@@ -1,0 +1,5 @@
+# Arquivos com credenciais privadas (NUNCA ENVIAR AO GITHUB)
+config.js
+.env
+.env.local
+*.log
