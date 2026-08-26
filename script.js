@@ -37,7 +37,7 @@ window.fecharPopup   = fecharPopup;
 window.iniciarSessao = iniciarSessao;
 
 document.addEventListener('DOMContentLoaded', function () {
-  console.log('✅ [Sistema TV] Versão 6.9 — Painel de Conexão Supabase em Configurações & Sincronização Dinâmica');
+  console.log('✅ [Sistema TV] Versão 7.0 — Sincronização e Boot Automático de Nuvem no GitHub Pages');
 
   /* ═══════════════════════════════════════════
      BANCO DE DADOS & SERVIÇO DE ARMAZENAMENTO (DB ADAPTER SERVICE)
@@ -196,8 +196,18 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     },
 
+    init: function() {
+      this.syncRemote();
+    },
+
     syncRemote: function() {
-      if (!this.url || !this.key) return;
+      if (!this.url) this.url = (envConfig && envConfig.SUPABASE_URL && envConfig.SUPABASE_URL.indexOf('seu-projeto') === -1) ? envConfig.SUPABASE_URL : (localStorage.getItem('tv_supabase_url') || '');
+      if (!this.key) this.key = (envConfig && envConfig.SUPABASE_ANON_KEY && envConfig.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) ? envConfig.SUPABASE_ANON_KEY : (localStorage.getItem('tv_supabase_key') || '');
+      if (!this.url || !this.key) {
+        updateCloudStatus(false, 'Modo Local');
+        return;
+      }
+      this.mode = 'supabase';
       var self = this;
       try {
         // 1. Sincroniza Ocorrências em tempo real (Supabase REST)
@@ -992,12 +1002,15 @@ document.addEventListener('DOMContentLoaded', function () {
   /* Render inicial */
   try { carregarFotoPerfilSalva(); } catch(e) {}
   try { loadNotificacoes(); } catch(e) {}
+  try { carregarCredenciaisSupabaseConfig(); } catch(e) {}
+  try { if (typeof DBService !== 'undefined' && DBService.init) DBService.init(); } catch(e) {}
   renderAll(true);
 
   /* Atualização automática em tempo real unificada de todas as telas e popups */
   setInterval(function() {
-    renderAll();
-  }, 5000);
+    try { renderAll(); } catch(e) {}
+    try { if (typeof DBService !== 'undefined' && DBService.syncRemote) DBService.syncRemote(); } catch(e) {}
+  }, 6000);
 
   /* Fechar popups clicando fora */
   document.querySelectorAll('.overlay').forEach(function(ov) {
@@ -2707,8 +2720,10 @@ document.addEventListener('DOMContentLoaded', function () {
   window.toggleMostrarChaveSupabase = toggleMostrarChaveSupabase;
 
   function testarConexaoSupabaseConfig() {
-    var url = (document.getElementById('cfg-supabase-url') ? document.getElementById('cfg-supabase-url').value.trim() : '');
-    var key = (document.getElementById('cfg-supabase-key') ? document.getElementById('cfg-supabase-key').value.trim() : '');
+    var urlInput = document.getElementById('cfg-supabase-url');
+    var keyInput = document.getElementById('cfg-supabase-key');
+    var url = urlInput ? urlInput.value.trim().replace(/\/+$/, '') : '';
+    var key = keyInput ? keyInput.value.trim() : '';
     var badgeEl = document.getElementById('cfg-db-status-badge');
 
     if (!url || !key) {
@@ -2724,7 +2739,8 @@ document.addEventListener('DOMContentLoaded', function () {
     fetch(url + '/rest/v1/ocorrencias?select=id&limit=1', {
       headers: {
         'apikey': key,
-        'Authorization': 'Bearer ' + key
+        'Authorization': 'Bearer ' + key,
+        'Cache-Control': 'no-cache'
       }
     })
     .then(function(res) {
@@ -2743,14 +2759,16 @@ document.addEventListener('DOMContentLoaded', function () {
         badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#EF4444;"></span> Falha na conexão (' + err.message + ')';
         badgeEl.style.color = '#DC2626';
       }
-      if (typeof mostrarToast === 'function') mostrarToast('Erro de Conexão', 'Não foi possível autenticar. Verifique a URL e a Chave.', 'danger');
+      if (typeof mostrarToast === 'function') mostrarToast('Erro de Conexão', 'Não foi possível autenticar. Verifique se copiou a nova Publishable key.', 'danger');
     });
   }
   window.testarConexaoSupabaseConfig = testarConexaoSupabaseConfig;
 
   function salvarCredenciaisSupabaseConfig() {
-    var url = (document.getElementById('cfg-supabase-url') ? document.getElementById('cfg-supabase-url').value.trim() : '');
-    var key = (document.getElementById('cfg-supabase-key') ? document.getElementById('cfg-supabase-key').value.trim() : '');
+    var urlInput = document.getElementById('cfg-supabase-url');
+    var keyInput = document.getElementById('cfg-supabase-key');
+    var url = urlInput ? urlInput.value.trim().replace(/\/+$/, '') : '';
+    var key = keyInput ? keyInput.value.trim() : '';
 
     if (!url || !key) {
       if (typeof mostrarToast === 'function') mostrarToast('Atenção', 'Preencha a URL e a Chave do Supabase.', 'warning');
