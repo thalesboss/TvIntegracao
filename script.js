@@ -17,7 +17,22 @@ function fecharPopup(id) {
     el.style.pointerEvents = 'none';
   }
 }
+function toggleBtnIniciarSessao(checked) {
+  var btn = document.getElementById('btn-iniciar');
+  if (btn) {
+    btn.disabled = !checked;
+    btn.style.opacity = checked ? '1' : '0.45';
+    btn.style.cursor = checked ? 'pointer' : 'not-allowed';
+  }
+}
 function iniciarSessao() {
+  var chk = document.getElementById('chk-entrada');
+  if (!chk || !chk.checked) {
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Atenção', 'Por favor, marque a caixa confirmando que leu as orientações antes de iniciar.', 'warning');
+    }
+    return;
+  }
   fecharPopup('popup-entrada');
   var pop = document.getElementById('popup-entrada');
   if (pop) {
@@ -32,12 +47,13 @@ function iniciarSessao() {
     lucide.createIcons();
   }
 }
-window.abrirPopup    = abrirPopup;
-window.fecharPopup   = fecharPopup;
-window.iniciarSessao = iniciarSessao;
+window.abrirPopup            = abrirPopup;
+window.fecharPopup           = fecharPopup;
+window.toggleBtnIniciarSessao = toggleBtnIniciarSessao;
+window.iniciarSessao         = iniciarSessao;
 
 document.addEventListener('DOMContentLoaded', function () {
-  console.log('✅ [Sistema TV] Versão 7.0 — Sincronização e Boot Automático de Nuvem no GitHub Pages');
+  console.log('✅ [Sistema TV] Versão 7.1 — Auditoria de Edições, Trava de Lixeira 7 Dias e Exclusão Estrita por ID');
 
   /* ═══════════════════════════════════════════
      BANCO DE DADOS & SERVIÇO DE ARMAZENAMENTO (DB ADAPTER SERVICE)
@@ -232,13 +248,12 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(function(remoteData) {
           if (Array.isArray(remoteData)) {
             var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
-            var titulosNaLixeira = (lixeiraData || []).map(function(item){ return (item.titulo || '').trim().toLowerCase(); });
             var clean = remoteData.map(sanitizeOcorrencia).filter(Boolean);
             clean.sort(function(a, b) { return (b.criado || 0) - (a.criado || 0); });
             ocorrencias = clean.filter(function(o){
               if (!o) return false;
+              if (o.status === 'lixeira') return false;
               if (idsNaLixeira.includes(o.id)) return false;
-              if (o.titulo && titulosNaLixeira.includes(o.titulo.trim().toLowerCase())) return false;
               return true;
             });
             if (typeof renderAll === 'function') renderAll();
@@ -264,11 +279,10 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(function(remoteHist) {
           if (Array.isArray(remoteHist)) {
             var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
-            var titulosNaLixeira = (lixeiraData || []).map(function(item){ return (item.titulo || '').trim().toLowerCase(); });
             historicoSeedData = remoteHist.filter(function(h){
               if (!h) return false;
+              if (h.status === 'lixeira') return false;
               if (idsNaLixeira.includes(h.id)) return false;
-              if (h.titulo && titulosNaLixeira.includes(h.titulo.trim().toLowerCase())) return false;
               return true;
             });
             if (typeof renderAll === 'function') renderAll();
@@ -1997,24 +2011,47 @@ document.addEventListener('DOMContentLoaded', function () {
       delete resolucaoAtual.anexos;
     }
 
+    var anterior = ocorrencias[idx];
+    var mudancas = [];
+    if (titulo !== (anterior.titulo || '')) mudancas.push('Título alterado de "' + (anterior.titulo || '') + '" para "' + titulo + '"');
+    if (prio !== (anterior.prio || '')) mudancas.push('Prioridade alterada de ' + (anterior.prio || 'Média') + ' para ' + prio);
+    if (cat !== (anterior.cat || '')) mudancas.push('Categoria alterada de ' + (anterior.cat || '') + ' para ' + cat);
+    if (resp !== (anterior.resp || '')) mudancas.push('Responsável alterado de ' + (anterior.resp || '') + ' para ' + resp);
+    if (local !== (anterior.local || '')) mudancas.push('Local alterado de "' + (anterior.local || '') + '" para "' + local + '"');
+    if (prazo !== (anterior.prazo || '')) mudancas.push('Prazo alterado para ' + (prazo || 'Sem prazo'));
+    if (desc !== (anterior.desc || '')) mudancas.push('Descrição detalhada atualizada');
+    if (anexosAtualizados.length !== ((anterior.anexos || []).length)) mudancas.push('Anexos atualizados (' + anexosAtualizados.length + ' arquivos)');
+
+    var historicoEdicoes = (anterior.historicoEdicoes && Array.isArray(anterior.historicoEdicoes)) ? anterior.historicoEdicoes.slice() : [];
+    if (mudancas.length > 0) {
+      historicoEdicoes.unshift({
+        autor: usuarioLogado,
+        dataHora: formatDataHoraLocal(),
+        mudancas: mudancas
+      });
+    }
+
     ocorrencias[idx] = Object.assign({}, ocorrencias[idx], {
-      titulo:    titulo,
-      prio:      prio,
-      cat:       cat,
-      resp:      resp,
-      local:     local,
-      prazo:     prazo,
-      desc:      desc,
-      mine:      isMine,
-      anexos:    anexosAtualizados,
-      resolucao: Object.keys(resolucaoAtual).length > 0 ? resolucaoAtual : null
+      titulo:           titulo,
+      prio:             prio,
+      cat:              cat,
+      resp:             resp,
+      local:            local,
+      prazo:            prazo,
+      desc:             desc,
+      mine:             isMine,
+      anexos:           anexosAtualizados,
+      resolucao:        Object.keys(resolucaoAtual).length > 0 ? resolucaoAtual : null,
+      historicoEdicoes: historicoEdicoes,
+      ultimaEdicaoPor:  usuarioLogado,
+      ultimaEdicaoEm:   formatDataHoraLocal()
     });
 
     save(ocorrencias);
     fecharPopup('popup-editar-oc');
     renderAll();
     if (typeof mostrarToast === 'function') {
-      mostrarToast('Ocorrência Atualizada', 'As alterações foram salvas e sincronizadas para toda a equipe.', 'success');
+      mostrarToast('Ocorrência Atualizada', 'As alterações de ' + usuarioLogado + ' foram salvas e sincronizadas.', 'success');
     }
   }
   window.salvarEdicaoOcorrencia = salvarEdicaoOcorrencia;
@@ -2101,8 +2138,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function excluirOcorrencia(id) {
     var targetId = id;
-    var oc = ocorrencias.find(function(o){ return o && (o.id === targetId || (itemDetalhesAtual && o.titulo === itemDetalhesAtual.titulo)); });
-    var hist = historicoSeedData.find(function(h){ return h && (h.id === targetId || (oc && h.titulo === oc.titulo)); });
+    var oc = ocorrencias.find(function(o){ return o && o.id === targetId; });
+    var hist = historicoSeedData.find(function(h){ return h && h.id === targetId; });
     var titulo = oc ? (oc.titulo || 'esta ocorrência') : (hist ? hist.titulo : 'esta ocorrência');
 
     if (confirm('Mover a ocorrência "' + titulo + '" para a Lixeira?\n\nEla ficará retida por 7 dias na Lixeira como backup antes da exclusão permanente.')) {
@@ -2110,15 +2147,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
       // 1. Envia comando DELETE direto para a nuvem (Supabase) para que a sincronização remota não restaure na tela
       if (typeof DBService !== 'undefined' && DBService && typeof DBService.deleteRemote === 'function') {
-        if (oc && oc.id) DBService.deleteRemote('ocorrencias', oc.id);
-        if (hist && hist.id) DBService.deleteRemote('historico', hist.id);
         if (idParaSalvar) {
           DBService.deleteRemote('ocorrencias', idParaSalvar);
           DBService.deleteRemote('historico', idParaSalvar);
-        }
-        if (targetId && targetId !== idParaSalvar) {
-          DBService.deleteRemote('ocorrencias', targetId);
-          DBService.deleteRemote('historico', targetId);
         }
       }
 
@@ -2137,24 +2168,22 @@ document.addEventListener('DOMContentLoaded', function () {
       lixeiraData = [itemLixeira].concat(lixeiraData.filter(function(i){ return i.id !== idParaSalvar; }));
       saveLixeira(lixeiraData);
 
-      // 3. Remove do array de ocorrências ativas e arquivadas imediatamente
+      // 3. Remove do array de ocorrências ativas e arquivadas imediatamente (estritamente por ID!)
       ocorrencias = ocorrencias.filter(function(o){
         if (!o) return false;
-        if (o.id === targetId || o.id === idParaSalvar) return false;
-        if (oc && o.id === oc.id) return false;
-        if (titulo && o.titulo && o.titulo.trim().toLowerCase() === titulo.trim().toLowerCase()) return false;
+        if (o.id === idParaSalvar || o.id === targetId) return false;
         return true;
       });
 
-      // 4. Remove do histórico geral (enquanto estiver na lixeira)
+      // 4. Remove do histórico geral (estritamente por ID!)
       historicoSeedData = historicoSeedData.filter(function(h){
         if (!h) return false;
-        if (h.id === targetId || h.id === idParaSalvar) return false;
-        if (hist && h.id === hist.id) return false;
-        if (titulo && h.titulo && h.titulo.trim().toLowerCase() === titulo.trim().toLowerCase()) return false;
+        if (h.id === idParaSalvar || h.id === targetId) return false;
         return true;
       });
 
+      save(ocorrencias);
+      saveHistorico(historicoSeedData);
       renderAll();
 
       if (typeof mostrarToast === 'function') {
@@ -2187,35 +2216,6 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.restaurarOcorrenciaLixeira = restaurarOcorrenciaLixeira;
 
-  function excluirPermanenteLixeira(id) {
-    var item = lixeiraData.find(function(i){ return i && (String(i.id) === String(id)); });
-    var titulo = item ? item.titulo : 'este registro';
-
-    if (confirm('Deseja realmente excluir permanentemente "' + titulo + '" do banco de dados agora?\n\nEsta ação não poderá ser desfeita.')) {
-      if (typeof DBService !== 'undefined' && DBService && typeof DBService.deleteRemote === 'function') {
-        DBService.deleteRemote('ocorrencias', id);
-        DBService.deleteRemote('historico', id);
-        if (item && item.id && String(item.id) !== String(id)) {
-          DBService.deleteRemote('ocorrencias', item.id);
-          DBService.deleteRemote('historico', item.id);
-        }
-      }
-      lixeiraData = lixeiraData.filter(function(i){
-        if (!i) return false;
-        if (String(i.id) === String(id)) return false;
-        if (item && i.titulo && item.titulo && i.titulo.trim().toLowerCase() === item.titulo.trim().toLowerCase()) return false;
-        return true;
-      });
-      saveLixeira(lixeiraData);
-      renderAll();
-
-      if (typeof mostrarToast === 'function') {
-        mostrarToast('Excluído Permanentemente', '"' + titulo + '" foi removido definitivamente.', 'info');
-      }
-    }
-  }
-  window.excluirPermanenteLixeira = excluirPermanenteLixeira;
-
   function renderLixeira() {
     var container = document.getElementById('lixeira-list');
     atualizarBadgesLixeira();
@@ -2226,7 +2226,7 @@ document.addEventListener('DOMContentLoaded', function () {
         '<div style="text-align:center;padding:48px 16px;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);">' +
           '<i data-lucide="trash-2" style="width:36px;height:36px;color:var(--muted);stroke-width:1.5;margin-bottom:10px;"></i>' +
           '<p style="color:var(--txt);font-size:14px;font-weight:600;">A lixeira está vazia</p>' +
-          '<p style="color:var(--muted);font-size:12px;margin-top:3px;">Ocorrências excluídas ficam armazenadas aqui por 7 dias como backup.</p>' +
+          '<p style="color:var(--muted);font-size:12px;margin-top:3px;">Ocorrências excluídas ficam retidas aqui por 7 dias antes da exclusão definitiva.</p>' +
         '</div>';
       if (typeof lucide !== 'undefined') lucide.createIcons();
       return;
@@ -2268,11 +2268,8 @@ document.addEventListener('DOMContentLoaded', function () {
             '</div>' +
           '</div>' +
           '<div class="oc-actions" style="justify-content:center;gap:8px;">' +
-            '<button class="btn-card-action btn-card-restore" onclick="restaurarOcorrenciaLixeira(\'' + item.id + '\')" title="Restaurar ocorrência">' +
+            '<button class="btn-card-action btn-card-restore" onclick="restaurarOcorrenciaLixeira(\'' + item.id + '\')" title="Restaurar ocorrência para as ativas">' +
               '<i data-lucide="rotate-ccw" style="width:12px;height:12px;stroke-width:2.2;"></i> Restaurar' +
-            '</button>' +
-            '<button class="btn-card-action btn-card-delete" onclick="excluirPermanenteLixeira(\'' + item.id + '\')" title="Excluir do banco permanentemente">' +
-              '<i data-lucide="trash-2" style="width:12px;height:12px;stroke-width:2.2;"></i> Excluir Agora' +
             '</button>' +
           '</div>' +
         '</article>'
@@ -3067,7 +3064,7 @@ document.addEventListener('DOMContentLoaded', function () {
           : []);
 
     if (anexos.length === 0 && item.id) {
-      var ocFound = ocorrencias.find(function(o){ return o && (o.id === item.id || (o.titulo && item.titulo && o.titulo.trim().toLowerCase() === item.titulo.trim().toLowerCase())); });
+      var ocFound = ocorrencias.find(function(o){ return o && o.id === item.id; });
       if (ocFound) {
         anexos = (ocFound.anexos && Array.isArray(ocFound.anexos) && ocFound.anexos.length > 0)
           ? ocFound.anexos
@@ -3109,6 +3106,33 @@ document.addEventListener('DOMContentLoaded', function () {
       mediaHTML += '</div></div>';
     }
 
+    var historicoEdicoes = item.historicoEdicoes || (ocFound && ocFound.historicoEdicoes) || [];
+    var edicoesHTML = '';
+    if (historicoEdicoes && historicoEdicoes.length > 0) {
+      edicoesHTML =
+        '<div class="form-card" style="margin-bottom:12px;background:var(--bg);border:1px solid var(--border-lt);">' +
+          '<h4 style="font-size:12.5px;font-weight:700;color:var(--txt);margin-bottom:8px;display:flex;align-items:center;gap:6px;">' +
+            '<i data-lucide="history" style="width:14px;height:14px;color:var(--blue);stroke-width:2;"></i>' +
+            'Histórico de Edições e Alterações (' + historicoEdicoes.length + ')' +
+          '</h4>' +
+          '<div style="display:flex;flex-direction:column;gap:8px;">' +
+            historicoEdicoes.map(function(ed) {
+              return (
+                '<div style="background:var(--surface);padding:8px 12px;border-radius:var(--r-md);border:1px solid var(--border-lt);font-size:11.5px;line-height:1.5;">' +
+                  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+                    '<strong style="color:var(--txt);display:flex;align-items:center;gap:5px;"><i data-lucide="user-check" style="width:12px;height:12px;color:var(--blue);"></i> ' + (ed.autor || 'Operador') + '</strong>' +
+                    '<span style="color:var(--muted);font-size:10.5px;">' + (ed.dataHora || '') + '</span>' +
+                  '</div>' +
+                  '<ul style="margin:0;padding-left:16px;color:var(--txt2);">' +
+                    (ed.mudancas || []).map(function(m){ return '<li>' + m + '</li>'; }).join('') +
+                  '</ul>' +
+                '</div>'
+              );
+            }).join('') +
+          '</div>' +
+        '</div>';
+    }
+
     if (modalBody) {
       modalBody.innerHTML =
         '<div class="form-card" style="margin-bottom:12px;background:var(--bg);border:1px solid var(--border-lt);">' +
@@ -3126,6 +3150,7 @@ document.addEventListener('DOMContentLoaded', function () {
             '</div>' +
           '</div>' +
         '</div>' +
+        edicoesHTML +
         mediaHTML +
         '<div class="form-card" style="background:var(--bg);border:1px solid var(--border-lt);">' +
           '<h4 style="font-size:12.5px;font-weight:700;color:var(--txt);margin-bottom:8px;display:flex;align-items:center;gap:6px;">' +
@@ -3320,9 +3345,10 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function verificarNotificacoesAutomaticas() {
+    var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
     // 1. Ocorrências com prazo expirado
     (ocorrencias || []).forEach(function(oc) {
-      if (oc && oc.status === 'aberta' && isOcorrenciaVencida(oc)) {
+      if (oc && oc.status === 'aberta' && !idsNaLixeira.includes(oc.id) && isOcorrenciaVencida(oc)) {
         var tit = '⚠️ Prazo Expirado: ' + (oc.titulo || 'Ocorrência');
         var msg = 'A ocorrência para "' + (oc.local || 'Central Técnica') + '" ultrapassou o horário estipulado (' + (oc.prazo || 'Prazo vencido') + ') e requer atenção.';
         var jaNotificado = (notificacoesStore || []).some(function(n){ return n && n.titulo === tit; });
@@ -3333,7 +3359,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // 2. Ocorrências arquivadas pendentes para o turno
-    var arquivadas = getArquivadas();
+    var arquivadas = getArquivadas().filter(function(oc){ return !idsNaLixeira.includes(oc.id); });
     if (arquivadas.length > 0) {
       var titArq = '📦 Ocorrências Arquivadas para o Turno';
       var msgArq = 'Existem ' + arquivadas.length + ' ocorrência(s) arquivada(s) aguardando verificação e acompanhamento da equipe.';
