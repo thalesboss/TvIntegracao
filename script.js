@@ -1851,9 +1851,6 @@ document.addEventListener('DOMContentLoaded', function () {
     div.innerHTML =
       '<div class="acc-head open" onclick="togAcc(this)" aria-expanded="true">' +
         '<span class="acc-title-text">Transmissão Vivo ' + newNum + '</span>' +
-        '<button type="button" class="btn btn-ghost btn-xs" onclick="event.stopPropagation(); removerTransmissaoCTRS(this);" style="margin-left:auto;margin-right:8px;color:var(--red);padding:2px 8px;border-color:rgba(255,59,48,0.25);" title="Remover esta transmissão">' +
-          '<i data-lucide="trash-2" style="width:12px;height:12px;stroke-width:2;"></i> Excluir' +
-        '</button>' +
         '<i data-lucide="chevron-down" class="acc-arrow" style="width:14px;height:14px;stroke-width:2;"></i>' +
       '</div>' +
       '<div class="acc-body open">' +
@@ -1888,6 +1885,12 @@ document.addEventListener('DOMContentLoaded', function () {
           '<div class="frow"><label>Status da Transmissão</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
         '</div>' +
         '<div class="frow"><label>Falhas Ocorridas</label><textarea placeholder="Descreva as falhas. Se nenhuma, deixe em branco."></textarea></div>' +
+        '<div style="display:flex;justify-content:flex-end;padding-top:10px;border-top:1px solid var(--border-lt);margin-top:10px;">' +
+          '<button type="button" class="btn btn-ghost btn-xs" onclick="removerTransmissaoCTRS(this);" style="color:var(--red);border-color:var(--red-border);display:inline-flex;align-items:center;gap:5px;padding:4px 10px;" title="Remover esta transmissão">' +
+            '<i data-lucide="trash-2" style="width:13px;height:13px;stroke-width:2;"></i>' +
+            '<span>Remover Transmissão</span>' +
+          '</button>' +
+        '</div>' +
       '</div>';
 
     container.appendChild(div);
