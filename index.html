@@ -902,6 +902,7 @@
           <h3><div class="fcard-ico fci-g" style="display:flex;align-items:center;justify-content:center;"><i data-lucide="radio" style="width:13px;height:13px;stroke-width:2;"></i></div> Transmissões ao Vivo
             <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:4px;">C = Conforme · NC = Não Conforme · NA = Não se Aplica</span>
           </h3>
+          <div id="ctrs-acc-container">
           <div class="acc-block">
             <div class="acc-head open" onclick="togAcc(this)" aria-expanded="true">Transmissão Vivo 1<i data-lucide="chevron-down" class="acc-arrow" style="width:14px;height:14px;stroke-width:2;"></i></div>
             <div class="acc-body open">
@@ -1039,6 +1040,15 @@
               </div>
               <div class="frow"><label>Falhas Ocorridas</label><textarea></textarea></div>
             </div>
+          </div>
+          </div><!-- /ctrs-acc-container -->
+
+          <!-- BOTAO ADICIONAR MAIS TRANSMISSOES (5, 6, 7...) -->
+          <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="adicionarTransmissaoCTRS()" style="display:inline-flex;align-items:center;gap:6px;" title="Adicionar mais uma transmissão ao checklist">
+              <i data-lucide="plus" style="width:14px;height:14px;color:var(--blue);stroke-width:2.2;"></i>
+              <span>Adicionar Transmissão ao Vivo</span>
+            </button>
           </div>
         </div>
         <div class="submit-bar">

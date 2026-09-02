@@ -1839,6 +1839,95 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.salvarRascunhoRelatorioTV = salvarRascunhoRelatorioTV;
 
+  function adicionarTransmissaoCTRS(silencioso) {
+    var container = document.getElementById('ctrs-acc-container');
+    if (!container) return;
+
+    var currentCount = container.querySelectorAll('.acc-block').length;
+    var newNum = currentCount + 1;
+
+    var div = document.createElement('div');
+    div.className = 'acc-block';
+    div.innerHTML =
+      '<div class="acc-head open" onclick="togAcc(this)" aria-expanded="true">' +
+        '<span class="acc-title-text">Transmissão Vivo ' + newNum + '</span>' +
+        '<button type="button" class="btn btn-ghost btn-xs" onclick="event.stopPropagation(); removerTransmissaoCTRS(this);" style="margin-left:auto;margin-right:8px;color:var(--red);padding:2px 8px;border-color:rgba(255,59,48,0.25);" title="Remover esta transmissão">' +
+          '<i data-lucide="trash-2" style="width:12px;height:12px;stroke-width:2;"></i> Excluir' +
+        '</button>' +
+        '<i data-lucide="chevron-down" class="acc-arrow" style="width:14px;height:14px;stroke-width:2;"></i>' +
+      '</div>' +
+      '<div class="acc-body open">' +
+        '<div class="fg2">' +
+          '<div class="frow"><label>Cidade / Bairro</label><input type="text" placeholder="Ex: Centro — Juiz de Fora"/></div>' +
+          '<div class="frow">' +
+            '<label>Infraestrutura da Transmissão</label>' +
+            '<select>' +
+              '<option value="">Selecione o equipamento...</option>' +
+              '<option value="LIVE U1">LIVE U1</option>' +
+              '<option value="LIVE U2">LIVE U2</option>' +
+              '<option value="LIVE U3">LIVE U3</option>' +
+              '<option value="LIVE U4">LIVE U4</option>' +
+              '<option value="LIVE U SMART">LIVE U SMART</option>' +
+              '<option value="REDAÇÃO">REDAÇÃO</option>' +
+              '<option value="KMJ">KMJ</option>' +
+              '<option value="NET PRAÇA">NET PRAÇA</option>' +
+              '<option value="NET PORTARIA">NET PORTARIA</option>' +
+              '<option value="FORMATOS NET">FORMATOS NET</option>' +
+              '<option value="NET 2º ANDAR">NET 2º ANDAR</option>' +
+              '<option value="NET 3º ANDAR">NET 3º ANDAR</option>' +
+              '<option value="NET 4º ANDAR">NET 4º ANDAR</option>' +
+            '</select>' +
+          '</div>' +
+          '<div class="frow"><label>Hora Abertura Sinal</label><input type="time"/></div>' +
+          '<div class="frow"><label>Hora Final (Teste OK)</label><input type="time"/></div>' +
+          '<div class="frow"><label>Qualidade do Áudio</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
+          '<div class="frow"><label>Qualidade do Vídeo</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
+          '<div class="frow"><label>Repórter</label><input type="text" placeholder="Nome do repórter"/></div>' +
+          '<div class="frow"><label>Entradas</label><input type="text" placeholder="Ex: 2 entradas conformes — externo"/></div>' +
+          '<div class="frow"><label>Repórter Cinematográfico</label><input type="text" placeholder="Nome do RC"/></div>' +
+          '<div class="frow"><label>Status da Transmissão</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
+        '</div>' +
+        '<div class="frow"><label>Falhas Ocorridas</label><textarea placeholder="Descreva as falhas. Se nenhuma, deixe em branco."></textarea></div>' +
+      '</div>';
+
+    container.appendChild(div);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    if (!silencioso) {
+      salvarRascunhoRelatorioTV(true);
+    }
+  }
+
+  function removerTransmissaoCTRS(btn) {
+    var block = btn.closest('.acc-block');
+    if (!block) return;
+    block.remove();
+
+    var remaining = document.querySelectorAll('#page-ctrs .acc-block');
+    remaining.forEach(function(b, idx) {
+      var num = idx + 1;
+      var titleSpan = b.querySelector('.acc-title-text');
+      if (titleSpan) {
+        titleSpan.textContent = 'Transmissão Vivo ' + num;
+      } else {
+        var head = b.querySelector('.acc-head');
+        if (head) {
+          for (var i = 0; i < head.childNodes.length; i++) {
+            if (head.childNodes[i].nodeType === 3 && head.childNodes[i].textContent.indexOf('Transmissão Vivo') !== -1) {
+              head.childNodes[i].textContent = 'Transmissão Vivo ' + num;
+              break;
+            }
+          }
+        }
+      }
+    });
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    salvarRascunhoRelatorioTV(true);
+  }
+
+  window.adicionarTransmissaoCTRS = adicionarTransmissaoCTRS;
+  window.removerTransmissaoCTRS   = removerTransmissaoCTRS;
+
   function carregarRascunhoRelatorioTV() {
     try {
       var raw = localStorage.getItem('tv_ctrs_rascunho_v2');
@@ -1857,7 +1946,13 @@ document.addEventListener('DOMContentLoaded', function () {
       if (obsEl && dados.obs)     obsEl.value = dados.obs;
 
       if (Array.isArray(dados.transmissoes)) {
+        var container = document.getElementById('ctrs-acc-container');
         var accBlocks = document.querySelectorAll('#page-ctrs .acc-block');
+        while (accBlocks.length < dados.transmissoes.length && container) {
+          adicionarTransmissaoCTRS(true);
+          accBlocks = document.querySelectorAll('#page-ctrs .acc-block');
+        }
+
         dados.transmissoes.forEach(function(tx, idx) {
           if (accBlocks[idx]) {
             var inputs = accBlocks[idx].querySelectorAll('input, select, textarea');
