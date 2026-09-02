@@ -47,13 +47,50 @@ function iniciarSessao() {
     lucide.createIcons();
   }
 }
-window.abrirPopup            = abrirPopup;
-window.fecharPopup           = fecharPopup;
+function abrirQuickLook(src, nome) {
+  if (!src) return;
+  var pop = document.getElementById('popup-quicklook');
+  var img = document.getElementById('quicklook-img');
+  var nameEl = document.getElementById('quicklook-filename');
+  var dlBtn = document.getElementById('quicklook-download-btn');
+
+  if (img) img.src = src;
+  if (nameEl) nameEl.textContent = nome || 'Imagem';
+  if (dlBtn) {
+    dlBtn.href = src;
+    dlBtn.download = nome || 'imagem_anexa';
+  }
+
+  abrirPopup('popup-quicklook');
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+}
+
+function fecharQuickLook() {
+  fecharPopup('popup-quicklook');
+  var img = document.getElementById('quicklook-img');
+  if (img) img.src = '';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' || e.keyCode === 27) {
+    var ql = document.getElementById('popup-quicklook');
+    if (ql && !ql.hasAttribute('hidden') && ql.style.display !== 'none') {
+      fecharQuickLook();
+    }
+  }
+});
+
+window.abrirPopup             = abrirPopup;
+window.fecharPopup            = fecharPopup;
+window.abrirQuickLook         = abrirQuickLook;
+window.fecharQuickLook        = fecharQuickLook;
 window.toggleBtnIniciarSessao = toggleBtnIniciarSessao;
-window.iniciarSessao         = iniciarSessao;
+window.iniciarSessao          = iniciarSessao;
 
 document.addEventListener('DOMContentLoaded', function () {
-  console.log('✅ [Sistema TV] Versão 7.1 — Auditoria de Edições, Trava de Lixeira 7 Dias e Exclusão Estrita por ID');
+  console.log('✅ [Sistema TV] Versão 7.3 — Exportador de Template CTRS para Outlook (BETA) & Autosave de Rascunho');
 
   /* ═══════════════════════════════════════════
      BANCO DE DADOS & SERVIÇO DE ARMAZENAMENTO (DB ADAPTER SERVICE)
@@ -1017,6 +1054,7 @@ document.addEventListener('DOMContentLoaded', function () {
   try { carregarFotoPerfilSalva(); } catch(e) {}
   try { loadNotificacoes(); } catch(e) {}
   try { carregarCredenciaisSupabaseConfig(); } catch(e) {}
+  try { carregarRascunhoRelatorioTV(); } catch(e) {}
   try { if (typeof DBService !== 'undefined' && DBService.init) DBService.init(); } catch(e) {}
   renderAll(true);
 
@@ -1404,6 +1442,13 @@ document.addEventListener('DOMContentLoaded', function () {
         img.src = file.dataUrl;
         img.alt = file.name || 'Imagem';
         img.loading = 'lazy';
+        img.style.cursor = 'pointer';
+        img.title = 'Clique para ampliar (Quick Look)';
+        (function(currentFile) {
+          img.onclick = function() {
+            abrirQuickLook(currentFile.dataUrl, currentFile.name);
+          };
+        })(file);
         item.appendChild(img);
       } else if (isPdf) {
         var pdfBox = document.createElement('div');
@@ -1489,10 +1534,9 @@ document.addEventListener('DOMContentLoaded', function () {
   function adicionarLinhaMaterial(tabelaId) {
     var tbody = document.querySelector('#' + (tabelaId || 'tb-rec') + ' tbody');
     if (!tbody) return;
-    var proximoNum = tbody.querySelectorAll('tr').length + 1;
     var tr = document.createElement('tr');
     tr.innerHTML =
-      '<td style="text-align:center;"><input type="number" class="item-quant" min="1" value="' + proximoNum + '" style="text-align:center;font-weight:600;width:55px;" /></td>' +
+      '<td style="text-align:center;"><input type="number" class="item-quant" min="1" value="" placeholder="" style="text-align:center;font-weight:600;width:55px;" /></td>' +
       '<td><input type="text" class="item-desc" placeholder="Descrição do equipamento/material..."/></td>' +
       '<td><input type="text" class="item-plaq" placeholder="Plaqueta..."/></td>' +
       '<td><input type="text" class="item-serie" placeholder="Nº Série..."/></td>' +
@@ -1509,15 +1553,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function removerLinhaMaterial(btn) {
     var tr = btn.closest('tr');
-    var tbody = tr ? tr.parentElement : null;
     if (tr) tr.remove();
-
-    if (tbody) {
-      tbody.querySelectorAll('tr').forEach(function(linha, idx) {
-        var quantInput = linha.querySelector('.item-quant');
-        if (quantInput) quantInput.value = idx + 1;
-      });
-    }
   }
   window.removerLinhaMaterial = removerLinhaMaterial;
 
@@ -1554,6 +1590,44 @@ document.addEventListener('DOMContentLoaded', function () {
     var recebedor = (recEl && recEl.value.trim()) ? recEl.value.trim() : getUsuarioAtual();
     var obs       = obsEl ? obsEl.value.trim() : '';
 
+    /* Validação e coleta de itens de recebimento */
+    var tbody = document.querySelector('#rec-materiais-tbody') || document.querySelector('#tb-rec tbody');
+    var linhas = tbody ? tbody.querySelectorAll('tr') : [];
+    var itensResumo = [];
+    var erroValidacao = false;
+
+    linhas.forEach(function(tr) {
+      var qInput = tr.querySelector('.item-quant');
+      var dInput = tr.querySelector('.item-desc');
+      var q = qInput ? qInput.value.trim() : '';
+      var d = dInput ? dInput.value.trim() : '';
+      var p = tr.querySelector('.item-plaq') ? tr.querySelector('.item-plaq').value.trim() : '';
+      var s = tr.querySelector('.item-serie') ? tr.querySelector('.item-serie').value.trim() : '';
+      var loc = tr.querySelector('.item-local') ? tr.querySelector('.item-local').value.trim() : '';
+
+      if (d || p || s || loc || q) {
+        if (!q || parseInt(q, 10) <= 0 || isNaN(parseInt(q, 10))) {
+          erroValidacao = true;
+          if (qInput) {
+            qInput.style.borderColor = '#EF4444';
+            qInput.focus();
+          }
+        } else {
+          if (qInput) qInput.style.borderColor = '';
+          itensResumo.push(q + 'x ' + (d || 'Material') + (p ? (' [Plaq: ' + p + ']') : '') + (s ? (' [Série: ' + s + ']') : ''));
+        }
+      }
+    });
+
+    if (erroValidacao) {
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('Quantidade Obrigatória', 'Por favor, informe uma quantidade válida (número maior que 0) para o material recebido.', 'warning');
+      } else {
+        alert('Por favor, informe uma quantidade válida (número maior que 0) para os materiais.');
+      }
+      return;
+    }
+
     var titulo = 'Recebimento N.F ' + (nf || 'S/N') + (remetente ? (' — ' + remetente) : '');
 
     var novoHist = {
@@ -1561,12 +1635,12 @@ document.addEventListener('DOMContentLoaded', function () {
       tipo:          'recebimento',
       subtipo:       'Recebimento Equipamentos',
       titulo:        titulo,
-      equipamento:   remetente || 'Equipamento / Material Recebido',
+      equipamento:   (itensResumo.length > 0 ? itensResumo[0] : (remetente || 'Equipamento / Material Recebido')),
       categoria:     'Investimento / Reg. Fotográfico',
       local:         'Juiz de Fora',
       dataCriacao:   nowStr,
       criadoPor:     recebedor,
-      descCriacao:   'Recebimento registrado. Remetente: ' + (remetente || 'N/A') + '. N.F: ' + (nf || 'N/A') + '. ' + (obs || ''),
+      descCriacao:   'Recebimento registrado. Remetente: ' + (remetente || 'N/A') + '. N.F: ' + (nf || 'N/A') + '. ' + (itensResumo.length > 0 ? ('Itens: ' + itensResumo.join('; ') + '. ') : '') + (obs || ''),
       status:        'Processado',
       dataResolucao: nowStr,
       resolvidoPor:  recebedor,
@@ -1590,10 +1664,9 @@ document.addEventListener('DOMContentLoaded', function () {
   function adicionarLinhaItemCompra() {
     var tbody = document.getElementById('req-itens-tbody');
     if (!tbody) return;
-    var proximoNum = tbody.querySelectorAll('tr').length + 1;
     var tr = document.createElement('tr');
     tr.innerHTML =
-      '<td style="text-align:center;"><input type="number" class="item-quant" min="1" value="' + proximoNum + '" style="text-align:center;font-weight:600;width:55px;" /></td>' +
+      '<td style="text-align:center;"><input type="number" class="item-quant" min="1" value="" placeholder="" style="text-align:center;font-weight:600;width:55px;" /></td>' +
       '<td><input type="text" class="item-desc" placeholder="Ex: Descrição do material..." /></td>' +
       '<td><input type="text" class="item-cod" placeholder="Código ex: P4-120" /></td>' +
       '<td><input type="text" class="item-fab" placeholder="Marca ou fabricante" /></td>' +
@@ -1610,15 +1683,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function removerLinhaItemCompra(btn) {
     var tr = btn.closest('tr');
-    var tbody = tr ? tr.parentElement : null;
     if (tr) tr.remove();
-
-    if (tbody) {
-      tbody.querySelectorAll('tr').forEach(function(linha, idx) {
-        var quantInput = linha.querySelector('.item-quant');
-        if (quantInput) quantInput.value = idx + 1;
-      });
-    }
   }
   window.removerLinhaItemCompra = removerLinhaItemCompra;
 
@@ -1650,20 +1715,43 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
 
-    /* Coleta itens */
+    /* Coleta itens com validação estrita de quantidade */
     var tbody = document.getElementById('req-itens-tbody');
     var linhas = tbody ? tbody.querySelectorAll('tr') : [];
     var itensResumo = [];
+    var erroValidacao = false;
 
     linhas.forEach(function(tr) {
-      var q = tr.querySelector('.item-quant') ? tr.querySelector('.item-quant').value : '1';
-      var d = tr.querySelector('.item-desc') ? tr.querySelector('.item-desc').value.trim() : '';
-      var f = tr.querySelector('.item-forn') ? tr.querySelector('.item-forn').value.trim() : '';
+      var qInput = tr.querySelector('.item-quant');
+      var dInput = tr.querySelector('.item-desc');
+      var q = qInput ? qInput.value.trim() : '';
+      var d = dInput ? dInput.value.trim() : '';
+      var c = tr.querySelector('.item-cod') ? tr.querySelector('.item-cod').value.trim() : '';
+      var f = tr.querySelector('.item-fab') ? tr.querySelector('.item-fab').value.trim() : '';
       var l = tr.querySelector('.item-link') ? tr.querySelector('.item-link').value.trim() : '';
-      if (d) {
-        itensResumo.push(q + 'x ' + d + (f ? (' (' + f + ')') : '') + (l ? (' [' + l + ']') : ''));
+
+      if (d || c || f || l || q) {
+        if (!q || parseInt(q, 10) <= 0 || isNaN(parseInt(q, 10))) {
+          erroValidacao = true;
+          if (qInput) {
+            qInput.style.borderColor = '#EF4444';
+            qInput.focus();
+          }
+        } else {
+          if (qInput) qInput.style.borderColor = '';
+          itensResumo.push(q + 'x ' + (d || 'Item') + (c ? (' [Cód: ' + c + ']') : '') + (f ? (' (' + f + ')') : '') + (l ? (' [' + l + ']') : ''));
+        }
       }
     });
+
+    if (erroValidacao) {
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('Quantidade Obrigatória', 'Por favor, informe uma quantidade válida (número maior que 0) para o material solicitado.', 'warning');
+      } else {
+        alert('Por favor, informe uma quantidade válida (número maior que 0) para todos os itens da requisição.');
+      }
+      return;
+    }
 
     var titulo = 'Requisição de Compra — ' + praca + ' (' + carater + ')';
     var descCompleta = 'Justificativa: ' + motivo + '\n' +
@@ -1708,10 +1796,380 @@ document.addEventListener('DOMContentLoaded', function () {
      ENVIO DE RELATÓRIO TV (CTRS) E GERADOR AUTOMÁTICO DE OCORRÊNCIAS
   ═══════════════════════════════════════════ */
 
-  function salvarRascunhoRelatorioTV() {
-    alert('Rascunho do Relatório TV salvo com sucesso!');
+  function salvarRascunhoRelatorioTV(silencioso) {
+    try {
+      var dataEl  = document.getElementById('ctrs-data');
+      var pracaEl = document.getElementById('ctrs-praca');
+      var tipoEl  = document.getElementById('ctrs-tipo');
+      var obsEl   = document.getElementById('ctrs-obs');
+
+      var dados = {
+        data:  dataEl  ? dataEl.value  : '',
+        praca: pracaEl ? pracaEl.value : '',
+        tipo:  tipoEl  ? tipoEl.value  : '',
+        obs:   obsEl   ? obsEl.value   : '',
+        transmissoes: []
+      };
+
+      var accBlocks = document.querySelectorAll('#page-ctrs .acc-block');
+      accBlocks.forEach(function(acc) {
+        var inputs = acc.querySelectorAll('input, select, textarea');
+        dados.transmissoes.push({
+          cidade:      inputs[0] ? inputs[0].value : '',
+          infra:       inputs[1] ? inputs[1].value : '',
+          horaAbert:   inputs[2] ? inputs[2].value : '',
+          horaFim:     inputs[3] ? inputs[3].value : '',
+          audioQ:      inputs[4] ? inputs[4].value : '',
+          videoQ:      inputs[5] ? inputs[5].value : '',
+          reporter:    inputs[6] ? inputs[6].value : '',
+          entradas:    inputs[7] ? inputs[7].value : '',
+          rc:          inputs[8] ? inputs[8].value : '',
+          statusTx:    inputs[9] ? inputs[9].value : '',
+          falhas:      inputs[10] ? inputs[10].value : ''
+        });
+      });
+
+      localStorage.setItem('tv_ctrs_rascunho_v2', JSON.stringify(dados));
+      if (!silencioso) {
+        alert('Rascunho do Relatório CTRS salvo com sucesso no navegador!');
+      }
+    } catch (e) {
+      console.warn('Erro ao salvar rascunho CTRS:', e);
+    }
   }
   window.salvarRascunhoRelatorioTV = salvarRascunhoRelatorioTV;
+
+  function carregarRascunhoRelatorioTV() {
+    try {
+      var raw = localStorage.getItem('tv_ctrs_rascunho_v2');
+      if (!raw) return;
+      var dados = JSON.parse(raw);
+      if (!dados) return;
+
+      var dataEl  = document.getElementById('ctrs-data');
+      var pracaEl = document.getElementById('ctrs-praca');
+      var tipoEl  = document.getElementById('ctrs-tipo');
+      var obsEl   = document.getElementById('ctrs-obs');
+
+      if (dataEl && dados.data)   dataEl.value = dados.data;
+      if (pracaEl && dados.praca) pracaEl.value = dados.praca;
+      if (tipoEl && dados.tipo)   tipoEl.value = dados.tipo;
+      if (obsEl && dados.obs)     obsEl.value = dados.obs;
+
+      if (Array.isArray(dados.transmissoes)) {
+        var accBlocks = document.querySelectorAll('#page-ctrs .acc-block');
+        dados.transmissoes.forEach(function(tx, idx) {
+          if (accBlocks[idx]) {
+            var inputs = accBlocks[idx].querySelectorAll('input, select, textarea');
+            if (inputs[0] && tx.cidade !== undefined)    inputs[0].value = tx.cidade;
+            if (inputs[1] && tx.infra !== undefined)     inputs[1].value = tx.infra;
+            if (inputs[2] && tx.horaAbert !== undefined) inputs[2].value = tx.horaAbert;
+            if (inputs[3] && tx.horaFim !== undefined)   inputs[3].value = tx.horaFim;
+            if (inputs[4] && tx.audioQ !== undefined)    inputs[4].value = tx.audioQ;
+            if (inputs[5] && tx.videoQ !== undefined)    inputs[5].value = tx.videoQ;
+            if (inputs[6] && tx.reporter !== undefined)  inputs[6].value = tx.reporter;
+            if (inputs[7] && tx.entradas !== undefined)  inputs[7].value = tx.entradas;
+            if (inputs[8] && tx.rc !== undefined)        inputs[8].value = tx.rc;
+            if (inputs[9] && tx.statusTx !== undefined)  inputs[9].value = tx.statusTx;
+            if (inputs[10] && tx.falhas !== undefined)   inputs[10].value = tx.falhas;
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar rascunho CTRS:', e);
+    }
+  }
+
+  function gerarHTMLTemplateCTRS() {
+    var dataEl  = document.getElementById('ctrs-data');
+    var pracaEl = document.getElementById('ctrs-praca');
+    var tipoEl  = document.getElementById('ctrs-tipo');
+    var obsEl   = document.getElementById('ctrs-obs');
+
+    var praca = pracaEl ? pracaEl.value : 'Juiz de Fora';
+    var dataRaw = dataEl && dataEl.value ? dataEl.value : '';
+    var dataFmt = '';
+    if (dataRaw) {
+      var p = dataRaw.split('-');
+      dataFmt = (p.length === 3) ? (p[2] + '/' + p[1] + '/' + p[0]) : dataRaw;
+    } else {
+      var dNow = new Date();
+      var dia = String(dNow.getDate()).padStart(2, '0');
+      var mes = String(dNow.getMonth() + 1).padStart(2, '0');
+      dataFmt = dia + '/' + mes + '/' + dNow.getFullYear();
+    }
+
+    var tipo = tipoEl ? tipoEl.value : 'INTEGRAÇÃO NOTÍCIA';
+    var inCheck = '', mg1Check = '', mg2Check = '', outrosCheck = '';
+    var tipoUpper = tipo.toUpperCase();
+    if (tipoUpper.includes('NOTÍCIA') || tipoUpper.includes('IN')) {
+      inCheck = 'X';
+    } else if (tipoUpper === 'MG1') {
+      mg1Check = 'X';
+    } else if (tipoUpper === 'MG2') {
+      mg2Check = 'X';
+    } else {
+      outrosCheck = 'X';
+    }
+
+    var obs = obsEl ? obsEl.value.trim() : '';
+
+    var formatTimeVal = function(val) {
+      if (!val) return '';
+      var parts = val.trim().split(':');
+      if (parts.length === 2) return parts[0] + 'h' + parts[1] + '\'';
+      return val.trim();
+    };
+
+    var formatQualidade = function(val) {
+      if (!val) return 'C';
+      var v = val.trim();
+      if (v.startsWith('NC') || v.startsWith('Não Conforme')) return 'NC';
+      if (v.startsWith('NA') || v.startsWith('Não se Aplica')) return 'NA';
+      return 'C';
+    };
+
+    var accBlocks = document.querySelectorAll('#page-ctrs .acc-block');
+    var transmissoesHTML = '';
+
+    accBlocks.forEach(function(acc, idx) {
+      var num = idx + 1;
+      var inputs = acc.querySelectorAll('input, select, textarea');
+      var cidade    = (inputs[0] && inputs[0].value.trim()) || '';
+      var infra     = (inputs[1] && inputs[1].value.trim()) || '';
+      var horaAbert = formatTimeVal(inputs[2] ? inputs[2].value : '');
+      var horaFim   = formatTimeVal(inputs[3] ? inputs[3].value : '');
+      var audioQ    = formatQualidade(inputs[4] ? inputs[4].value : '');
+      var videoQ    = formatQualidade(inputs[5] ? inputs[5].value : '');
+      var reporter  = (inputs[6] && inputs[6].value.trim()) || '';
+      var entradas  = (inputs[7] && inputs[7].value.trim()) || '';
+      var rc        = (inputs[8] && inputs[8].value.trim()) || '';
+      var statusTx  = formatQualidade(inputs[9] ? inputs[9].value : '');
+      var falhas    = (inputs[10] && inputs[10].value.trim()) || '';
+
+      var reporterCompleto = reporter;
+      if (entradas) {
+        reporterCompleto += (reporterCompleto ? ' (' + entradas + ')' : entradas);
+      }
+
+      var cidadeCompleta = cidade;
+      if (cidadeCompleta && !cidadeCompleta.toLowerCase().includes(praca.toLowerCase())) {
+        cidadeCompleta = praca + ' - ' + cidadeCompleta;
+      } else if (!cidadeCompleta) {
+        cidadeCompleta = praca;
+      }
+
+      transmissoesHTML +=
+        '<table cellpadding="4" cellspacing="0" style="width:100%; max-width:820px; border-collapse:collapse; font-family:Arial, Helvetica, sans-serif; font-size:11.5px; color:#000000; border:1.5px solid #000000; margin-bottom:12px;">' +
+          '<tr style="background-color:#F2F2F2;">' +
+            '<td colspan="3" style="text-align:center; font-weight:bold; font-size:12px; border:1px solid #000000; padding:4px;">' +
+              'Informações da Transmissão ao Vivo ' + num +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td colspan="3" style="border:1px solid #000000; padding:4px 8px;">' +
+              '<strong>Cidade:</strong> ' + cidadeCompleta +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td style="width:45%; border:1px solid #000000; padding:4px 8px;">' +
+              '<strong>Infraestrutura de Transmissão Utilizada:</strong> ' + infra +
+            '</td>' +
+            '<td style="width:33%; border:1px solid #000000; padding:4px 8px;">' +
+              '<strong>Hora Abertura Sinal:</strong> ' + horaAbert +
+            '</td>' +
+            '<td style="width:22%; border:1px solid #000000; padding:4px 8px;">' +
+              '<strong>Qualidade Áudio:</strong> ' + audioQ +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td style="border:1px solid #000000; padding:4px 8px;">' +
+              '<strong>Repórter:</strong> ' + reporterCompleto +
+            '</td>' +
+            '<td style="border:1px solid #000000; padding:4px 8px;">' +
+              '<strong>Hora final (Teste OK):</strong> ' + horaFim +
+            '</td>' +
+            '<td style="border:1px solid #000000; padding:4px 8px;">' +
+              '<strong>Qualidade Vídeo:</strong> ' + videoQ +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td style="border:1px solid #000000; padding:4px 8px;">' +
+              '<strong>Repórter Cinematográfico:</strong> ' + rc +
+            '</td>' +
+            '<td colspan="2" style="border:1px solid #000000; padding:4px 8px;">' +
+              '<strong>Status da Transmissão:</strong> ' + statusTx +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td colspan="3" style="border:1px solid #000000; padding:4px 8px; min-height:30px;">' +
+              '<strong>Falhas ocorridas:</strong> ' + (falhas || '') +
+            '</td>' +
+          '</tr>' +
+        '</table>';
+    });
+
+    var htmlCompleto =
+      '<div style="font-family:Arial, Helvetica, sans-serif; color:#000000; max-width:820px; margin:0 auto; padding:10px;">' +
+        '<!-- CABEÇALHO OFICIAL ENGENHARIA -->' +
+        '<table cellpadding="4" cellspacing="0" style="width:100%; max-width:820px; border-collapse:collapse; font-family:Arial, sans-serif; font-size:11.5px; color:#000000; border:1.5px solid #000000; margin-bottom:12px;">' +
+          '<tr>' +
+            '<td rowspan="2" style="width:160px; text-align:center; vertical-align:middle; border:1px solid #000000; padding:8px;">' +
+              '<div style="font-weight:900; font-size:15px; letter-spacing:1px; color:#000000;">TV INTEGRAÇÃO</div>' +
+            '</td>' +
+            '<td style="text-align:center; vertical-align:middle; border:1px solid #000000; padding:6px; font-weight:bold; font-size:12px; line-height:1.4;">' +
+              'Processo Engenharia 1.1.1 – P02 – F02<br/>' +
+              'Checklist de Transmissão ao Vivo CTRS' +
+            '</td>' +
+            '<td style="width:140px; text-align:center; vertical-align:middle; border:1px solid #000000; padding:6px; font-size:11px;">' +
+              'Formulário<br/>' +
+              '<strong>Página: 1/1</strong>' +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td style="border:1px solid #000000; padding:4px 8px; font-size:10.5px;">' +
+              '<table style="width:100%; border-collapse:collapse;">' +
+                '<tr>' +
+                  '<td style="text-align:left; border:none; padding:0;">Data Emissão Inicial: 11/08/2011</td>' +
+                  '<td style="text-align:right; border:none; padding:0;">Data Revisão: 01/04/2016</td>' +
+                '</tr>' +
+              '</table>' +
+            '</td>' +
+            '<td style="text-align:center; border:1px solid #000000; padding:4px 8px; font-size:10.5px;">' +
+              'Número Revisão: 02' +
+            '</td>' +
+          '</tr>' +
+        '</table>' +
+
+        '<!-- INFORMAÇÕES PRINCIPAIS -->' +
+        '<table cellpadding="4" cellspacing="0" style="width:100%; max-width:820px; border-collapse:collapse; font-family:Arial, sans-serif; font-size:11.5px; color:#000000; border:1.5px solid #000000; margin-bottom:12px;">' +
+          '<tr style="background-color:#F2F2F2;">' +
+            '<td colspan="4" style="text-align:center; font-weight:bold; border:1px solid #000000; padding:4px;">' +
+              'Informações Principais' +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td colspan="2" style="width:50%; border:1px solid #000000; padding:5px 8px;">' +
+              '<strong>Data:</strong> ' + dataFmt +
+            '</td>' +
+            '<td colspan="2" style="width:50%; border:1px solid #000000; padding:5px 8px;">' +
+              '<strong>Praça:</strong> ' + praca +
+            '</td>' +
+          '</tr>' +
+          '<tr style="text-align:center;">' +
+            '<td style="width:25%; border:1px solid #000000; padding:5px 8px;">' +
+              '<strong>IN:</strong> ' + (inCheck || '&nbsp;') +
+            '</td>' +
+            '<td style="width:25%; border:1px solid #000000; padding:5px 8px;">' +
+              '<strong>MG1:</strong> ' + (mg1Check || '&nbsp;') +
+            '</td>' +
+            '<td style="width:25%; border:1px solid #000000; padding:5px 8px;">' +
+              '<strong>MG2:</strong> ' + (mg2Check || '&nbsp;') +
+            '</td>' +
+            '<td style="width:25%; border:1px solid #000000; padding:5px 8px;">' +
+              '<strong>OUTROS:</strong> ' + (outrosCheck || '&nbsp;') +
+            '</td>' +
+          '</tr>' +
+        '</table>' +
+
+        '<!-- TRANSMISSÕES AO VIVO -->' +
+        transmissoesHTML +
+
+        '<!-- LEGENDA -->' +
+        '<table cellpadding="4" cellspacing="0" style="width:100%; max-width:820px; border-collapse:collapse; font-family:Arial, sans-serif; font-size:11px; color:#000000; border:1.5px solid #000000; margin-bottom:12px;">' +
+          '<tr style="background-color:#F2F2F2;">' +
+            '<td colspan="3" style="text-align:center; font-weight:bold; border:1px solid #000000; padding:4px;">' +
+              'Legenda' +
+            '</td>' +
+          '</tr>' +
+          '<tr style="text-align:center;">' +
+            '<td style="width:33.3%; border:1px solid #000000; padding:5px 8px;">C – Conforme</td>' +
+            '<td style="width:33.3%; border:1px solid #000000; padding:5px 8px;">NC – Não Conforme</td>' +
+            '<td style="width:33.3%; border:1px solid #000000; padding:5px 8px;">NA – Não se Aplica</td>' +
+          '</tr>' +
+        '</table>' +
+
+        '<!-- OBSERVAÇÕES -->' +
+        '<table cellpadding="4" cellspacing="0" style="width:100%; max-width:820px; border-collapse:collapse; font-family:Arial, sans-serif; font-size:11.5px; color:#000000; border:1.5px solid #000000; margin-bottom:12px;">' +
+          '<tr style="background-color:#F2F2F2;">' +
+            '<td style="text-align:center; font-weight:bold; border:1px solid #000000; padding:4px;">' +
+              'Observações' +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td style="border:1px solid #000000; padding:8px; min-height:40px; white-space:pre-wrap;">' +
+              (obs || 'Sem observações.') +
+            '</td>' +
+          '</tr>' +
+        '</table>' +
+      '</div>';
+
+    return {
+      html: htmlCompleto,
+      assunto: 'Transmissão ao Vivo - CTRS - ' + (inCheck ? 'IN' : (mg1Check ? 'MG1' : (mg2Check ? 'MG2' : 'OUTROS'))) + ' - ' + praca + ' - ' + dataFmt
+    };
+  }
+
+  function copiarRelatorioOutlook() {
+    salvarRascunhoRelatorioTV(true);
+    var resultado = gerarHTMLTemplateCTRS();
+    var html = resultado.html;
+    var assunto = resultado.assunto;
+
+    var assuntoEl = document.getElementById('ctrs-outlook-assunto');
+    if (assuntoEl) {
+      assuntoEl.textContent = assunto;
+    }
+
+    var copiado = false;
+    if (navigator.clipboard && window.ClipboardItem) {
+      try {
+        var blobHtml = new Blob([html], { type: 'text/html' });
+        var blobText = new Blob([assunto + '\n\n' + html.replace(/<[^>]+>/g, ' ')], { type: 'text/plain' });
+        var item = new ClipboardItem({
+          'text/html': blobHtml,
+          'text/plain': blobText
+        });
+        navigator.clipboard.write([item]).then(function() {
+          abrirPopup('popup-ctrs-outlook');
+        }).catch(function(err) {
+          fallbackCopiarAreaTransferencia(html);
+        });
+        copiado = true;
+      } catch (e) {
+        copiado = false;
+      }
+    }
+
+    if (!copiado) {
+      fallbackCopiarAreaTransferencia(html);
+    }
+  }
+  window.copiarRelatorioOutlook = copiarRelatorioOutlook;
+
+  function fallbackCopiarAreaTransferencia(html) {
+    var container = document.createElement('div');
+    container.innerHTML = html;
+    container.style.position = 'fixed';
+    container.style.pointerEvents = 'none';
+    container.style.opacity = '0';
+    document.body.appendChild(container);
+
+    var range = document.createRange();
+    range.selectNode(container);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+
+    try {
+      document.execCommand('copy');
+      abrirPopup('popup-ctrs-outlook');
+    } catch (e) {
+      alert('Não foi possível copiar automaticamente. Por favor selecione e copie os dados.');
+    }
+
+    window.getSelection().removeAllRanges();
+    document.body.removeChild(container);
+  }
 
   function enviarRelatorioTV() {
     var nowStr = formatDataHoraLocal();
@@ -2894,7 +3352,7 @@ document.addEventListener('DOMContentLoaded', function () {
       var plClass = isArquivado ? 'pl-gray' : (isParcial ? 'pl-y' : (item.tipo==='ocorrencia'?'pl-r':item.tipo==='relatorio'?'pl-g':'pl-y'));
 
       return (
-        '<article class="' + cardClasses + '" onclick="selecionarItemHistorico(\'' + item.id + '\')" style="cursor:pointer;margin-bottom:10px;' + (isSel ? 'border-color:var(--blue);box-shadow:0 0 0 2px rgba(0,113,227,.15);' : '') + '">' +
+        '<article class="' + cardClasses + '" onclick="verDetalhesHistorico(\'' + item.id + '\')" style="cursor:pointer;margin-bottom:10px;' + (isSel ? 'border-color:var(--blue);box-shadow:0 0 0 2px rgba(0,113,227,.15);' : '') + '">' +
           '<div class="prio-line ' + plClass + '"></div>' +
           '<div class="oc-body">' +
             '<div class="oc-header"><h3>' + item.titulo + '</h3>' + tagTipo + tagMeu + '</div>' +
@@ -2904,9 +3362,6 @@ document.addEventListener('DOMContentLoaded', function () {
               '<span><i data-lucide="check-circle-2" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Resolvido por: ' + (item.resolvidoPor || 'Pendente') + '</span>' +
               '<span><i data-lucide="calendar" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> ' + item.dataCriacao + '</span>' +
             '</div>' +
-          '</div>' +
-          '<div class="oc-actions" style="justify-content:center;">' +
-            '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); verDetalhesHistorico(\'' + item.id + '\');">Ver Detalhes</button>' +
           '</div>' +
         '</article>'
       );
@@ -3089,10 +3544,11 @@ document.addEventListener('DOMContentLoaded', function () {
         var mediaSrc = anx.url || anx.dataUrl || '';
 
         if (isImg && mediaSrc) {
+          var safeName = (anx.name ? anx.name.replace(/'/g, "\\'") : 'Imagem Anexa');
           mediaHTML +=
             '<div style="text-align:center;background:var(--surface);padding:8px;border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
-              '<img src="' + mediaSrc + '" alt="' + (anx.name || 'Imagem') + '" loading="lazy" style="max-width:100%;max-height:300px;border-radius:var(--r-md);cursor:pointer;object-fit:contain;" onclick="window.open(this.src)"/>' +
-              '<div style="font-size:11px;color:var(--muted);margin-top:6px;">📷 ' + (anx.name || 'Imagem') + ' (clique para ampliar)</div>' +
+              '<img src="' + mediaSrc + '" alt="' + (anx.name || 'Imagem') + '" loading="lazy" style="max-width:100%;max-height:300px;border-radius:var(--r-md);cursor:pointer;object-fit:contain;transition:transform 0.15s ease;" onmouseover="this.style.transform=\'scale(1.01)\'" onmouseout="this.style.transform=\'scale(1)\'" onclick="abrirQuickLook(this.src, \'' + safeName + '\')"/>' +
+              '<div style="font-size:11px;color:var(--blue);font-weight:600;margin-top:6px;cursor:pointer;" onclick="abrirQuickLook(\'' + mediaSrc + '\', \'' + safeName + '\')">📷 ' + (anx.name || 'Imagem') + ' (clique para ampliar no Quick Look)</div>' +
             '</div>';
         } else if (mediaSrc) {
           mediaHTML +=
@@ -3240,7 +3696,9 @@ document.addEventListener('DOMContentLoaded', function () {
   ═══════════════════════════════════════════ */
 
   var NOTIF_STORAGE_KEY = 'tv_notificacoes_v2';
+  var NOTIF_DISMISSED_KEY = 'tv_notificacoes_dismissed_v2';
   var notificacoesStore = [];
+  var notificacoesDispensadas = [];
 
   function loadNotificacoes() {
     try {
@@ -3250,11 +3708,22 @@ document.addEventListener('DOMContentLoaded', function () {
         if (Array.isArray(parsed)) notificacoesStore = parsed;
       }
     } catch(e) {}
+
+    try {
+      var rawD = localStorage.getItem(NOTIF_DISMISSED_KEY);
+      if (rawD) {
+        var parsedD = JSON.parse(rawD);
+        if (Array.isArray(parsedD)) notificacoesDispensadas = parsedD;
+      }
+    } catch(e) {}
   }
 
   function saveNotificacoes() {
     try {
-      localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(notificacoesStore.slice(0, 40)));
+      localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(notificacoesStore.slice(0, 50)));
+    } catch(e) {}
+    try {
+      localStorage.setItem(NOTIF_DISMISSED_KEY, JSON.stringify(notificacoesDispensadas.slice(-100)));
     } catch(e) {}
     atualizarBadgesNotificacoes();
   }
@@ -3300,22 +3769,27 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.mostrarToast = mostrarToast;
 
-  function adicionarNotificacao(titulo, mensagem, tipo, exibirToast) {
+  function adicionarNotificacao(titulo, mensagem, tipo, exibirToast, chaveAutomatica) {
+    if (chaveAutomatica && Array.isArray(notificacoesDispensadas) && notificacoesDispensadas.includes(chaveAutomatica)) {
+      return;
+    }
+
     var novaNotif = {
       id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
       titulo: titulo || 'Notificação do Sistema',
       msg: mensagem || '',
       tempo: formatDataHoraLocal(),
       tipo: tipo || 'info',
-      lida: false
+      lida: false,
+      chaveAutomatica: chaveAutomatica || null
     };
 
     var jaExiste = (notificacoesStore || []).some(function(n) {
-      return n && n.titulo === titulo && n.msg === mensagem;
+      return n && ((chaveAutomatica && n.chaveAutomatica === chaveAutomatica) || (n.titulo === titulo && n.msg === mensagem));
     });
 
     if (!jaExiste) {
-      notificacoesStore = [novaNotif].concat(notificacoesStore || []).slice(0, 40);
+      notificacoesStore = [novaNotif].concat(notificacoesStore || []).slice(0, 50);
       saveNotificacoes();
       if (exibirToast !== false) {
         mostrarToast(titulo, mensagem, tipo);
@@ -3324,6 +3798,19 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.adicionarNotificacao = adicionarNotificacao;
+
+  function removerNotificacao(id) {
+    var notif = (notificacoesStore || []).find(function(n){ return n && n.id === id; });
+    if (notif && notif.chaveAutomatica) {
+      if (!notificacoesDispensadas.includes(notif.chaveAutomatica)) {
+        notificacoesDispensadas.push(notif.chaveAutomatica);
+      }
+    }
+    notificacoesStore = (notificacoesStore || []).filter(function(n){ return n && n.id !== id; });
+    saveNotificacoes();
+    renderNotificacoes();
+  }
+  window.removerNotificacao = removerNotificacao;
 
   function atualizarBadgesNotificacoes() {
     var badgeSidebar = document.querySelector('.notif-badge');
@@ -3349,24 +3836,20 @@ document.addEventListener('DOMContentLoaded', function () {
     // 1. Ocorrências com prazo expirado
     (ocorrencias || []).forEach(function(oc) {
       if (oc && oc.status === 'aberta' && !idsNaLixeira.includes(oc.id) && isOcorrenciaVencida(oc)) {
+        var chaveOc = 'vencida_' + oc.id + '_' + (oc.prazo || '');
         var tit = '⚠️ Prazo Expirado: ' + (oc.titulo || 'Ocorrência');
         var msg = 'A ocorrência para "' + (oc.local || 'Central Técnica') + '" ultrapassou o horário estipulado (' + (oc.prazo || 'Prazo vencido') + ') e requer atenção.';
-        var jaNotificado = (notificacoesStore || []).some(function(n){ return n && n.titulo === tit; });
-        if (!jaNotificado) {
-          adicionarNotificacao(tit, msg, 'warning', false);
-        }
+        adicionarNotificacao(tit, msg, 'warning', false, chaveOc);
       }
     });
 
     // 2. Ocorrências arquivadas pendentes para o turno
     var arquivadas = getArquivadas().filter(function(oc){ return !idsNaLixeira.includes(oc.id); });
     if (arquivadas.length > 0) {
+      var chaveArq = 'arq_status_' + arquivadas.map(function(a){ return a.id; }).sort().join('_');
       var titArq = '📦 Ocorrências Arquivadas para o Turno';
       var msgArq = 'Existem ' + arquivadas.length + ' ocorrência(s) arquivada(s) aguardando verificação e acompanhamento da equipe.';
-      var jaNotificadoArq = (notificacoesStore || []).some(function(n){ return n && n.titulo === titArq; });
-      if (!jaNotificadoArq) {
-        adicionarNotificacao(titArq, msgArq, 'info', false);
-      }
+      adicionarNotificacao(titArq, msgArq, 'info', false, chaveArq);
     }
   }
   window.verificarNotificacoesAutomaticas = verificarNotificacoesAutomaticas;
@@ -3399,15 +3882,18 @@ document.addEventListener('DOMContentLoaded', function () {
       var unreadBadge = !n.lida ? '<span class="tag tag-blue" style="font-size:9.5px;padding:1px 6px;margin-left:6px;font-weight:600;">Nova</span>' : '';
 
       return (
-        '<div style="background:' + bgCor + ';border:1px solid ' + borderCor + ';border-radius:var(--r-md);padding:10px 12px;display:flex;gap:10px;align-items:flex-start;">' +
+        '<div style="background:' + bgCor + ';border:1px solid ' + borderCor + ';border-radius:var(--r-md);padding:10px 12px;display:flex;gap:10px;align-items:flex-start;position:relative;">' +
           '<div style="color:' + txtCor + ';margin-top:1px;"><i data-lucide="' + icoNome + '" style="width:16px;height:16px;stroke-width:2.2;"></i></div>' +
-          '<div style="flex:1;display:flex;flex-direction:column;gap:2px;">' +
+          '<div style="flex:1;display:flex;flex-direction:column;gap:2px;padding-right:18px;">' +
             '<div style="display:flex;justify-content:space-between;align-items:center;">' +
               '<div style="display:flex;align-items:center;"><strong style="font-size:12.5px;color:' + txtCor + ';">' + (n.titulo || 'Alerta') + '</strong>' + unreadBadge + '</div>' +
               '<span style="font-size:10.5px;color:var(--muted);white-space:nowrap;margin-left:8px;">' + (n.tempo || '') + '</span>' +
             '</div>' +
             '<span style="font-size:12px;color:var(--txt2);line-height:1.4;">' + (n.msg || '') + '</span>' +
           '</div>' +
+          '<button type="button" onclick="removerNotificacao(\'' + n.id + '\')" title="Dispensar notificação" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;" onmouseover="this.style.color=\'var(--red)\'" onmouseout="this.style.color=\'var(--muted)\'">' +
+            '<i data-lucide="x" style="width:13px;height:13px;stroke-width:2.2;"></i>' +
+          '</button>' +
         '</div>'
       );
     }).join('');
@@ -3427,11 +3913,36 @@ document.addEventListener('DOMContentLoaded', function () {
   window.abrirNotificacoes = abrirNotificacoes;
 
   function limparTodasNotificacoes() {
+    // 1. Marca todas as notificações atuais como dispensadas para que o robô não as recrie
+    var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
+    (ocorrencias || []).forEach(function(oc) {
+      if (oc && oc.status === 'aberta' && !idsNaLixeira.includes(oc.id)) {
+        var chaveOc = 'vencida_' + oc.id + '_' + (oc.prazo || '');
+        if (!notificacoesDispensadas.includes(chaveOc)) {
+          notificacoesDispensadas.push(chaveOc);
+        }
+      }
+    });
+
+    var arquivadas = getArquivadas().filter(function(oc){ return !idsNaLixeira.includes(oc.id); });
+    if (arquivadas.length > 0) {
+      var chaveArq = 'arq_status_' + arquivadas.map(function(a){ return a.id; }).sort().join('_');
+      if (!notificacoesDispensadas.includes(chaveArq)) {
+        notificacoesDispensadas.push(chaveArq);
+      }
+    }
+
+    (notificacoesStore || []).forEach(function(n) {
+      if (n && n.chaveAutomatica && !notificacoesDispensadas.includes(n.chaveAutomatica)) {
+        notificacoesDispensadas.push(n.chaveAutomatica);
+      }
+    });
+
     notificacoesStore = [];
     saveNotificacoes();
     renderNotificacoes();
     if (typeof mostrarToast === 'function') {
-      mostrarToast('Notificações Limpas', 'O histórico de notificações foi esvaziado.', 'info');
+      mostrarToast('Notificações Limpas', 'O histórico de notificações foi esvaziado com sucesso.', 'info');
     }
   }
   window.limparTodasNotificacoes = limparTodasNotificacoes;

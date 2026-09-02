@@ -4,9 +4,9 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>TV Integração</title>
-  <link rel="icon" type="image/png" href="favicon.png?v=7.1"/>
-  <link rel="shortcut icon" href="favicon.ico?v=7.1"/>
-  <link rel="stylesheet" href="style.css?v=7.1"/>
+  <link rel="icon" type="image/png" href="favicon.png?v=7.3"/>
+  <link rel="shortcut icon" href="favicon.ico?v=7.3"/>
+  <link rel="stylesheet" href="style.css?v=7.3"/>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <style>
     .lucide { display:inline-block; vertical-align:middle; flex-shrink:0; }
@@ -413,6 +413,63 @@
 </div>
 
 <!-- ═══════════════════════════════════════
+     POPUP: MACOS QUICK LOOK (VISUALIZADOR DE IMAGENS)
+═══════════════════════════════════════ -->
+<div class="overlay quicklook-overlay" id="popup-quicklook" hidden role="dialog" aria-modal="true" aria-label="Visualizador Quick Look" onclick="if(event.target===this) fecharQuickLook()">
+  <div class="quicklook-container" onclick="event.stopPropagation()">
+    <div class="quicklook-header">
+      <div class="quicklook-title-group">
+        <i data-lucide="image" style="width:16px;height:16px;color:var(--blue);stroke-width:2;"></i>
+        <span id="quicklook-filename" class="quicklook-filename">Imagem.png</span>
+      </div>
+      <div class="quicklook-actions">
+        <a id="quicklook-download-btn" href="#" download="imagem" class="quicklook-btn" title="Baixar imagem original">
+          <i data-lucide="download" style="width:15px;height:15px;stroke-width:2;"></i>
+          <span>Baixar</span>
+        </a>
+        <button type="button" class="quicklook-btn quicklook-close-btn" onclick="fecharQuickLook()" title="Fechar (ESC)">
+          <i data-lucide="x" style="width:16px;height:16px;stroke-width:2.2;"></i>
+        </button>
+      </div>
+    </div>
+    <div class="quicklook-body">
+      <img id="quicklook-img" src="" alt="Visualização em alta resolução" />
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     POPUP: CTRS COPIADO PARA OUTLOOK (BETA)
+═══════════════════════════════════════ -->
+<div class="overlay" id="popup-ctrs-outlook" hidden role="dialog" aria-modal="true" onclick="if(event.target===this) fecharPopup('popup-ctrs-outlook')">
+  <div class="modal" style="width: 460px; padding: 24px; text-align: center; border-radius: var(--r-2xl);">
+    <div style="width: 48px; height: 48px; border-radius: 50%; background: #ECFDF5; color: #10B981; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto 14px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.2);">
+      <i data-lucide="clipboard-check" style="width: 24px; height: 24px; stroke-width: 2.2;"></i>
+    </div>
+    <h3 style="font-size: 16px; font-weight: 700; color: var(--txt); margin-bottom: 8px; letter-spacing: -0.015em;">Relatório Copiado com Sucesso!</h3>
+    <p style="font-size: 13px; color: var(--txt2); line-height: 1.5; margin-bottom: 14px;">
+      O checklist oficial do CTRS foi formatado e copiado para a área de transferência. Basta abrir o Outlook e pressionar <strong>CTRL + V</strong> para colar a tabela pronta.
+    </p>
+
+    <!-- ASSUNTO SUGERIDO -->
+    <div style="background: rgba(0, 113, 227, 0.06); border: 1px solid var(--blue-border); border-radius: var(--r-md); padding: 10px 12px; margin-bottom: 12px; text-align: left; font-size: 11.5px;">
+      <div style="font-size: 10px; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Assunto sugerido para o e-mail:</div>
+      <div id="ctrs-outlook-assunto" style="font-weight: 600; color: var(--txt); user-select: all; font-family: monospace;">Transmissão ao Vivo - CTRS - IN - Juiz de Fora</div>
+    </div>
+
+    <!-- AVISO BETA -->
+    <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: var(--r-md); padding: 10px 12px; font-size: 11.5px; color: #B45309; text-align: left; margin-bottom: 18px; display: flex; align-items: flex-start; gap: 8px;">
+      <i data-lucide="alert-triangle" style="width: 16px; height: 16px; flex-shrink: 0; stroke-width: 2; margin-top: 1px; color: #D97706;"></i>
+      <span><strong>Recurso em fase Beta:</strong> Por favor, faça uma rápida conferência visual dos dados colados antes de enviar o e-mail.</span>
+    </div>
+
+    <div style="display: flex; justify-content: center; gap: 8px;">
+      <button type="button" class="btn btn-primary" onclick="fecharPopup('popup-ctrs-outlook')" style="min-width: 130px;">Entendido</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
      POPUP: GERAR RELATÓRIO POWER BI
 ═══════════════════════════════════════ -->
 <div class="overlay" id="popup-gerar-powerbi" hidden role="dialog" aria-modal="true" aria-labelledby="pbi-title">
@@ -649,7 +706,6 @@
     <div class="s-btn" onclick="irPara('arquivados',this)" role="button" tabindex="0">
       <i data-lucide="archive" style="width:15px;height:15px;stroke-width:2;"></i>
       <span class="s-label">Arquivados</span>
-      <span class="s-badge arquivados-badge" style="display:none;">0</span>
     </div>
     <div class="s-btn" onclick="irPara('historico',this)" role="button" tabindex="0">
       <i data-lucide="clock" style="width:15px;height:15px;stroke-width:2;"></i>
@@ -681,12 +737,10 @@
     <div class="s-btn" onclick="irPara('lixeira',this)" role="button" tabindex="0">
       <i data-lucide="trash-2" style="width:15px;height:15px;stroke-width:2;"></i>
       <span class="s-label">Lixeira</span>
-      <span class="s-badge lixeira-badge" style="display:none;">0</span>
     </div>
     <div class="s-btn" onclick="abrirNotificacoes()" role="button" tabindex="0">
       <i data-lucide="bell" style="width:15px;height:15px;stroke-width:2;"></i>
       <span class="s-label">Notificações</span>
-      <span class="s-badge notif-badge">0</span>
     </div>
     <div class="s-btn" onclick="irPara('config',this)" role="button" tabindex="0">
       <i data-lucide="settings" style="width:15px;height:15px;stroke-width:2;"></i>
@@ -995,9 +1049,14 @@
               <span class="sb-tag">E-mail</span>
             </div>
           </div>
-          <div style="display:flex;gap:6px;margin-left:auto;">
-            <button class="btn btn-ghost btn-sm" onclick="salvarRascunhoRelatorioTV()">Salvar Rascunho</button>
-            <button class="btn btn-primary btn-sm" onclick="enviarRelatorioTV()">Enviar Relatório</button>
+          <div style="display:flex;gap:8px;margin-left:auto;align-items:center;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="salvarRascunhoRelatorioTV()">Salvar Rascunho</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="copiarRelatorioOutlook()" style="position:relative;display:inline-flex;align-items:center;gap:6px;overflow:visible;" title="Copiar relatório formatado para colar direto no Outlook">
+              <i data-lucide="copy" style="width:14px;height:14px;stroke-width:2;color:var(--blue);"></i>
+              <span>Copiar para o Outlook</span>
+              <span class="apple-beta-capsule">BETA</span>
+            </button>
+            <button type="button" class="btn btn-success btn-sm" onclick="enviarRelatorioTV()">Enviar Relatório</button>
           </div>
         </div>
       </div>
@@ -1566,7 +1625,7 @@
               </thead>
               <tbody id="rec-materiais-tbody">
                 <tr>
-                  <td style="text-align:center;"><input type="number" class="item-quant" min="1" value="1" style="text-align:center;font-weight:600;width:55px;" /></td>
+                  <td style="text-align:center;"><input type="number" class="item-quant" min="1" value="" placeholder="" style="text-align:center;font-weight:600;width:55px;" /></td>
                   <td><input type="text" class="item-desc" placeholder="Descrição do equipamento/material..."/></td>
                   <td><input type="text" class="item-plaq" placeholder="Plaqueta..."/></td>
                   <td><input type="text" class="item-serie" placeholder="Nº Série..."/></td>
@@ -1741,9 +1800,9 @@
                 </thead>
                 <tbody id="req-itens-tbody">
                   <tr>
-                    <td style="text-align:center;"><input type="number" class="item-quant" min="1" value="1" style="text-align:center;font-weight:600;width:55px;" /></td>
+                    <td style="text-align:center;"><input type="number" class="item-quant" min="1" value="" placeholder="" style="text-align:center;font-weight:600;width:55px;" /></td>
                     <td><input type="text" class="item-desc" placeholder="Ex: Descrição do material..." /></td>
-                    <td><input type="text" class="item-cod" placeholder="Código ex: P4-120" /></td>
+                    <td><input type="text" class="item-cod" placeholder="Ex: P4-120" /></td>
                     <td><input type="text" class="item-fab" placeholder="Marca ou fabricante" /></td>
                     <td><input type="url" class="item-link" placeholder="https://link-do-produto.com..." /></td>
                     <td style="text-align:center;">
@@ -2263,7 +2322,7 @@
 </div><!-- /main -->
 
 <script src="config.js" onerror="window.ENV_CONFIG=window.ENV_CONFIG||{};"></script>
-<script src="script.js?v=7.1"></script>
+<script src="script.js?v=7.3"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof lucide !== 'undefined') lucide.createIcons();
