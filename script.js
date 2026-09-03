@@ -90,7 +90,7 @@ window.toggleBtnIniciarSessao = toggleBtnIniciarSessao;
 window.iniciarSessao          = iniciarSessao;
 
 document.addEventListener('DOMContentLoaded', function () {
-  console.log('✅ [Sistema TV] Versão 7.3 — Exportador de Template CTRS para Outlook (BETA) & Autosave de Rascunho');
+  console.log('✅ [Sistema TV] Versão 7.4 — Ocorrências do Dashboard no Banco, Autosave Silencioso & Persistência de Orçamentos');
 
   /* ═══════════════════════════════════════════
      BANCO DE DADOS & SERVIÇO DE ARMAZENAMENTO (DB ADAPTER SERVICE)
@@ -1055,8 +1055,31 @@ document.addEventListener('DOMContentLoaded', function () {
   try { loadNotificacoes(); } catch(e) {}
   try { carregarCredenciaisSupabaseConfig(); } catch(e) {}
   try { carregarRascunhoRelatorioTV(); } catch(e) {}
+  try { carregarRascunhoRecebimento(); } catch(e) {}
+  try { carregarRascunhoCompra(); } catch(e) {}
+  try { carregarDashboardMetricsStore(); } catch(e) {}
+  try { carregarOrcamentoStore(); } catch(e) {}
   try { if (typeof DBService !== 'undefined' && DBService.init) DBService.init(); } catch(e) {}
   renderAll(true);
+
+  // Autosave contínuo em segundo plano para formulários (proteção contra queda de energia/fechamento)
+  var debounceTimers = {};
+  function registrarAutosaveListener(pageId, salvarFn) {
+    var page = document.getElementById(pageId);
+    if (!page) return;
+    function acao() {
+      clearTimeout(debounceTimers[pageId]);
+      debounceTimers[pageId] = setTimeout(function() {
+        salvarFn(true);
+      }, 500);
+    }
+    page.addEventListener('input', acao);
+    page.addEventListener('change', acao);
+  }
+
+  registrarAutosaveListener('page-ctrs', salvarRascunhoRelatorioTV);
+  registrarAutosaveListener('page-recebimento', salvarRascunhoRecebimento);
+  registrarAutosaveListener('page-compras', salvarRascunhoCompra);
 
   /* Atualização automática em tempo real unificada de todas as telas e popups */
   setInterval(function() {
@@ -1571,10 +1594,65 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.selecionarFormaPagamento = selecionarFormaPagamento;
 
-  function salvarRascunhoRecebimento() {
-    alert('Rascunho do Recebimento de Equipamentos salvo com sucesso!');
+  function salvarRascunhoRecebimento(silencioso) {
+    try {
+      var remEl = document.getElementById('rec-remetente');
+      var nfEl  = document.getElementById('rec-nf');
+      var recEl = document.getElementById('rec-recebedor');
+      var obsEl = document.getElementById('rec-obs');
+
+      var dados = {
+        remetente: remEl ? remEl.value : '',
+        nf:        nfEl ? nfEl.value : '',
+        recebedor: recEl ? recEl.value : '',
+        obs:       obsEl ? obsEl.value : ''
+      };
+      localStorage.setItem('tv_recebimento_rascunho_v1', JSON.stringify(dados));
+      if (!silencioso && typeof mostrarToast === 'function') {
+        mostrarToast('Rascunho Salvo', 'Dados de recebimento salvos com sucesso.', 'info');
+      }
+    } catch (e) {}
   }
   window.salvarRascunhoRecebimento = salvarRascunhoRecebimento;
+
+  function carregarRascunhoRecebimento() {
+    try {
+      var raw = localStorage.getItem('tv_recebimento_rascunho_v1');
+      if (!raw) return;
+      var dados = JSON.parse(raw);
+      if (!dados) return;
+
+      var remEl = document.getElementById('rec-remetente');
+      var nfEl  = document.getElementById('rec-nf');
+      var recEl = document.getElementById('rec-recebedor');
+      var obsEl = document.getElementById('rec-obs');
+
+      if (remEl && dados.remetente !== undefined) remEl.value = dados.remetente;
+      if (nfEl && dados.nf !== undefined)        nfEl.value = dados.nf;
+      if (recEl && dados.recebedor !== undefined) recEl.value = dados.recebedor;
+      if (obsEl && dados.obs !== undefined)      obsEl.value = dados.obs;
+    } catch (e) {}
+  }
+
+  function limparFormularioRecebimento(confirmar) {
+    if (confirmar && !confirm('Deseja realmente limpar todos os campos do recebimento?')) {
+      return;
+    }
+    try {
+      localStorage.removeItem('tv_recebimento_rascunho_v1');
+      var page = document.getElementById('page-recebimento');
+      if (page) {
+        page.querySelectorAll('input:not([type="radio"]), textarea').forEach(function(el) { el.value = ''; });
+        page.querySelectorAll('select').forEach(function(el) { el.selectedIndex = 0; });
+        var prev = document.getElementById('rec-previews');
+        if (prev) prev.innerHTML = '';
+      }
+      if (confirmar && typeof mostrarToast === 'function') {
+        mostrarToast('Formulário Limpo', 'Campos de recebimento zerados.', 'info');
+      }
+    } catch (e) {}
+  }
+  window.limparFormularioRecebimento = limparFormularioRecebimento;
 
   function enviarRecebimento(modelo) {
     var nowStr = formatDataHoraLocal();
@@ -1649,6 +1727,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     historicoSeedData = [novoHist].concat(historicoSeedData);
     saveHistorico(historicoSeedData);
+
+    // Limpa o rascunho e o formulário para o próximo recebimento
+    limparFormularioRecebimento(false);
+
     renderAll();
     if (typeof mostrarToast === 'function') {
       mostrarToast('Recebimento Registrado', 'Salvo no Histórico. O envio por e-mail ainda não está disponível.', 'info');
@@ -1687,10 +1769,84 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.removerLinhaItemCompra = removerLinhaItemCompra;
 
-  function salvarRascunhoCompra() {
-    alert('Rascunho da Requisição de Compra salvo com sucesso!');
+  function salvarRascunhoCompra(silencioso) {
+    try {
+      var pracaEl       = document.getElementById('req-praca');
+      var caraterEl     = document.getElementById('req-carater');
+      var solicitanteEl = document.getElementById('req-solicitante');
+      var motivoEl      = document.getElementById('req-motivo');
+      var destinoEl     = document.getElementById('req-destino');
+      var centroEl      = document.getElementById('req-centrocusto');
+      var projetoEl     = document.getElementById('req-projeto');
+
+      var dados = {
+        praca:       pracaEl ? pracaEl.value : '',
+        carater:     caraterEl ? caraterEl.value : '',
+        solicitante: solicitanteEl ? solicitanteEl.value : '',
+        motivo:      motivoEl ? motivoEl.value : '',
+        destino:     destinoEl ? destinoEl.value : '',
+        centro:      centroEl ? centroEl.value : '',
+        projeto:     projetoEl ? projetoEl.value : ''
+      };
+      localStorage.setItem('tv_compras_rascunho_v1', JSON.stringify(dados));
+      if (!silencioso && typeof mostrarToast === 'function') {
+        mostrarToast('Rascunho Salvo', 'Dados de compras salvos com sucesso.', 'info');
+      }
+    } catch (e) {}
   }
   window.salvarRascunhoCompra = salvarRascunhoCompra;
+
+  function carregarRascunhoCompra() {
+    try {
+      var raw = localStorage.getItem('tv_compras_rascunho_v1');
+      if (!raw) return;
+      var dados = JSON.parse(raw);
+      if (!dados) return;
+
+      var pracaEl       = document.getElementById('req-praca');
+      var caraterEl     = document.getElementById('req-carater');
+      var solicitanteEl = document.getElementById('req-solicitante');
+      var motivoEl      = document.getElementById('req-motivo');
+      var destinoEl     = document.getElementById('req-destino');
+      var centroEl      = document.getElementById('req-centrocusto');
+      var projetoEl     = document.getElementById('req-projeto');
+
+      if (pracaEl && dados.praca !== undefined)             pracaEl.value = dados.praca;
+      if (caraterEl && dados.carater !== undefined)         caraterEl.value = dados.carater;
+      if (solicitanteEl && dados.solicitante !== undefined) solicitanteEl.value = dados.solicitante;
+      if (motivoEl && dados.motivo !== undefined)           motivoEl.value = dados.motivo;
+      if (destinoEl && dados.destino !== undefined)         destinoEl.value = dados.destino;
+      if (centroEl && dados.centro !== undefined)           centroEl.value = dados.centro;
+      if (projetoEl && dados.projeto !== undefined)         projetoEl.value = dados.projeto;
+    } catch (e) {}
+  }
+
+  function limparFormularioCompras(confirmar) {
+    if (confirmar && !confirm('Deseja realmente limpar a requisição de compras?')) {
+      return;
+    }
+    try {
+      localStorage.removeItem('tv_compras_rascunho_v1');
+      var page = document.getElementById('page-compras');
+      if (page) {
+        page.querySelectorAll('input:not([type="radio"]), textarea').forEach(function(el) { el.value = ''; });
+        page.querySelectorAll('select').forEach(function(el) { el.selectedIndex = 0; });
+        var prev = document.getElementById('req-previews');
+        if (prev) prev.innerHTML = '';
+        var tbody = document.getElementById('req-itens-tbody');
+        if (tbody) {
+          tbody.innerHTML = '';
+          if (typeof adicionarLinhaItemCompra === 'function') {
+            adicionarLinhaItemCompra();
+          }
+        }
+      }
+      if (confirmar && typeof mostrarToast === 'function') {
+        mostrarToast('Formulário Limpo', 'Campos de compras zerados.', 'info');
+      }
+    } catch (e) {}
+  }
+  window.limparFormularioCompras = limparFormularioCompras;
 
   function enviarRequisicaoCompra() {
     var nowStr = formatDataHoraLocal();
@@ -1777,6 +1933,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     historicoSeedData = [novoHist].concat(historicoSeedData);
     saveHistorico(historicoSeedData);
+
+    // Limpa o rascunho e o formulário para a próxima requisição
+    limparFormularioCompras(false);
+
     renderAll();
 
     if (typeof adicionarNotificacao === 'function') {
@@ -1784,11 +1944,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     alert('Requisição de Compra cadastrada com sucesso no Histórico!\n\nNota: A função de envio por e-mail ainda não está disponível.');
-
-    /* reset formulário */
-    if (motivoEl)      motivoEl.value = '';
-    if (destinoEl)     destinoEl.value = '';
-    if (solicitanteEl) solicitanteEl.value = '';
   }
   window.enviarRequisicaoCompra = enviarRequisicaoCompra;
 
@@ -2208,8 +2363,46 @@ document.addEventListener('DOMContentLoaded', function () {
     };
   }
 
+  function limparFormularioCTRS(confirmar) {
+    if (confirmar && !confirm('Deseja realmente limpar todos os campos preenchidos do relatório CTRS?')) {
+      return;
+    }
+    try {
+      localStorage.removeItem('tv_ctrs_rascunho_v2');
+
+      var dataEl = document.getElementById('ctrs-data');
+      var obsEl  = document.getElementById('ctrs-obs');
+      if (dataEl) dataEl.value = new Date().toISOString().split('T')[0];
+      if (obsEl)  obsEl.value = '';
+
+      var accBlocks = document.querySelectorAll('#page-ctrs .acc-block');
+      accBlocks.forEach(function(acc) {
+        var inputs = acc.querySelectorAll('input, select, textarea');
+        inputs.forEach(function(inp) {
+          if (inp.tagName === 'SELECT') inp.selectedIndex = 0;
+          else inp.value = '';
+        });
+      });
+
+      // Se houver mais de 4 blocos dinâmicos, remove os excedentes
+      var container = document.getElementById('ctrs-acc-container');
+      if (container) {
+        var blocks = container.querySelectorAll('.acc-block');
+        for (var i = 4; i < blocks.length; i++) {
+          blocks[i].remove();
+        }
+      }
+
+      if (confirmar && typeof mostrarToast === 'function') {
+        mostrarToast('Formulário Limpo', 'Os campos do CTRS foram zerados para o próximo preenchimento.', 'info');
+      }
+    } catch (e) {
+      console.warn('Erro ao limpar CTRS:', e);
+    }
+  }
+  window.limparFormularioCTRS = limparFormularioCTRS;
+
   function copiarRelatorioOutlook() {
-    salvarRascunhoRelatorioTV(true);
     var resultado = gerarHTMLTemplateCTRS();
     var html = resultado.html;
     var assunto = resultado.assunto;
@@ -2230,8 +2423,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         navigator.clipboard.write([item]).then(function() {
           abrirPopup('popup-ctrs-outlook');
+          limparFormularioCTRS(false);
         }).catch(function(err) {
           fallbackCopiarAreaTransferencia(html);
+          limparFormularioCTRS(false);
         });
         copiado = true;
       } catch (e) {
@@ -2241,6 +2436,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (!copiado) {
       fallbackCopiarAreaTransferencia(html);
+      limparFormularioCTRS(false);
     }
   }
   window.copiarRelatorioOutlook = copiarRelatorioOutlook;
@@ -2340,6 +2536,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     historicoSeedData = [novoHist].concat(historicoSeedData);
     saveHistorico(historicoSeedData);
+
+    // Limpa o rascunho e o formulário do CTRS para a próxima transmissão
+    limparFormularioCTRS(false);
+
+    renderAll();
 
     if (novasOcorrenciasCriadas > 0) {
       if (typeof adicionarNotificacao === 'function') {
@@ -4286,6 +4487,24 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.abrirModalOcItemDireto = abrirModalOcItemDireto;
 
+  function salvarDashboardMetricsStore() {
+    try {
+      localStorage.setItem('tv_dashboard_metrics_v2', JSON.stringify(dashboardMetrics));
+    } catch (e) {}
+  }
+
+  function carregarDashboardMetricsStore() {
+    try {
+      var raw = localStorage.getItem('tv_dashboard_metrics_v2');
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          dashboardMetrics = parsed;
+        }
+      }
+    } catch (e) {}
+  }
+
   function salvarOcDashboard() {
     var tipoPainel = document.getElementById('oc-dash-tipo-painel').value;
     var alvo = document.getElementById('oc-dash-alvo').value;
@@ -4304,17 +4523,43 @@ document.addEventListener('DOMContentLoaded', function () {
         else if (status === 'canc') metricObj.canc += 1;
         else if (status === 'conf') metricObj.conf += 1;
       }
+      salvarDashboardMetricsStore();
+    }
+
+    // Se for Não Conforme (falha) ou Cancelado, cria a Ocorrência Real no Banco de Dados
+    if (status === 'nc' || status === 'canc') {
+      var statusLabel = (status === 'nc') ? 'Não Conforme (Falha)' : 'Cancelado';
+      var nowStr = formatDataHoraLocal();
+      var novaOc = {
+        id:          'oc_dash_' + Date.now(),
+        titulo:      'Falha em ' + alvo + ' (' + statusLabel + ')',
+        prio:        (status === 'nc' ? 'Alta' : 'Média'),
+        cat:         (tipoPainel === 'telejornal' ? 'Telejornal / Transmissão ao Vivo' : 'Equipamentos de Transmissão'),
+        resp:        'Equipe de Transmissão',
+        local:       'Juiz de Fora',
+        prazo:       '12:00',
+        desc:        obs,
+        mine:        false,
+        tags:        ['Dashboard Transmissões', alvo],
+        status:      'aberta',
+        criado:      Date.now(),
+        dataCriacao: nowStr,
+        resolucao:   null
+      };
+      ocorrencias = [novaOc].concat(ocorrencias);
+      save(ocorrencias);
     }
 
     fecharPopup('popup-nova-oc-dashboard');
     document.getElementById('oc-dash-obs').value = '';
 
     if (typeof mostrarToast === 'function') {
-      mostrarToast('Ocorrência Registrada no Dashboard', 'O gráfico do ' + alvo + ' foi atualizado diretamente no painel.', 'warning');
+      mostrarToast('Ocorrência Registrada no Banco', 'Salvo no banco de dados e gráficos do ' + alvo + ' atualizados.', 'warning');
     }
-    alert('Ocorrência salva com sucesso no Dashboard!\n\nAs métricas do ' + alvo + ' foram atualizadas.');
+    alert('Ocorrência salva com sucesso no Banco de Dados e Dashboard!\n\nAs métricas do ' + alvo + ' foram atualizadas e a ocorrência foi registrada no sistema.');
 
     renderDashboards();
+    renderAll();
   }
   window.salvarOcDashboard = salvarOcDashboard;
 
@@ -4638,6 +4883,7 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     orcamentoSeedData.push(novo);
+    salvarOrcamentoStore();
     fecharPopup('popup-novo-item-orcamento');
     renderOrcamento();
 
@@ -4647,14 +4893,35 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.confirmarItemOrcamento = confirmarItemOrcamento;
 
+  var ORCAMENTO_STORAGE_KEY = 'tv_orcamento_seed_v2';
+  function salvarOrcamentoStore() {
+    try {
+      localStorage.setItem(ORCAMENTO_STORAGE_KEY, JSON.stringify(orcamentoSeedData));
+    } catch (e) {}
+  }
+
+  function carregarOrcamentoStore() {
+    try {
+      var raw = localStorage.getItem(ORCAMENTO_STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          orcamentoSeedData = parsed;
+        }
+      }
+    } catch (e) {}
+  }
+
   function removerItemOrcamento(id) {
     if (!confirm('Deseja remover esta linha orçamentária do plano?')) return;
     orcamentoSeedData = orcamentoSeedData.filter(function(i){ return i.id !== id; });
+    salvarOrcamentoStore();
     renderOrcamento();
   }
   window.removerItemOrcamento = removerItemOrcamento;
 
   function salvarOrcamento() {
+    salvarOrcamentoStore();
     if (typeof mostrarToast === 'function') {
       mostrarToast('Plano Orçamentário Salvo', 'As previsões orçamentárias do ciclo ' + anoOrcamento + ' foram salvas com sucesso.', 'success');
     }

@@ -4,9 +4,9 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>TV Integração</title>
-  <link rel="icon" type="image/png" href="favicon.png?v=7.3"/>
-  <link rel="shortcut icon" href="favicon.ico?v=7.3"/>
-  <link rel="stylesheet" href="style.css?v=7.3"/>
+  <link rel="icon" type="image/png" href="favicon.png?v=7.4"/>
+  <link rel="shortcut icon" href="favicon.ico?v=7.4"/>
+  <link rel="stylesheet" href="style.css?v=7.4"/>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <style>
     .lucide { display:inline-block; vertical-align:middle; flex-shrink:0; }
@@ -1060,7 +1060,10 @@
             </div>
           </div>
           <div style="display:flex;gap:8px;margin-left:auto;align-items:center;">
-            <button type="button" class="btn btn-ghost btn-sm" onclick="salvarRascunhoRelatorioTV()">Salvar Rascunho</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="limparFormularioCTRS(true)" style="display:inline-flex;align-items:center;gap:5px;color:var(--muted);" title="Limpar todos os campos do formulário">
+              <i data-lucide="rotate-ccw" style="width:13px;height:13px;stroke-width:2;"></i>
+              <span>Limpar</span>
+            </button>
             <button type="button" class="btn btn-ghost btn-sm" onclick="copiarRelatorioOutlook()" style="position:relative;display:inline-flex;align-items:center;gap:6px;overflow:visible;" title="Copiar relatório formatado para colar direto no Outlook">
               <i data-lucide="copy" style="width:14px;height:14px;stroke-width:2;color:var(--blue);"></i>
               <span>Copiar para o Outlook</span>
@@ -1728,8 +1731,11 @@
               <span class="sb-tag">E-mail Recebimento</span>
             </div>
           </div>
-          <div style="display:flex;gap:6px;margin-left:auto;">
-            <button class="btn btn-ghost btn-sm" onclick="salvarRascunhoRecebimento()">Salvar Rascunho</button>
+          <div style="display:flex;gap:6px;margin-left:auto;align-items:center;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="limparFormularioRecebimento(true)" style="display:inline-flex;align-items:center;gap:5px;color:var(--muted);" title="Limpar formulário">
+              <i data-lucide="rotate-ccw" style="width:13px;height:13px;stroke-width:2;"></i>
+              <span>Limpar</span>
+            </button>
             <button class="btn btn-primary btn-sm" onclick="enviarRecebimento()">Enviar Recebimento</button>
           </div>
         </div>
@@ -1860,8 +1866,11 @@
             <div id="req-previews" class="upload-previews"></div>
           </div>
 
-          <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:24px;padding-top:14px;border-top:1px solid var(--border-lt);">
-            <button type="button" class="btn btn-ghost" onclick="salvarRascunhoCompra()">Salvar Rascunho</button>
+          <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:24px;padding-top:14px;border-top:1px solid var(--border-lt);align-items:center;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="limparFormularioCompras(true)" style="display:inline-flex;align-items:center;gap:5px;color:var(--muted);" title="Limpar formulário">
+              <i data-lucide="rotate-ccw" style="width:13px;height:13px;stroke-width:2;"></i>
+              <span>Limpar</span>
+            </button>
             <button type="button" class="btn btn-primary" onclick="enviarRequisicaoCompra()">Enviar Requisição de Compra</button>
           </div>
         </div>
@@ -2332,7 +2341,7 @@
 </div><!-- /main -->
 
 <script src="config.js" onerror="window.ENV_CONFIG=window.ENV_CONFIG||{};"></script>
-<script src="script.js?v=7.3"></script>
+<script src="script.js?v=7.4"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof lucide !== 'undefined') lucide.createIcons();
