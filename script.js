@@ -90,7 +90,7 @@ window.toggleBtnIniciarSessao = toggleBtnIniciarSessao;
 window.iniciarSessao          = iniciarSessao;
 
 document.addEventListener('DOMContentLoaded', function () {
-  console.log('✅ [Sistema TV] Versão 7.8 — Histórico Dinâmico: Hover Fluido & Painel Lateral Unificado');
+  console.log('✅ [Sistema TV] Versão 7.9 — Blindagem de Testes: Sincronização Otimizada, Anti-XSS e Cache Resiliente');
 
   /* ═══════════════════════════════════════════
      BANCO DE DADOS & SERVIÇO DE ARMAZENAMENTO (DB ADAPTER SERVICE)
@@ -105,8 +105,20 @@ document.addEventListener('DOMContentLoaded', function () {
     localStorage.removeItem('tv_reset_clean_prod_v1');
   } catch(e) {}
 
-  var USER_NAME_STORAGE_KEY = 'tv_user_name_v1';
-  var PHOTO_STORAGE_KEY     = 'tv_user_photo_v1';
+  var USER_NAME_STORAGE_KEY    = 'tv_user_name_v1';
+  var PHOTO_STORAGE_KEY        = 'tv_user_photo_v1';
+  var OCORRENCIAS_CACHE_KEY    = 'tv_ocorrencias_cache_v2';
+
+  function escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+  window.escapeHTML = escapeHTML;
 
   function getUsuarioAtual() {
     var stored = localStorage.getItem(USER_NAME_STORAGE_KEY);
@@ -210,7 +222,15 @@ document.addEventListener('DOMContentLoaded', function () {
               ? item.anexos
               : ((resObj.anexos && Array.isArray(resObj.anexos)) ? resObj.anexos : []);
             if (anxList.length > 0) {
-              resObj.anexos = anxList;
+              resObj.anexos = anxList.map(function(anx) {
+                if (!anx) return null;
+                var a = Object.assign({}, anx);
+                // Se já possui URL no Storage, descarta o base64 (dataUrl) pesado do banco de dados
+                if (a.url && a.url.startsWith('http')) {
+                  delete a.dataUrl;
+                }
+                return a;
+              }).filter(Boolean);
             }
             return {
               id: item.id,
@@ -293,7 +313,15 @@ document.addEventListener('DOMContentLoaded', function () {
               if (idsNaLixeira.includes(o.id)) return false;
               return true;
             });
-            if (typeof renderAll === 'function') renderAll();
+            try {
+              localStorage.setItem(OCORRENCIAS_CACHE_KEY, JSON.stringify(ocorrencias));
+            } catch(e) {}
+            var oldSig = (window._lastOcSyncSig || '');
+            var newSig = ocorrencias.map(function(o){ return o.id + '_' + o.status + '_' + (o.criado || 0); }).join('|');
+            if (oldSig !== newSig) {
+              window._lastOcSyncSig = newSig;
+              if (typeof renderAll === 'function') renderAll();
+            }
           }
         })
         .catch(function(err) {
@@ -335,7 +363,12 @@ document.addEventListener('DOMContentLoaded', function () {
             try {
               localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(historicoSeedData));
             } catch(e) {}
-            if (typeof renderAll === 'function') renderAll();
+            var oldHistSig = (window._lastHistSyncSig || '');
+            var newHistSig = historicoSeedData.map(function(h){ return h.id + '_' + (h.status || ''); }).join('|');
+            if (oldHistSig !== newHistSig) {
+              window._lastHistSyncSig = newHistSig;
+              if (typeof renderAll === 'function') renderAll();
+            }
           }
         })
         .catch(function(err) {
@@ -409,17 +442,42 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function load() {
+    if (!ocorrencias || ocorrencias.length === 0) {
+      try {
+        var rawCache = localStorage.getItem(OCORRENCIAS_CACHE_KEY);
+        if (rawCache) {
+          var parsed = JSON.parse(rawCache);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            ocorrencias = parsed.map(sanitizeOcorrencia).filter(Boolean);
+          }
+        }
+      } catch(e) {}
+    }
     return ocorrencias || [];
   }
 
   function save(list) {
     ocorrencias = list || [];
+    try {
+      localStorage.setItem(OCORRENCIAS_CACHE_KEY, JSON.stringify(ocorrencias));
+    } catch(e) {}
     if (typeof DBService !== 'undefined' && DBService && typeof DBService.pushRemote === 'function') {
       DBService.pushRemote('ocorrencias', ocorrencias);
     }
   }
 
-  var ocorrencias = [];
+  var ocorrencias = (function() {
+    try {
+      var rawCache = localStorage.getItem(OCORRENCIAS_CACHE_KEY);
+      if (rawCache) {
+        var parsed = JSON.parse(rawCache);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(sanitizeOcorrencia).filter(Boolean);
+        }
+      }
+    } catch(e) {}
+    return [];
+  })();
 
   function getAbertas()    { return ocorrencias.filter(function(o){ return o && o.status === 'aberta'; }); }
   function getArquivadas() { return ocorrencias.filter(function(o){ return o && o.status === 'arquivada'; }); }
@@ -611,10 +669,10 @@ document.addEventListener('DOMContentLoaded', function () {
         '<article class="' + cardClasses + '" data-id="' + oc.id + '" onclick="verDetalhesOcorrencia(\'' + oc.id + '\')" style="margin-bottom:10px;" title="Clique para ver detalhes">' +
           '<div class="prio-line ' + prioLine(oc.prio) + '"></div>' +
           '<div class="oc-body">' +
-            '<div class="oc-header"><h3>' + (oc.titulo || 'Sem título') + '</h3>' + tagsHTML + '</div>' +
-            '<p class="oc-desc">' + (oc.desc || '') + '</p>' +
+            '<div class="oc-header"><h3>' + escapeHTML(oc.titulo || 'Sem título') + '</h3>' + tagsHTML + '</div>' +
+            '<p class="oc-desc">' + escapeHTML(oc.desc || '') + '</p>' +
             '<div class="oc-meta">' +
-              '<span class="oc-meta-item"><i data-lucide="' + respIco + '" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i>' + (oc.resp || 'Todos do turno') + '</span>' +
+              '<span class="oc-meta-item"><i data-lucide="' + respIco + '" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i>' + escapeHTML(oc.resp || 'Todos do turno') + '</span>' +
               timeH + prazoH + localH +
             '</div>' +
           '</div>' +
@@ -1173,11 +1231,7 @@ document.addEventListener('DOMContentLoaded', function () {
   registrarAutosaveListener('page-recebimento', salvarRascunhoRecebimento);
   registrarAutosaveListener('page-compras', salvarRascunhoCompra);
 
-  /* Atualização automática em tempo real unificada de todas as telas e popups */
-  setInterval(function() {
-    try { renderAll(); } catch(e) {}
-    try { if (typeof DBService !== 'undefined' && DBService.syncRemote) DBService.syncRemote(); } catch(e) {}
-  }, 6000);
+
 
   /* Fechar popups clicando fora */
   document.querySelectorAll('.overlay').forEach(function(ov) {
@@ -3751,7 +3805,7 @@ document.addEventListener('DOMContentLoaded', function () {
             '<strong style="color:var(--green-dk);display:flex;align-items:center;gap:4px;font-size:11px;margin-bottom:2px;">' +
               '<i data-lucide="check-circle-2" style="width:11px;height:11px;"></i> Resolução / Fechamento:' +
             '</strong>' +
-            '<span style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + textoRes + '</span>' +
+            '<span style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + escapeHTML(textoRes) + '</span>' +
           '</div>';
       }
 
@@ -3759,13 +3813,13 @@ document.addEventListener('DOMContentLoaded', function () {
         '<article class="' + cardClasses + '" onclick="verDetalhesHistorico(\'' + item.id + '\')" onmouseenter="selecionarItemHistorico(\'' + item.id + '\')" style="cursor:pointer;margin-bottom:10px;' + (isSel ? 'border-color:var(--blue);box-shadow:0 0 0 2px rgba(0,113,227,.15);' : '') + '">' +
           '<div class="prio-line ' + plClass + '"></div>' +
           '<div class="oc-body">' +
-            '<div class="oc-header"><h3>' + item.titulo + '</h3>' + tagTipo + tagMeu + '</div>' +
-            '<p class="oc-desc" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + (item.descCriacao || item.desc || 'Sem descrição') + '</p>' +
+            '<div class="oc-header"><h3>' + escapeHTML(item.titulo || 'Sem título') + '</h3>' + tagTipo + tagMeu + '</div>' +
+            '<p class="oc-desc" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + escapeHTML(item.descCriacao || item.desc || 'Sem descrição') + '</p>' +
             resolucaoBox +
             '<div class="oc-meta" style="margin-top:8px;gap:14px;flex-wrap:wrap;display:flex;align-items:center;font-size:11.5px;">' +
-              '<span><i data-lucide="user" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Criado por: ' + (item.criadoPor || 'Sistema') + '</span>' +
-              '<span><i data-lucide="check-circle-2" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Resolvido por: ' + (item.resolvidoPor || 'Pendente') + '</span>' +
-              '<span><i data-lucide="calendar" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> ' + (item.dataResolucao || item.dataCriacao || '') + '</span>' +
+              '<span><i data-lucide="user" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Criado por: ' + escapeHTML(item.criadoPor || 'Sistema') + '</span>' +
+              '<span><i data-lucide="check-circle-2" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Resolvido por: ' + escapeHTML(item.resolvidoPor || 'Pendente') + '</span>' +
+              '<span><i data-lucide="calendar" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> ' + escapeHTML(item.dataResolucao || item.dataCriacao || '') + '</span>' +
             '</div>' +
           '</div>' +
         '</article>'
@@ -5219,12 +5273,12 @@ document.addEventListener('DOMContentLoaded', function () {
   ═══════════════════════════════════════════ */
   DBService.syncRemote();
 
-  // Sincronização ultra-rápida em tempo real (a cada 2 segundos) e imediata ao focar na janela
+  // Sincronização periódica em tempo real (a cada 5 segundos) e imediata ao focar na janela
   setInterval(function() {
     if (typeof DBService !== 'undefined' && DBService && typeof DBService.syncRemote === 'function') {
       DBService.syncRemote();
     }
-  }, 2000);
+  }, 5000);
 
   window.addEventListener('focus', function() {
     if (typeof DBService !== 'undefined' && DBService && typeof DBService.syncRemote === 'function') {
