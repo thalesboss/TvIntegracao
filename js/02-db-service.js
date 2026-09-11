@@ -174,7 +174,13 @@ document.addEventListener('DOMContentLoaded', function () {
       this.syncRemote();
     },
 
-    syncRemote: function() {
+    syncRemote: function(force) {
+      var now = Date.now();
+      if (!force && this._lastSyncTime && (now - this._lastSyncTime < 15000)) {
+        return; // Evita chamadas repetidas desnecessárias em menos de 15 segundos
+      }
+      this._lastSyncTime = now;
+
       if (!this.url) this.url = (envConfig && envConfig.SUPABASE_URL && envConfig.SUPABASE_URL.indexOf('seu-projeto') === -1) ? envConfig.SUPABASE_URL : (localStorage.getItem('tv_supabase_url') || '');
       if (!this.key) this.key = (envConfig && envConfig.SUPABASE_ANON_KEY && envConfig.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) ? envConfig.SUPABASE_ANON_KEY : (localStorage.getItem('tv_supabase_key') || '');
       if (!this.url || !this.key) {
@@ -184,8 +190,8 @@ document.addEventListener('DOMContentLoaded', function () {
       this.mode = 'supabase';
       var self = this;
       try {
-        // 1. Sincroniza Ocorrências em tempo real (Supabase REST)
-        var urlOc = self.url.replace(/\/$/, '') + '/rest/v1/ocorrencias?select=*&order=criado.desc';
+        // 1. Sincroniza Ocorrências em tempo real (Supabase REST) com limite inteligente
+        var urlOc = self.url.replace(/\/$/, '') + '/rest/v1/ocorrencias?select=*&order=criado.desc&limit=100';
         fetch(urlOc, {
           headers: {
             'apikey': self.key,
@@ -230,8 +236,8 @@ document.addEventListener('DOMContentLoaded', function () {
           console.warn('[DBService Cloud Sync] Offline ou conectando ao Supabase...', err);
         });
 
-        // 2. Sincroniza Histórico em tempo real (Supabase REST)
-        var urlHist = self.url.replace(/\/$/, '') + '/rest/v1/historico?select=*&order=dataCriacao.desc';
+        // 2. Sincroniza Histórico em tempo real (Supabase REST) com limite inteligente
+        var urlHist = self.url.replace(/\/$/, '') + '/rest/v1/historico?select=*&order=dataCriacao.desc&limit=100';
         fetch(urlHist, {
           headers: {
             'apikey': self.key,
@@ -275,6 +281,26 @@ document.addEventListener('DOMContentLoaded', function () {
         .catch(function(err) {
           console.warn('[DBService Cloud Sync Hist] Offline ou conectando ao Supabase...', err);
         });
+
+        // 3. Sincroniza Checklist e Rotinas em tempo real (Supabase)
+        try {
+          if (typeof sincronizarChecklistNuvem === 'function') sincronizarChecklistNuvem();
+        } catch(eChk) {}
+
+        // 4. Sincroniza Orçamentos em tempo real (Supabase)
+        try {
+          if (typeof sincronizarOrcamentoNuvem === 'function') sincronizarOrcamentoNuvem();
+        } catch(eOrc) {}
+
+        // 5. Sincroniza Lixeira em tempo real (Supabase)
+        try {
+          if (typeof sincronizarLixeiraNuvem === 'function') sincronizarLixeiraNuvem();
+        } catch(eLix) {}
+
+        // 6. Sincroniza Notificações em tempo real (Supabase)
+        try {
+          if (typeof sincronizarNotificacoesNuvem === 'function') sincronizarNotificacoesNuvem();
+        } catch(eNot) {}
       } catch (e) {
         updateCloudStatus(false);
         console.warn('[DBService Cloud Sync] Exceção:', e);
@@ -282,6 +308,73 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   };
   window.DBService = DBService;
+
+  /* ═══════════════════════════════════════════
+     RESOLUÇÃO INTELIGENTE DE OPERADOR POR NOME (MULTI-PC & MULTI-NAVEGADOR)
+  ═══════════════════════════════════════════ */
+  window.OPERADOR_UUID_ATUAL = null;
+
+  function obterOuCriarOperadorPorNome(nome, callback) {
+    if (!nome || typeof nome !== 'string' || !nome.trim()) {
+      if (typeof callback === 'function') callback(null);
+      return;
+    }
+    var nomeNorm = nome.trim();
+    var dbUrl = (DBService && DBService.url) ? DBService.url.replace(/\/+$/, '') : '';
+    var dbKey = (DBService && DBService.key) ? DBService.key : '';
+
+    if (!dbUrl || !dbKey) {
+      if (typeof callback === 'function') callback(null);
+      return;
+    }
+
+    var endpoint = dbUrl + '/rest/v1/operadores?nome=eq.' + encodeURIComponent(nomeNorm) + '&select=id,nome,ativo';
+    fetch(endpoint, {
+      headers: {
+        'apikey': dbKey,
+        'Authorization': 'Bearer ' + dbKey,
+        'Cache-Control': 'no-cache'
+      }
+    })
+    .then(function(res) { return res.ok ? res.json() : []; })
+    .then(function(ops) {
+      if (Array.isArray(ops) && ops.length > 0) {
+        var op = ops[0];
+        window.OPERADOR_UUID_ATUAL = op.id;
+        console.log('[Operador DB] ✅ Operador reconhecido por nome no Supabase:', op.nome, op.id);
+        if (typeof callback === 'function') callback(op.id);
+        if (typeof sincronizarChecklistNuvem === 'function') sincronizarChecklistNuvem();
+      } else {
+        var novoId = 'op_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+        var payload = { id: novoId, nome: nomeNorm, ativo: true };
+        fetch(dbUrl + '/rest/v1/operadores', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': dbKey,
+            'Authorization': 'Bearer ' + dbKey,
+            'Prefer': 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify(payload)
+        })
+        .then(function() {
+          window.OPERADOR_UUID_ATUAL = novoId;
+          console.log('[Operador DB] ✅ Novo operador cadastrado no Supabase:', nomeNorm, novoId);
+          if (typeof callback === 'function') callback(novoId);
+          if (typeof sincronizarChecklistNuvem === 'function') sincronizarChecklistNuvem();
+        })
+        .catch(function(err) {
+          console.warn('[Operador DB] Falha ao registrar novo operador:', err);
+          if (typeof callback === 'function') callback(null);
+        });
+      }
+    })
+    .catch(function(err) {
+      console.warn('[Operador DB] Falha ao consultar operador por nome:', err);
+      if (typeof callback === 'function') callback(null);
+    });
+  }
+  window.obterOuCriarOperadorPorNome = obterOuCriarOperadorPorNome;
 
   function updateCloudStatus(isOnline, customText) {
     var indicator = document.getElementById('cloud-status-indicator');

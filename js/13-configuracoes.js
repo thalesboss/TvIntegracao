@@ -78,6 +78,9 @@
   function atualizarNomeOperadorUI(nome) {
     var nomeExibido = (nome && nome.trim()) ? nome.trim() : 'Operador';
     localStorage.setItem(USER_NAME_STORAGE_KEY, nomeExibido);
+    if (typeof obterOuCriarOperadorPorNome === 'function') {
+      obterOuCriarOperadorPorNome(nomeExibido);
+    }
 
     var upName = document.getElementById('up-name');
     if (upName) upName.textContent = nomeExibido;

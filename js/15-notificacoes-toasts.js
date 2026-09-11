@@ -28,43 +28,69 @@
     }
   ];
 
-  function loadNotificacoes() {
-    try {
-      var raw = localStorage.getItem(NOTIF_STORAGE_KEY);
-      if (raw) {
-        var parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          notificacoesStore = parsed;
-        } else {
-          notificacoesStore = INITIAL_NOTIFICACOES_SEED.slice();
-        }
-      } else {
-        notificacoesStore = INITIAL_NOTIFICACOES_SEED.slice();
-      }
-    } catch(e) {
-      notificacoesStore = INITIAL_NOTIFICACOES_SEED.slice();
+  function getNotifDBCredentials() {
+    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
+    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
+    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
+      url = window.ENV_CONFIG.SUPABASE_URL;
     }
+    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
+      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
+    }
+    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
+  }
 
-    try {
-      var rawD = localStorage.getItem(NOTIF_DISMISSED_KEY);
-      if (rawD) {
-        var parsedD = JSON.parse(rawD);
-        if (Array.isArray(parsedD)) notificacoesDispensadas = parsedD;
-      }
-    } catch(e) {}
+  function loadNotificacoes() {
+    notificacoesStore = INITIAL_NOTIFICACOES_SEED.slice();
     window.notificacoesStore = notificacoesStore;
+    sincronizarNotificacoesNuvem();
   }
 
   function saveNotificacoes() {
     window.notificacoesStore = notificacoesStore;
-    try {
-      localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(notificacoesStore.slice(0, 50)));
-    } catch(e) {}
-    try {
-      localStorage.setItem(NOTIF_DISMISSED_KEY, JSON.stringify(notificacoesDispensadas.slice(-100)));
-    } catch(e) {}
     atualizarBadgesNotificacoes();
   }
+
+  function sincronizarNotificacoesNuvem() {
+    var db = getNotifDBCredentials();
+    if (!db.url || !db.key) return;
+
+    fetch(db.url + '/rest/v1/notificacoes?select=*&order=id.desc&limit=50', {
+      headers: {
+        'apikey': db.key,
+        'Authorization': 'Bearer ' + db.key,
+        'Cache-Control': 'no-cache'
+      }
+    })
+    .then(function(res) { return res.ok ? res.json() : null; })
+    .then(function(cloudNotifs) {
+      if (Array.isArray(cloudNotifs) && cloudNotifs.length > 0) {
+        notificacoesStore = cloudNotifs;
+        window.notificacoesStore = notificacoesStore;
+        atualizarBadgesNotificacoes();
+        renderNotificacoes();
+      }
+    })
+    .catch(function() {});
+  }
+  window.sincronizarNotificacoesNuvem = sincronizarNotificacoesNuvem;
+
+  function salvarNotificacaoNuvem(notif) {
+    var db = getNotifDBCredentials();
+    if (!db.url || !db.key || !notif) return;
+
+    fetch(db.url + '/rest/v1/notificacoes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': db.key,
+        'Authorization': 'Bearer ' + db.key,
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify(notif)
+    }).catch(function() {});
+  }
+  window.salvarNotificacaoNuvem = salvarNotificacaoNuvem;
 
   function mostrarToast(titulo, mensagem, tipo) {
     var container = document.getElementById('toast-container');

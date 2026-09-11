@@ -6,7 +6,7 @@
   <title>TV Integração</title>
   <link rel="icon" type="image/png" href="assets/icons/favicon.png?v=7.9"/>
   <link rel="shortcut icon" href="assets/icons/favicon.ico?v=7.9"/>
-  <link rel="stylesheet" href="style.css?v=7.9"/>
+  <link rel="stylesheet" href="style.css?v=8.0"/>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <style>
     .lucide { display:inline-block; vertical-align:middle; flex-shrink:0; }
@@ -666,8 +666,9 @@
       </div>
       <div class="fg2">
         <div class="frow">
-          <label for="orc-modal-valor">Valor Estimado (R$) </label>
-          <input type="number" id="orc-modal-valor" placeholder="Ex: 45000" min="0" />
+          <label for="orc-modal-valor">Valor Estimado (R$) *</label>
+          <input type="number" id="orc-modal-valor" placeholder="Ex: 45000" min="0" oninput="atualizarFmtValorNovoOrcamento(this.value)" />
+          <div id="orc-modal-valor-fmt" style="font-size:11.5px;font-weight:600;color:var(--blue);margin-top:4px;">R$ 0,00</div>
         </div>
         <div class="frow">
           <label for="orc-modal-prio">Prioridade </label>
@@ -692,44 +693,86 @@
 </div>
 
 <!-- ═══════════════════════════════════════
-     POPUP: SALVAR MODELO DE ROTINA / CHECKLIST
+     POPUP: DETALHES & EDIÇÃO DA LINHA ORÇAMENTÁRIA
 ═══════════════════════════════════════ -->
-<div class="overlay" id="popup-salvar-modelo" hidden role="dialog" aria-modal="true" aria-labelledby="salvar-mod-title">
-  <div class="modal" style="max-width: 480px;">
+<div class="overlay" id="popup-detalhes-orcamento" hidden role="dialog" aria-modal="true" aria-labelledby="orc-det-modal-title">
+  <div class="modal" style="max-width: 520px;">
     <div class="modal-header">
-      <div class="modal-icon icon-blue">
-        <i data-lucide="bookmark-plus" style="width:18px;height:18px;color:#fff;stroke-width:2;"></i>
+      <div class="modal-icon" style="background:#D97706;">
+        <i data-lucide="wallet" style="width:18px;height:18px;color:#fff;stroke-width:2.2;"></i>
       </div>
       <div>
-        <h2 id="salvar-mod-title">Salvar como Modelo de Rotina</h2>
-        <p>Crie uma pré-definição reutilizável a partir das tarefas atuais</p>
+        <h2 id="orc-det-modal-title">Detalhes da Linha Orçamentária</h2>
+        <p>Edição e gestão de investimentos e custeio</p>
       </div>
-      <button class="modal-close-btn" onclick="fecharPopup('popup-salvar-modelo')" title="Fechar"><i data-lucide="x" style="width:15px;height:15px;stroke-width:2.2;"></i></button>
+      <button class="modal-close-btn" onclick="fecharPopup('popup-detalhes-orcamento')" title="Fechar"><i data-lucide="x" style="width:15px;height:15px;stroke-width:2.2;"></i></button>
     </div>
-    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
+    <div class="modal-body">
+      <input type="hidden" id="orc-det-id" />
       <div class="frow">
-        <label for="mod-titulo" style="font-weight:600;font-size:12.5px;color:var(--txt);">Nome da Pré-definição *</label>
-        <input type="text" id="mod-titulo" placeholder="Ex: Plantão Sábado, Transmissão Futebol, Estúdio 2..." style="width:100%;font-size:13px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);" />
+        <label for="orc-det-desc">Descrição do Item / Equipamento / Projeto *</label>
+        <input type="text" id="orc-det-desc" placeholder="Ex: Substituição de Switcher de Vídeo SDI" />
       </div>
-      <div class="frow">
-        <label for="mod-desc" style="font-weight:600;font-size:12.5px;color:var(--txt);">Descrição ou Instruções rápidas (Opcional)</label>
-        <textarea id="mod-desc" placeholder="Ex: Procedimentos de verificação rápida antes do início da jornada..." style="min-height:60px;font-size:12.5px;"></textarea>
-      </div>
-      <div style="background:rgba(0,122,255,0.06);border:1px solid rgba(0,122,255,0.15);border-radius:10px;padding:12px;display:flex;align-items:flex-start;gap:10px;">
-        <input type="checkbox" id="mod-compartilhado" checked style="margin-top:2px;cursor:pointer;accent-color:#007aff;width:16px;height:16px;" />
-        <div>
-          <label for="mod-compartilhado" style="font-size:12.5px;font-weight:600;color:var(--txt);cursor:pointer;">
-            Compartilhar com toda a equipe
-          </label>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4;">
-            Se desmarcado, esta pré-definição será <strong>privada</strong> e ficará visível apenas no seu perfil de operador.
-          </div>
+      <div class="fg2">
+        <div class="frow">
+          <label for="orc-det-tipo">Classificação</label>
+          <select id="orc-det-tipo">
+            <option value="CAPEX">Novos Equipamentos & Projetos (CAPEX)</option>
+            <option value="OPEX">Manutenção & Custeio (OPEX)</option>
+          </select>
+        </div>
+        <div class="frow">
+          <label for="orc-det-praca">Praça / Localidade</label>
+          <select id="orc-det-praca">
+            <option value="Juiz de Fora">Juiz de Fora</option>
+            <option value="Uberlândia">Uberlândia</option>
+            <option value="Uberaba">Uberaba</option>
+            <option value="Divinópolis">Divinópolis</option>
+            <option value="Araxá">Araxá</option>
+            <option value="Rede Integração (Geral)">Rede Integração (Geral)</option>
+          </select>
         </div>
       </div>
+      <div class="fg2">
+        <div class="frow">
+          <label for="orc-det-valor">Valor Estimado (R$) *</label>
+          <input type="number" id="orc-det-valor" step="0.01" min="0" oninput="atualizarFmtValorOrcamento(this.value)" placeholder="Ex: 45000" />
+          <div id="orc-det-valor-fmt" style="font-size:11.5px;font-weight:600;color:var(--blue);margin-top:4px;">R$ 0,00</div>
+        </div>
+        <div class="frow">
+          <label for="orc-det-prio">Prioridade</label>
+          <select id="orc-det-prio">
+            <option value="Alta">Alta</option>
+            <option value="Média">Média</option>
+            <option value="Baixa">Baixa</option>
+            <option value="Estratégica">Estratégica</option>
+          </select>
+        </div>
+      </div>
+      <div class="frow">
+        <label for="orc-det-status">Status da Proposta</label>
+        <select id="orc-det-status">
+          <option value="Proposto">Proposto</option>
+          <option value="Em Revisão">Em Revisão</option>
+          <option value="Aprovado">Aprovado</option>
+          <option value="Rejeitado">Rejeitado</option>
+        </select>
+      </div>
+      <div class="frow">
+        <label for="orc-det-just">Justificativa Técnica / Benefício Esperado</label>
+        <textarea id="orc-det-just" placeholder="Justificativa técnica..." style="min-height:75px;"></textarea>
+      </div>
     </div>
-    <div class="modal-footer" style="justify-content:flex-end;gap:8px;">
-      <button class="btn btn-ghost" onclick="fecharPopup('popup-salvar-modelo')">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmarSalvarModelo()" style="padding:8px 18px;">Salvar no Banco de Dados</button>
+    <div class="modal-footer" style="justify-content:space-between;gap:8px;">
+      <button class="btn btn-ghost" onclick="excluirItemOrcamentoModal()" style="color:var(--red);border-color:rgba(239,68,68,0.25);">
+        <i data-lucide="trash-2" style="width:14px;height:14px;stroke-width:2;"></i> Excluir Linha
+      </button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" onclick="fecharPopup('popup-detalhes-orcamento')">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarEdicaoItemOrcamento()">
+          <i data-lucide="check" style="width:14px;height:14px;stroke-width:2.5;"></i> Salvar Alterações
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -2482,7 +2525,7 @@
 </div><!-- /main -->
 
 <script src="config.js" onerror="window.ENV_CONFIG=window.ENV_CONFIG||{};"></script>
-<script src="script.js?v=7.9"></script>
+<script src="script.js?v=8.0"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof lucide !== 'undefined') lucide.createIcons();

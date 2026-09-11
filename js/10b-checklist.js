@@ -1,31 +1,26 @@
   /* ═══════════════════════════════════════════
-     CHECKLIST DIÁRIO & MONITORAMENTO DE ROTINA (APPLE REMINDERS STYLE)
+     CHECKLIST DIÁRIO & MONITORAMENTO DE ROTINA (APPLE REMINDERS STYLE) — SUPABASE
   ═══════════════════════════════════════════ */
 
-  var CHECKLIST_STORAGE_KEY = 'tv_checklist_items_v1';
-  var CHECKLIST_LAST_DATE_KEY = 'tv_checklist_last_date_v1';
   var checklistFiltroAtual = 'todos';
   var checklistItems = [];
+  var checklistUltimaDataVerificada = new Date().toISOString().slice(0, 10);
 
   /* ── Verificação e Resete Automático da Meia-Noite ── */
   function verificarReseteMeiaNoite() {
     try {
       var hojeStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-      var ultimaData = localStorage.getItem(CHECKLIST_LAST_DATE_KEY);
-
-      if (!ultimaData) {
-        localStorage.setItem(CHECKLIST_LAST_DATE_KEY, hojeStr);
-      } else if (ultimaData !== hojeStr) {
-        console.log('[Checklist] 🕛 Meia-noite detectada: Novo dia (' + hojeStr + '). Desmarcando tarefas de rotina...');
-        // Desmarcar todas as rotinas para o novo dia
+      if (checklistUltimaDataVerificada !== hojeStr) {
+        console.log('[Checklist] 🕛 Meia-noite detectada: Novo dia (' + hojeStr + '). Desmarcando tarefas de rotina no Supabase...');
+        checklistUltimaDataVerificada = hojeStr;
         if (Array.isArray(checklistItems) && checklistItems.length > 0) {
           checklistItems.forEach(function(it) {
             it.concluido = false;
             it.concluidoEm = null;
+            if (it.padrao) salvarRotinaPadraoNuvem(it);
+            else salvarLembretePessoalNuvem(it);
           });
-          salvarChecklistStore();
         }
-        localStorage.setItem(CHECKLIST_LAST_DATE_KEY, hojeStr);
         if (typeof mostrarToast === 'function') {
           mostrarToast('Novo Dia Iniciado', 'As rotinas foram desmarcadas automaticamente para o plantão de hoje.', 'info');
         }
@@ -36,23 +31,6 @@
   }
 
   function carregarChecklistStore() {
-    try {
-      var raw = localStorage.getItem(CHECKLIST_STORAGE_KEY);
-      if (raw) {
-        checklistItems = JSON.parse(raw);
-        // Purgar rotinas mockadas legadas antigas (prefixo 'rot-')
-        checklistItems = checklistItems.filter(function(it) {
-          return it && (!it.id || !it.id.toString().startsWith('rot-'));
-        });
-      } else {
-        checklistItems = [];
-        salvarChecklistStore();
-      }
-    } catch(e) {
-      console.warn('Erro ao carregar checklist:', e);
-      checklistItems = [];
-    }
-
     verificarReseteMeiaNoite();
     atualizarDataChecklistUI();
     renderChecklist();
@@ -62,11 +40,7 @@
   window.carregarChecklistStore = carregarChecklistStore;
 
   function salvarChecklistStore() {
-    try {
-      localStorage.setItem(CHECKLIST_STORAGE_KEY, JSON.stringify(checklistItems));
-    } catch(e) {
-      console.warn('Erro ao salvar checklist:', e);
-    }
+    window.checklistItems = checklistItems;
   }
 
   function atualizarDataChecklistUI() {
@@ -463,10 +437,10 @@
           operadoresMap[op.nome.trim()] = op.id;
         });
 
-        // Salva o UUID do operador atual se o nome corresponder
+        // Define o UUID do operador atual se o nome corresponder
         var usuarioAtual = getUsuarioAtual();
         if (operadoresMap[usuarioAtual]) {
-          localStorage.setItem('tv_operador_uuid_v1', operadoresMap[usuarioAtual]);
+          window.OPERADOR_UUID_ATUAL = operadoresMap[usuarioAtual];
         }
 
         if (datalist) {
@@ -491,16 +465,15 @@
   ═══════════════════════════════════════════ */
 
   function getOperadorUUID() {
-    var uuid = localStorage.getItem('tv_operador_uuid_v1');
-    if (uuid) return uuid;
+    if (window.OPERADOR_UUID_ATUAL) return window.OPERADOR_UUID_ATUAL;
     var usuarioAtual = getUsuarioAtual();
-    if (operadoresMap[usuarioAtual]) {
-      uuid = operadoresMap[usuarioAtual];
-      localStorage.setItem('tv_operador_uuid_v1', uuid);
-      return uuid;
+    if (usuarioAtual && operadoresMap && operadoresMap[usuarioAtual]) {
+      window.OPERADOR_UUID_ATUAL = operadoresMap[usuarioAtual];
+      return window.OPERADOR_UUID_ATUAL;
     }
     return null;
   }
+  window.getOperadorUUID = getOperadorUUID;
 
   function sincronizarChecklistNuvem() {
     var db = getDBCredentials();

@@ -1,4 +1,4 @@
-﻿/* ═══════════════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════════════
    RELATÓRIO & SPLIT LAYOUTS
    ═══════════════════════════════════════════════════════════════════════════ */
 .rel-layout {
@@ -121,6 +121,9 @@
 .frow input:not([type="checkbox"]):not([type="radio"]),
 .frow select,
 .frow textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   background: #FFFFFF;
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: var(--r-md);
@@ -156,8 +159,9 @@ input[type="checkbox"]:focus {
   resize: vertical;
   min-height: 72px;
 }
-.fg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
-.fg3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 12px; }
+.fg2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 12px; }
+.fg3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 12px; }
+.fg2 > *, .fg3 > * { min-width: 0; }
 .divider { height: 1px; background: var(--border-lt); margin: 6px 0 14px; }
 
 /* Accordion CTRS */

@@ -16,12 +16,13 @@
 
   DBService.syncRemote();
 
-  // Sincronização periódica em tempo real (a cada 5 segundos) e imediata ao focar na janela
+  // Sincronização inteligente: periódica a cada 2 minutos se a aba estiver visível, e ao focar na janela
   setInterval(function() {
+    if (document.hidden) return; // Se a aba estiver minimizada ou em segundo plano, economiza tráfego
     if (typeof DBService !== 'undefined' && DBService && typeof DBService.syncRemote === 'function') {
       DBService.syncRemote();
     }
-  }, 5000);
+  }, 120000); // 2 minutos (redução imediata de 96% no consumo de rede)
 
   window.addEventListener('focus', function() {
     if (typeof DBService !== 'undefined' && DBService && typeof DBService.syncRemote === 'function') {
@@ -37,6 +38,7 @@
     if (identInput) setTimeout(function(){ identInput.focus(); }, 180);
   } else {
     atualizarNomeOperadorUI(savedUserName.trim());
+    try { if (typeof obterOuCriarOperadorPorNome === 'function') obterOuCriarOperadorPorNome(savedUserName.trim()); } catch(e) {}
     abrirPopup('popup-entrada');
   }
 

@@ -1,27 +1,104 @@
   /* ═══════════════════════════════════════════
-     SISTEMA DE LIXEIRA (Retenção 7 dias / Notificação 24h)
+     SISTEMA DE LIXEIRA (Retenção 7 dias / Notificação 24h) — BANCO DE DADOS SUPABASE
   ═══════════════════════════════════════════ */
-  var LIXEIRA_STORAGE_KEY = 'tv_lixeira_data_v1';
   var lixeiraData = [];
 
-  function loadLixeira() {
-    try {
-      var raw = localStorage.getItem(LIXEIRA_STORAGE_KEY);
-      lixeiraData = raw ? JSON.parse(raw) : [];
-    } catch(e) {
-      lixeiraData = [];
+  function getLixeiraDBCredentials() {
+    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
+    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
+    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
+      url = window.ENV_CONFIG.SUPABASE_URL;
     }
+    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
+      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
+    }
+    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
+  }
+
+  function loadLixeira() {
+    sincronizarLixeiraNuvem();
     return lixeiraData;
   }
   loadLixeira();
 
   function saveLixeira(list) {
     lixeiraData = list || [];
-    try {
-      localStorage.setItem(LIXEIRA_STORAGE_KEY, JSON.stringify(lixeiraData));
-    } catch(e) {}
+    window.lixeiraData = lixeiraData;
     atualizarBadgesLixeira();
   }
+
+  function sincronizarLixeiraNuvem() {
+    var db = getLixeiraDBCredentials();
+    if (!db.url || !db.key) return;
+
+    fetch(db.url + '/rest/v1/lixeira?select=*&order=dataExclusao.desc&limit=50', {
+      headers: {
+        'apikey': db.key,
+        'Authorization': 'Bearer ' + db.key,
+        'Cache-Control': 'no-cache'
+      }
+    })
+    .then(function(res) { return res.ok ? res.json() : null; })
+    .then(function(cloudItens) {
+      if (Array.isArray(cloudItens)) {
+        lixeiraData = cloudItens;
+        window.lixeiraData = lixeiraData;
+        atualizarBadgesLixeira();
+        renderLixeira();
+      }
+    })
+    .catch(function(err) {
+      console.warn('[Lixeira DB] Não foi possível sincronizar lixeira:', err);
+    });
+  }
+  window.sincronizarLixeiraNuvem = sincronizarLixeiraNuvem;
+
+  function salvarItemLixeiraNuvem(item) {
+    var db = getLixeiraDBCredentials();
+    if (!db.url || !db.key || !item) return;
+
+    fetch(db.url + '/rest/v1/lixeira', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': db.key,
+        'Authorization': 'Bearer ' + db.key,
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify(item)
+    })
+    .then(function(res) {
+      if (res.ok) {
+        console.log('[Lixeira DB] ✅ Item gravado na lixeira do banco:', item.id);
+      }
+    })
+    .catch(function(err) {
+      console.warn('[Lixeira DB] Erro ao enviar para lixeira remota:', err);
+    });
+  }
+  window.salvarItemLixeiraNuvem = salvarItemLixeiraNuvem;
+
+  function excluirItemLixeiraNuvem(id) {
+    var db = getLixeiraDBCredentials();
+    if (!db.url || !db.key || !id) return;
+
+    fetch(db.url + '/rest/v1/lixeira?id=eq.' + encodeURIComponent(id), {
+      method: 'DELETE',
+      headers: {
+        'apikey': db.key,
+        'Authorization': 'Bearer ' + db.key
+      }
+    })
+    .then(function(res) {
+      if (res.ok) {
+        console.log('[Lixeira DB] ✅ Item removido da lixeira do banco:', id);
+      }
+    })
+    .catch(function(err) {
+      console.warn('[Lixeira DB] Erro ao remover da lixeira remota:', err);
+    });
+  }
+  window.excluirItemLixeiraNuvem = excluirItemLixeiraNuvem;
 
   function atualizarBadgesLixeira() {
     var badge = document.querySelector('.lixeira-badge');
@@ -47,6 +124,7 @@
       // 1. Já expirou os 7 dias -> Exclui permanentemente inclusive da nuvem
       if (tempoRestanteMs <= 0) {
         alterou = true;
+        excluirItemLixeiraNuvem(item.id);
         if (typeof DBService !== 'undefined' && DBService && typeof DBService.deleteRemote === 'function') {
           DBService.deleteRemote('ocorrencias', item.id);
           DBService.deleteRemote('historico', item.id);
@@ -58,6 +136,7 @@
       if (tempoRestanteMs <= 24 * 60 * 60 * 1000 && !item.notificado24h) {
         item.notificado24h = true;
         alterou = true;
+        salvarItemLixeiraNuvem(item);
         if (typeof adicionarNotificacao === 'function') {
           adicionarNotificacao(
             'Aviso de Exclusão da Lixeira',
@@ -107,6 +186,7 @@
 
       lixeiraData = [itemLixeira].concat(lixeiraData.filter(function(i){ return i.id !== idParaSalvar; }));
       saveLixeira(lixeiraData);
+      salvarItemLixeiraNuvem(itemLixeira);
 
       // 3. Remove do array de ocorrências ativas e arquivadas imediatamente (estritamente por ID!)
       ocorrencias = ocorrencias.filter(function(o){
@@ -148,6 +228,7 @@
 
     lixeiraData = lixeiraData.filter(function(i){ return i.id !== id; });
     saveLixeira(lixeiraData);
+    excluirItemLixeiraNuvem(id);
     renderAll();
 
     if (typeof mostrarToast === 'function') {
