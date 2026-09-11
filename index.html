@@ -4,8 +4,8 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>TV Integração</title>
-  <link rel="icon" type="image/png" href="favicon.png?v=7.9"/>
-  <link rel="shortcut icon" href="favicon.ico?v=7.9"/>
+  <link rel="icon" type="image/png" href="assets/icons/favicon.png?v=7.9"/>
+  <link rel="shortcut icon" href="assets/icons/favicon.ico?v=7.9"/>
   <link rel="stylesheet" href="style.css?v=7.9"/>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <style>
@@ -53,8 +53,14 @@
         Informe seu nome completo ou como deseja ser identificado nos registros, relatórios e ocorrências deste computador.
       </p>
       <div class="frow">
-        <label for="ident-operador-nome" style="font-weight:600;font-size:12.5px;color:var(--txt);">Nome Completo *</label>
-        <input type="text" id="ident-operador-nome" placeholder="Ex: Carlos Silva" style="width:100%;font-size:13px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);" />
+        <label for="ident-operador-nome" style="font-weight:600;font-size:12.5px;color:var(--txt);display:flex;align-items:center;justify-content:space-between;">
+          <span>Nome do Operador *</span>
+          <span style="font-size:11px;font-weight:400;color:var(--muted);">Selecione ou digite seu nome</span>
+        </label>
+        <input type="text" id="ident-operador-nome" list="lista-operadores-sugeridos" placeholder="Digite ou selecione da lista..." style="width:100%;font-size:13px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);" autocomplete="off" />
+        <datalist id="lista-operadores-sugeridos">
+          <!-- Preenchido via Supabase / DBService -->
+        </datalist>
       </div>
       <div class="frow">
         <label style="font-weight:600;font-size:12.5px;color:var(--txt);">E-mail Padrão (Ambiente de Teste)</label>
@@ -126,7 +132,7 @@
     </div>
     <div class="modal-footer" style="justify-content:flex-end;gap:8px;">
       <button class="btn btn-ghost" onclick="fecharPopup('popup-logout')">Cancelar</button>
-      <button class="btn btn-danger">Enviar e Deslogar</button>
+      <button class="btn btn-danger" onclick="confirmarLogout()">Enviar e Deslogar</button>
     </div>
   </div>
 </div>
@@ -209,7 +215,7 @@
     </div>
     <div class="modal-footer" style="justify-content:flex-end;gap:8px;">
       <button class="btn btn-ghost" onclick="fecharPopup('popup-nova-oc')">Cancelar</button>
-      <button class="btn btn-primary" id="btn-criar">Criar Ocorrência</button>
+      <button class="btn btn-primary" id="btn-criar" onclick="criarNovaOcorrencia()">Criar Ocorrência</button>
     </div>
   </div>
 </div>
@@ -348,7 +354,7 @@
     </div>
     <div class="modal-footer" style="justify-content:flex-end;gap:8px;">
       <button class="btn btn-ghost" onclick="fecharPopup('popup-resolver')">Cancelar</button>
-      <button class="btn btn-success" id="btn-confirmar-resolver">Confirmar Resolução</button>
+      <button class="btn btn-success" id="btn-confirmar-resolver" onclick="confirmarResolucao()">Confirmar Resolução</button>
     </div>
   </div>
 </div>
@@ -686,17 +692,64 @@
 </div>
 
 <!-- ═══════════════════════════════════════
+     POPUP: SALVAR MODELO DE ROTINA / CHECKLIST
+═══════════════════════════════════════ -->
+<div class="overlay" id="popup-salvar-modelo" hidden role="dialog" aria-modal="true" aria-labelledby="salvar-mod-title">
+  <div class="modal" style="max-width: 480px;">
+    <div class="modal-header">
+      <div class="modal-icon icon-blue">
+        <i data-lucide="bookmark-plus" style="width:18px;height:18px;color:#fff;stroke-width:2;"></i>
+      </div>
+      <div>
+        <h2 id="salvar-mod-title">Salvar como Modelo de Rotina</h2>
+        <p>Crie uma pré-definição reutilizável a partir das tarefas atuais</p>
+      </div>
+      <button class="modal-close-btn" onclick="fecharPopup('popup-salvar-modelo')" title="Fechar"><i data-lucide="x" style="width:15px;height:15px;stroke-width:2.2;"></i></button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
+      <div class="frow">
+        <label for="mod-titulo" style="font-weight:600;font-size:12.5px;color:var(--txt);">Nome da Pré-definição *</label>
+        <input type="text" id="mod-titulo" placeholder="Ex: Plantão Sábado, Transmissão Futebol, Estúdio 2..." style="width:100%;font-size:13px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);" />
+      </div>
+      <div class="frow">
+        <label for="mod-desc" style="font-weight:600;font-size:12.5px;color:var(--txt);">Descrição ou Instruções rápidas (Opcional)</label>
+        <textarea id="mod-desc" placeholder="Ex: Procedimentos de verificação rápida antes do início da jornada..." style="min-height:60px;font-size:12.5px;"></textarea>
+      </div>
+      <div style="background:rgba(0,122,255,0.06);border:1px solid rgba(0,122,255,0.15);border-radius:10px;padding:12px;display:flex;align-items:flex-start;gap:10px;">
+        <input type="checkbox" id="mod-compartilhado" checked style="margin-top:2px;cursor:pointer;accent-color:#007aff;width:16px;height:16px;" />
+        <div>
+          <label for="mod-compartilhado" style="font-size:12.5px;font-weight:600;color:var(--txt);cursor:pointer;">
+            Compartilhar com toda a equipe
+          </label>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4;">
+            Se desmarcado, esta pré-definição será <strong>privada</strong> e ficará visível apenas no seu perfil de operador.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:flex-end;gap:8px;">
+      <button class="btn btn-ghost" onclick="fecharPopup('popup-salvar-modelo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarSalvarModelo()" style="padding:8px 18px;">Salvar no Banco de Dados</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
      SIDEBAR
 ═══════════════════════════════════════ -->
 <aside class="sidebar" role="navigation" aria-label="Menu principal">
   <nav class="s-nav">
     <div style="padding:10px 8px 8px;display:flex;align-items:center;gap:8px;user-select:none;">
-      <img src="logo-tv-integracao.png" alt="TV Integração" style="width:20px;height:20px;object-fit:contain;flex-shrink:0;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.12));"/>
+      <img src="assets/images/logo-tv-integracao.png" alt="TV Integração" style="width:20px;height:20px;object-fit:contain;flex-shrink:0;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.12));"/>
       <span style="font-size:12px;font-weight:700;color:var(--txt);letter-spacing:-0.01em;">TV Integração</span>
     </div>
     <div class="s-btn active" onclick="irPara('dashboard',this)" role="button" tabindex="0">
       <i data-lucide="home" style="width:15px;height:15px;stroke-width:2;"></i>
       <span class="s-label">Ocorrências</span>
+    </div>
+    <div class="s-btn" onclick="irPara('checklist',this)" role="button" tabindex="0">
+      <i data-lucide="check-square" style="width:15px;height:15px;stroke-width:2;"></i>
+      <span class="s-label">Checklist Diário</span>
     </div>
     <div class="s-section">Relatórios</div>
     <div class="s-btn" onclick="irPara('ctrs',this)" role="button" tabindex="0">
@@ -741,6 +794,7 @@
     <div class="s-btn" onclick="abrirNotificacoes()" role="button" tabindex="0">
       <i data-lucide="bell" style="width:15px;height:15px;stroke-width:2;"></i>
       <span class="s-label">Notificações</span>
+      <span class="notif-badge" style="display:none;">0</span>
     </div>
     <div class="s-btn" onclick="irPara('config',this)" role="button" tabindex="0">
       <i data-lucide="settings" style="width:15px;height:15px;stroke-width:2;"></i>
@@ -867,6 +921,157 @@
     </div>
   </main>
 
+  <!-- ── PÁGINA: CHECKLIST DIÁRIO & ROTINAS (APPLE REMINDERS STYLE) ── -->
+  <main class="page" id="page-checklist" aria-label="Checklist Diário e Rotinas Preventivas">
+    <div class="scroll-area checklist-scroll-area">
+      <div class="checklist-wrapper">
+        
+        <!-- Hero Apple Progress -->
+        <div class="reminders-hero">
+          <div class="reminders-hero-info">
+            <div class="reminders-hero-title">
+              <i data-lucide="check-circle-2" style="width:22px;height:22px;color:#34c759;stroke-width:2.2;"></i>
+              Rotina & Monitoramento Diário
+            </div>
+            <div class="reminders-hero-subtitle">
+              <i data-lucide="calendar" style="width:13px;height:13px;stroke-width:2;"></i>
+              <span id="reminders-current-date">Hoje</span>
+              <span>·</span>
+              <span>Prevenção e checagem contínua</span>
+            </div>
+          </div>
+          <div class="reminders-hero-stat">
+            <div class="reminders-progress-bar-wrap" title="Progresso da Rotina">
+              <div class="reminders-progress-bar-fill" id="reminders-progress-fill" style="width: 0%;"></div>
+            </div>
+            <div class="reminders-hero-numbers">
+              <div class="reminders-pct" id="reminders-pct">0%</div>
+              <div class="reminders-count-lbl" id="reminders-count-lbl">0 de 0 checados</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Apple Filter Cards Grid -->
+        <div class="reminders-cards-grid">
+          <div class="reminders-filter-card active" onclick="filtrarChecklist('todos', this)">
+            <div class="reminders-fc-top">
+              <div class="reminders-fc-icon blue">
+                <i data-lucide="layers" style="width:17px;height:17px;stroke-width:2.2;"></i>
+              </div>
+              <div class="reminders-fc-count" id="fc-count-todos">0</div>
+            </div>
+            <div class="reminders-fc-label">Todas as Rotinas</div>
+          </div>
+          <div class="reminders-filter-card" onclick="filtrarChecklist('pendentes', this)">
+            <div class="reminders-fc-top">
+              <div class="reminders-fc-icon orange">
+                <i data-lucide="clock" style="width:17px;height:17px;stroke-width:2.2;"></i>
+              </div>
+              <div class="reminders-fc-count" id="fc-count-pendentes">0</div>
+            </div>
+            <div class="reminders-fc-label">Pendentes</div>
+          </div>
+          <div class="reminders-filter-card" onclick="filtrarChecklist('rotina', this)">
+            <div class="reminders-fc-top">
+              <div class="reminders-fc-icon purple">
+                <i data-lucide="sparkles" style="width:17px;height:17px;stroke-width:2.2;"></i>
+              </div>
+              <div class="reminders-fc-count" id="fc-count-rotina">0</div>
+            </div>
+            <div class="reminders-fc-label">Preventivas TV</div>
+          </div>
+          <div class="reminders-filter-card" onclick="filtrarChecklist('concluidos', this)">
+            <div class="reminders-fc-top">
+              <div class="reminders-fc-icon green">
+                <i data-lucide="check" style="width:17px;height:17px;stroke-width:2.5;"></i>
+              </div>
+              <div class="reminders-fc-count" id="fc-count-concluidos">0</div>
+            </div>
+            <div class="reminders-fc-label">Concluídos</div>
+          </div>
+        </div>
+
+        <!-- ── APPLE SPLIT VIEW: DUAS COLUNAS LADO A LADO ── -->
+        <div class="reminders-split-layout">
+          
+          <!-- COLUNA ESQUERDA: Rotinas Padrão da Emissora (Obrigatórias para Todos) -->
+          <div class="reminders-col">
+            <!-- Input Rápido no topo da coluna de Rotinas Padrão TV -->
+            <div class="reminders-add-box" style="margin-bottom:14px;border-color:rgba(0,122,255,0.2);">
+              <div class="reminders-add-circle" style="color:#007aff;border-color:#007aff;">
+                <i data-lucide="plus" style="width:13px;height:13px;stroke-width:2.5;"></i>
+              </div>
+              <input type="text" id="reminders-new-padrao-input" class="reminders-add-input" placeholder="Nova rotina padrão da TV... (Enter)" onkeydown="if(event.key==='Enter') adicionarRotinaPadrao();"/>
+              <select id="reminders-new-padrao-cat" class="reminders-category-select">
+                <option value="rotina" selected>Geral TV</option>
+                <option value="ctrs">CTRS</option>
+                <option value="estudio">Estúdio</option>
+                <option value="infra">Infra</option>
+              </select>
+              <button class="reminders-add-btn" onclick="adicionarRotinaPadrao()" title="Adicionar rotina para toda a equipe" style="background:#007aff;">
+                <i data-lucide="plus" style="width:14px;height:14px;stroke-width:2.5;"></i>
+              </button>
+            </div>
+
+            <div class="reminders-section">
+              <div class="reminders-section-head">
+                <div class="reminders-section-title">
+                  <i data-lucide="shield-check" style="width:16px;height:16px;color:#007aff;stroke-width:2.2;"></i>
+                  <span>Rotinas Padrão TV (Geral)</span>
+                </div>
+                <span class="reminders-col-badge badge-blue" id="badge-rotinas-padrao">0</span>
+              </div>
+              <div style="padding:10px 18px 0 18px;font-size:11.5px;color:var(--muted);line-height:1.4;">
+                Procedimentos de conformidade técnica e preventivas visíveis para todos os operadores.
+              </div>
+              <ul class="reminders-list" id="reminders-list-padrao">
+                <!-- Gerado via JavaScript -->
+              </ul>
+            </div>
+          </div>
+
+          <!-- COLUNA DIREITA: Minhas Rotinas & Lembretes Pessoais -->
+          <div class="reminders-col">
+            <!-- Input Rápido Estilo Apple no topo da coluna pessoal -->
+            <div class="reminders-add-box" style="margin-bottom:14px;">
+              <div class="reminders-add-circle">
+                <i data-lucide="plus" style="width:13px;height:13px;stroke-width:2.5;"></i>
+              </div>
+              <input type="text" id="reminders-new-input" class="reminders-add-input" placeholder="Novo lembrete pessoal... (Enter)" onkeydown="if(event.key==='Enter') adicionarLembreteRapido();"/>
+              <select id="reminders-new-cat" class="reminders-category-select">
+                <option value="estudio">Estúdio</option>
+                <option value="ctrs">CTRS</option>
+                <option value="infra">Infra</option>
+                <option value="avulso" selected>Lembrete</option>
+              </select>
+              <button class="reminders-add-btn" onclick="adicionarLembreteRapido()" title="Adicionar lembrete pessoal">
+                <i data-lucide="plus" style="width:14px;height:14px;stroke-width:2.5;"></i>
+              </button>
+            </div>
+
+            <div class="reminders-section">
+              <div class="reminders-section-head">
+                <div class="reminders-section-title">
+                  <i data-lucide="user-check" style="width:16px;height:16px;color:#af52de;stroke-width:2.2;"></i>
+                  <span>Minhas Rotinas & Lembretes</span>
+                </div>
+                <span class="reminders-col-badge badge-purple" id="badge-rotinas-pessoais">0</span>
+              </div>
+              <div style="padding:10px 18px 0 18px;font-size:11.5px;color:var(--muted);line-height:1.4;">
+                Tarefas específicas e anotações operacionais do seu turno.
+              </div>
+              <ul class="reminders-list" id="reminders-list-pessoal">
+                <!-- Gerado via JavaScript -->
+              </ul>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </main>
+
   <!-- ── PÁGINA: CTRS ── -->
   <main class="page" id="page-ctrs" aria-label="CTRS — Checklist de Transmissão ao Vivo">
     <div class="rel-layout">
@@ -936,7 +1141,7 @@
                 <div class="frow"><label>Repórter Cinematográfico</label><input type="text" placeholder="Nome do RC"/></div>
                 <div class="frow"><label>Status da Transmissão</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>
               </div>
-              <div class="frow"><label>Falhas Ocorridas</label><textarea placeholder="Descreva as falhas. Se nenhuma, deixe em branco."></textarea></div>
+              <div class="frow"><label>Observações</label><textarea placeholder="Descreva as falhas ou observações. Se nenhuma, deixe em branco."></textarea></div>
             </div>
           </div>
           <div class="acc-block">
@@ -970,7 +1175,7 @@
                 <div class="frow"><label>Repórter Cinematográfico</label><input type="text"/></div>
                 <div class="frow"><label>Status da Transmissão</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>
               </div>
-              <div class="frow"><label>Falhas Ocorridas</label><textarea></textarea></div>
+              <div class="frow"><label>Observações</label><textarea></textarea></div>
             </div>
           </div>
           <div class="acc-block">
@@ -1004,7 +1209,7 @@
                 <div class="frow"><label>Repórter Cinematográfico</label><input type="text"/></div>
                 <div class="frow"><label>Status da Transmissão</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>
               </div>
-              <div class="frow"><label>Falhas Ocorridas</label><textarea></textarea></div>
+              <div class="frow"><label>Observações</label><textarea></textarea></div>
             </div>
           </div>
           <div class="acc-block">
@@ -1038,7 +1243,7 @@
                 <div class="frow"><label>Repórter Cinematográfico</label><input type="text"/></div>
                 <div class="frow"><label>Status da Transmissão</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>
               </div>
-              <div class="frow"><label>Falhas Ocorridas</label><textarea></textarea></div>
+              <div class="frow"><label>Observações</label><textarea></textarea></div>
             </div>
           </div>
           </div><!-- /ctrs-acc-container -->
@@ -1487,70 +1692,6 @@
           </div>
         </div>
       </div>
-    </div>
-  </main>
-
-  <!-- ── PÁGINA: FALHAS ── -->
-  <main class="page" id="page-falhas" aria-label="Relatório de Falhas de Engenharia">
-    <div class="rel-layout">
-      <div class="rel-center">
-        <div class="dest-bar">
-          <strong>Envio automático ao salvar:</strong>
-          <span class="dest-tag">Relatório de Falhas</span>
-          <span class="dest-tag">Relatório Power BI</span>
-          <span class="dest-tag">E-mail</span>
-          <span class="dest-ref">Processo 1.1.1.P06 – F01</span>
-        </div>
-        <div class="form-card">
-          <h3><div class="fcard-ico fci-b" style="display:flex;align-items:center;justify-content:center;"><i data-lucide="clipboard" style="width:13px;height:13px;stroke-width:2;"></i></div> Informações da Praça</h3>
-          <div class="fg2">
-            <div class="frow">
-              <label for="f-praca">Praça</label>
-              <select id="f-praca">
-                <option selected>Juiz de Fora</option>
-                <option>Uberlândia</option>
-                <option>Uberaba</option>
-                <option>Divinópolis</option>
-                <option>Varginha</option>
-                <option>Araxá</option>
-              </select>
-            </div>
-            <div class="frow"><label for="f-gestor">Gestor</label><input id="f-gestor" type="text" placeholder="Nome do gestor"/></div>
-            <div class="frow"><label for="f-data">Data</label><input id="f-data" type="date" value="2026-08-06"/></div>
-            <div class="frow"><label for="f-colab">Colaborador</label><input id="f-colab" type="text" placeholder="Nome do colaborador"/></div>
-            <div class="frow"><label for="f-inicio">Hora Início do Turno</label><input id="f-inicio" type="time" value="06:00"/></div>
-            <div class="frow"><label for="f-fim">Hora Fim do Turno</label><input id="f-fim" type="time" value="14:00"/></div>
-          </div>
-        </div>
-        <div class="form-card">
-          <div class="frow"><label for="f-oc-tv">Ocorrências nos Telejornais e Transmissões ao Vivo</label><textarea id="f-oc-tv" placeholder="Descreva as ocorrências. Se nenhuma: - Sem ocorrência."></textarea></div>
-          <div class="frow"><label for="f-ac-tv">Ações Corretivas — Telejornais / Transmissões</label><textarea id="f-ac-tv" placeholder="Descreva as ações tomadas ou a tomar..."></textarea></div>
-          <div class="divider"></div>
-          <div class="frow"><label for="f-oc-prog">Ocorrências Durante a Programação</label><textarea id="f-oc-prog" placeholder="Descreva as ocorrências. Se nenhuma: - Sem ocorrência."></textarea></div>
-          <div class="frow"><label for="f-ac-prog">Ações Corretivas — Programação</label><textarea id="f-ac-prog" placeholder="Descreva as ações tomadas ou a tomar..."></textarea></div>
-          <div class="divider"></div>
-          <div class="frow"><label for="f-oc-rota">Ocorrências na Rota de Transmissão e Retransmissão</label><textarea id="f-oc-rota" placeholder="Descreva as ocorrências. Se nenhuma: - Sem ocorrência."></textarea></div>
-          <div class="frow"><label for="f-ac-rota">Ações Corretivas — Rota de Transmissão</label><textarea id="f-ac-rota" placeholder="Descreva as ações tomadas ou a tomar..."></textarea></div>
-        </div>
-        <div class="submit-bar">
-          <div class="dest-info-group">
-            <span class="dest-label">Envio automático para:</span>
-            <div class="dest-tags">
-              <span class="sb-tag">Relatório Power BI</span>
-              <span class="sb-tag">E-mail</span>
-            </div>
-          </div>
-          <div style="display:flex;gap:6px;margin-left:auto;">
-            <button class="btn btn-ghost btn-sm">Salvar Rascunho</button>
-            <button class="btn btn-primary btn-sm">Enviar Relatório</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── ASIDE FALHAS — gerado pelo JS ── -->
-      <aside class="rel-aside" id="aside-falhas" aria-label="Ocorrências">
-        <!-- preenchido por renderAside('aside-falhas') -->
-      </aside>
     </div>
   </main>
 

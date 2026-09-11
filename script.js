@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════
    POPUP — funções base globais
 ═══════════════════════════════════════════ */
 function abrirPopup(id) {
@@ -89,6 +89,12 @@ window.fecharQuickLook        = fecharQuickLook;
 window.toggleBtnIniciarSessao = toggleBtnIniciarSessao;
 window.iniciarSessao          = iniciarSessao;
 
+/* Fechar popups clicando fora no overlay escuro */
+document.addEventListener('click', function(e) {
+  if (e.target && e.target.classList && e.target.classList.contains('overlay') && e.target.id !== 'popup-entrada') {
+    fecharPopup(e.target.id);
+  }
+});
 document.addEventListener('DOMContentLoaded', function () {
   console.log('✅ [Sistema TV] Versão 7.9 — Blindagem de Testes: Sincronização Otimizada, Anti-XSS e Cache Resiliente');
 
@@ -96,14 +102,6 @@ document.addEventListener('DOMContentLoaded', function () {
      BANCO DE DADOS & SERVIÇO DE ARMAZENAMENTO (DB ADAPTER SERVICE)
      Interface modular para transição transparente entre LocalStorage e Backend API (Supabase/Firebase/REST)
   ═══════════════════════════════════════════ */
-  /* Purge e limpeza de dados antigos: localStorage mantem APENAS o nome do operador */
-  try {
-    localStorage.removeItem('tv_ocorrencias_prod');
-    localStorage.removeItem('tv_historico_prod');
-    localStorage.removeItem('tv_ocorrencias_v1');
-    localStorage.removeItem('tv_historico_v1');
-    localStorage.removeItem('tv_reset_clean_prod_v1');
-  } catch(e) {}
 
   var USER_NAME_STORAGE_KEY    = 'tv_user_name_v1';
   var PHOTO_STORAGE_KEY        = 'tv_user_photo_v1';
@@ -458,6 +456,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function save(list) {
     ocorrencias = list || [];
+    window.ocorrencias = ocorrencias;
     try {
       localStorage.setItem(OCORRENCIAS_CACHE_KEY, JSON.stringify(ocorrencias));
     } catch(e) {}
@@ -465,6 +464,83 @@ document.addEventListener('DOMContentLoaded', function () {
       DBService.pushRemote('ocorrencias', ocorrencias);
     }
   }
+
+  var INITIAL_OCORRENCIAS_SEED = [
+    {
+      id: 'oc_init_1',
+      titulo: 'Oscilação no Sinal do Transmissor Principal',
+      prio: 'Alta',
+      cat: 'Transmissão',
+      resp: 'Todos do turno',
+      local: 'Torre Central — Juiz de Fora',
+      prazo: '12:00',
+      desc: 'Identificada flutuação de potência no transmissor VHF canal 5 durante a abertura do turno. Necessário verificar acoplador e cabos coaxiais da antena transmissora.',
+      mine: false,
+      tags: ['Prioritário', 'Transmissão'],
+      status: 'aberta',
+      criado: Date.now() - 3600000,
+      dataCriacao: formatDataHoraLocal(Date.now() - 3600000),
+      resolucao: null,
+      anexos: []
+    },
+    {
+      id: 'oc_init_2',
+      titulo: 'Verificação de Cabos SDI da Mesa de Produção',
+      prio: 'Média',
+      cat: 'Equipamento',
+      resp: 'Carlos Silva',
+      local: 'Estúdio 1 — switcher principal',
+      prazo: '15:30',
+      desc: 'Cabo SDI da câmera 2 apresentando ruído intermitente quando movimentado pelo operador de câmera. Necessário substituir o patch cord de 5 metros.',
+      mine: true,
+      tags: ['Equipamento', 'Estúdio'],
+      status: 'aberta',
+      criado: Date.now() - 7200000,
+      dataCriacao: formatDataHoraLocal(Date.now() - 7200000),
+      resolucao: null,
+      anexos: []
+    },
+    {
+      id: 'oc_init_3',
+      titulo: 'Backup de Mídia da Ilha de Edição 3',
+      prio: 'Baixa',
+      cat: 'TI / Redes',
+      resp: 'Operador',
+      local: 'Central Técnica',
+      prazo: '18:00',
+      desc: 'Realizar rotina de backup dos arquivos brutos das matérias do telejornal para o storage secundário de arquivo permanente.',
+      mine: false,
+      tags: ['Arquivada'],
+      status: 'arquivada',
+      criado: Date.now() - 86400000,
+      dataCriacao: formatDataHoraLocal(Date.now() - 86400000),
+      resolucao: null,
+      anexos: []
+    },
+    {
+      id: 'oc_init_4',
+      titulo: 'Receptor de Satélite — Calibração FEC',
+      prio: 'Média',
+      cat: 'Transmissão',
+      resp: 'Carlos Silva',
+      local: 'Sala de Receptores',
+      prazo: '10:00',
+      desc: 'Frequência de downlink do feed nacional reajustada no receptor digital com parâmetros FEC corrigidos.',
+      mine: false,
+      tags: ['Concluída'],
+      status: 'resolvida',
+      criado: Date.now() - 10800000,
+      dataCriacao: formatDataHoraLocal(Date.now() - 10800000),
+      resolucao: {
+        statusRes: 'Resolvido',
+        descRes: 'Parâmetros de modulação e FEC reconfigurados no decodificador. Nível de sinal estabilizado em 14.8 dB.',
+        data: Date.now() - 5400000,
+        resolvidoPor: 'Carlos Silva',
+        anexos: []
+      },
+      anexos: []
+    }
+  ];
 
   var ocorrencias = (function() {
     try {
@@ -476,13 +552,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       }
     } catch(e) {}
-    return [];
+    return INITIAL_OCORRENCIAS_SEED.map(sanitizeOcorrencia).filter(Boolean);
   })();
+  window.ocorrencias = ocorrencias;
 
   function getAbertas()    { return ocorrencias.filter(function(o){ return o && o.status === 'aberta'; }); }
   function getArquivadas() { return ocorrencias.filter(function(o){ return o && o.status === 'arquivada'; }); }
   function getResolvidas() { return ocorrencias.filter(function(o){ return o && o.status === 'resolvida'; }); }
-
   /* ═══════════════════════════════════════════
      HELPERS DE RENDER
   ═══════════════════════════════════════════ */
@@ -587,7 +663,6 @@ document.addEventListener('DOMContentLoaded', function () {
       return dia + '/' + mes + ' às ' + horaStr;
     }
   }
-  var formatDataRelativaApple = formatDataRelativa;
 
   var filtroOcorrenciasAtivo = 'todas';
 
@@ -733,7 +808,6 @@ document.addEventListener('DOMContentLoaded', function () {
       { key: 'anteriores', titulo: 'Dias Anteriores', icone: 'archive', items: grupos.anteriores }
     ];
   }
-  var agruparPorDiasApple = agruparPorDias;
 
   function renderSecoesComCards(secoes, fnRenderCard) {
     var html = '';
@@ -750,7 +824,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     return html;
   }
-  var renderSecoesComCardsApple = renderSecoesComCards;
 
   /* ─── Render: painéis aside (CTRS + Falhas) ─── */
   /* Ambos usam o mesmo nome "Ocorrências" e os mesmos dados */
@@ -814,7 +887,6 @@ document.addEventListener('DOMContentLoaded', function () {
       abertasHTML +
       resolvidasHTML;
   }
-
   /* ═══════════════════════════════════════════
      HISTÓRICO GERAL — ESTRUTURA DE DADOS
   ═══════════════════════════════════════════ */
@@ -829,9 +901,11 @@ document.addEventListener('DOMContentLoaded', function () {
       if (Array.isArray(pHist) && pHist.length > 0) historicoSeedData = pHist;
     }
   } catch(e) {}
+  window.historicoSeedData = historicoSeedData;
 
   function saveHistorico(list) {
     historicoSeedData = list || [];
+    window.historicoSeedData = historicoSeedData;
     try {
       localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(historicoSeedData));
     } catch(e) {}
@@ -907,10 +981,6 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.getHistoricoCompleto = getHistoricoCompleto;
 
-  function getHistoricoSeed() {
-    return getHistoricoCompleto();
-  }
-
   function loadHistorico() {
     return getHistoricoCompleto();
   }
@@ -939,7 +1009,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return '<span class="tag tag-blue-soft">Registro</span>';
   }
-
   /* ─── Render: Dashboard Resolvidas & Power BI ─── */
   var resolvidasFiltro = 'todas';
 
@@ -1188,7 +1257,7 @@ document.addEventListener('DOMContentLoaded', function () {
     try { verificarExpiracaoLixeira(); } catch(e) { console.error('Erro em verificarExpiracaoLixeira:', e); }
     try { verificarNotificacoesAutomaticas(); } catch(e) { console.error('Erro em verificarNotificacoesAutomaticas:', e); }
     try { renderNotificacoes(); } catch(e) { console.error('Erro em renderNotificacoes:', e); }
-    ['aside-ctrs', 'aside-falhas', 'aside-recebimento', 'aside-compras', 'aside-orcamento', 'aside-arquivados'].forEach(function(asId) {
+    ['aside-ctrs', 'aside-recebimento', 'aside-compras', 'aside-orcamento', 'aside-arquivados'].forEach(function(asId) {
       try { renderAside(asId); } catch(e) { console.error('Erro em ' + asId + ':', e); }
     });
     try { renderResolvidas(); } catch(e) { console.error('Erro em renderResolvidas:', e); }
@@ -1199,18 +1268,6 @@ document.addEventListener('DOMContentLoaded', function () {
     try { renderPopupLogout(); } catch(e) { console.error('Erro em renderPopupLogout:', e); }
     try { updateStats(); } catch(e) { console.error('Erro em updateStats:', e); }
   }
-
-  /* Render inicial */
-  try { carregarFotoPerfilSalva(); } catch(e) {}
-  try { loadNotificacoes(); } catch(e) {}
-  try { carregarCredenciaisSupabaseConfig(); } catch(e) {}
-  try { carregarRascunhoRelatorioTV(); } catch(e) {}
-  try { carregarRascunhoRecebimento(); } catch(e) {}
-  try { carregarRascunhoCompra(); } catch(e) {}
-  try { carregarDashboardMetricsStore(); } catch(e) {}
-  try { carregarOrcamentoStore(); } catch(e) {}
-  try { if (typeof DBService !== 'undefined' && DBService.init) DBService.init(); } catch(e) {}
-  renderAll(true);
 
   // Autosave contínuo em segundo plano para formulários (proteção contra queda de energia/fechamento)
   var debounceTimers = {};
@@ -1226,40 +1283,9 @@ document.addEventListener('DOMContentLoaded', function () {
     page.addEventListener('input', acao);
     page.addEventListener('change', acao);
   }
-
-  registrarAutosaveListener('page-ctrs', salvarRascunhoRelatorioTV);
-  registrarAutosaveListener('page-recebimento', salvarRascunhoRecebimento);
-  registrarAutosaveListener('page-compras', salvarRascunhoCompra);
-
-
-
-  /* Fechar popups clicando fora */
-  document.querySelectorAll('.overlay').forEach(function(ov) {
-    ov.addEventListener('click', function(e) {
-      if (e.target === this && this.id !== 'popup-entrada') fecharPopup(this.id);
-    });
-  });
-
-  /* Atalho de Teclado Global: tecla ESC fecha qualquer popup ativo */
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
-      document.querySelectorAll('.overlay:not([hidden])').forEach(function(ov) {
-        if (ov.id !== 'popup-entrada' && ov.style.display !== 'none') {
-          fecharPopup(ov.id);
-        }
-      });
-    }
-  });
-
+  window.registrarAutosaveListener = registrarAutosaveListener;
   /* ═══════════════════════════════════════════
      POPUP ENTRADA
-  ═══════════════════════════════════════════ */
-
-  function fecharEntrada() {
-    iniciarSessao();
-  }
-  window.fecharEntrada = fecharEntrada;
-
   /* ═══════════════════════════════════════════
      CHECKLIST LOGOUT
   ═══════════════════════════════════════════ */
@@ -1269,6 +1295,26 @@ document.addEventListener('DOMContentLoaded', function () {
     if (item && el) item.classList.toggle('done', el.checked); 
   }
   window.markDone = markDone;
+
+  function confirmarLogout() {
+    var obs = document.getElementById('obs-logout');
+    fecharPopup('popup-logout');
+    if (obs) obs.value = '';
+    loginTime = Date.now();
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Turno Encerrado', 'Checklist de saída registrado e sessão encerrada com sucesso.', 'success');
+    }
+    var popEntrada = document.getElementById('popup-entrada');
+    if (popEntrada) {
+      var chk = document.getElementById('chk-entrada');
+      if (chk) chk.checked = false;
+      if (typeof toggleBtnIniciarSessao === 'function') {
+        toggleBtnIniciarSessao(false);
+      }
+      abrirPopup('popup-entrada');
+    }
+  }
+  window.confirmarLogout = confirmarLogout;
 
   /* ═══════════════════════════════════════════
      TIMER DE SESSÃO / TEMPO LOGADO
@@ -1342,6 +1388,7 @@ document.addEventListener('DOMContentLoaded', function () {
     recebimento1: { page:'page-recebimento',  title:'Recebimento de Materiais',                 chip:'Registro patrimonial e anexo de fotos/vídeos' },
     recebimento2: { page:'page-recebimento',  title:'Recebimento de Materiais',                 chip:'Registro patrimonial e anexo de fotos/vídeos' },
     dashboard:    { page:'page-dashboard',    title:'Ocorrências',                              chip: function() { return 'Logado há: ' + getTempoLogadoStr(); } },
+    checklist:    { page:'page-checklist',    title:'Checklist Diário & Rotinas',               chip:'Monitoramento preventivo e rotinas do turno' },
     ctrs:         { page:'page-ctrs',         title:'Checklist de Transmissão — CTRS',          chip:'Preencher após cada jornal' },
     arquivados:   { page:'page-arquivados',   title:'Ocorrências Arquivadas',                   chip:'Verificação e acompanhamento do próximo turno' },
     historico:    { page:'page-historico',    title:'Histórico Geral de Registros',             chip:'Ocorrências, Relatórios e Recebimentos' },
@@ -1386,16 +1433,29 @@ document.addEventListener('DOMContentLoaded', function () {
      FILTROS
   ═══════════════════════════════════════════ */
 
-  function filtrar(el, tipo) {
-    if (el) {
-      el.closest('.pills').querySelectorAll('.pill').forEach(function(p) { p.classList.remove('on'); });
-      el.classList.add('on');
+  function filtrar(elOrTipo, tipo) {
+    var el = (elOrTipo && typeof elOrTipo === 'object' && elOrTipo.nodeType) ? elOrTipo : null;
+    var tipoFinal = typeof elOrTipo === 'string' ? elOrTipo : tipo;
+    if (el && typeof el.closest === 'function') {
+      var pills = el.closest('.pills');
+      if (pills) {
+        pills.querySelectorAll('.pill').forEach(function(p) { p.classList.remove('on'); });
+        el.classList.add('on');
+      }
+    } else if (tipoFinal) {
+      document.querySelectorAll('#page-dashboard .pills .pill').forEach(function(p) {
+        var pText = p.textContent.trim().toLowerCase();
+        if (pText === tipoFinal.toLowerCase() || (tipoFinal.toLowerCase() === 'todas' && pText === 'todas')) {
+          p.classList.add('on');
+        } else {
+          p.classList.remove('on');
+        }
+      });
     }
-    filtroOcorrenciasAtivo = (tipo || (el ? el.textContent.trim().toLowerCase() : 'todas')).toLowerCase();
+    filtroOcorrenciasAtivo = (tipoFinal || (el ? el.textContent.trim().toLowerCase() : 'todas')).toLowerCase();
     renderCards();
   }
   window.filtrar = filtrar;
-
   /* ═══════════════════════════════════════════
      INDEXEDDB LOCAL MEDIA CACHE (Para vídeos e fotos de qualquer tamanho)
   ═══════════════════════════════════════════ */
@@ -1649,18 +1709,6 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.renderPreviewsForContainer = renderPreviewsForContainer;
 
-  function renderPreviews(files, container) {
-    if (!container) return;
-    var containerId = container.id || 'previews';
-    handleFileSelect({ files: files }, containerId);
-  }
-  window.renderPreviews = renderPreviews;
-
-  function renderMediaPreviews(files, containerId) {
-    handleFileSelect({ files: files }, containerId);
-  }
-  window.renderMediaPreviews = renderMediaPreviews;
-
   /* Listeners para áreas de upload (Requisições, Recebimentos e Ocorrências) */
   ['req', 'rec', 'rec1', 'rec2', 'nova', 'edit-oc', 'resolver'].forEach(function(prefix) {
     var area  = document.getElementById(prefix + '-upload-area');
@@ -1674,31 +1722,9 @@ document.addEventListener('DOMContentLoaded', function () {
       };
     }
   });
-
   /* ═══════════════════════════════════════════
      RECEBIMENTOS DE EQUIPAMENTOS
   ═══════════════════════════════════════════ */
-
-  function alternarModeloRecebimento(mod) {
-    var mod1 = document.getElementById('rec-modelo-1');
-    var mod2 = document.getElementById('rec-modelo-2');
-    var pill1 = document.getElementById('pill-mod-1');
-    var pill2 = document.getElementById('pill-mod-2');
-
-    if (mod === 1) {
-      if (mod1) mod1.style.display = 'block';
-      if (mod2) mod2.style.display = 'none';
-      if (pill1) pill1.classList.add('on');
-      if (pill2) pill2.classList.remove('on');
-    } else {
-      if (mod1) mod1.style.display = 'none';
-      if (mod2) mod2.style.display = 'block';
-      if (pill1) pill1.classList.remove('on');
-      if (pill2) pill2.classList.add('on');
-    }
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-  }
-  window.alternarModeloRecebimento = alternarModeloRecebimento;
 
   function adicionarLinhaMaterial(tabelaId) {
     var tbody = document.querySelector('#' + (tabelaId || 'tb-rec') + ' tbody');
@@ -1885,6 +1911,9 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.enviarRecebimento = enviarRecebimento;
 
+  if (typeof registrarAutosaveListener === 'function') {
+    registrarAutosaveListener('page-recebimento', salvarRascunhoRecebimento);
+  }
   /* ═══════════════════════════════════════════
      REQUISIÇÃO DE COMPRAS E VENDAS
   ═══════════════════════════════════════════ */
@@ -2093,6 +2122,9 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.enviarRequisicaoCompra = enviarRequisicaoCompra;
 
+  if (typeof registrarAutosaveListener === 'function') {
+    registrarAutosaveListener('page-compras', salvarRascunhoCompra);
+  }
   /* ═══════════════════════════════════════════
      ENVIO DE RELATÓRIO TV (CTRS) E GERADOR AUTOMÁTICO DE OCORRÊNCIAS
   ═══════════════════════════════════════════ */
@@ -2185,7 +2217,7 @@ document.addEventListener('DOMContentLoaded', function () {
           '<div class="frow"><label>Repórter Cinematográfico</label><input type="text" placeholder="Nome do RC"/></div>' +
           '<div class="frow"><label>Status da Transmissão</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
         '</div>' +
-        '<div class="frow"><label>Falhas Ocorridas</label><textarea placeholder="Descreva as falhas. Se nenhuma, deixe em branco."></textarea></div>' +
+        '<div class="frow"><label>Observações</label><textarea placeholder="Descreva as falhas. Se nenhuma, deixe em branco."></textarea></div>' +
         '<div style="display:flex;justify-content:flex-end;padding-top:10px;border-top:1px solid var(--border-lt);margin-top:10px;">' +
           '<button type="button" class="btn btn-ghost btn-xs" onclick="removerTransmissaoCTRS(this);" style="color:var(--red);border-color:var(--red-border);display:inline-flex;align-items:center;gap:5px;padding:4px 10px;" title="Remover esta transmissão">' +
             '<i data-lucide="trash-2" style="width:13px;height:13px;stroke-width:2;"></i>' +
@@ -2402,7 +2434,7 @@ document.addEventListener('DOMContentLoaded', function () {
           '</tr>' +
           '<tr>' +
             '<td colspan="3" style="border:1px solid #000000; padding:4px 8px; min-height:30px;">' +
-              '<strong>Falhas ocorridas:</strong> ' + (falhas || '') +
+              '<strong>Observações:</strong> ' + (falhas || '') +
             '</td>' +
           '</tr>' +
         '</table>';
@@ -2702,6 +2734,707 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.enviarRelatorioTV = enviarRelatorioTV;
 
+  if (typeof registrarAutosaveListener === 'function') {
+    registrarAutosaveListener('page-ctrs', salvarRascunhoRelatorioTV);
+  }
+  /* ═══════════════════════════════════════════
+     CHECKLIST DIÁRIO & MONITORAMENTO DE ROTINA (APPLE REMINDERS STYLE)
+  ═══════════════════════════════════════════ */
+
+  var CHECKLIST_STORAGE_KEY = 'tv_checklist_items_v1';
+  var CHECKLIST_LAST_DATE_KEY = 'tv_checklist_last_date_v1';
+  var checklistFiltroAtual = 'todos';
+  var checklistItems = [];
+
+  /* ── Verificação e Resete Automático da Meia-Noite ── */
+  function verificarReseteMeiaNoite() {
+    try {
+      var hojeStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      var ultimaData = localStorage.getItem(CHECKLIST_LAST_DATE_KEY);
+
+      if (!ultimaData) {
+        localStorage.setItem(CHECKLIST_LAST_DATE_KEY, hojeStr);
+      } else if (ultimaData !== hojeStr) {
+        console.log('[Checklist] 🕛 Meia-noite detectada: Novo dia (' + hojeStr + '). Desmarcando tarefas de rotina...');
+        // Desmarcar todas as rotinas para o novo dia
+        if (Array.isArray(checklistItems) && checklistItems.length > 0) {
+          checklistItems.forEach(function(it) {
+            it.concluido = false;
+            it.concluidoEm = null;
+          });
+          salvarChecklistStore();
+        }
+        localStorage.setItem(CHECKLIST_LAST_DATE_KEY, hojeStr);
+        if (typeof mostrarToast === 'function') {
+          mostrarToast('Novo Dia Iniciado', 'As rotinas foram desmarcadas automaticamente para o plantão de hoje.', 'info');
+        }
+      }
+    } catch(e) {
+      console.warn('Erro ao verificar resete da meia-noite:', e);
+    }
+  }
+
+  function carregarChecklistStore() {
+    try {
+      var raw = localStorage.getItem(CHECKLIST_STORAGE_KEY);
+      if (raw) {
+        checklistItems = JSON.parse(raw);
+        // Purgar rotinas mockadas legadas antigas (prefixo 'rot-')
+        checklistItems = checklistItems.filter(function(it) {
+          return it && (!it.id || !it.id.toString().startsWith('rot-'));
+        });
+      } else {
+        checklistItems = [];
+        salvarChecklistStore();
+      }
+    } catch(e) {
+      console.warn('Erro ao carregar checklist:', e);
+      checklistItems = [];
+    }
+
+    verificarReseteMeiaNoite();
+    atualizarDataChecklistUI();
+    renderChecklist();
+    sincronizarChecklistNuvem();
+    carregarOperadoresSugeridos();
+  }
+  window.carregarChecklistStore = carregarChecklistStore;
+
+  function salvarChecklistStore() {
+    try {
+      localStorage.setItem(CHECKLIST_STORAGE_KEY, JSON.stringify(checklistItems));
+    } catch(e) {
+      console.warn('Erro ao salvar checklist:', e);
+    }
+  }
+
+  function atualizarDataChecklistUI() {
+    var elDate = document.getElementById('reminders-current-date');
+    if (!elDate) return;
+    try {
+      var hoje = new Date();
+      var opcoes = { weekday: 'long', day: 'numeric', month: 'long' };
+      var dataFmt = hoje.toLocaleDateString('pt-BR', opcoes);
+      // Capitalizar primeira letra
+      dataFmt = dataFmt.charAt(0).toUpperCase() + dataFmt.slice(1);
+      elDate.textContent = dataFmt;
+    } catch(e) {
+      elDate.textContent = 'Hoje';
+    }
+  }
+
+  function renderChecklist() {
+    var listPadraoEl = document.getElementById('reminders-list-padrao');
+    var listPessoalEl = document.getElementById('reminders-list-pessoal');
+    if (!listPadraoEl && !listPessoalEl) return;
+
+    // Calcular estatísticas
+    var total = checklistItems.length;
+    var concluidos = checklistItems.filter(function(it) { return it.concluido; }).length;
+    var pendentes = total - concluidos;
+    var rotinas = checklistItems.filter(function(it) { return it.categoria === 'rotina' || it.padrao; }).length;
+    var pct = total > 0 ? Math.round((concluidos / total) * 100) : 0;
+
+    // Atualizar UI de resumo (Hero)
+    var fill = document.getElementById('reminders-progress-fill');
+    if (fill) fill.style.width = pct + '%';
+
+    var pctEl = document.getElementById('reminders-pct');
+    if (pctEl) pctEl.textContent = pct + '%';
+
+    var lblEl = document.getElementById('reminders-count-lbl');
+    if (lblEl) lblEl.textContent = concluidos + ' de ' + total + ' checados';
+
+    // Atualizar Contadores dos Cards
+    var cTodos = document.getElementById('fc-count-todos');
+    if (cTodos) cTodos.textContent = total;
+
+    var cPend = document.getElementById('fc-count-pendentes');
+    if (cPend) cPend.textContent = pendentes;
+
+    var cRot = document.getElementById('fc-count-rotina');
+    if (cRot) cRot.textContent = rotinas;
+
+    var cConc = document.getElementById('fc-count-concluidos');
+    if (cConc) cConc.textContent = concluidos;
+
+    // Separar itens entre Padrão TV (oficiais/recorrentes para toda a equipe) e Pessoais (privados do operador)
+    var padraoItems = checklistItems.filter(function(it) {
+      return !!it.padrao;
+    });
+    var pessoalItems = checklistItems.filter(function(it) {
+      return !it.padrao;
+    });
+
+    // Atualizar badges das colunas
+    var bPadrao = document.getElementById('badge-rotinas-padrao');
+    if (bPadrao) {
+      var concP = padraoItems.filter(function(i){ return i.concluido; }).length;
+      bPadrao.textContent = concP + '/' + padraoItems.length;
+    }
+    var bPessoal = document.getElementById('badge-rotinas-pessoais');
+    if (bPessoal) {
+      var concU = pessoalItems.filter(function(i){ return i.concluido; }).length;
+      bPessoal.textContent = concU + '/' + pessoalItems.length;
+    }
+
+    var listPadraoEl = document.getElementById('reminders-list-padrao');
+    var listPessoalEl = document.getElementById('reminders-list-pessoal');
+
+    function renderizarLista(itens, targetEl, emptyMsg) {
+      if (!targetEl) return;
+      var filtrados = itens.filter(function(it) {
+        if (checklistFiltroAtual === 'pendentes') return !it.concluido;
+        if (checklistFiltroAtual === 'concluidos') return it.concluido;
+        if (checklistFiltroAtual === 'rotina') return it.categoria === 'rotina' || it.padrao;
+        return true; // 'todos'
+      });
+
+      if (filtrados.length === 0) {
+        var textoVazio = emptyMsg;
+        if (itens.length > 0) {
+          textoVazio = checklistFiltroAtual === 'pendentes'
+            ? 'Todos os itens desta coluna foram concluídos!'
+            : 'Nenhum item encontrado para o filtro ativo.';
+        }
+        targetEl.innerHTML = '<li class="reminders-empty" style="padding:28px 16px;">' +
+          '<i data-lucide="check-circle" style="width:30px;height:30px;opacity:0.4;"></i>' +
+          '<div style="font-size:13px;font-weight:600;margin-top:4px;">Nenhum item</div>' +
+          '<div style="font-size:11.5px;color:var(--muted);">' + textoVazio + '</div>' +
+          '</li>';
+        return;
+      }
+
+      var html = '';
+      filtrados.forEach(function(item) {
+        var completedClass = item.concluido ? ' completed' : '';
+        var tagLabel = getCategoriaLabel(item.categoria);
+        var tagClass = 'tag-' + (item.categoria || 'avulso');
+        var metaHorario = item.horario ? '<span>·</span><span>' + escapeHTML(item.horario) + '</span>' : '';
+
+        html += '<li class="reminder-item' + completedClass + '" id="chk-item-' + item.id + '">' +
+          '<button class="reminder-checkbox" onclick="toggleChecklistItem(\'' + item.id + '\')" title="' + (item.concluido ? 'Desmarcar' : 'Concluir') + '">' +
+            '<i data-lucide="check" style="width:13px;height:13px;stroke-width:3;"></i>' +
+          '</button>' +
+          '<div class="reminder-body">' +
+            '<div class="reminder-title">' + escapeHTML(item.titulo) + '</div>' +
+            '<div class="reminder-meta">' +
+              '<span class="reminder-tag ' + tagClass + '">' + tagLabel + '</span>' +
+              metaHorario +
+            '</div>' +
+          '</div>' +
+          '<div class="reminder-actions">' +
+            '<button class="reminder-action-btn alert" onclick="criarOcorrenciaDoChecklist(\'' + item.id + '\')" data-tooltip="Falha detectada? Criar ocorrência desta rotina" aria-label="Criar ocorrência desta rotina">' +
+              '<i data-lucide="alert-triangle" style="width:14px;height:14px;stroke-width:2.2;"></i>' +
+            '</button>' +
+            '<button class="reminder-action-btn del" onclick="removerItemChecklist(\'' + item.id + '\')" title="Excluir rotina/lembrete" aria-label="Excluir rotina">' +
+              '<i data-lucide="trash-2" style="width:14px;height:14px;stroke-width:2;"></i>' +
+            '</button>' +
+          '</div>' +
+        '</li>';
+      });
+
+      targetEl.innerHTML = html;
+    }
+
+    renderizarLista(padraoItems, listPadraoEl, 'Nenhuma rotina padrão cadastrada. Adicione acima para toda a equipe.');
+    renderizarLista(pessoalItems, listPessoalEl, 'Nenhum lembrete pessoal cadastrado.');
+
+    if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+  }
+  window.renderChecklist = renderChecklist;
+
+  function getCategoriaLabel(cat) {
+    switch(cat) {
+      case 'rotina': return 'Rotina TV';
+      case 'estudio': return 'Estúdio';
+      case 'ctrs': return 'Transmissão CTRS';
+      case 'infra': return 'Infraestrutura';
+      default: return 'Lembrete';
+    }
+  }
+
+  function toggleChecklistItem(id) {
+    var item = checklistItems.find(function(it) { return it.id === id; });
+    if (!item) return;
+    item.concluido = !item.concluido;
+    item.concluidoEm = item.concluido ? new Date().toISOString() : null;
+    salvarChecklistStore();
+    renderChecklist();
+
+    // Sincroniza estado de conclusão com a nuvem
+    if (item.padrao) {
+      salvarRotinaPadraoNuvem(item);
+    } else {
+      salvarLembretePessoalNuvem(item);
+    }
+
+    if (item.concluido && typeof tocarSomNotificacao === 'function') {
+      try { tocarSomNotificacao(); } catch(e) {}
+    }
+  }
+  window.toggleChecklistItem = toggleChecklistItem;
+
+  function filtrarChecklist(tipo, el) {
+    checklistFiltroAtual = tipo;
+    document.querySelectorAll('.reminders-filter-card').forEach(function(c) {
+      c.classList.remove('active');
+    });
+    if (el) el.classList.add('active');
+
+    var titleEl = document.getElementById('reminders-current-view-title');
+    if (titleEl) {
+      var mapTitles = {
+        todos: 'Todas as Rotinas & Lembretes',
+        pendentes: 'Itens Pendentes de Checagem',
+        rotina: 'Procedimentos Preventivos da TV',
+        concluidos: 'Itens Verificados & Concluídos'
+      };
+      titleEl.innerHTML = '<i data-lucide="list-checks" style="width:15px;height:15px;stroke-width:2;"></i> ' + (mapTitles[tipo] || 'Itens');
+    }
+
+    renderChecklist();
+  }
+  window.filtrarChecklist = filtrarChecklist;
+
+  function adicionarRotinaPadrao() {
+    var input = document.getElementById('reminders-new-padrao-input');
+    var catSelect = document.getElementById('reminders-new-padrao-cat');
+    if (!input || !input.value.trim()) return;
+
+    var titulo = input.value.trim();
+    var categoria = catSelect ? catSelect.value : 'rotina';
+    var novoItem = {
+      id: 'padrao-' + Date.now(),
+      titulo: titulo,
+      categoria: categoria,
+      padrao: true,
+      concluido: false,
+      horario: 'Criado às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    };
+
+    checklistItems.unshift(novoItem);
+    salvarChecklistStore();
+    input.value = '';
+    renderChecklist();
+
+    // Envia para o Supabase com padrao: true para toda a equipe
+    salvarRotinaPadraoNuvem(novoItem);
+
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Rotina Padrão TV Adicionada', 'Procedimento oficial adicionado e compartilhado para toda a equipe.', 'success');
+    }
+  }
+  window.adicionarRotinaPadrao = adicionarRotinaPadrao;
+
+  function adicionarLembreteRapido() {
+    var input = document.getElementById('reminders-new-input');
+    var catSelect = document.getElementById('reminders-new-cat');
+    if (!input || !input.value.trim()) return;
+
+    var titulo = input.value.trim();
+    var categoria = catSelect ? catSelect.value : 'avulso';
+    var novoItem = {
+      id: 'lembrete-' + Date.now(),
+      titulo: titulo,
+      categoria: categoria,
+      padrao: false,
+      concluido: false,
+      horario: 'Criado às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    };
+
+    checklistItems.unshift(novoItem);
+    salvarChecklistStore();
+    input.value = '';
+    renderChecklist();
+
+    // Envia direto para o Supabase atrelado ao UUID do operador
+    salvarLembretePessoalNuvem(novoItem);
+
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Lembrete Adicionado', 'Item incluído na rotina de hoje e sincronizado na nuvem.', 'success');
+    }
+  }
+  window.adicionarLembreteRapido = adicionarLembreteRapido;
+
+  function removerItemChecklist(id) {
+    var item = checklistItems.find(function(it) { return it.id === id; });
+    if (!item) return;
+
+    if (item.padrao) {
+      if (!confirm('Esta é uma Rotina Padrão da emissora. Deseja realmente excluí-la para toda a equipe?')) {
+        return;
+      }
+    }
+
+    checklistItems = checklistItems.filter(function(it) { return it.id !== id; });
+    salvarChecklistStore();
+    renderChecklist();
+
+    if (item.padrao) {
+      excluirRotinaPadraoNuvem(id);
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('Rotina Removida', 'A rotina padrão foi removida para todos os operadores.', 'info');
+      }
+    } else {
+      excluirLembretePessoalNuvem(id);
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('Lembrete Removido', 'Lembrete pessoal excluído.', 'info');
+      }
+    }
+  }
+  window.removerItemChecklist = removerItemChecklist;
+
+  function reiniciarRotinaDiaria() {
+    if (!confirm('Deseja reiniciar a rotina diária para o início de um novo turno? Os itens padrão serão desmarcados.')) {
+      return;
+    }
+    // Desmarcar todos os itens e reter tarefas
+    checklistItems.forEach(function(it) {
+      it.concluido = false;
+      it.concluidoEm = null;
+    });
+    salvarChecklistStore();
+    renderChecklist();
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Rotina Reiniciada', 'O checklist está pronto para o novo turno.', 'info');
+    }
+  }
+  window.reiniciarRotinaDiaria = reiniciarRotinaDiaria;
+
+  function criarOcorrenciaDoChecklist(id) {
+    var item = checklistItems.find(function(it) { return it.id === id; });
+    if (!item) return;
+
+    if (typeof abrirPopup === 'function') {
+      abrirPopup('popup-nova-oc');
+
+      // 1. Preenche o Título diretamente com o nome da rotina
+      var tituloEl = document.getElementById('nova-titulo');
+      if (tituloEl) {
+        tituloEl.value = 'Falha na Rotina: ' + item.titulo;
+      }
+
+      // 2. Preenche a Categoria correta de acordo com a rotina
+      var catEl = document.getElementById('nova-cat');
+      if (catEl) {
+        if (item.categoria === 'ctrs') {
+          catEl.value = 'Telejornal / Transmissão ao Vivo';
+        } else if (item.categoria === 'estudio') {
+          catEl.value = 'Equipamento';
+        } else if (item.categoria === 'infra') {
+          catEl.value = 'Infraestrutura';
+        } else if (item.categoria === 'rotina') {
+          catEl.value = 'Programação';
+        } else {
+          catEl.value = 'Outro';
+        }
+      }
+
+      // 3. Preenche a Descrição Detalhada com formato completo (atinge os 50 caracteres mínimos)
+      var descEl = document.getElementById('nova-desc');
+      if (descEl) {
+        var agoraStr = new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        descEl.value = 'Inconformidade detectada durante a verificação de rotina em ' + agoraStr + '.\nProcedimento checado: ' + item.titulo + '.\nDetalhes da falha observada: ';
+        
+        // Atualiza o contador de caracteres e botão de criar
+        var counter = document.getElementById('nova-counter');
+        if (counter) {
+          var len = descEl.value.length;
+          if (len >= 50) {
+            counter.textContent = '✓ ' + len + ' caracteres — mínimo atingido';
+            counter.className = 'char-count ok';
+          }
+        }
+        var btnCriar = document.getElementById('btn-criar');
+        if (btnCriar) {
+          btnCriar.style.opacity = '1';
+          btnCriar.style.cursor = 'pointer';
+          btnCriar._valido = true;
+        }
+
+        setTimeout(function() {
+          descEl.focus();
+          descEl.setSelectionRange(descEl.value.length, descEl.value.length);
+        }, 180);
+      }
+    }
+  }
+  window.criarOcorrenciaDoChecklist = criarOcorrenciaDoChecklist;
+
+
+
+  /* ═══════════════════════════════════════════
+     INTEGRAÇÃO SUPABASE: LISTA DE OPERADORES & RESOLUÇÃO DE UUID
+  ═══════════════════════════════════════════ */
+
+  var operadoresMap = {}; // nome -> id (UUID)
+
+  function getDBCredentials() {
+    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
+    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
+    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
+      url = window.ENV_CONFIG.SUPABASE_URL;
+    }
+    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
+      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
+    }
+    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
+  }
+
+  function carregarOperadoresSugeridos() {
+    var datalist = document.getElementById('lista-operadores-sugeridos');
+    var db = getDBCredentials();
+    if (!db.url || !db.key) return;
+
+    var endpoint = db.url + '/rest/v1/operadores?select=id,nome&ativo=eq.true&order=nome.asc';
+    fetch(endpoint, {
+      headers: {
+        'apikey': db.key,
+        'Authorization': 'Bearer ' + db.key
+      }
+    })
+    .then(function(res) { return res.ok ? res.json() : null; })
+    .then(function(operadores) {
+      if (Array.isArray(operadores) && operadores.length > 0) {
+        operadoresMap = {};
+        operadores.forEach(function(op) {
+          operadoresMap[op.nome.trim()] = op.id;
+        });
+
+        // Salva o UUID do operador atual se o nome corresponder
+        var usuarioAtual = getUsuarioAtual();
+        if (operadoresMap[usuarioAtual]) {
+          localStorage.setItem('tv_operador_uuid_v1', operadoresMap[usuarioAtual]);
+        }
+
+        if (datalist) {
+          datalist.innerHTML = operadores.map(function(op) {
+            return '<option value="' + escapeHTML(op.nome) + '">';
+          }).join('');
+        }
+        console.log('[Operadores] ' + operadores.length + ' operadores carregados do banco de dados (Supabase).');
+
+        // Sincroniza as rotinas com o banco agora que temos o UUID
+        sincronizarChecklistNuvem();
+      }
+    })
+    .catch(function(err) {
+      console.warn('[Operadores] Não foi possível carregar operadores do Supabase:', err);
+    });
+  }
+  window.carregarOperadoresSugeridos = carregarOperadoresSugeridos;
+
+  /* ═══════════════════════════════════════════
+     SINCRONIZAÇÃO EM NUVEM: ROTINAS DIRETAMENTE NO BANCO DE DADOS
+  ═══════════════════════════════════════════ */
+
+  function getOperadorUUID() {
+    var uuid = localStorage.getItem('tv_operador_uuid_v1');
+    if (uuid) return uuid;
+    var usuarioAtual = getUsuarioAtual();
+    if (operadoresMap[usuarioAtual]) {
+      uuid = operadoresMap[usuarioAtual];
+      localStorage.setItem('tv_operador_uuid_v1', uuid);
+      return uuid;
+    }
+    return null;
+  }
+
+  function sincronizarChecklistNuvem() {
+    var db = getDBCredentials();
+    if (!db.url || !db.key) return;
+    var opUUID = getOperadorUUID();
+    var usuarioAtual = getUsuarioAtual();
+
+    // Sempre busca todas as rotinas padrão (padrao=true) + as rotinas pessoais do operador atual
+    var queryFilter = '';
+    if (opUUID) {
+      queryFilter = 'or=(padrao.eq.true,operador_id.eq.' + encodeURIComponent(opUUID) + ')';
+    } else if (usuarioAtual && usuarioAtual !== 'Plantão Técnico' && usuarioAtual !== 'Operador') {
+      queryFilter = 'or=(padrao.eq.true,operador_nome.eq.' + encodeURIComponent(usuarioAtual) + ')';
+    } else {
+      queryFilter = 'padrao=eq.true';
+    }
+
+    var endpoint = db.url + '/rest/v1/checklist_itens?select=*&' + queryFilter + '&order=criado_em.asc';
+
+    fetch(endpoint, {
+      headers: {
+        'apikey': db.key,
+        'Authorization': 'Bearer ' + db.key,
+        'Cache-Control': 'no-cache'
+      }
+    })
+    .then(function(res) { return res.ok ? res.json() : null; })
+    .then(function(cloudItens) {
+      if (Array.isArray(cloudItens)) {
+        var itensProcessados = cloudItens.map(function(c) {
+          return {
+            id: c.id,
+            titulo: c.titulo,
+            categoria: c.categoria || (c.padrao ? 'rotina' : 'avulso'),
+            padrao: !!c.padrao,
+            concluido: !!c.concluido,
+            concluidoEm: c.concluido_em || null,
+            horario: c.padrao
+              ? 'Rotina TV'
+              : (c.criado_em ? 'Criado em ' + new Date(c.criado_em).toLocaleDateString('pt-BR') : 'Pessoal'),
+            operador_id: c.operador_id,
+            operador_nome: c.operador_nome
+          };
+        });
+
+        // Preservar itens locais recém-criados que ainda não estejam na nuvem
+        var idNuvemMap = {};
+        itensProcessados.forEach(function(item) { idNuvemMap[item.id] = true; });
+
+        var pendentesLocais = checklistItems.filter(function(it) {
+          return it && !idNuvemMap[it.id] && (!it.id || !it.id.toString().startsWith('rot-'));
+        });
+
+        checklistItems = itensProcessados.concat(pendentesLocais);
+        salvarChecklistStore();
+        renderChecklist();
+        console.log('[Checklist DB] ✅ ' + itensProcessados.length + ' rotinas carregadas diretamente do banco de dados (Supabase checklist_itens).');
+      }
+    })
+    .catch(function(err) {
+      console.warn('[Checklist DB] Erro ao sincronizar com banco de dados:', err);
+    });
+  }
+  window.sincronizarChecklistNuvem = sincronizarChecklistNuvem;
+  window.sincronizarLembretesPessoaisNuvem = sincronizarChecklistNuvem;
+
+  function salvarRotinaPadraoNuvem(item) {
+    var db = getDBCredentials();
+    if (!db.url || !db.key) {
+      console.warn('[Checklist DB] Supabase não configurado. Salvo apenas localmente.');
+      return;
+    }
+
+    var payload = {
+      id: item.id,
+      operador_id: null,
+      operador_nome: 'Padrão TV',
+      titulo: item.titulo,
+      categoria: item.categoria || 'rotina',
+      padrao: true,
+      concluido: !!item.concluido,
+      concluido_em: item.concluidoEm || null
+    };
+
+    var endpoint = db.url + '/rest/v1/checklist_itens';
+    fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': db.key,
+        'Authorization': 'Bearer ' + db.key,
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(function(res) {
+      if (!res.ok) {
+        return res.text().then(function(errText) {
+          console.error('[Checklist DB] Erro ao salvar rotina padrão no banco:', res.status, errText);
+        });
+      }
+      console.log('[Checklist DB] ✅ Rotina padrão salva com sucesso no banco de dados (checklist_itens):', item.titulo);
+    })
+    .catch(function(err) {
+      console.error('[Checklist DB] Falha ao enviar rotina padrão para o banco:', err);
+    });
+  }
+  window.salvarRotinaPadraoNuvem = salvarRotinaPadraoNuvem;
+
+  function excluirRotinaPadraoNuvem(id) {
+    var db = getDBCredentials();
+    if (!db.url || !db.key || !id) return;
+    var endpoint = db.url + '/rest/v1/checklist_itens?id=eq.' + encodeURIComponent(id);
+    fetch(endpoint, {
+      method: 'DELETE',
+      headers: {
+        'apikey': db.key,
+        'Authorization': 'Bearer ' + db.key
+      }
+    })
+    .then(function(res) {
+      if (res.ok) {
+        console.log('[Checklist DB] ✅ Rotina padrão excluída do banco de dados:', id);
+      }
+    })
+    .catch(function(err) {
+      console.error('[Checklist DB] Falha ao excluir rotina padrão do banco:', err);
+    });
+  }
+  window.excluirRotinaPadraoNuvem = excluirRotinaPadraoNuvem;
+
+  function salvarLembretePessoalNuvem(item) {
+    var db = getDBCredentials();
+    if (!db.url || !db.key) return;
+    var opUUID = getOperadorUUID();
+    var usuarioAtual = getUsuarioAtual();
+
+    var payload = {
+      id: item.id,
+      operador_id: opUUID || null,
+      operador_nome: usuarioAtual,
+      titulo: item.titulo,
+      categoria: item.categoria || 'avulso',
+      padrao: false,
+      concluido: !!item.concluido,
+      concluido_em: item.concluidoEm || null
+    };
+
+    var endpoint = db.url + '/rest/v1/checklist_itens';
+    fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': db.key,
+        'Authorization': 'Bearer ' + db.key,
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(function(res) {
+      if (!res.ok) {
+        return res.text().then(function(errText) {
+          console.error('[Checklist DB] Erro ao salvar lembrete pessoal no banco:', res.status, errText);
+        });
+      }
+      console.log('[Checklist DB] ✅ Lembrete pessoal salvo diretamente no banco de dados:', item.titulo);
+    })
+    .catch(function(err) {
+      console.error('[Checklist DB] Falha ao enviar lembrete pessoal para o banco:', err);
+    });
+  }
+  window.salvarLembretePessoalNuvem = salvarLembretePessoalNuvem;
+
+  function excluirLembretePessoalNuvem(id) {
+    var db = getDBCredentials();
+    if (!db.url || !db.key || !id) return;
+    var endpoint = db.url + '/rest/v1/checklist_itens?id=eq.' + encodeURIComponent(id);
+    fetch(endpoint, {
+      method: 'DELETE',
+      headers: {
+        'apikey': db.key,
+        'Authorization': 'Bearer ' + db.key
+      }
+    })
+    .then(function(res) {
+      if (res.ok) {
+        console.log('[Checklist DB] ✅ Lembrete pessoal excluído do banco de dados:', id);
+      }
+    })
+    .catch(function(err) {
+      console.error('[Checklist DB] Falha ao excluir lembrete do banco:', err);
+    });
+  }
+  window.excluirLembretePessoalNuvem = excluirLembretePessoalNuvem;
+
   /* ═══════════════════════════════════════════
      POPUP: NOVA OCORRÊNCIA
   ═══════════════════════════════════════════ */
@@ -2711,7 +3444,6 @@ document.addEventListener('DOMContentLoaded', function () {
   var novaCounter = document.getElementById('nova-counter');
   var btnCriar    = document.getElementById('btn-criar');
   var novaFile    = document.getElementById('nova-arquivos');
-  var novaArea    = document.getElementById('nova-upload-area');
   var novaPrevs   = document.getElementById('nova-previews');
 
   function validarNova() {
@@ -2745,52 +3477,74 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  function criarNovaOcorrencia() {
+    var tituloVal = novaTitulo ? novaTitulo.value.trim() : '';
+    var descVal = novaDesc ? novaDesc.value.trim() : '';
+
+    if (!tituloVal) {
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('Título Necessário', 'Por favor, informe o título da ocorrência.', 'warning');
+      }
+      if (novaTitulo) novaTitulo.focus();
+      return;
+    }
+
+    if (descVal.length < 50) {
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('Descrição Curta', 'A descrição deve ter pelo menos 50 caracteres (' + descVal.length + '/50).', 'warning');
+      }
+      if (novaDesc) novaDesc.focus();
+      return;
+    }
+
+    var respVal = document.getElementById('nova-resp') ? document.getElementById('nova-resp').value : '';
+    var userAtual = getUsuarioAtual();
+    var isMine = (respVal === userAtual || respVal === 'Operador' || respVal.indexOf(userAtual) !== -1 || respVal.indexOf('Você') !== -1);
+
+    var anexosFinais = (uploadedFilesStore['nova-previews'] || []).slice();
+    var novo = {
+      id:          'oc_' + Date.now(),
+      titulo:      tituloVal,
+      prio:        document.getElementById('nova-prio') ? document.getElementById('nova-prio').value : 'Média',
+      cat:         document.getElementById('nova-cat') ? document.getElementById('nova-cat').value : 'Equipamento',
+      resp:        respVal || 'Todos do turno',
+      local:       document.getElementById('nova-local') ? document.getElementById('nova-local').value.trim() : '',
+      prazo:       document.getElementById('nova-prazo') ? document.getElementById('nova-prazo').value : '',
+      desc:        descVal,
+      mine:        isMine,
+      tags:        ['Nova'],
+      status:      'aberta',
+      criado:      Date.now(),
+      dataCriacao: formatDataHoraLocal(),
+      resolucao:   anexosFinais.length > 0 ? { statusRes: 'Aberta', anexos: anexosFinais } : null,
+      anexos:      anexosFinais
+    };
+
+    ocorrencias = [novo].concat(ocorrencias);
+    window.ocorrencias = ocorrencias;
+    save(ocorrencias);
+    uploadedFilesStore['nova-previews'] = [];
+    fecharPopup('popup-nova-oc');
+    adicionarNotificacao('Nova Ocorrência Criada', novo.titulo + ' (' + novo.prio + ' Prioridade)', novo.prio === 'Alta' ? 'warning' : 'info');
+    renderAll();
+
+    /* reset */
+    if (novaTitulo) novaTitulo.value = '';
+    if (novaDesc)   novaDesc.value   = '';
+    if (novaFile)   novaFile.value   = '';
+    if (novaPrevs)  novaPrevs.innerHTML = '';
+    if (novaCounter) { novaCounter.textContent = 'Mínimo 50 caracteres'; novaCounter.className = 'char-count'; }
+    if (document.getElementById('nova-prio')) document.getElementById('nova-prio').selectedIndex = 1;
+    if (document.getElementById('nova-resp')) document.getElementById('nova-resp').selectedIndex = 0;
+    if (document.getElementById('nova-cat'))  document.getElementById('nova-cat').selectedIndex  = 0;
+    if (document.getElementById('nova-local')) document.getElementById('nova-local').value = '';
+    if (document.getElementById('nova-prazo')) document.getElementById('nova-prazo').value = '';
+    validarNova();
+  }
+  window.criarNovaOcorrencia = criarNovaOcorrencia;
+
   if (btnCriar) {
-    btnCriar.addEventListener('click', function() {
-      if (!this._valido) return;
-      var respVal = document.getElementById('nova-resp') ? document.getElementById('nova-resp').value : '';
-      var userAtual = getUsuarioAtual();
-      var isMine = (respVal === userAtual || respVal === 'Operador' || respVal.indexOf(userAtual) !== -1 || respVal.indexOf('Você') !== -1);
-
-      var anexosFinais = (uploadedFilesStore['nova-previews'] || []).slice();
-      var novo = {
-        id:          'oc_' + Date.now(),
-        titulo:      novaTitulo.value.trim(),
-        prio:        document.getElementById('nova-prio').value,
-        cat:         document.getElementById('nova-cat').value,
-        resp:        respVal,
-        local:       document.getElementById('nova-local').value.trim(),
-        prazo:       document.getElementById('nova-prazo').value,
-        desc:        novaDesc.value.trim(),
-        mine:        isMine,
-        tags:        ['Nova'],
-        status:      'aberta',
-        criado:      Date.now(),
-        dataCriacao: formatDataHoraLocal(),
-        resolucao:   anexosFinais.length > 0 ? { statusRes: 'Aberta', anexos: anexosFinais } : null,
-        anexos:      anexosFinais
-      };
-
-      ocorrencias = [novo].concat(ocorrencias);
-      save(ocorrencias);
-      uploadedFilesStore['nova-previews'] = [];
-      fecharPopup('popup-nova-oc');
-      adicionarNotificacao('Nova Ocorrência Criada', novo.titulo + ' (' + novo.prio + ' Prioridade)', novo.prio === 'Alta' ? 'warning' : 'info');
-      renderAll();
-
-      /* reset */
-      novaTitulo.value = '';
-      novaDesc.value   = '';
-      if (novaFile)  novaFile.value = '';
-      if (novaPrevs) novaPrevs.innerHTML = '';
-      if (novaCounter) { novaCounter.textContent = 'Mínimo 50 caracteres'; novaCounter.className = 'char-count'; }
-      document.getElementById('nova-prio').selectedIndex = 1;
-      document.getElementById('nova-resp').selectedIndex = 0;
-      document.getElementById('nova-cat').selectedIndex  = 0;
-      document.getElementById('nova-local').value = '';
-      document.getElementById('nova-prazo').value = '';
-      validarNova();
-    });
+    btnCriar.addEventListener('click', criarNovaOcorrencia);
   }
 
   /* ═══════════════════════════════════════════
@@ -2802,7 +3556,6 @@ document.addEventListener('DOMContentLoaded', function () {
   var resolverCounter = document.getElementById('resolver-counter');
   var btnConfirmar    = document.getElementById('btn-confirmar-resolver');
   var resolverFile    = document.getElementById('resolver-arquivos');
-  var resolverArea    = document.getElementById('resolver-upload-area');
   var resolverPrevs   = document.getElementById('resolver-previews');
 
   function validarResolver() {
@@ -2960,7 +3713,6 @@ document.addEventListener('DOMContentLoaded', function () {
   window.salvarEdicaoOcorrencia = salvarEdicaoOcorrencia;
 
   var itemDetalhesAtual = null;
-
   /* ═══════════════════════════════════════════
      SISTEMA DE LIXEIRA (Retenção 7 dias / Notificação 24h)
   ═══════════════════════════════════════════ */
@@ -3190,12 +3942,26 @@ document.addEventListener('DOMContentLoaded', function () {
   ═══════════════════════════════════════════ */
   var filtroArquivadosAtivo = 'todas';
 
-  function filtrarArquivados(el, tipo) {
-    if (el) {
-      el.closest('.pills').querySelectorAll('.pill').forEach(function(p) { p.classList.remove('on'); });
-      el.classList.add('on');
+  function filtrarArquivados(elOrTipo, tipo) {
+    var el = (elOrTipo && typeof elOrTipo === 'object' && elOrTipo.nodeType) ? elOrTipo : null;
+    var tipoFinal = typeof elOrTipo === 'string' ? elOrTipo : tipo;
+    if (el && typeof el.closest === 'function') {
+      var pills = el.closest('.pills');
+      if (pills) {
+        pills.querySelectorAll('.pill').forEach(function(p) { p.classList.remove('on'); });
+        el.classList.add('on');
+      }
+    } else if (tipoFinal) {
+      document.querySelectorAll('#page-arquivados .pills .pill').forEach(function(p) {
+        var pText = p.textContent.trim().toLowerCase();
+        if (pText === tipoFinal.toLowerCase() || (tipoFinal.toLowerCase() === 'todas' && pText === 'todas')) {
+          p.classList.add('on');
+        } else {
+          p.classList.remove('on');
+        }
+      });
     }
-    filtroArquivadosAtivo = (tipo || (el ? el.textContent.trim().toLowerCase() : 'todas')).toLowerCase();
+    filtroArquivadosAtivo = (tipoFinal || (el ? el.textContent.trim().toLowerCase() : 'todas')).toLowerCase();
     renderArquivados();
   }
   window.filtrarArquivados = filtrarArquivados;
@@ -3326,14 +4092,6 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.renderArquivados = renderArquivados;
 
-  function excluirOcorrenciaDoModal() {
-    var id = document.getElementById('edit-oc-id').value;
-    if (!id) return;
-    fecharPopup('popup-editar-oc');
-    excluirOcorrencia(id);
-  }
-  window.excluirOcorrenciaDoModal = excluirOcorrenciaDoModal;
-
   function editarOcorrenciaDoModalDetalhes() {
     if (!itemDetalhesAtual) return;
     var targetId = itemDetalhesAtual.id;
@@ -3357,91 +4115,109 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.excluirOcorrenciaDoModalDetalhes = excluirOcorrenciaDoModalDetalhes;
 
-  if (btnConfirmar) {
-    btnConfirmar.addEventListener('click', function() {
-      if (!this._valido || !resolverAtualId) return;
-      var idx = ocorrencias.findIndex(function(o){ return o.id === resolverAtualId; });
-      if (idx === -1) return;
-
-      var statusEl = document.getElementById('resolver-status');
-      var statusEscolhido = statusEl ? statusEl.value : 'Resolvido';
-      var oc = ocorrencias[idx];
-      var nowStr = formatDataHoraLocal();
-      var usuarioLogado = getUsuarioAtual();
-      var descResolucao = resolverDesc.value.trim();
-
-      var isParcial = (statusEscolhido === 'Parcialmente resolvido');
-      var isArquivada = (statusEscolhido === 'Resolvida e Arquivada');
-
-      var updatedTags = (oc.tags || []).filter(function(t){ return t !== 'Parcialmente Resolvida' && t !== 'Arquivada'; });
-      if (isParcial) {
-        updatedTags.push('Parcialmente Resolvida');
-      } else if (isArquivada) {
-        updatedTags.push('Arquivada');
-      }
-
-      var novoStatus = 'resolvida';
-      if (isParcial) novoStatus = 'aberta';
-      else if (isArquivada) novoStatus = 'arquivada';
-
-      var anexosNovos = (uploadedFilesStore['resolver-previews'] || []).slice();
-      var anexosAntigos = (oc.anexos && Array.isArray(oc.anexos)) ? oc.anexos : ((oc.resolucao && Array.isArray(oc.resolucao.anexos)) ? oc.resolucao.anexos : []);
-      var anexosCombinados = anexosAntigos.concat(anexosNovos);
-
-      ocorrencias[idx] = Object.assign({}, oc, {
-        status: novoStatus,
-        tags: updatedTags,
-        anexos: anexosCombinados,
-        resolucao: {
-          statusRes: statusEscolhido,
-          descRes:   descResolucao,
-          data:      Date.now(),
-          resolvidoPor: usuarioLogado,
-          anexos:    anexosCombinados
-        }
-      });
-
-      // ADICIONA AUTOMATICAMENTE AO HISTÓRICO GERAL!
-      var tagsHist = isArquivada ? ['Arquivada'] : [];
-      var novoItemHist = {
-        id:            'h_oc_' + Date.now(),
-        tipo:          'ocorrencia',
-        subtipo:       oc.cat || 'Equipamento',
-        titulo:        oc.titulo,
-        equipamento:   oc.local ? (oc.local + ' — ' + (oc.cat || 'Equipamento')) : (oc.cat || oc.titulo),
-        categoria:     oc.cat || 'Equipamento',
-        local:         oc.local || 'Central Técnica',
-        dataCriacao:   nowStr,
-        criadoPor:     oc.resp || 'Sistema',
-        descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
-        status:        statusEscolhido,
-        dataResolucao: nowStr,
-        resolvidoPor:  usuarioLogado,
-        descResolucao: descResolucao,
-        tags:          tagsHist,
-        anexos:        anexosCombinados
-      };
-
-      historicoSeedData = [novoItemHist].concat(historicoSeedData);
-      saveHistorico(historicoSeedData);
-
-      save(ocorrencias);
+  function confirmarResolucao() {
+    if (!resolverAtualId) {
       fecharPopup('popup-resolver');
-      renderAll();
-      resolverAtualId = null;
-
+      return;
+    }
+    var descResolucao = resolverDesc ? resolverDesc.value.trim() : '';
+    if (descResolucao.length < 10) {
       if (typeof mostrarToast === 'function') {
-        if (isParcial) {
-          mostrarToast('Parcialmente Resolvida', 'A ocorrência foi registrada no histórico e continua ativa para acompanhamento.', 'warning');
-        } else if (isArquivada) {
-          mostrarToast('Ocorrência Arquivada', 'A ocorrência foi arquivada para verificação do próximo turno e salva no histórico.', 'info');
-        } else {
-          mostrarToast('Ocorrência Concluída', 'A ocorrência foi resolvida e registrada no histórico geral.', 'success');
-        }
+        mostrarToast('Descrição Necessária', 'Preencha a descrição da resolução com pelo menos 10 caracteres (' + descResolucao.length + '/10).', 'warning');
+      }
+      if (resolverDesc) resolverDesc.focus();
+      return;
+    }
+
+    var idx = ocorrencias.findIndex(function(o){ return o.id === resolverAtualId; });
+    if (idx === -1) {
+      fecharPopup('popup-resolver');
+      return;
+    }
+
+    var statusEl = document.getElementById('resolver-status');
+    var statusEscolhido = statusEl ? statusEl.value : 'Resolvido';
+    var oc = ocorrencias[idx];
+    var nowStr = formatDataHoraLocal();
+    var usuarioLogado = getUsuarioAtual();
+
+    var isParcial = (statusEscolhido === 'Parcialmente resolvido');
+    var isArquivada = (statusEscolhido === 'Resolvida e Arquivada');
+
+    var updatedTags = (oc.tags || []).filter(function(t){ return t !== 'Parcialmente Resolvida' && t !== 'Arquivada'; });
+    if (isParcial) {
+      updatedTags.push('Parcialmente Resolvida');
+    } else if (isArquivada) {
+      updatedTags.push('Arquivada');
+    }
+
+    var novoStatus = 'resolvida';
+    if (isParcial) novoStatus = 'aberta';
+    else if (isArquivada) novoStatus = 'arquivada';
+
+    var anexosNovos = (uploadedFilesStore['resolver-previews'] || []).slice();
+    var anexosAntigos = (oc.anexos && Array.isArray(oc.anexos)) ? oc.anexos : ((oc.resolucao && Array.isArray(oc.resolucao.anexos)) ? oc.resolucao.anexos : []);
+    var anexosCombinados = anexosAntigos.concat(anexosNovos);
+
+    ocorrencias[idx] = Object.assign({}, oc, {
+      status: novoStatus,
+      tags: updatedTags,
+      anexos: anexosCombinados,
+      resolucao: {
+        statusRes: statusEscolhido,
+        descRes:   descResolucao,
+        data:      Date.now(),
+        resolvidoPor: usuarioLogado,
+        anexos:    anexosCombinados
       }
     });
-  }
+    window.ocorrencias = ocorrencias;
 
+    // ADICIONA AUTOMATICAMENTE AO HISTÓRICO GERAL!
+    var tagsHist = isArquivada ? ['Arquivada'] : [];
+    var novoItemHist = {
+      id:            'h_oc_' + Date.now(),
+      tipo:          'ocorrencia',
+      subtipo:       oc.cat || 'Equipamento',
+      titulo:        oc.titulo,
+      equipamento:   oc.local ? (oc.local + ' — ' + (oc.cat || 'Equipamento')) : (oc.cat || oc.titulo),
+      categoria:     oc.cat || 'Equipamento',
+      local:         oc.local || 'Central Técnica',
+      dataCriacao:   nowStr,
+      criadoPor:     oc.resp || 'Sistema',
+      descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
+      status:        statusEscolhido,
+      dataResolucao: nowStr,
+      resolvidoPor:  usuarioLogado,
+      descResolucao: descResolucao,
+      tags:          tagsHist,
+      anexos:        anexosCombinados
+    };
+
+    historicoSeedData = [novoItemHist].concat(historicoSeedData);
+    window.historicoSeedData = historicoSeedData;
+    saveHistorico(historicoSeedData);
+
+    save(ocorrencias);
+    fecharPopup('popup-resolver');
+    renderAll();
+    resolverAtualId = null;
+
+    if (typeof mostrarToast === 'function') {
+      if (isParcial) {
+        mostrarToast('Parcialmente Resolvida', 'A ocorrência foi registrada no histórico e continua ativa para acompanhamento.', 'warning');
+      } else if (isArquivada) {
+        mostrarToast('Ocorrência Arquivada', 'A ocorrência foi arquivada para verificação do próximo turno e salva no histórico.', 'info');
+      } else {
+        mostrarToast('Ocorrência Concluída', 'A ocorrência foi resolvida e registrada no histórico geral.', 'success');
+      }
+    }
+  }
+  window.confirmarResolucao = confirmarResolucao;
+
+  if (btnConfirmar) {
+    btnConfirmar.addEventListener('click', confirmarResolucao);
+  }
   /* ═══════════════════════════════════════════
      CONFIGURAÇÕES
   ═══════════════════════════════════════════ */
@@ -3714,7 +4490,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 1400);
   }
   window.salvarConfiguracoes = salvarConfiguracoes;
-
   /* ═══════════════════════════════════════════
      HISTÓRICO GERAL (Funções de Renderização e Filtros)
   ═══════════════════════════════════════════ */
@@ -4323,7 +5098,6 @@ document.addEventListener('DOMContentLoaded', function () {
     verDetalhesHistoricoDirect(item);
   }
   window.verDetalhesOcorrencia = verDetalhesOcorrencia;
-
   /* ═══════════════════════════════════════════
      SISTEMA DE TOAST NOTIFICATIONS & CENTRAL DE ALERTAS
   ═══════════════════════════════════════════ */
@@ -4333,14 +5107,43 @@ document.addEventListener('DOMContentLoaded', function () {
   var notificacoesStore = [];
   var notificacoesDispensadas = [];
 
+  var INITIAL_NOTIFICACOES_SEED = [
+    {
+      id: 'notif_init_1',
+      titulo: 'Boas-vindas ao Turno TV Integração',
+      msg: 'Sistema operacional ativo. Verifique os checklists diários de CTRS e as transmissões ao vivo agendadas.',
+      tempo: formatDataHoraLocal(),
+      tipo: 'info',
+      lida: false,
+      chaveAutomatica: 'seed_welcome'
+    },
+    {
+      id: 'notif_init_2',
+      titulo: 'Atenção: Transmissor VHF',
+      msg: 'Ocorrência aberta na Torre Central requer acompanhamento dos níveis de potência.',
+      tempo: formatDataHoraLocal(),
+      tipo: 'warning',
+      lida: false,
+      chaveAutomatica: 'seed_transmissor'
+    }
+  ];
+
   function loadNotificacoes() {
     try {
       var raw = localStorage.getItem(NOTIF_STORAGE_KEY);
       if (raw) {
         var parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) notificacoesStore = parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          notificacoesStore = parsed;
+        } else {
+          notificacoesStore = INITIAL_NOTIFICACOES_SEED.slice();
+        }
+      } else {
+        notificacoesStore = INITIAL_NOTIFICACOES_SEED.slice();
       }
-    } catch(e) {}
+    } catch(e) {
+      notificacoesStore = INITIAL_NOTIFICACOES_SEED.slice();
+    }
 
     try {
       var rawD = localStorage.getItem(NOTIF_DISMISSED_KEY);
@@ -4349,9 +5152,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (Array.isArray(parsedD)) notificacoesDispensadas = parsedD;
       }
     } catch(e) {}
+    window.notificacoesStore = notificacoesStore;
   }
 
   function saveNotificacoes() {
+    window.notificacoesStore = notificacoesStore;
     try {
       localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(notificacoesStore.slice(0, 50)));
     } catch(e) {}
@@ -4536,12 +5341,14 @@ document.addEventListener('DOMContentLoaded', function () {
   window.renderNotificacoes = renderNotificacoes;
 
   function abrirNotificacoes() {
-    /* marca todas como lidas */
-    (notificacoesStore || []).forEach(function(n){ if (n) n.lida = true; });
-    saveNotificacoes();
     renderNotificacoes();
     abrirPopup('popup-notificacoes');
     if (typeof lucide !== 'undefined') lucide.createIcons();
+    setTimeout(function() {
+      (notificacoesStore || []).forEach(function(n){ if (n) n.lida = true; });
+      saveNotificacoes();
+      atualizarBadgesNotificacoes();
+    }, 1200);
   }
   window.abrirNotificacoes = abrirNotificacoes;
 
@@ -4579,7 +5386,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.limparTodasNotificacoes = limparTodasNotificacoes;
-
   /* ═══════════════════════════════════════════
      SISTEMA DE EXPORTAÇÃO E CONSOLIDAÇÃO POWER BI
   ═══════════════════════════════════════════ */
@@ -5033,7 +5839,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (barCancEq) barCancEq.style.height = eqTotal > 0 ? Math.max(eqPctCanc * 0.85, 4) + '%' : '4px';
   }
   window.renderResumoTransmissoesGerais = renderResumoTransmissoesGerais;
-
   /* ═══════════════════════════════════════════
      PLANEJAMENTO ORÇAMENTÁRIO (ANO ATUAL + 1)
   ═══════════════════════════════════════════ */
@@ -5228,7 +6033,34 @@ document.addEventListener('DOMContentLoaded', function () {
   window.confirmarItemOrcamento = confirmarItemOrcamento;
 
   var ORCAMENTO_STORAGE_KEY = 'tv_orcamento_seed_v2';
+
+  var INITIAL_ORCAMENTO_SEED = [
+    {
+      id: 'orc_init_1',
+      ano: new Date().getFullYear(),
+      tipo: 'CAPEX',
+      praca: 'Juiz de Fora',
+      descricao: 'Aquisição de Switcher de Vídeo SDI 12G 4K',
+      justificativa: 'Modernização do controle mestre e suporte a sinais HD/4K de alta taxa de quadros.',
+      valor: 45000,
+      prioridade: 'Alta',
+      dataCriacao: formatDataHoraLocal()
+    },
+    {
+      id: 'orc_init_2',
+      ano: new Date().getFullYear(),
+      tipo: 'OPEX',
+      praca: 'Uberlândia',
+      descricao: 'Manutenção Preventiva de Geradores e Nobreaks',
+      justificativa: 'Contrato de revisão trimestral das baterias e banco de carga da torre de transmissão.',
+      valor: 8500,
+      prioridade: 'Média',
+      dataCriacao: formatDataHoraLocal()
+    }
+  ];
+
   function salvarOrcamentoStore() {
+    window.orcamentoSeedData = orcamentoSeedData;
     try {
       localStorage.setItem(ORCAMENTO_STORAGE_KEY, JSON.stringify(orcamentoSeedData));
     } catch (e) {}
@@ -5241,9 +6073,16 @@ document.addEventListener('DOMContentLoaded', function () {
         var parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
           orcamentoSeedData = parsed;
+        } else {
+          orcamentoSeedData = INITIAL_ORCAMENTO_SEED.slice();
         }
+      } else {
+        orcamentoSeedData = INITIAL_ORCAMENTO_SEED.slice();
       }
-    } catch (e) {}
+    } catch (e) {
+      orcamentoSeedData = INITIAL_ORCAMENTO_SEED.slice();
+    }
+    window.orcamentoSeedData = orcamentoSeedData;
   }
 
   function removerItemOrcamento(id) {
@@ -5267,10 +6106,22 @@ document.addEventListener('DOMContentLoaded', function () {
     alert('Relatório de Orçamento ' + anoOrcamento + ' exportado com sucesso em formato consolidado (CAPEX/OPEX).');
   }
   window.exportarOrcamentoExcel = exportarOrcamentoExcel;
-
   /* ═══════════════════════════════════════════
      FLUXO DE INICIALIZAÇÃO E IDENTIFICAÇÃO DO OPERADOR
   ═══════════════════════════════════════════ */
+  /* Render inicial */
+  try { carregarFotoPerfilSalva(); } catch(e) {}
+  try { loadNotificacoes(); } catch(e) {}
+  try { carregarCredenciaisSupabaseConfig(); } catch(e) {}
+  try { carregarRascunhoRelatorioTV(); } catch(e) {}
+  try { carregarRascunhoRecebimento(); } catch(e) {}
+  try { carregarRascunhoCompra(); } catch(e) {}
+  try { carregarDashboardMetricsStore(); } catch(e) {}
+  try { carregarOrcamentoStore(); } catch(e) {}
+  try { carregarChecklistStore(); } catch(e) {}
+  try { if (typeof DBService !== 'undefined' && DBService.init) DBService.init(); } catch(e) {}
+  renderAll(true);
+
   DBService.syncRemote();
 
   // Sincronização periódica em tempo real (a cada 5 segundos) e imediata ao focar na janela
@@ -5287,6 +6138,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   var savedUserName = localStorage.getItem(USER_NAME_STORAGE_KEY);
+  try { if (typeof carregarOperadoresSugeridos === 'function') carregarOperadoresSugeridos(); } catch(e) {}
   if (!savedUserName || !savedUserName.trim()) {
     abrirPopup('popup-identificacao-operador');
     var identInput = document.getElementById('ident-operador-nome');

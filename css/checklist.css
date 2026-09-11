@@ -1,0 +1,581 @@
+/* ===========================================================================
+   CHECKLIST DIÁRIO & ROTINAS PREVENTIVAS
+   Inspirado no Apple Reminders / macOS Human Interface Guidelines (HIG)
+   =========================================================================== */
+
+/* Fundo com desfoque e profundidade Liquid Glass */
+.checklist-scroll-area {
+  padding: 72px 24px 40px 24px !important; /* Respeita a altura da topbar (52px) perfeitamente centralizado */
+  background: 
+    radial-gradient(ellipse 65% 50% at 50% 0%, rgba(0, 122, 255, 0.05), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 85% 20%, rgba(52, 199, 89, 0.04), transparent 60%),
+    linear-gradient(180deg, #f8f9fc 0%, #f1f3f7 100%);
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.checklist-wrapper {
+  max-width: 1180px; /* Alargado para acomodar perfeitamente o Split View Apple */
+  width: 100%;
+  margin: 0 auto;
+  padding: 8px 10px 40px;
+}
+
+/* ── Apple Split View: Grid de Duas Colunas ── */
+.reminders-split-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .reminders-split-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+.reminders-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.reminders-col-badge {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-feature-settings: "tnum";
+}
+
+.reminders-col-badge.badge-blue {
+  background: rgba(0, 122, 255, 0.12);
+  color: #007aff;
+}
+
+.reminders-col-badge.badge-purple {
+  background: rgba(175, 82, 222, 0.12);
+  color: #af52de;
+}
+
+/* ── Banner de Resumo / Apple Progress com Frosted Glass ── */
+.reminders-hero {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 18px;
+  padding: 20px 24px;
+  margin-bottom: 18px;
+  box-shadow: 0 10px 30px -6px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.02);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reminders-hero:hover {
+  box-shadow: 0 14px 36px -4px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.reminders-hero-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.reminders-hero-title {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--txt, #1c1c1e);
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reminders-hero-subtitle {
+  font-size: 13px;
+  color: var(--muted, #8e8e93);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reminders-hero-stat {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  text-align: right;
+}
+
+.reminders-progress-bar-wrap {
+  width: 170px;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.reminders-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #34c759, #30d158);
+  border-radius: 999px;
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reminders-hero-numbers {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.reminders-pct {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--txt, #1c1c1e);
+  font-feature-settings: "tnum";
+}
+
+.reminders-count-lbl {
+  font-size: 12px;
+  color: var(--muted, #8e8e93);
+}
+
+/* ── Apple Quick Filter Cards ── */
+.reminders-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 820px) {
+  .reminders-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.reminders-filter-card {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 16px;
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 84px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.reminders-filter-card:hover {
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 122, 255, 0.3);
+}
+
+.reminders-filter-card.active {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #007aff;
+  box-shadow: 0 0 0 2px #007aff, 0 8px 24px rgba(0, 122, 255, 0.15);
+}
+
+.reminders-fc-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.reminders-fc-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.reminders-fc-icon.blue   { background: rgba(0, 122, 255, 0.12); color: #007aff; }
+.reminders-fc-icon.orange { background: rgba(255, 149, 0, 0.12); color: #ff9500; }
+.reminders-fc-icon.purple { background: rgba(175, 82, 222, 0.12); color: #af52de; }
+.reminders-fc-icon.green  { background: rgba(52, 199, 89, 0.12); color: #34c759; }
+
+.reminders-fc-count {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--txt, #1c1c1e);
+  font-feature-settings: "tnum";
+}
+
+.reminders-fc-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted, #8e8e93);
+  margin-top: 8px;
+}
+
+/* ── Nova Tarefa Rápida (Input estilo Apple) ── */
+.reminders-add-box {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 14px;
+  padding: 8px 14px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+}
+
+.reminders-add-box:focus-within {
+  background: #ffffff;
+  border-color: #007aff;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2), 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.reminders-add-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--muted, #8e8e93);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--muted, #8e8e93);
+}
+
+.reminders-add-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: var(--txt, #1c1c1e);
+  font-family: inherit;
+}
+
+.reminders-add-input::placeholder {
+  color: var(--muted, #aeaeb2);
+}
+
+.reminders-category-select {
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 8px;
+  padding: 5px 9px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--txt, #1c1c1e);
+  background: rgba(242, 242, 247, 0.8);
+  outline: none;
+  cursor: pointer;
+}
+
+.reminders-add-btn {
+  background: #007aff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.reminders-add-btn:hover {
+  background: #0062cc;
+  transform: translateY(-1px);
+}
+
+/* ── Lista de Lembretes / Tarefas ── */
+.reminders-section {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 18px;
+  overflow: visible; /* Garante que os tooltips nunca sejam cortados */
+  box-shadow: 0 10px 30px -6px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.02);
+  margin-bottom: 24px;
+}
+
+.reminders-section-head {
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(248, 249, 251, 0.4);
+}
+
+.reminders-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted, #8e8e93);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reminders-reset-btn {
+  background: transparent;
+  border: none;
+  color: #007aff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.reminders-reset-btn:hover {
+  background: rgba(0, 122, 255, 0.08);
+}
+
+.reminders-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.reminder-item {
+  display: flex;
+  align-items: center;
+  padding: 13px 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  gap: 14px;
+  transition: background 0.18s ease, opacity 0.22s ease;
+}
+
+.reminder-item:last-child {
+  border-bottom: none;
+}
+
+.reminder-item:hover {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+/* ── Checkbox Circular Apple com Animação Elástica ── */
+.reminder-checkbox {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #8e8e93;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  padding: 0;
+  position: relative;
+}
+
+.reminder-checkbox:hover {
+  border-color: #34c759;
+  transform: scale(1.08);
+  background: rgba(52, 199, 89, 0.08);
+}
+
+.reminder-checkbox:active {
+  transform: scale(0.9);
+}
+
+.reminder-checkbox i {
+  color: #fff;
+  opacity: 0;
+  transform: scale(0.2) rotate(-15deg);
+  transition: opacity 0.2s ease, transform 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.35);
+}
+
+/* Estado Concluído com Animação Pop Bounce */
+.reminder-item.completed .reminder-checkbox {
+  background: #34c759;
+  border-color: #34c759;
+  animation: appleCheckBounce 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.35) forwards;
+}
+
+.reminder-item.completed .reminder-checkbox i {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+@keyframes appleCheckBounce {
+  0% { transform: scale(0.85); }
+  50% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+/* ── Texto & Metadados do Lembrete ── */
+.reminder-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.reminder-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--txt, #1c1c1e);
+  transition: color 0.22s ease, text-decoration 0.22s ease, opacity 0.22s ease;
+}
+
+.reminder-item.completed .reminder-title {
+  color: var(--muted, #8e8e93);
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+
+.reminder-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted, #8e8e93);
+}
+
+.reminder-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.reminder-tag.tag-rotina { background: rgba(0, 122, 255, 0.1); color: #007aff; }
+.reminder-tag.tag-estudio { background: rgba(255, 149, 0, 0.1); color: #ff9500; }
+.reminder-tag.tag-ctrs   { background: rgba(88, 86, 214, 0.1); color: #5856d6; }
+.reminder-tag.tag-infra  { background: rgba(255, 45, 85, 0.1); color: #ff2d55; }
+.reminder-tag.tag-avulso { background: rgba(142, 142, 147, 0.12); color: #8e8e93; }
+
+/* ── Botões de Ação com Tooltips Elegantes ── */
+.reminder-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.35;
+  transition: opacity 0.18s ease;
+}
+
+.reminder-item:hover .reminder-actions {
+  opacity: 1;
+}
+
+.reminder-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted, #8e8e93);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.reminder-action-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--txt, #1c1c1e);
+}
+
+.reminder-action-btn.del:hover {
+  color: #ff3b30;
+  background: rgba(255, 59, 48, 0.1);
+}
+
+.reminder-action-btn.alert:hover {
+  color: #ff9500;
+  background: rgba(255, 149, 0, 0.12);
+}
+
+/* ── Tooltip Flutuante no Botão de Alerta (à esquerda do botão para nunca cortar) ── */
+.reminder-action-btn[data-tooltip]::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 10px);
+  transform: translateY(-50%) translateX(6px);
+  background: rgba(28, 28, 30, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 6px 11px;
+  border-radius: 7px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28), 0 1px 3px rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 99999;
+}
+
+.reminder-action-btn[data-tooltip]::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 4px);
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-left-color: rgba(28, 28, 30, 0.96);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 99999;
+}
+
+.reminder-action-btn[data-tooltip]:hover::before {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%) translateX(0);
+}
+
+.reminder-action-btn[data-tooltip]:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+.reminders-empty {
+  padding: 42px 20px;
+  text-align: center;
+  color: var(--muted, #8e8e93);
+}
+
+.reminders-empty i {
+  stroke-width: 1.5;
+  margin-bottom: 10px;
+  opacity: 0.5;
+}

@@ -1,0 +1,130 @@
+﻿/* ═══════════════════════════════════════════════════════════════════════════
+   macOS QUICK LOOK LIGHTBOX (VISUALIZADOR EM ALTA RESOLUÇÃO)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.quicklook-overlay {
+  background: rgba(245, 245, 247, 0.55) !important;
+  backdrop-filter: blur(28px) saturate(180%) contrast(100%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(180%) contrast(100%) !important;
+  z-index: 9999 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.quicklook-container {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: var(--r-2xl);
+  box-shadow: 0 32px 84px -12px rgba(0, 0, 0, 0.16), 0 8px 24px -4px rgba(0, 0, 0, 0.06), inset 0 1px 1px 0 rgba(255, 255, 255, 0.95);
+  max-width: 92vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  animation: qlPop 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes qlPop {
+  from { opacity: 0; transform: scale(0.94) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.quicklook-header {
+  padding: 12px 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0;
+}
+.quicklook-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.quicklook-filename {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--txt);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.quicklook-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.quicklook-btn {
+  background: rgba(0, 0, 0, 0.045);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: var(--txt);
+  padding: 6px 12px;
+  border-radius: var(--r-md);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  user-select: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+.quicklook-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.14);
+  transform: translateY(-1px);
+}
+.quicklook-btn:active {
+  transform: scale(0.975);
+}
+.quicklook-close-btn {
+  padding: 6px 9px;
+  border-radius: 50%;
+}
+.quicklook-body {
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(245, 245, 247, 0.4);
+  overflow: auto;
+  max-height: calc(90vh - 60px);
+}
+.quicklook-body img {
+  max-width: 86vw;
+  max-height: calc(86vh - 70px);
+  object-fit: contain;
+  border-radius: var(--r-lg);
+  box-shadow: 0 14px 40px -8px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.05), inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  user-select: none;
+}
+
+/* ── Apple Intelligence Style Floating Beta Capsule ── */
+.apple-beta-capsule {
+  position: absolute;
+  top: -7px;
+  right: -6px;
+  background: rgba(28, 28, 30, 0.94);
+  color: #FFFFFF;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.22);
+  line-height: 1.2;
+  pointer-events: none;
+  user-select: none;
+  z-index: 2;
+  text-transform: uppercase;
+}
+

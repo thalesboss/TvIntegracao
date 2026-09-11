@@ -1,0 +1,107 @@
+﻿/* ═══════════════════════════════════════════════════════════════════════════
+   RECEBIMENTOS & TABELAS
+   ═══════════════════════════════════════════════════════════════════════════ */
+.rec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: #FFFFFF;
+}
+.rec-table th {
+  background: #F8FAFC;
+  color: #475569;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  text-align: left;
+}
+.rec-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  vertical-align: middle;
+}
+.rec-table tr:hover td {
+  background: rgba(0, 113, 227, 0.018);
+}
+.rec-table tr:last-child td {
+  border-bottom: none;
+}
+.rec-table input[type="text"],
+.rec-table input[type="number"],
+.rec-table input[type="url"] {
+  width: 100%;
+  padding: 6.5px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: var(--r-md);
+  font-size: 12.5px;
+  background: #FFFFFF;
+  color: var(--txt);
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+.rec-table input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
+  outline: none;
+}
+
+.rec-notice-box {
+  background: var(--blue-lt);
+  border: 1px solid var(--blue-border);
+  border-radius: var(--r-md);
+  padding: 12px 16px;
+  font-size: 12px;
+  color: #0058C6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0;
+  line-height: 1.45;
+}
+
+.rec-payment-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 6px;
+}
+.rec-pay-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--txt);
+  cursor: pointer;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  padding: 7px 14px;
+  border-radius: var(--r-md);
+  transition: all 0.12s ease;
+  user-select: none;
+  box-shadow: var(--shadow-sm);
+}
+.rec-pay-option:hover {
+  border-color: var(--blue-border);
+  background: var(--blue-lt);
+}
+.rec-pay-option.selected {
+  border-color: var(--blue);
+  background: var(--blue-lt);
+  color: var(--blue);
+  box-shadow: 0 1px 3px rgba(0, 122, 255, 0.2);
+}
+.rec-pay-option input[type="radio"] {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+  cursor: pointer;
+  accent-color: var(--blue);
+}
+
