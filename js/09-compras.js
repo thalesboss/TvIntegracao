@@ -25,6 +25,7 @@
   function removerLinhaItemCompra(btn) {
     var tr = btn.closest('tr');
     if (tr) tr.remove();
+    try { salvarRascunhoCompra(true); } catch(e) {}
   }
   window.removerLinhaItemCompra = removerLinhaItemCompra;
 
@@ -38,6 +39,27 @@
       var centroEl      = document.getElementById('req-centrocusto');
       var projetoEl     = document.getElementById('req-projeto');
 
+      var itens = [];
+      var tbody = document.getElementById('req-itens-tbody');
+      if (tbody) {
+        var rows = tbody.querySelectorAll('tr');
+        rows.forEach(function(tr) {
+          var qEl = tr.querySelector('.item-quant');
+          var dEl = tr.querySelector('.item-desc');
+          var cEl = tr.querySelector('.item-cod');
+          var fEl = tr.querySelector('.item-fab');
+          var lEl = tr.querySelector('.item-link');
+          var quant = qEl ? qEl.value : '';
+          var desc  = dEl ? dEl.value : '';
+          var cod   = cEl ? cEl.value : '';
+          var fab   = fEl ? fEl.value : '';
+          var link  = lEl ? lEl.value : '';
+          if (quant || desc || cod || fab || link) {
+            itens.push({ quant: quant, desc: desc, cod: cod, fab: fab, link: link });
+          }
+        });
+      }
+
       var dados = {
         praca:       pracaEl ? pracaEl.value : '',
         carater:     caraterEl ? caraterEl.value : '',
@@ -45,7 +67,8 @@
         motivo:      motivoEl ? motivoEl.value : '',
         destino:     destinoEl ? destinoEl.value : '',
         centro:      centroEl ? centroEl.value : '',
-        projeto:     projetoEl ? projetoEl.value : ''
+        projeto:     projetoEl ? projetoEl.value : '',
+        itens:       itens
       };
       localStorage.setItem('tv_compras_rascunho_v1', JSON.stringify(dados));
       if (!silencioso && typeof mostrarToast === 'function') {
@@ -77,8 +100,32 @@
       if (destinoEl && dados.destino !== undefined)         destinoEl.value = dados.destino;
       if (centroEl && dados.centro !== undefined)           centroEl.value = dados.centro;
       if (projetoEl && dados.projeto !== undefined)         projetoEl.value = dados.projeto;
+
+      if (Array.isArray(dados.itens) && dados.itens.length > 0) {
+        var tbody = document.getElementById('req-itens-tbody');
+        if (tbody) {
+          tbody.innerHTML = '';
+          dados.itens.forEach(function(item) {
+            adicionarLinhaItemCompra();
+            var lastRow = tbody.lastElementChild;
+            if (lastRow) {
+              var qEl = lastRow.querySelector('.item-quant');
+              var dEl = lastRow.querySelector('.item-desc');
+              var cEl = lastRow.querySelector('.item-cod');
+              var fEl = lastRow.querySelector('.item-fab');
+              var lEl = lastRow.querySelector('.item-link');
+              if (qEl && item.quant !== undefined) qEl.value = item.quant;
+              if (dEl && item.desc !== undefined)  dEl.value = item.desc;
+              if (cEl && item.cod !== undefined)   cEl.value = item.cod;
+              if (fEl && item.fab !== undefined)   fEl.value = item.fab;
+              if (lEl && item.link !== undefined)  lEl.value = item.link;
+            }
+          });
+        }
+      }
     } catch (e) {}
   }
+  window.carregarRascunhoCompra = carregarRascunhoCompra;
 
   function limparFormularioCompras(confirmar) {
     if (confirmar && !confirm('Deseja realmente limpar a requisição de compras?')) {
@@ -99,6 +146,10 @@
             adicionarLinhaItemCompra();
           }
         }
+        var pEl = document.getElementById('req-praca');
+        if (pEl && typeof getPracaAtual === 'function') pEl.value = getPracaAtual();
+        var sEl = document.getElementById('req-solicitante');
+        if (sEl && typeof getUsuarioAtual === 'function') sEl.value = getUsuarioAtual();
       }
       if (confirmar && typeof mostrarToast === 'function') {
         mostrarToast('Formulário Limpo', 'Campos de compras zerados.', 'info');
@@ -187,11 +238,12 @@
       status:        'Aguardando Aprovação',
       dataResolucao: 'Encaminhado para a chefia',
       resolvidoPor:  'Chefia / Setor de Compras',
-      descResolucao: 'Solicitação registrada no sistema. Aguardando validação do chefe imediato para envio à gerência e compras.'
+      descResolucao: 'Solicitação registrada no sistema. Aguardando validação do chefe imediato para envio à gerência e compras.',
+      praca:         praca
     };
 
     historicoSeedData = [novoHist].concat(historicoSeedData);
-    saveHistorico(historicoSeedData);
+    saveHistorico(historicoSeedData, novoHist);
 
     // Limpa o rascunho e o formulário para a próxima requisição
     limparFormularioCompras(false);

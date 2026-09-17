@@ -91,19 +91,19 @@
             '<div class="prio-line pl-r"></div>' +
             '<div class="oc-body">' +
               '<div class="oc-header">' +
-                '<h3>' + oc.titulo + '</h3>' +
+                '<h3>' + escapeHTML(oc.titulo || 'Sem título') + '</h3>' +
                 '<span class="tag tag-r">⚠️ Prazo Expirado / Não Resolvida</span>' +
-                '<span class="tag tag-y">' + oc.prio + '</span>' +
+                '<span class="tag tag-y">' + escapeHTML(oc.prio || 'Média') + '</span>' +
               '</div>' +
-              '<p class="oc-desc">' + oc.desc + '</p>' +
+              '<p class="oc-desc">' + escapeHTML(oc.desc || '') + '</p>' +
               '<div class="oc-meta">' +
-                '<span><i data-lucide="user" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Atribuído: ' + oc.resp + '</span>' +
-                '<span><i data-lucide="clock" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Prazo: ' + (oc.prazo || 'Expirado') + '</span>' +
-                '<span><i data-lucide="map-pin" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Local: ' + (oc.local || 'N/A') + '</span>' +
+                '<span><i data-lucide="user" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Atribuído: ' + escapeHTML(oc.resp || 'Todos do turno') + '</span>' +
+                '<span><i data-lucide="clock" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Prazo: ' + escapeHTML(oc.prazo || 'Expirado') + '</span>' +
+                '<span><i data-lucide="map-pin" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Local: ' + escapeHTML(oc.local || 'N/A') + '</span>' +
               '</div>' +
             '</div>' +
             '<div class="oc-actions" onclick="event.stopPropagation();">' +
-              '<button class="btn-apple-action btn-apple-resolve" onclick="event.stopPropagation(); abrirResolver(\'' + oc.id + '\')" title="Resolver ocorrência">' +
+              '<button class="btn-card-action btn-card-resolve" onclick="event.stopPropagation(); abrirResolver(\'' + oc.id + '\')" title="Resolver ocorrência">' +
                 '<i data-lucide="check-circle-2" style="width:12px;height:12px;stroke-width:2.2;"></i> Resolver' +
               '</button>' +
             '</div>' +
@@ -123,14 +123,14 @@
             '<div class="prio-line ' + prioLineClass + '"></div>' +
             '<div class="oc-body">' +
               '<div class="oc-header">' +
-                '<h3>' + oc.titulo + '</h3>' +
-                '<span class="tag ' + tagStatusClass + '">' + (isParcial ? '⚠️ ' : '✓ ') + statusTexto + '</span>' +
-                '<span class="tag tag-teal-soft">' + (oc.cat || 'Equipamento') + '</span>' +
+                '<h3>' + escapeHTML(oc.titulo || 'Sem título') + '</h3>' +
+                '<span class="tag ' + tagStatusClass + '">' + (isParcial ? '⚠️ ' : '✓ ') + escapeHTML(statusTexto) + '</span>' +
+                '<span class="tag tag-teal-soft">' + escapeHTML(oc.cat || 'Equipamento') + '</span>' +
               '</div>' +
-              '<p class="oc-desc" style="color:var(--txt);"><strong>Resolução:</strong> ' + descResolucao + '</p>' +
+              '<p class="oc-desc" style="color:var(--txt);"><strong>Resolução:</strong> ' + escapeHTML(descResolucao) + '</p>' +
               '<div class="oc-meta">' +
-                '<span><i data-lucide="user-check" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Responsável: ' + oc.resp + '</span>' +
-                '<span><i data-lucide="map-pin" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Local: ' + (oc.local || 'Central Técnica') + '</span>' +
+                '<span><i data-lucide="user-check" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Responsável: ' + escapeHTML(oc.resp || 'Todos do turno') + '</span>' +
+                '<span><i data-lucide="map-pin" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Local: ' + escapeHTML(oc.local || 'Central Técnica') + '</span>' +
               '</div>' +
             '</div>' +
           '</article>'
@@ -190,8 +190,8 @@
         '<div class="info-item ' + corClass + '">' +
           '<div class="ii-dot ' + corClass + '"></div>' +
           '<div>' +
-            '<strong>' + tagTexto + ' — ' + (oc.local || oc.cat || 'Equipamento') + '</strong>' +
-            (oc.titulo || 'Ocorrência') + (oc.prazo ? (' (Prazo: ' + oc.prazo + ')') : '') +
+            '<strong>' + escapeHTML(tagTexto) + ' — ' + escapeHTML(oc.local || oc.cat || 'Equipamento') + '</strong>' +
+            escapeHTML(oc.titulo || 'Ocorrência') + (oc.prazo ? (' (Prazo: ' + escapeHTML(oc.prazo) + ')') : '') +
           '</div>' +
         '</div>'
       );
@@ -215,7 +215,7 @@
       return (
         '<label class="chk-item" id="' + cid + '">' +
           '<input type="checkbox" onchange="markDone(\'' + cid + '\',this)"/> ' +
-          '<span>' + (oc.titulo || 'Ocorrência') + textExtra + ' (' + (oc.resp || 'Todos') + ')</span>' +
+          '<span>' + escapeHTML(oc.titulo || 'Ocorrência') + escapeHTML(textExtra) + ' (' + escapeHTML(oc.resp || 'Todos') + ')</span>' +
         '</label>'
       );
     }).join('');
@@ -257,6 +257,7 @@
     try { renderPopupLogout(); } catch(e) { console.error('Erro em renderPopupLogout:', e); }
     try { updateStats(); } catch(e) { console.error('Erro em updateStats:', e); }
   }
+  window.renderAll = renderAll;
 
   // Autosave contínuo em segundo plano para formulários (proteção contra queda de energia/fechamento)
   var debounceTimers = {};

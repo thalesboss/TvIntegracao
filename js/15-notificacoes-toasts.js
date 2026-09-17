@@ -7,26 +7,7 @@
   var notificacoesStore = [];
   var notificacoesDispensadas = [];
 
-  var INITIAL_NOTIFICACOES_SEED = [
-    {
-      id: 'notif_init_1',
-      titulo: 'Boas-vindas ao Turno TV Integração',
-      msg: 'Sistema operacional ativo. Verifique os checklists diários de CTRS e as transmissões ao vivo agendadas.',
-      tempo: formatDataHoraLocal(),
-      tipo: 'info',
-      lida: false,
-      chaveAutomatica: 'seed_welcome'
-    },
-    {
-      id: 'notif_init_2',
-      titulo: 'Atenção: Transmissor VHF',
-      msg: 'Ocorrência aberta na Torre Central requer acompanhamento dos níveis de potência.',
-      tempo: formatDataHoraLocal(),
-      tipo: 'warning',
-      lida: false,
-      chaveAutomatica: 'seed_transmissor'
-    }
-  ];
+  var INITIAL_NOTIFICACOES_SEED = [];
 
   function getNotifDBCredentials() {
     var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
@@ -40,14 +21,41 @@
     return { url: url ? url.replace(/\/+$/, '') : '', key: key };
   }
 
+  function salvarDispensadas() {
+    window.notificacoesDispensadas = notificacoesDispensadas;
+    try {
+      localStorage.setItem(NOTIF_DISMISSED_KEY, JSON.stringify(notificacoesDispensadas));
+    } catch(e) {}
+  }
+
   function loadNotificacoes() {
-    notificacoesStore = INITIAL_NOTIFICACOES_SEED.slice();
+    try {
+      var savedDisp = localStorage.getItem(NOTIF_DISMISSED_KEY);
+      notificacoesDispensadas = savedDisp ? JSON.parse(savedDisp) : [];
+      if (!Array.isArray(notificacoesDispensadas)) notificacoesDispensadas = [];
+    } catch(e) {
+      notificacoesDispensadas = [];
+    }
+
+    try {
+      var saved = localStorage.getItem(NOTIF_STORAGE_KEY);
+      notificacoesStore = saved ? JSON.parse(saved) : [];
+      if (!Array.isArray(notificacoesStore)) notificacoesStore = [];
+    } catch(e) {
+      notificacoesStore = [];
+    }
+
     window.notificacoesStore = notificacoesStore;
+    window.notificacoesDispensadas = notificacoesDispensadas;
+    atualizarBadgesNotificacoes();
     sincronizarNotificacoesNuvem();
   }
 
   function saveNotificacoes() {
     window.notificacoesStore = notificacoesStore;
+    try {
+      localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(notificacoesStore));
+    } catch(e) {}
     atualizarBadgesNotificacoes();
   }
 
@@ -64,9 +72,12 @@
     })
     .then(function(res) { return res.ok ? res.json() : null; })
     .then(function(cloudNotifs) {
-      if (Array.isArray(cloudNotifs) && cloudNotifs.length > 0) {
+      if (Array.isArray(cloudNotifs)) {
         notificacoesStore = cloudNotifs;
         window.notificacoesStore = notificacoesStore;
+        try {
+          localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(notificacoesStore));
+        } catch(e) {}
         atualizarBadgesNotificacoes();
         renderNotificacoes();
       }
@@ -91,6 +102,50 @@
     }).catch(function() {});
   }
   window.salvarNotificacaoNuvem = salvarNotificacaoNuvem;
+
+  function marcarTodasLidasNuvem() {
+    var db = getNotifDBCredentials();
+    if (!db.url || !db.key) return;
+    fetch(db.url + '/rest/v1/notificacoes?lida=eq.false', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': db.key,
+        'Authorization': 'Bearer ' + db.key,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ lida: true })
+    }).catch(function() {});
+  }
+  window.marcarTodasLidasNuvem = marcarTodasLidasNuvem;
+
+  function deletarNotificacaoNuvem(id) {
+    var db = getNotifDBCredentials();
+    if (!db.url || !db.key || !id) return;
+    fetch(db.url + '/rest/v1/notificacoes?id=eq.' + encodeURIComponent(id), {
+      method: 'DELETE',
+      headers: {
+        'apikey': db.key,
+        'Authorization': 'Bearer ' + db.key,
+        'Prefer': 'return=minimal'
+      }
+    }).catch(function() {});
+  }
+  window.deletarNotificacaoNuvem = deletarNotificacaoNuvem;
+
+  function deletarTodasNotificacoesNuvem() {
+    var db = getNotifDBCredentials();
+    if (!db.url || !db.key) return;
+    fetch(db.url + '/rest/v1/notificacoes?id=not.is.null', {
+      method: 'DELETE',
+      headers: {
+        'apikey': db.key,
+        'Authorization': 'Bearer ' + db.key,
+        'Prefer': 'return=minimal'
+      }
+    }).catch(function() {});
+  }
+  window.deletarTodasNotificacoesNuvem = deletarTodasNotificacoesNuvem;
 
   function mostrarToast(titulo, mensagem, tipo) {
     var container = document.getElementById('toast-container');
@@ -145,7 +200,8 @@
       tempo: formatDataHoraLocal(),
       tipo: tipo || 'info',
       lida: false,
-      chaveAutomatica: chaveAutomatica || null
+      chaveAutomatica: chaveAutomatica || null,
+      praca: (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora'
     };
 
     var jaExiste = (notificacoesStore || []).some(function(n) {
@@ -153,12 +209,12 @@
     });
 
     if (!jaExiste) {
-      notificacoesStore = [novaNotif].concat(notificacoesStore || []).slice(0, 50);
+      notificacoesStore.unshift(novaNotif);
       saveNotificacoes();
+      salvarNotificacaoNuvem(novaNotif);
       if (exibirToast !== false) {
         mostrarToast(titulo, mensagem, tipo);
       }
-      renderNotificacoes();
     }
   }
   window.adicionarNotificacao = adicionarNotificacao;
@@ -168,10 +224,12 @@
     if (notif && notif.chaveAutomatica) {
       if (!notificacoesDispensadas.includes(notif.chaveAutomatica)) {
         notificacoesDispensadas.push(notif.chaveAutomatica);
+        salvarDispensadas();
       }
     }
     notificacoesStore = (notificacoesStore || []).filter(function(n){ return n && n.id !== id; });
     saveNotificacoes();
+    deletarNotificacaoNuvem(id);
     renderNotificacoes();
   }
   window.removerNotificacao = removerNotificacao;
@@ -197,9 +255,9 @@
 
   function verificarNotificacoesAutomaticas() {
     var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
-    // 1. Ocorrências com prazo expirado
+    // 1. Ocorrências com prazo expirado (ignora seeds demonstrativas)
     (ocorrencias || []).forEach(function(oc) {
-      if (oc && oc.status === 'aberta' && !idsNaLixeira.includes(oc.id) && isOcorrenciaVencida(oc)) {
+      if (oc && oc.status === 'aberta' && !String(oc.id).startsWith('oc_init_') && !idsNaLixeira.includes(oc.id) && isOcorrenciaVencida(oc)) {
         var chaveOc = 'vencida_' + oc.id + '_' + (oc.prazo || '');
         var tit = '⚠️ Prazo Expirado: ' + (oc.titulo || 'Ocorrência');
         var msg = 'A ocorrência para "' + (oc.local || 'Central Técnica') + '" ultrapassou o horário estipulado (' + (oc.prazo || 'Prazo vencido') + ') e requer atenção.';
@@ -207,8 +265,8 @@
       }
     });
 
-    // 2. Ocorrências arquivadas pendentes para o turno
-    var arquivadas = getArquivadas().filter(function(oc){ return !idsNaLixeira.includes(oc.id); });
+    // 2. Ocorrências arquivadas pendentes para o turno (ignora seeds demonstrativas)
+    var arquivadas = getArquivadas().filter(function(oc){ return !String(oc.id).startsWith('oc_init_') && !idsNaLixeira.includes(oc.id); });
     if (arquivadas.length > 0) {
       var chaveArq = 'arq_status_' + arquivadas.map(function(a){ return a.id; }).sort().join('_');
       var titArq = '📦 Ocorrências Arquivadas para o Turno';
@@ -223,7 +281,11 @@
     atualizarBadgesNotificacoes();
     if (!container) return;
 
-    if (!notificacoesStore || notificacoesStore.length === 0) {
+    var daPraca = (notificacoesStore || []).filter(function(n) {
+      return n && (typeof pertenceAPracaAtiva !== 'function' || pertenceAPracaAtiva(n));
+    });
+
+    if (daPraca.length === 0) {
       container.innerHTML =
         '<div style="text-align:center;padding:32px 16px;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-md);">' +
           '<i data-lucide="bell-off" style="width:32px;height:32px;color:var(--muted);stroke-width:1.5;margin-bottom:8px;"></i>' +
@@ -234,7 +296,7 @@
       return;
     }
 
-    container.innerHTML = notificacoesStore.map(function(n) {
+    container.innerHTML = daPraca.map(function(n) {
       var isWarning = n.tipo === 'warning' || n.tipo === 'warn';
       var isDanger  = n.tipo === 'danger'  || n.tipo === 'error';
       var isSuccess = n.tipo === 'success' || n.tipo === 'ok';
@@ -267,14 +329,21 @@
   window.renderNotificacoes = renderNotificacoes;
 
   function abrirNotificacoes() {
+    var teveNaoLidas = false;
+    (notificacoesStore || []).forEach(function(n){
+      if (n && !n.lida) {
+        n.lida = true;
+        teveNaoLidas = true;
+      }
+    });
+    saveNotificacoes();
+    atualizarBadgesNotificacoes();
     renderNotificacoes();
     abrirPopup('popup-notificacoes');
     if (typeof lucide !== 'undefined') lucide.createIcons();
-    setTimeout(function() {
-      (notificacoesStore || []).forEach(function(n){ if (n) n.lida = true; });
-      saveNotificacoes();
-      atualizarBadgesNotificacoes();
-    }, 1200);
+    if (teveNaoLidas) {
+      marcarTodasLidasNuvem();
+    }
   }
   window.abrirNotificacoes = abrirNotificacoes;
 
@@ -303,9 +372,11 @@
         notificacoesDispensadas.push(n.chaveAutomatica);
       }
     });
+    salvarDispensadas();
 
     notificacoesStore = [];
     saveNotificacoes();
+    deletarTodasNotificacoesNuvem();
     renderNotificacoes();
     if (typeof mostrarToast === 'function') {
       mostrarToast('Notificações Limpas', 'O histórico de notificações foi esvaziado com sucesso.', 'info');

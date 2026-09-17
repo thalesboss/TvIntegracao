@@ -562,9 +562,9 @@
 
     historicoSeedData = [novoItemHist].concat(historicoSeedData);
     window.historicoSeedData = historicoSeedData;
-    saveHistorico(historicoSeedData);
+    saveHistorico(historicoSeedData, novoItemHist);
 
-    save(ocorrencias);
+    save(ocorrencias, ocorrencias[idx], false);
     fecharPopup('popup-resolver');
     renderAll();
     resolverAtualId = null;

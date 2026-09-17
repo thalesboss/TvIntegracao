@@ -342,3 +342,89 @@ input[type="checkbox"]:focus {
   color: var(--muted);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   PRINT / PDF STYLESHEET (A4 Otimizado para Laudos & CTR)
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm 12mm 15mm;
+  }
+
+  /* Ocultar elementos de navegação, modais, botões e status */
+  .sidebar,
+  .topbar,
+  .notif-btn,
+  .cloud-status,
+  .btn,
+  button,
+  .modal,
+  .overlay,
+  .quicklook-overlay,
+  .user-popover,
+  #toast-container,
+  .rel-aside,
+  .sn-r, .sn-y, .sn-g, .sn-b {
+    display: none !important;
+  }
+
+  /* Reset de layout e fundo para folha A4 limpa */
+  html, body {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+    line-height: 1.4 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .main, .page, .scroll-area, .rel-layout, .rel-center {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    display: block !important;
+  }
+
+  /* Exibe somente a página em visualização ativa */
+  .page:not(.active) {
+    display: none !important;
+  }
+
+  /* Prevenção de quebra de linha/página em tabelas e blocos de laudo */
+  table, tr, td, th,
+  .form-card,
+  .rel-preview-container,
+  .card,
+  .bloco-rec,
+  .bloco-compra {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    box-shadow: none !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  th, td {
+    border: 1px solid #D0D0D0 !important;
+    color: #000000 !important;
+    padding: 6px 8px !important;
+  }
+
+  input, select, textarea {
+    border: 1px solid #D0D0D0 !important;
+    background: transparent !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+  }
+}
+
+

@@ -177,8 +177,9 @@
     if (totalEl) totalEl.textContent = total + ' transmissões';
     if (slaEl) slaEl.textContent = pctConf + '% (Disponibilidade)';
 
+    var pracaAtual = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var isEquip = (tipo === 'equipamento');
-    if (localEl) localEl.textContent = isEquip ? 'Unidade Móvel / Jornalismo Externo (Juiz de Fora)' : 'Estúdio Principal · Juiz de Fora (MG)';
+    if (localEl) localEl.textContent = isEquip ? 'Unidade Móvel / Jornalismo Externo (' + pracaAtual + ')' : 'Estúdio Principal · ' + pracaAtual + ' (MG)';
     if (linkEl) linkEl.textContent = isEquip ? 'Link Celular 4K / Bonding LiveU (4x SIM 5G)' : 'Rede SDI / IP Fibra Óptica + Satélite';
     if (ultimoEl) ultimoEl.textContent = nc > 0 ? 'Última transmissão com alerta (' + nc + ' falha registrada)' : 'Última transmissão 100% Conforme (OK)';
 
@@ -239,23 +240,119 @@
   }
   window.abrirModalOcItemDireto = abrirModalOcItemDireto;
 
+  function getDashboardMetricsKey() {
+    var praca = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+    return (praca.indexOf('Uber') !== -1) ? 'tv_dashboard_metrics_v2_udi' : 'tv_dashboard_metrics_v2_jf';
+  }
+
   function salvarDashboardMetricsStore() {
     try {
-      localStorage.setItem('tv_dashboard_metrics_v2', JSON.stringify(dashboardMetrics));
+      localStorage.setItem(getDashboardMetricsKey(), JSON.stringify(dashboardMetrics));
     } catch (e) {}
   }
 
   function carregarDashboardMetricsStore() {
     try {
-      var raw = localStorage.getItem('tv_dashboard_metrics_v2');
+      var praca = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+      var key = getDashboardMetricsKey();
+      var raw = localStorage.getItem(key);
       if (raw) {
         var parsed = JSON.parse(raw);
         if (parsed && typeof parsed === 'object') {
           dashboardMetrics = parsed;
+          return;
         }
+      }
+      // Se não houver cache para esta praça:
+      if (praca.indexOf('Uber') !== -1) {
+        // Uberlândia: telejornais iguais ao padrão, equipamentos limpos
+        dashboardMetrics = {
+          telejornal: {
+            'INTEGRAÇÃO NOTÍCIA': { conf: 0, nc: 0, canc: 0 },
+            'MG1':                { conf: 0, nc: 0, canc: 0 },
+            'MG2':                { conf: 0, nc: 0, canc: 0 },
+            'GIRO MG2':           { conf: 0, nc: 0, canc: 0 }
+          },
+          equipamento: {}
+        };
+      } else {
+        // Juiz de Fora: 13 equipamentos padrão
+        dashboardMetrics = {
+          telejornal: {
+            'INTEGRAÇÃO NOTÍCIA': { conf: 0, nc: 0, canc: 0 },
+            'MG1':                { conf: 0, nc: 0, canc: 0 },
+            'MG2':                { conf: 0, nc: 0, canc: 0 },
+            'GIRO MG2':           { conf: 0, nc: 0, canc: 0 }
+          },
+          equipamento: {
+            'LIVE U1':      { conf: 0, nc: 0, canc: 0 },
+            'LIVE U2':      { conf: 0, nc: 0, canc: 0 },
+            'LIVE U3':      { conf: 0, nc: 0, canc: 0 },
+            'LIVE U SMART': { conf: 0, nc: 0, canc: 0 },
+            'REDAÇÃO':      { conf: 0, nc: 0, canc: 0 },
+            'LIVE U4':      { conf: 0, nc: 0, canc: 0 },
+            'NET PRAÇA':    { conf: 0, nc: 0, canc: 0 },
+            'NET PORTARIA': { conf: 0, nc: 0, canc: 0 },
+            'FORMATOS NET': { conf: 0, nc: 0, canc: 0 },
+            'NET 2º ANDAR': { conf: 0, nc: 0, canc: 0 },
+            'NET 3º ANDAR': { conf: 0, nc: 0, canc: 0 },
+            'NET 4º ANDAR': { conf: 0, nc: 0, canc: 0 },
+            'KMJ':          { conf: 0, nc: 0, canc: 0 }
+          }
+        };
       }
     } catch (e) {}
   }
+  window.carregarDashboardMetricsStore = carregarDashboardMetricsStore;
+
+  function abrirModalNovoEquipamento() {
+    var nomeEl = document.getElementById('novo-eq-nome');
+    var obsEl  = document.getElementById('novo-eq-obs');
+    if (nomeEl) { nomeEl.value = ''; setTimeout(function(){ nomeEl.focus(); }, 150); }
+    if (obsEl)  obsEl.value = '';
+    abrirPopup('popup-novo-equipamento');
+  }
+  window.abrirModalNovoEquipamento = abrirModalNovoEquipamento;
+
+  function salvarNovoEquipamentoDashboard() {
+    var nomeEl = document.getElementById('novo-eq-nome');
+    var tipoEl = document.getElementById('novo-eq-tipo');
+    var obsEl  = document.getElementById('novo-eq-obs');
+    var nome = (nomeEl ? nomeEl.value : '').trim().toUpperCase();
+    if (!nome) {
+      alert('Por favor, informe o nome do equipamento.');
+      if (nomeEl) nomeEl.focus();
+      return;
+    }
+
+    var praca = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+    if (!dashboardMetrics) dashboardMetrics = {};
+    if (!dashboardMetrics.equipamento) dashboardMetrics.equipamento = {};
+
+    if (dashboardMetrics.equipamento[nome]) {
+      alert('Já existe um equipamento cadastrado com o nome "' + nome + '" nesta praça.');
+      return;
+    }
+
+    dashboardMetrics.equipamento[nome] = {
+      conf: 0,
+      nc: 0,
+      canc: 0,
+      tipo: tipoEl ? tipoEl.value : 'Equipamento',
+      obs: obsEl ? obsEl.value : ''
+    };
+    window._ultimoEqAdicionado = nome;
+    salvarDashboardMetricsStore();
+
+    fecharPopup('popup-novo-equipamento');
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Equipamento Cadastrado', nome + ' adicionado com sucesso ao dashboard de ' + praca + '.', 'success');
+    }
+
+    renderDashboards();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+  window.salvarNovoEquipamentoDashboard = salvarNovoEquipamentoDashboard;
 
   function salvarOcDashboard() {
     var tipoPainel = document.getElementById('oc-dash-tipo-painel').value;
@@ -282,13 +379,14 @@
     if (status === 'nc' || status === 'canc') {
       var statusLabel = (status === 'nc') ? 'Não Conforme (Falha)' : 'Cancelado';
       var nowStr = formatDataHoraLocal();
+      var pracaAtual = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
       var novaOc = {
         id:          'oc_dash_' + Date.now(),
         titulo:      'Falha em ' + alvo + ' (' + statusLabel + ')',
         prio:        (status === 'nc' ? 'Alta' : 'Média'),
         cat:         (tipoPainel === 'telejornal' ? 'Telejornal / Transmissão ao Vivo' : 'Equipamentos de Transmissão'),
         resp:        'Equipe de Transmissão',
-        local:       'Juiz de Fora',
+        local:       pracaAtual,
         prazo:       '12:00',
         desc:        obs,
         mine:        false,
@@ -296,10 +394,11 @@
         status:      'aberta',
         criado:      Date.now(),
         dataCriacao: nowStr,
-        resolucao:   null
+        resolucao:   null,
+        praca:       pracaAtual
       };
       ocorrencias = [novaOc].concat(ocorrencias);
-      save(ocorrencias);
+      save(ocorrencias, novaOc, true);
     }
 
     fecharPopup('popup-nova-oc-dashboard');
@@ -315,6 +414,64 @@
   }
   window.salvarOcDashboard = salvarOcDashboard;
 
+  function renderEquipamentosCards() {
+    var grid = document.getElementById('dash-equipamentos-grid');
+    if (!grid) return;
+
+    var equips = (dashboardMetrics && dashboardMetrics.equipamento) ? dashboardMetrics.equipamento : {};
+    var eqKeys = Object.keys(equips);
+    var htmlCards = '';
+
+    eqKeys.forEach(function(key) {
+      var m = equips[key];
+      var totalReal = (m.conf || 0) + (m.nc || 0) + (m.canc || 0);
+      var total = totalReal === 0 ? 1 : totalReal;
+      var pctConf = totalReal === 0 ? 0 : Math.round((m.conf / total) * 100);
+      var pctNc   = totalReal === 0 ? 0 : Math.round((m.nc / total) * 100);
+      var pctCanc = totalReal === 0 ? 0 : (100 - pctConf - pctNc);
+      if (pctCanc < 0) pctCanc = 0;
+
+      var endConf = pctConf;
+      var endNc = pctConf + pctNc;
+      var pieGradient = totalReal === 0
+        ? '#E2E8F0'
+        : ('conic-gradient(#10B981 0% ' + endConf + '%, #EF4444 ' + endConf + '% ' + endNc + '%, #F59E0B ' + endNc + '% 100%)');
+
+      var isNew = (window._ultimoEqAdicionado === key) ? ' dash-card-new-anim' : '';
+
+      htmlCards +=
+        '<div class="dash-card' + isNew + '" onclick="abrirDetalhesTransmissao(\'' + escapeHTML(key) + '\', \'equipamento\')" style="padding:13px;cursor:pointer;" title="Clique para ver detalhes operacionais e telemetria">' +
+          '<h5 style="font-size:12px;font-weight:700;text-align:center;margin-bottom:10px;color:#0F172A;">' + escapeHTML(key) + '</h5>' +
+          '<div style="display:flex;align-items:center;justify-content:center;gap:12px;">' +
+            '<div style="width:76px;height:76px;border-radius:50%;background:' + pieGradient + ';box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;position:relative;">' +
+              '<div class="dash-pie-donut-sm">' +
+                '<div style="font-size:12.5px;font-weight:800;color:#0F172A;" class="pie-count">' + totalReal + '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div style="font-size:10.5px;line-height:1.6;color:#334155;">' +
+              '<div><span style="color:#10B981;">■</span> Conf. <strong class="pct-conf" style="color:#059669;">(' + pctConf + '%)</strong></div>' +
+              '<div><span style="color:#EF4444;">■</span> Falha <strong class="pct-nc" style="color:#DC2626;">(' + pctNc + '%)</strong></div>' +
+              '<div><span style="color:#F59E0B;">■</span> Canc. <strong class="pct-canc" style="color:#D97706;">(' + pctCanc + '%)</strong></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    });
+
+    // Card Adicionar Equipamento interativo com animação fluida
+    htmlCards +=
+      '<div class="dash-card dash-card-add" onclick="abrirModalNovoEquipamento()" title="Cadastrar novo equipamento nesta praça">' +
+        '<div class="dash-card-add-icon">' +
+          '<i data-lucide="plus" style="width:20px;height:20px;stroke-width:2.5;"></i>' +
+        '</div>' +
+        '<span class="dash-card-add-label">+ Adicionar Equipamento</span>' +
+        '<span class="dash-card-add-sub">Monitoramento ao vivo</span>' +
+      '</div>';
+
+    grid.innerHTML = htmlCards;
+    window._ultimoEqAdicionado = null;
+  }
+  window.renderEquipamentosCards = renderEquipamentosCards;
+
   function renderDashboards() {
     if (typeof dashboardMetrics === 'undefined' || !dashboardMetrics) return;
 
@@ -322,28 +479,13 @@
       'INTEGRAÇÃO NOTÍCIA': 'pie-tj-noticia',
       'MG1': 'pie-tj-mg1',
       'MG2': 'pie-tj-mg2',
-      'GIRO MG2': 'pie-tj-giro',
-
-      'LIVE U1': 'pie-eq-liveu1',
-      'LIVE U2': 'pie-eq-liveu2',
-      'LIVE U3': 'pie-eq-liveu3',
-      'LIVE U SMART': 'pie-eq-liveusmart',
-      'REDAÇÃO': 'pie-eq-redacao',
-      'LIVE U4': 'pie-eq-liveu4',
-      'NET PRAÇA': 'pie-eq-netpraca',
-      'NET PORTARIA': 'pie-eq-netportaria',
-      'FORMATOS NET': 'pie-eq-formatosnet',
-      'NET 2º ANDAR': 'pie-eq-net2andar',
-      'NET 3º ANDAR': 'pie-eq-net3andar',
-      'NET 4º ANDAR': 'pie-eq-net4andar',
-      'KMJ': 'pie-eq-kmj'
+      'GIRO MG2': 'pie-tj-giro'
     };
 
-    ['telejornal', 'equipamento'].forEach(function(categoria) {
-      var items = dashboardMetrics[categoria];
-      if (!items) return;
-      Object.keys(items).forEach(function(key) {
-        var m = items[key];
+    // 1. Atualizar gráficos de Telejornais
+    if (dashboardMetrics.telejornal) {
+      Object.keys(dashboardMetrics.telejornal).forEach(function(key) {
+        var m = dashboardMetrics.telejornal[key];
         var totalReal = m.conf + m.nc + m.canc;
         var total = totalReal === 0 ? 1 : totalReal;
 
@@ -378,8 +520,14 @@
           }
         }
       });
-    });
+    }
+
+    // 2. Renderizar dinamicamente os cartões de Equipamentos
+    renderEquipamentosCards();
+
+    // 3. Atualizar Resumos Gerais
     renderResumoTransmissoesGerais();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.renderDashboards = renderDashboards;
 

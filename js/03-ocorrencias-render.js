@@ -155,7 +155,7 @@
 
       (oc.tags || []).forEach(function(t) {
         if (t !== 'Nova' && t !== 'Atrasada' && t !== 'Turno anterior' && t !== 'Parcialmente Resolvida' && t !== 'Só para você' && t !== 'Dia Anterior') {
-          tagsHTML += '<span class="tag tag-y">' + t + '</span>';
+          tagsHTML += '<span class="tag tag-y">' + escapeHTML(t) + '</span>';
         }
       });
 
@@ -166,13 +166,13 @@
       var prazoH   = '';
       if (oc.prazo) {
         if (isVencida) {
-          prazoH = '<span class="oc-meta-item" style="color:#DC2626;font-weight:600;"><i data-lucide="timer" style="width:12px;height:12px;stroke-width:2.5;color:#DC2626;"></i>Prazo: ' + oc.prazo + ' (Expirado)</span>';
+          prazoH = '<span class="oc-meta-item" style="color:#DC2626;font-weight:600;"><i data-lucide="timer" style="width:12px;height:12px;stroke-width:2.5;color:#DC2626;"></i>Prazo: ' + escapeHTML(oc.prazo) + ' (Expirado)</span>';
         } else {
-          prazoH = '<span class="oc-meta-item"><i data-lucide="timer" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i>Prazo: ' + oc.prazo + '</span>';
+          prazoH = '<span class="oc-meta-item"><i data-lucide="timer" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i>Prazo: ' + escapeHTML(oc.prazo) + '</span>';
         }
       }
 
-      var localH   = oc.local ? '<span class="oc-meta-item"><i data-lucide="map-pin" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + oc.local + '</span>' : '';
+      var localH   = oc.local ? '<span class="oc-meta-item"><i data-lucide="map-pin" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + escapeHTML(oc.local) + '</span>' : '';
 
       var cardClasses = 'oc-card';
       if (isVencida) cardClasses += ' vencida';
@@ -202,6 +202,7 @@
     container.innerHTML = renderSecoesComCards(secoes, renderCardHTML);
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
+  window.renderCards = renderCards;
 
   /* ── Helper Global: Agrupamento temporal (Hoje, Ontem, Dias Anteriores) ── */
   function agruparPorDias(itens, fnData) {
@@ -289,14 +290,14 @@
         });
         if (oc.mine) tagsPrio += '<span class="tag" style="background:#EEF2FF;color:#4F46E5;border:1px solid #C7D2FE;font-weight:600;">Atribuída a você</span>';
 
-        var meta = oc.resp || 'Todos do turno';
-        if (oc.prazo) meta += ' · ' + oc.prazo;
-        if (oc.local) meta += ' · ' + oc.local;
+        var meta = escapeHTML(oc.resp || 'Todos do turno');
+        if (oc.prazo) meta += ' · ' + escapeHTML(oc.prazo);
+        if (oc.local) meta += ' · ' + escapeHTML(oc.local);
 
         return (
           '<div class="mini-oc' + (oc.mine ? ' mine' : '') + '" onclick="abrirResolver(\'' + oc.id + '\')">' +
             '<div class="mini-top"><div class="mini-dot ' + dotClass + '"></div>' +
-            '<div class="mini-title">' + (oc.titulo || 'Ocorrência') + '</div></div>' +
+            '<div class="mini-title">' + escapeHTML(oc.titulo || 'Ocorrência') + '</div></div>' +
             '<div style="margin-bottom:3px;">' + tagsPrio + '</div>' +
             '<div class="mini-info">' + meta + '</div>' +
           '</div>'
@@ -314,8 +315,8 @@
           var statusLabel = oc.resolucao ? oc.resolucao.statusRes : 'Resolvido';
           return (
             '<div class="resolved-item">' +
-              '<div class="ri-title">' + oc.titulo + '</div>' +
-              '<div class="ri-meta">' + statusLabel + ' · ' + oc.resp + '</div>' +
+              '<div class="ri-title">' + escapeHTML(oc.titulo || '') + '</div>' +
+              '<div class="ri-meta">' + escapeHTML(statusLabel) + ' · ' + escapeHTML(oc.resp || 'Todos do turno') + '</div>' +
             '</div>'
           );
         }).join('');

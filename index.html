@@ -54,22 +54,42 @@
       </p>
       <div class="frow">
         <label for="ident-operador-nome" style="font-weight:600;font-size:12.5px;color:var(--txt);display:flex;align-items:center;justify-content:space-between;">
-          <span>Nome do Operador *</span>
-          <span style="font-size:11px;font-weight:400;color:var(--muted);">Selecione ou digite seu nome</span>
+          <span>Nome Completo do Operador *</span>
+          <span style="font-size:11px;font-weight:400;color:var(--muted);">Nome e sobrenome</span>
         </label>
-        <input type="text" id="ident-operador-nome" list="lista-operadores-sugeridos" placeholder="Digite ou selecione da lista..." style="width:100%;font-size:13px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);" autocomplete="off" />
+        <input type="text" id="ident-operador-nome" list="lista-operadores-sugeridos" placeholder="Ex: Thales Motta" style="width:100%;font-size:13px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);" autocomplete="off" />
         <datalist id="lista-operadores-sugeridos">
           <!-- Preenchido via Supabase / DBService -->
         </datalist>
       </div>
+
       <div class="frow">
-        <label style="font-weight:600;font-size:12.5px;color:var(--txt);">E-mail Padrão (Ambiente de Teste)</label>
-        <input type="email" value="teste@teste.com" disabled style="width:100%;font-size:13px;padding:9px 12px;border:1px solid var(--border-lt);border-radius:var(--r-md);background:#F1F5F9;color:var(--muted);cursor:not-allowed;" />
-        <span style="font-size:11px;color:var(--muted);margin-top:2px;">Configurado automaticamente para o ambiente operacional.</span>
+        <label for="ident-operador-praca" style="font-weight:600;font-size:12.5px;color:var(--txt);display:flex;align-items:center;justify-content:space-between;">
+          <span>Praça de Trabalho *</span>
+          <span style="font-size:11px;font-weight:400;color:var(--muted);">Emissora / Unidade</span>
+        </label>
+        <select id="ident-operador-praca" style="width:100%;font-size:13px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);">
+          <option value="Juiz de Fora" selected>Juiz de Fora</option>
+          <option value="Uberlândia">Uberlândia</option>
+        </select>
+      </div>
+
+      <div class="frow" id="ident-chave-group">
+        <label for="ident-chave-acesso" style="font-weight:600;font-size:12.5px;color:var(--txt);display:flex;align-items:center;justify-content:space-between;">
+          <span id="ident-chave-label">Chave de Acesso *</span>
+          <span id="ident-chave-hint" style="font-size:11px;font-weight:400;color:var(--muted);">Senha de acesso</span>
+        </label>
+        <div style="position:relative;display:flex;align-items:center;">
+          <input type="password" id="ident-chave-acesso" placeholder="Digite sua chave de acesso..." style="width:100%;font-size:13px;padding:9px 36px 9px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);" autocomplete="current-password" />
+          <button type="button" onclick="toggleVisibilidadeChaveAcesso()" title="Mostrar/Ocultar chave" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);display:flex;align-items:center;justify-content:center;">
+            <i data-lucide="eye" id="ident-chave-eye" style="width:16px;height:16px;"></i>
+          </button>
+        </div>
+        <div id="ident-chave-msg" style="font-size:11.5px;margin-top:4px;display:none;line-height:1.4;"></div>
       </div>
     </div>
     <div class="modal-footer" style="justify-content:flex-end;">
-      <button class="btn btn-primary" type="button" onclick="confirmarIdentificacaoOperador()" style="padding:8px 20px;font-size:13px;">Salvar e Continuar</button>
+      <button class="btn btn-primary" id="btn-confirmar-identificacao" type="button" onclick="confirmarIdentificacaoOperador()" style="padding:8px 20px;font-size:13px;">Salvar e Continuar</button>
     </div>
   </div>
 </div>
@@ -419,7 +439,7 @@
 </div>
 
 <!-- ═══════════════════════════════════════
-     POPUP: MACOS QUICK LOOK (VISUALIZADOR DE IMAGENS)
+     POPUP: VISUALIZADOR DE MÍDIA EM ALTA RESOLUÇÃO (LIGHTBOX)
 ═══════════════════════════════════════ -->
 <div class="overlay quicklook-overlay" id="popup-quicklook" hidden role="dialog" aria-modal="true" aria-label="Visualizador Quick Look" onclick="if(event.target===this) fecharQuickLook()">
   <div class="quicklook-container" onclick="event.stopPropagation()">
@@ -625,6 +645,48 @@
 </div>
 
 <!-- ═══════════════════════════════════════
+     POPUP: NOVO EQUIPAMENTO DASHBOARD
+═══════════════════════════════════════ -->
+<div class="overlay" id="popup-novo-equipamento" hidden role="dialog" aria-modal="true" aria-labelledby="novo-eq-title">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <div class="modal-icon" style="background:var(--blue);">
+        <i data-lucide="plus-circle" style="width:17px;height:17px;color:#fff;stroke-width:2;"></i>
+      </div>
+      <div>
+        <h3 class="modal-title" id="novo-eq-title">Adicionar Novo Equipamento</h3>
+        <p class="modal-subtitle">Cadastrar equipamento para monitoramento de transmissões ao vivo</p>
+      </div>
+      <button class="modal-close-btn" onclick="fecharPopup('popup-novo-equipamento')" title="Fechar"><i data-lucide="x" style="width:15px;height:15px;"></i></button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
+      <div class="frow">
+        <label for="novo-eq-nome">Nome do Equipamento *</label>
+        <input id="novo-eq-nome" type="text" placeholder="Ex: LIVE U5, MOCHILINK 01, MCR..." style="font-weight:600;text-transform:uppercase;" />
+      </div>
+      <div class="frow">
+        <label for="novo-eq-tipo">Categoria / Tipo</label>
+        <select id="novo-eq-tipo">
+          <option value="Mochilink / LiveU">Mochilink / LiveU</option>
+          <option value="Link de Internet / Ponto">Link de Internet / Ponto</option>
+          <option value="Câmera / Estúdio">Câmera / Estúdio</option>
+          <option value="Infraestrutura Geral">Infraestrutura Geral</option>
+        </select>
+      </div>
+      <div class="frow">
+        <label for="novo-eq-obs">Observação Inicial (Opcional)</label>
+        <input id="novo-eq-obs" type="text" placeholder="Ex: Adicionado para novos links ao vivo" />
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;">
+      <button class="btn btn-ghost" onclick="fecharPopup('popup-novo-equipamento')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarNovoEquipamentoDashboard()">Adicionar Equipamento</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════
      POPUP: PROPOR ITEM NO ORÇAMENTO
 ═══════════════════════════════════════ -->
 <div class="overlay" id="popup-novo-item-orcamento" hidden role="dialog" aria-modal="true" aria-labelledby="orc-modal-title">
@@ -797,7 +859,7 @@
     <div class="s-section">Relatórios</div>
     <div class="s-btn" onclick="irPara('ctrs',this)" role="button" tabindex="0">
       <i data-lucide="radio" style="width:15px;height:15px;stroke-width:2;"></i>
-      <span class="s-label">Relatório CTRS</span>
+      <span class="s-label" id="sidebar-label-ctrs">Relatório CTRS</span>
     </div>
     <div class="s-btn" onclick="irPara('arquivados',this)" role="button" tabindex="0">
       <i data-lucide="archive" style="width:15px;height:15px;stroke-width:2;"></i>
@@ -807,8 +869,8 @@
       <i data-lucide="clock" style="width:15px;height:15px;stroke-width:2;"></i>
       <span class="s-label">Histórico</span>
     </div>
-    <div class="s-section">Recebimento</div>
-    <div class="s-btn" onclick="irPara('recebimento',this)" role="button" tabindex="0">
+    <div class="s-section" id="sidebar-section-recebimento">Recebimento</div>
+    <div class="s-btn" id="sidebar-btn-recebimento" onclick="irPara('recebimento',this)" role="button" tabindex="0">
       <i data-lucide="package-check" style="width:15px;height:15px;stroke-width:2;"></i>
       <span class="s-label">Recebimento de Materiais</span>
     </div>
@@ -894,6 +956,9 @@
   <header class="topbar">
     <h1 class="topbar-title" id="page-title">Ocorrências</h1>
     <span class="chip" id="page-chip">Logado há: 00h 00m 00s</span>
+    <div id="topbar-praca-badge" class="praca-badge" title="Praça de operação ativa">
+      <span>📍</span> <span id="topbar-praca-nome">Juiz de Fora</span>
+    </div>
     <div id="cloud-status-indicator" class="cloud-status online" title="Conectado ao Supabase em tempo real">
       <span class="cloud-dot"></span>
       <span class="cloud-text">Nuvem Conectada</span>
@@ -964,12 +1029,12 @@
     </div>
   </main>
 
-  <!-- ── PÁGINA: CHECKLIST DIÁRIO & ROTINAS (APPLE REMINDERS STYLE) ── -->
+  <!-- ── PÁGINA: CHECKLIST DIÁRIO & ROTINAS OPERACIONAIS ── -->
   <main class="page" id="page-checklist" aria-label="Checklist Diário e Rotinas Preventivas">
     <div class="scroll-area checklist-scroll-area">
       <div class="checklist-wrapper">
         
-        <!-- Hero Apple Progress -->
+        <!-- Painel de Progresso Operacional -->
         <div class="reminders-hero">
           <div class="reminders-hero-info">
             <div class="reminders-hero-title">
@@ -994,7 +1059,7 @@
           </div>
         </div>
 
-        <!-- Apple Filter Cards Grid -->
+        <!-- Grade de Cartões de Filtro Rápido -->
         <div class="reminders-cards-grid">
           <div class="reminders-filter-card active" onclick="filtrarChecklist('todos', this)">
             <div class="reminders-fc-top">
@@ -1034,7 +1099,7 @@
           </div>
         </div>
 
-        <!-- ── APPLE SPLIT VIEW: DUAS COLUNAS LADO A LADO ── -->
+        <!-- ── PAINEL DIVIDIDO (SPLIT VIEW): DUAS COLUNAS LADO A LADO ── -->
         <div class="reminders-split-layout">
           
           <!-- COLUNA ESQUERDA: Rotinas Padrão da Emissora (Obrigatórias para Todos) -->
@@ -1075,7 +1140,7 @@
 
           <!-- COLUNA DIREITA: Minhas Rotinas & Lembretes Pessoais -->
           <div class="reminders-col">
-            <!-- Input Rápido Estilo Apple no topo da coluna pessoal -->
+            <!-- Inserção Rápida de Tarefa no topo da coluna pessoal -->
             <div class="reminders-add-box" style="margin-bottom:14px;">
               <div class="reminders-add-circle">
                 <i data-lucide="plus" style="width:13px;height:13px;stroke-width:2.5;"></i>
@@ -1315,7 +1380,7 @@
             <button type="button" class="btn btn-ghost btn-sm" onclick="copiarRelatorioOutlook()" style="position:relative;display:inline-flex;align-items:center;gap:6px;overflow:visible;" title="Copiar relatório formatado para colar direto no Outlook">
               <i data-lucide="copy" style="width:14px;height:14px;stroke-width:2;color:var(--blue);"></i>
               <span>Copiar para o Outlook</span>
-              <span class="apple-beta-capsule">BETA</span>
+              <span class="beta-capsule">BETA</span>
             </button>
             <button type="button" class="btn btn-success btn-sm" onclick="enviarRelatorioTV()">Enviar Relatório</button>
           </div>
@@ -1341,10 +1406,10 @@
               Transmissões ao Vivo — <span id="dash-view-title" style="color:var(--blue);">Telejornal</span>
             </h2>
           </div>
-          <div style="font-size:12px;font-weight:500;color:var(--muted);margin-top:2px;">Painel Consolidado de Telemetria &nbsp;·&nbsp; Juiz de Fora</div>
+          <div style="font-size:12px;font-weight:500;color:var(--muted);margin-top:2px;">Painel Consolidado de Telemetria &nbsp;·&nbsp; <span id="dash-trans-praca">Juiz de Fora</span></div>
         </div>
 
-        <!-- CONTROLE SEGMENTADO SUAVE (macOS PILL SWITCH) -->
+        <!-- CONTROLE SEGMENTADO SUAVE (SELETOR POR PÍLULAS) -->
         <div style="display:flex;background:rgba(0,0,0,0.05);padding:3px;border-radius:30px;gap:3px;border:1px solid var(--border-lt);box-shadow:inset 0 1px 2px rgba(0,0,0,0.04);">
           <button id="btn-tab-tj" type="button" onclick="alternarDashboard('telejornal')" style="background:#007AFF;color:#ffffff;border:none;font-weight:700;display:flex;align-items:center;gap:6px;padding:6px 16px;border-radius:24px;cursor:pointer;transition:all .22s cubic-bezier(0.4,0,0.2,1);font-size:12px;box-shadow:0 2px 6px rgba(0,122,255,0.35);">
             <i data-lucide="tv" style="width:14px;height:14px;"></i>
@@ -1484,229 +1549,8 @@
 
       <!-- VISÃO 2: EQUIPAMENTOS -->
       <div id="dash-view-equipamentos" class="dash-view-animated" style="display:none;">
-        <!-- GRID DE EQUIPAMENTOS (13 ITENS) NO TOPO -->
-        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:14px;margin-bottom:20px;">
-          <!-- LIVE U1 -->
-          <div class="dash-card" onclick="abrirDetalhesTransmissao('LIVE U1', 'equipamento')" style="padding:13px;cursor:pointer;" title="Clique para ver detalhes operacionais e telemetria">
-            <h5 style="font-size:12px;font-weight:700;text-align:center;margin-bottom:10px;color:#0F172A;">LIVE U1</h5>
-            <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
-              <div id="pie-eq-liveu1" style="width:76px;height:76px;border-radius:50%;background:conic-gradient(#10B981 0% 98%, #EF4444 98% 99%, #F59E0B 99% 100%);box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;position:relative;">
-                <div class="dash-pie-donut-sm">
-                  <div style="font-size:12.5px;font-weight:800;color:#0F172A;" class="pie-count">112</div>
-                </div>
-              </div>
-              <div style="font-size:10.5px;line-height:1.6;color:#334155;">
-                <div><span style="color:#10B981;">■</span> Conf. <strong class="pct-conf" style="color:#059669;">(98%)</strong></div>
-                <div><span style="color:#EF4444;">■</span> Falha <strong class="pct-nc" style="color:#DC2626;">(1%)</strong></div>
-                <div><span style="color:#F59E0B;">■</span> Canc. <strong class="pct-canc" style="color:#D97706;">(1%)</strong></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- LIVE U2 -->
-          <div class="dash-card" onclick="abrirDetalhesTransmissao('LIVE U2', 'equipamento')" style="padding:13px;cursor:pointer;" title="Clique para ver detalhes operacionais e telemetria">
-            <h5 style="font-size:12px;font-weight:700;text-align:center;margin-bottom:10px;color:#0F172A;">LIVE U2</h5>
-            <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
-              <div id="pie-eq-liveu2" style="width:76px;height:76px;border-radius:50%;background:conic-gradient(#10B981 0% 100%, #EF4444 100% 100%, #F59E0B 100% 100%);box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;position:relative;">
-                <div class="dash-pie-donut-sm">
-                  <div style="font-size:12.5px;font-weight:800;color:#0F172A;" class="pie-count">106</div>
-                </div>
-              </div>
-              <div style="font-size:10.5px;line-height:1.6;color:#334155;">
-                <div><span style="color:#10B981;">■</span> Conf. <strong class="pct-conf" style="color:#059669;">(100%)</strong></div>
-                <div><span style="color:#EF4444;">■</span> Falha <strong class="pct-nc" style="color:#DC2626;">(0%)</strong></div>
-                <div><span style="color:#F59E0B;">■</span> Canc. <strong class="pct-canc" style="color:#D97706;">(0%)</strong></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- LIVE U3 -->
-          <div class="dash-card" onclick="abrirDetalhesTransmissao('LIVE U3', 'equipamento')" style="padding:13px;cursor:pointer;" title="Clique para ver detalhes operacionais e telemetria">
-            <h5 style="font-size:12px;font-weight:700;text-align:center;margin-bottom:10px;color:#0F172A;">LIVE U3</h5>
-            <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
-              <div id="pie-eq-liveu3" style="width:76px;height:76px;border-radius:50%;background:conic-gradient(#10B981 0% 100%, #EF4444 100% 100%, #F59E0B 100% 100%);box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;position:relative;">
-                <div class="dash-pie-donut-sm">
-                  <div style="font-size:12.5px;font-weight:800;color:#0F172A;" class="pie-count">10</div>
-                </div>
-              </div>
-              <div style="font-size:10.5px;line-height:1.6;color:#334155;">
-                <div><span style="color:#10B981;">■</span> Conf. <strong class="pct-conf" style="color:#059669;">(100%)</strong></div>
-                <div><span style="color:#EF4444;">■</span> Falha <strong class="pct-nc" style="color:#DC2626;">(0%)</strong></div>
-                <div><span style="color:#F59E0B;">■</span> Canc. <strong class="pct-canc" style="color:#D97706;">(0%)</strong></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- LIVE U SMART -->
-          <div class="dash-card" onclick="abrirDetalhesTransmissao('LIVE U SMART', 'equipamento')" style="padding:13px;cursor:pointer;" title="Clique para ver detalhes operacionais e telemetria">
-            <h5 style="font-size:12px;font-weight:700;text-align:center;margin-bottom:10px;color:#0F172A;">LIVE U SMART</h5>
-            <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
-              <div id="pie-eq-liveusmart" style="width:76px;height:76px;border-radius:50%;background:conic-gradient(#10B981 0% 100%, #EF4444 100% 100%, #F59E0B 100% 100%);box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;position:relative;">
-                <div class="dash-pie-donut-sm">
-                  <div style="font-size:12.5px;font-weight:800;color:#0F172A;" class="pie-count">23</div>
-                </div>
-              </div>
-              <div style="font-size:10.5px;line-height:1.6;color:#334155;">
-                <div><span style="color:#10B981;">■</span> Conf. <strong class="pct-conf" style="color:#059669;">(100%)</strong></div>
-                <div><span style="color:#EF4444;">■</span> Falha <strong class="pct-nc" style="color:#DC2626;">(0%)</strong></div>
-                <div><span style="color:#F59E0B;">■</span> Canc. <strong class="pct-canc" style="color:#D97706;">(0%)</strong></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- REDAÇÃO -->
-          <div class="dash-card" onclick="abrirDetalhesTransmissao('REDAÇÃO', 'equipamento')" style="padding:13px;cursor:pointer;" title="Clique para ver detalhes operacionais e telemetria">
-            <h5 style="font-size:12px;font-weight:700;text-align:center;margin-bottom:10px;color:#0F172A;">REDAÇÃO</h5>
-            <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
-              <div id="pie-eq-redacao" style="width:76px;height:76px;border-radius:50%;background:conic-gradient(#10B981 0% 100%, #EF4444 100% 100%, #F59E0B 100% 100%);box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;position:relative;">
-                <div class="dash-pie-donut-sm">
-                  <div style="font-size:12.5px;font-weight:800;color:#0F172A;" class="pie-count">44</div>
-                </div>
-              </div>
-              <div style="font-size:10.5px;line-height:1.6;color:#334155;">
-                <div><span style="color:#10B981;">■</span> Conf. <strong class="pct-conf" style="color:#059669;">(100%)</strong></div>
-                <div><span style="color:#EF4444;">■</span> Falha <strong class="pct-nc" style="color:#DC2626;">(0%)</strong></div>
-                <div><span style="color:#F59E0B;">■</span> Canc. <strong class="pct-canc" style="color:#D97706;">(0%)</strong></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- LIVE U4 -->
-          <div class="dash-card" onclick="abrirDetalhesTransmissao('LIVE U4', 'equipamento')" style="padding:13px;cursor:pointer;" title="Clique para ver detalhes operacionais e telemetria">
-            <h5 style="font-size:12px;font-weight:700;text-align:center;margin-bottom:10px;color:#0F172A;">LIVE U4</h5>
-            <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
-              <div id="pie-eq-liveu4" style="width:76px;height:76px;border-radius:50%;background:conic-gradient(#10B981 0% 100%, #EF4444 100% 100%, #F59E0B 100% 100%);box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;position:relative;">
-                <div class="dash-pie-donut-sm">
-                  <div style="font-size:12.5px;font-weight:800;color:#0F172A;" class="pie-count">108</div>
-                </div>
-              </div>
-              <div style="font-size:10.5px;line-height:1.6;color:#334155;">
-                <div><span style="color:#10B981;">■</span> Conf. <strong class="pct-conf" style="color:#059669;">(100%)</strong></div>
-                <div><span style="color:#EF4444;">■</span> Falha <strong class="pct-nc" style="color:#DC2626;">(0%)</strong></div>
-                <div><span style="color:#F59E0B;">■</span> Canc. <strong class="pct-canc" style="color:#D97706;">(0%)</strong></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- NET PRAÇA -->
-          <div class="dash-card" onclick="abrirDetalhesTransmissao('NET PRAÇA', 'equipamento')" style="padding:13px;cursor:pointer;" title="Clique para ver detalhes operacionais e telemetria">
-            <h5 style="font-size:12px;font-weight:700;text-align:center;margin-bottom:10px;color:#0F172A;">NET PRAÇA</h5>
-            <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
-              <div id="pie-eq-netpraca" style="width:76px;height:76px;border-radius:50%;background:conic-gradient(#10B981 0% 100%, #EF4444 100% 100%, #F59E0B 100% 100%);box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;position:relative;">
-                <div class="dash-pie-donut-sm">
-                  <div style="font-size:12.5px;font-weight:800;color:#0F172A;" class="pie-count">2</div>
-                </div>
-              </div>
-              <div style="font-size:10.5px;line-height:1.6;color:#334155;">
-                <div><span style="color:#10B981;">■</span> Conf. <strong class="pct-conf" style="color:#059669;">(100%)</strong></div>
-                <div><span style="color:#EF4444;">■</span> Falha <strong class="pct-nc" style="color:#DC2626;">(0%)</strong></div>
-                <div><span style="color:#F59E0B;">■</span> Canc. <strong class="pct-canc" style="color:#D97706;">(0%)</strong></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- NET PORTARIA -->
-          <div class="dash-card" onclick="abrirDetalhesTransmissao('NET PORTARIA', 'equipamento')" style="padding:13px;cursor:pointer;" title="Clique para ver detalhes operacionais e telemetria">
-            <h5 style="font-size:12px;font-weight:700;text-align:center;margin-bottom:10px;color:#0F172A;">NET PORTARIA</h5>
-            <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
-              <div id="pie-eq-netportaria" style="width:76px;height:76px;border-radius:50%;background:conic-gradient(#10B981 0% 100%, #EF4444 100% 100%, #F59E0B 100% 100%);box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;position:relative;">
-                <div class="dash-pie-donut-sm">
-                  <div style="font-size:12.5px;font-weight:800;color:#0F172A;" class="pie-count">5</div>
-                </div>
-              </div>
-              <div style="font-size:10.5px;line-height:1.6;color:#334155;">
-                <div><span style="color:#10B981;">■</span> Conf. <strong class="pct-conf" style="color:#059669;">(100%)</strong></div>
-                <div><span style="color:#EF4444;">■</span> Falha <strong class="pct-nc" style="color:#DC2626;">(0%)</strong></div>
-                <div><span style="color:#F59E0B;">■</span> Canc. <strong class="pct-canc" style="color:#D97706;">(0%)</strong></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- FORMATOS NET -->
-          <div class="dash-card" onclick="abrirDetalhesTransmissao('FORMATOS NET', 'equipamento')" style="padding:13px;cursor:pointer;" title="Clique para ver detalhes operacionais e telemetria">
-            <h5 style="font-size:12px;font-weight:700;text-align:center;margin-bottom:10px;color:#0F172A;">FORMATOS NET</h5>
-            <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
-              <div id="pie-eq-formatosnet" style="width:76px;height:76px;border-radius:50%;background:conic-gradient(#10B981 0% 100%, #EF4444 100% 100%, #F59E0B 100% 100%);box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;position:relative;">
-                <div class="dash-pie-donut-sm">
-                  <div style="font-size:12.5px;font-weight:800;color:#0F172A;" class="pie-count">3</div>
-                </div>
-              </div>
-              <div style="font-size:10.5px;line-height:1.6;color:#334155;">
-                <div><span style="color:#10B981;">■</span> Conf. <strong class="pct-conf" style="color:#059669;">(100%)</strong></div>
-                <div><span style="color:#EF4444;">■</span> Falha <strong class="pct-nc" style="color:#DC2626;">(0%)</strong></div>
-                <div><span style="color:#F59E0B;">■</span> Canc. <strong class="pct-canc" style="color:#D97706;">(0%)</strong></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- NET 2º ANDAR -->
-          <div class="dash-card" onclick="abrirDetalhesTransmissao('NET 2º ANDAR', 'equipamento')" style="padding:13px;cursor:pointer;" title="Clique para ver detalhes operacionais e telemetria">
-            <h5 style="font-size:12px;font-weight:700;text-align:center;margin-bottom:10px;color:#0F172A;">NET 2º ANDAR</h5>
-            <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
-              <div id="pie-eq-net2andar" style="width:76px;height:76px;border-radius:50%;background:conic-gradient(#10B981 0% 100%, #EF4444 100% 100%, #F59E0B 100% 100%);box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;position:relative;">
-                <div class="dash-pie-donut-sm">
-                  <div style="font-size:12.5px;font-weight:800;color:#0F172A;" class="pie-count">1</div>
-                </div>
-              </div>
-              <div style="font-size:10.5px;line-height:1.6;color:#334155;">
-                <div><span style="color:#10B981;">■</span> Conf. <strong class="pct-conf" style="color:#059669;">(100%)</strong></div>
-                <div><span style="color:#EF4444;">■</span> Falha <strong class="pct-nc" style="color:#DC2626;">(0%)</strong></div>
-                <div><span style="color:#F59E0B;">■</span> Canc. <strong class="pct-canc" style="color:#D97706;">(0%)</strong></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- NET 3º ANDAR -->
-          <div class="dash-card" onclick="abrirDetalhesTransmissao('NET 3º ANDAR', 'equipamento')" style="padding:13px;cursor:pointer;" title="Clique para ver detalhes operacionais e telemetria">
-            <h5 style="font-size:12px;font-weight:700;text-align:center;margin-bottom:10px;color:#0F172A;">NET 3º ANDAR</h5>
-            <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
-              <div id="pie-eq-net3andar" style="width:76px;height:76px;border-radius:50%;background:conic-gradient(#10B981 0% 100%, #EF4444 100% 100%, #F59E0B 100% 100%);box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;position:relative;">
-                <div class="dash-pie-donut-sm">
-                  <div style="font-size:12.5px;font-weight:800;color:#0F172A;" class="pie-count">1</div>
-                </div>
-              </div>
-              <div style="font-size:10.5px;line-height:1.6;color:#334155;">
-                <div><span style="color:#10B981;">■</span> Conf. <strong class="pct-conf" style="color:#059669;">(100%)</strong></div>
-                <div><span style="color:#EF4444;">■</span> Falha <strong class="pct-nc" style="color:#DC2626;">(0%)</strong></div>
-                <div><span style="color:#F59E0B;">■</span> Canc. <strong class="pct-canc" style="color:#D97706;">(0%)</strong></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- NET 4º ANDAR -->
-          <div class="dash-card" onclick="abrirDetalhesTransmissao('NET 4º ANDAR', 'equipamento')" style="padding:13px;cursor:pointer;" title="Clique para ver detalhes operacionais e telemetria">
-            <h5 style="font-size:12px;font-weight:700;text-align:center;margin-bottom:10px;color:#0F172A;">NET 4º ANDAR</h5>
-            <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
-              <div id="pie-eq-net4andar" style="width:76px;height:76px;border-radius:50%;background:conic-gradient(#10B981 0% 100%, #EF4444 100% 100%, #F59E0B 100% 100%);box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;position:relative;">
-                <div class="dash-pie-donut-sm">
-                  <div style="font-size:12.5px;font-weight:800;color:#0F172A;" class="pie-count">1</div>
-                </div>
-              </div>
-              <div style="font-size:10.5px;line-height:1.6;color:#334155;">
-                <div><span style="color:#10B981;">■</span> Conf. <strong class="pct-conf" style="color:#059669;">(100%)</strong></div>
-                <div><span style="color:#EF4444;">■</span> Falha <strong class="pct-nc" style="color:#DC2626;">(0%)</strong></div>
-                <div><span style="color:#F59E0B;">■</span> Canc. <strong class="pct-canc" style="color:#D97706;">(0%)</strong></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- KMJ -->
-          <div class="dash-card" onclick="abrirDetalhesTransmissao('KMJ', 'equipamento')" style="padding:13px;cursor:pointer;" title="Clique para ver detalhes operacionais e telemetria">
-            <h5 style="font-size:12px;font-weight:700;text-align:center;margin-bottom:10px;color:#0F172A;">KMJ</h5>
-            <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
-              <div id="pie-eq-kmj" style="width:76px;height:76px;border-radius:50%;background:conic-gradient(#10B981 0% 100%, #EF4444 100% 100%, #F59E0B 100% 100%);box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;position:relative;">
-                <div class="dash-pie-donut-sm">
-                  <div style="font-size:12.5px;font-weight:800;color:#0F172A;" class="pie-count">1</div>
-                </div>
-              </div>
-              <div style="font-size:10.5px;line-height:1.6;color:#334155;">
-                <div><span style="color:#10B981;">■</span> Conf. <strong class="pct-conf" style="color:#059669;">(100%)</strong></div>
-                <div><span style="color:#EF4444;">■</span> Falha <strong class="pct-nc" style="color:#DC2626;">(0%)</strong></div>
-                <div><span style="color:#F59E0B;">■</span> Canc. <strong class="pct-canc" style="color:#D97706;">(0%)</strong></div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <!-- GRID DE EQUIPAMENTOS DINÂMICO -->
+        <div id="dash-equipamentos-grid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:14px;margin-bottom:20px;"></div>
 
         <!-- TRANSMISSÕES AO VIVO GERAL DE EQUIPAMENTOS (DINÂMICO) -->
         <div class="dash-card" style="padding:20px;">
@@ -2208,7 +2052,7 @@
               Dashboard Ocorrências — <span style="color:var(--blue);">Resolução & Desempenho</span>
             </h2>
           </div>
-          <div style="font-size:12px;font-weight:500;color:var(--muted);margin-top:2px;">Painel de Métricas & Indicadores em Tempo Real · Juiz de Fora</div>
+          <div style="font-size:12px;font-weight:500;color:var(--muted);margin-top:2px;">Painel de Métricas & Indicadores em Tempo Real &nbsp;·&nbsp; <span id="dash-resolvidas-praca">Juiz de Fora</span></div>
         </div>
 
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
@@ -2340,7 +2184,7 @@
                 <button class="pill on" data-cat="todos" onclick="filtrarCategoriaHistorico('todos', this)">Todos (<span id="cnt-hist-todos">0</span>)</button>
                 <button class="pill" data-cat="ocorrencia" onclick="filtrarCategoriaHistorico('ocorrencia', this)">Ocorrências (<span id="cnt-hist-oc">0</span>)</button>
                 <button class="pill" data-cat="relatorio" onclick="filtrarCategoriaHistorico('relatorio', this)">Relatórios (<span id="cnt-hist-rel">0</span>)</button>
-                <button class="pill" data-cat="recebimento" onclick="filtrarCategoriaHistorico('recebimento', this)">Recebimentos (<span id="cnt-hist-rec">0</span>)</button>
+                <button class="pill" id="hist-pill-recebimento" data-cat="recebimento" onclick="filtrarCategoriaHistorico('recebimento', this)">Recebimentos (<span id="cnt-hist-rec">0</span>)</button>
                 <button class="pill" data-cat="meus" onclick="filtrarCategoriaHistorico('meus', this)">Meus Registros (<span id="cnt-hist-meus">0</span>)</button>
               </div>
             </div>
@@ -2386,7 +2230,7 @@
           <div class="frow"><label for="cfg-nome">Nome do Operador</label><input id="cfg-nome" type="text" value="Operador" oninput="atualizarNomeUsuario(this.value)"/></div>
           <div class="frow"><label for="cfg-email">E-mail</label><input id="cfg-email" type="email" value="teste@teste.com" disabled style="background:#F1F5F9;color:var(--muted);cursor:not-allowed;"/></div>
           <div class="frow"><label for="cfg-cargo">Cargo</label><input id="cfg-cargo" type="text" value="Técnico de Estúdio" disabled/></div>
-          <div class="frow"><label for="cfg-praca">Praça</label><input id="cfg-praca" type="text" value="Juiz de Fora" disabled/></div>
+          <div class="frow"><label for="cfg-praca">Praça</label><select id="cfg-praca" onchange="trocarPracaConfig(this.value)" style="background:#fff;cursor:pointer;font-weight:600;"><option value="Juiz de Fora">Juiz de Fora (JF)</option><option value="Uberlândia">Uberlândia (UDI)</option></select></div>
         </div>
       </div>
 

@@ -109,7 +109,7 @@
     lixeira:      { page:'page-lixeira',      title:'Lixeira',                                  chip:'Itens excluídos retidos por 7 dias' },
     resolvidas:   { page:'page-resolvidas',   title:'Dashboard Ocorrências — Resolução & Desempenho (Power BI)', chip:'Dashboard de Métricas e Indicadores' },
     dashboard_ocorrencias:  { page:'page-resolvidas',             title:'Dashboard Ocorrências — Resolução & Desempenho (Power BI)', chip:'Dashboard de Métricas e Indicadores' },
-    dashboard_transmissoes: { page:'page-dashboard-ocorrencias',  title:'Dashboard Transmissões — Transmissões ao Vivo',  chip:'Juiz de Fora' },
+    dashboard_transmissoes: { page:'page-dashboard-ocorrencias',  title:'Dashboard Transmissões — Transmissões ao Vivo',  chip:'Transmissões em Tempo Real' },
     compras_vendas:{ page:'page-compras-vendas', title:'Solicitação de Compras',                chip:'Preencher solicitação de compra' },
     orcamento:     { page:'page-orcamento',      title: 'Orçamento Anual', chip: function() { return 'Ciclo ' + (new Date().getFullYear() + 1); } },
     config:        { page:'page-config',         title:'Configurações',                            chip:'Perfil e preferências'      }
@@ -170,3 +170,143 @@
     renderCards();
   }
   window.filtrar = filtrar;
+
+  /* ═══════════════════════════════════════════
+     GESTÃO DE PRAÇA ATIVA (MULTI-PRAÇA)
+  ═══════════════════════════════════════════ */
+  var CHAVE_PRACA = 'tv_praca_ativa';
+
+  function getPracaAtual() {
+    try {
+      var salval = localStorage.getItem(CHAVE_PRACA);
+      if (salval && (salval === 'Juiz de Fora' || salval === 'Uberlândia' || salval === 'Uberlandia')) {
+        return salval === 'Uberlandia' ? 'Uberlândia' : salval;
+      }
+    } catch(e) {}
+    return 'Juiz de Fora';
+  }
+  window.getPracaAtual = getPracaAtual;
+
+  function setPracaAtual(praca) {
+    if (!praca) return;
+    var norm = praca.indexOf('Uber') !== -1 ? 'Uberlândia' : 'Juiz de Fora';
+    try {
+      localStorage.setItem(CHAVE_PRACA, norm);
+    } catch(e) {}
+    aplicarModoPraca(norm);
+  }
+  window.setPracaAtual = setPracaAtual;
+
+  function aplicarModoPraca(praca) {
+    var p = praca || getPracaAtual();
+    var isUberlandia = p.indexOf('Uber') !== -1;
+
+    // 1. Atualizar topbar badge
+    var nomeEl = document.getElementById('topbar-praca-nome');
+    if (nomeEl) {
+      nomeEl.textContent = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
+    }
+
+    // 2. Atualizar menu lateral: CTRS vs Relatório
+    var ctrsLabel = document.getElementById('sidebar-label-ctrs');
+    if (ctrsLabel) {
+      ctrsLabel.textContent = isUberlandia ? 'Relatório' : 'Relatório CTRS';
+    }
+
+    // 3. Atualizar pageMap para título dinâmico de CTRS
+    if (pageMap && pageMap.ctrs) {
+      pageMap.ctrs.title = isUberlandia ? 'Relatório de Transmissão ao Vivo' : 'Checklist de Transmissão — CTRS';
+      pageMap.ctrs.chip  = isUberlandia ? 'Preencher após cada transmissão / jornal' : 'Preencher após cada jornal';
+    }
+
+    // 4. Se a página CTRS estiver aberta ou tiver cabeçalho no HTML, atualizar
+    var ctrsPageHeader = document.querySelector('#page-ctrs .sec-header h2');
+    if (ctrsPageHeader) {
+      ctrsPageHeader.textContent = isUberlandia ? 'Relatório de Transmissão ao Vivo' : 'Checklist de Transmissão — CTRS';
+    }
+
+    // 5. Esconder / Exibir Recebimento de Materiais (somente Juiz de Fora)
+    var secRec = document.getElementById('sidebar-section-recebimento');
+    var btnRec = document.getElementById('sidebar-btn-recebimento');
+    if (secRec) secRec.style.display = isUberlandia ? 'none' : '';
+    if (btnRec) btnRec.style.display = isUberlandia ? 'none' : '';
+
+    // Esconder / Exibir pílula de Recebimento no Histórico
+    var histPillRec = document.getElementById('hist-pill-recebimento');
+    if (histPillRec) histPillRec.style.display = isUberlandia ? 'none' : '';
+    if (isUberlandia && typeof historicoFiltroCategoria !== 'undefined' && historicoFiltroCategoria === 'recebimento') {
+      if (typeof filtrarCategoriaHistorico === 'function') {
+        var pillTodos = document.querySelector('#hist-pills button[data-cat="todos"]');
+        filtrarCategoriaHistorico('todos', pillTodos);
+      }
+    }
+
+    // Se estiver atualmente na página de recebimento e mudar para Uberlândia, redirecionar para dashboard
+    var activePage = document.querySelector('.page.active');
+    if (isUberlandia && activePage && activePage.id === 'page-recebimento') {
+      irPara('dashboard');
+    }
+
+    // 6. Atualizar selects nas páginas de formulários para a praça ativa
+    var cfgPraca = document.getElementById('cfg-praca');
+    if (cfgPraca) cfgPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
+
+    var identPraca = document.getElementById('ident-operador-praca');
+    if (identPraca) identPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
+
+    var ctrsPraca = document.getElementById('ctrs-praca');
+    if (ctrsPraca) ctrsPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
+
+    var reqPraca = document.getElementById('req-praca');
+    if (reqPraca) reqPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
+
+    var orcPraca = document.getElementById('orc-modal-praca');
+    if (orcPraca) orcPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
+
+    // 7. Atualizar subtítulos dos dashboards com a praça ativa
+    var dashTransPraca = document.getElementById('dash-trans-praca');
+    if (dashTransPraca) dashTransPraca.textContent = p;
+
+    var dashResolvidasPraca = document.getElementById('dash-resolvidas-praca');
+    if (dashResolvidasPraca) dashResolvidasPraca.textContent = p;
+
+    var upPraca = document.getElementById('up-praca');
+    if (upPraca) upPraca.textContent = p;
+
+    // 8. Notificar e re-renderizar módulos com dados da praça selecionada
+    try {
+      if (typeof window.carregarDashboardMetricsStore === 'function') {
+        window.carregarDashboardMetricsStore();
+      }
+      if (typeof window.renderDashboards === 'function') {
+        window.renderDashboards();
+      }
+      if (typeof window.renderCards === 'function') {
+        window.renderCards();
+      }
+      if (typeof window.renderHistorico === 'function') {
+        window.renderHistorico();
+      }
+      if (typeof window.renderArquivados === 'function') {
+        window.renderArquivados();
+      }
+      if (typeof window.renderOrcamento === 'function') {
+        window.renderOrcamento();
+      }
+      if (typeof window.atualizarBadgesNotificacoes === 'function') {
+        window.atualizarBadgesNotificacoes();
+      }
+    } catch(e) {
+      console.warn('Erro ao atualizar views após troca de praça:', e);
+    }
+  }
+  window.aplicarModoPraca = aplicarModoPraca;
+
+  function trocarPracaConfig(novaPraca) {
+    setPracaAtual(novaPraca);
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Praça Alterada', 'Ambiente de trabalho alternado para ' + novaPraca + '. Dados isolados carregados.', 'info');
+    }
+  }
+  window.trocarPracaConfig = trocarPracaConfig;
+

@@ -80,12 +80,13 @@
       criado:      Date.now(),
       dataCriacao: formatDataHoraLocal(),
       resolucao:   anexosFinais.length > 0 ? { statusRes: 'Aberta', anexos: anexosFinais } : null,
-      anexos:      anexosFinais
+      anexos:      anexosFinais,
+      praca:       (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora')
     };
 
     ocorrencias = [novo].concat(ocorrencias);
     window.ocorrencias = ocorrencias;
-    save(ocorrencias);
+    save(ocorrencias, novo, true);
     uploadedFilesStore['nova-previews'] = [];
     fecharPopup('popup-nova-oc');
     adicionarNotificacao('Nova Ocorrência Criada', novo.titulo + ' (' + novo.prio + ' Prioridade)', novo.prio === 'Alta' ? 'warning' : 'info');
@@ -266,7 +267,7 @@
       ultimaEdicaoEm:   formatDataHoraLocal()
     });
 
-    save(ocorrencias);
+    save(ocorrencias, ocorrencias[idx], false);
     fecharPopup('popup-editar-oc');
     renderAll();
     if (typeof mostrarToast === 'function') {

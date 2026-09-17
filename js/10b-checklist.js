@@ -1,5 +1,5 @@
   /* ═══════════════════════════════════════════
-     CHECKLIST DIÁRIO & MONITORAMENTO DE ROTINA (APPLE REMINDERS STYLE) — SUPABASE
+     CHECKLIST DIÁRIO & MONITORAMENTO DE ROTINAS OPERACIONAIS — SUPABASE
   ═══════════════════════════════════════════ */
 
   var checklistFiltroAtual = 'todos';

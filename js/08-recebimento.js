@@ -25,6 +25,7 @@
   function removerLinhaMaterial(btn) {
     var tr = btn.closest('tr');
     if (tr) tr.remove();
+    try { salvarRascunhoRecebimento(true); } catch(e) {}
   }
   window.removerLinhaMaterial = removerLinhaMaterial;
 
@@ -49,11 +50,33 @@
       var recEl = document.getElementById('rec-recebedor');
       var obsEl = document.getElementById('rec-obs');
 
+      var materiais = [];
+      var tbody = document.querySelector('#rec-materiais-tbody') || document.querySelector('#tb-rec tbody');
+      if (tbody) {
+        var rows = tbody.querySelectorAll('tr');
+        rows.forEach(function(tr) {
+          var qEl = tr.querySelector('.item-quant');
+          var dEl = tr.querySelector('.item-desc');
+          var pEl = tr.querySelector('.item-plaq');
+          var sEl = tr.querySelector('.item-serie');
+          var lEl = tr.querySelector('.item-local');
+          var quant = qEl ? qEl.value : '';
+          var desc  = dEl ? dEl.value : '';
+          var plaq  = pEl ? pEl.value : '';
+          var serie = sEl ? sEl.value : '';
+          var local = lEl ? lEl.value : '';
+          if (quant || desc || plaq || serie || local) {
+            materiais.push({ quant: quant, desc: desc, plaq: plaq, serie: serie, local: local });
+          }
+        });
+      }
+
       var dados = {
         remetente: remEl ? remEl.value : '',
         nf:        nfEl ? nfEl.value : '',
         recebedor: recEl ? recEl.value : '',
-        obs:       obsEl ? obsEl.value : ''
+        obs:       obsEl ? obsEl.value : '',
+        materiais: materiais
       };
       localStorage.setItem('tv_recebimento_rascunho_v1', JSON.stringify(dados));
       if (!silencioso && typeof mostrarToast === 'function') {
@@ -79,8 +102,32 @@
       if (nfEl && dados.nf !== undefined)        nfEl.value = dados.nf;
       if (recEl && dados.recebedor !== undefined) recEl.value = dados.recebedor;
       if (obsEl && dados.obs !== undefined)      obsEl.value = dados.obs;
+
+      if (Array.isArray(dados.materiais) && dados.materiais.length > 0) {
+        var tbody = document.querySelector('#rec-materiais-tbody') || document.querySelector('#tb-rec tbody');
+        if (tbody) {
+          tbody.innerHTML = '';
+          dados.materiais.forEach(function(item) {
+            adicionarLinhaMaterial();
+            var lastRow = tbody.lastElementChild;
+            if (lastRow) {
+              var qEl = lastRow.querySelector('.item-quant');
+              var dEl = lastRow.querySelector('.item-desc');
+              var pEl = lastRow.querySelector('.item-plaq');
+              var sEl = lastRow.querySelector('.item-serie');
+              var lEl = lastRow.querySelector('.item-local');
+              if (qEl && item.quant !== undefined) qEl.value = item.quant;
+              if (dEl && item.desc !== undefined)  dEl.value = item.desc;
+              if (pEl && item.plaq !== undefined)  pEl.value = item.plaq;
+              if (sEl && item.serie !== undefined) sEl.value = item.serie;
+              if (lEl && item.local !== undefined) lEl.value = item.local;
+            }
+          });
+        }
+      }
     } catch (e) {}
   }
+  window.carregarRascunhoRecebimento = carregarRascunhoRecebimento;
 
   function limparFormularioRecebimento(confirmar) {
     if (confirmar && !confirm('Deseja realmente limpar todos os campos do recebimento?')) {
@@ -94,6 +141,13 @@
         page.querySelectorAll('select').forEach(function(el) { el.selectedIndex = 0; });
         var prev = document.getElementById('rec-previews');
         if (prev) prev.innerHTML = '';
+        var tbody = document.querySelector('#rec-materiais-tbody') || document.querySelector('#tb-rec tbody');
+        if (tbody) {
+          tbody.innerHTML = '';
+          if (typeof adicionarLinhaMaterial === 'function') {
+            adicionarLinhaMaterial();
+          }
+        }
       }
       if (confirmar && typeof mostrarToast === 'function') {
         mostrarToast('Formulário Limpo', 'Campos de recebimento zerados.', 'info');
@@ -174,7 +228,7 @@
     };
 
     historicoSeedData = [novoHist].concat(historicoSeedData);
-    saveHistorico(historicoSeedData);
+    saveHistorico(historicoSeedData, novoHist);
 
     // Limpa o rascunho e o formulário para o próximo recebimento
     limparFormularioRecebimento(false);

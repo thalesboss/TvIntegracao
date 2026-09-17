@@ -2,6 +2,7 @@
      FLUXO DE INICIALIZAÇÃO E IDENTIFICAÇÃO DO OPERADOR
   ═══════════════════════════════════════════ */
   /* Render inicial */
+  try { if (typeof aplicarModoPraca === 'function') aplicarModoPraca(); } catch(e) {}
   try { carregarFotoPerfilSalva(); } catch(e) {}
   try { loadNotificacoes(); } catch(e) {}
   try { carregarCredenciaisSupabaseConfig(); } catch(e) {}
@@ -24,7 +25,11 @@
     }
   }, 120000); // 2 minutos (redução imediata de 96% no consumo de rede)
 
+  var lastFocusSync = 0;
   window.addEventListener('focus', function() {
+    var now = Date.now();
+    if (now - lastFocusSync < 60000) return; // Limite de 1 sincronização por minuto ao alternar abas
+    lastFocusSync = now;
     if (typeof DBService !== 'undefined' && DBService && typeof DBService.syncRemote === 'function') {
       DBService.syncRemote();
     }
@@ -32,6 +37,7 @@
 
   var savedUserName = localStorage.getItem(USER_NAME_STORAGE_KEY);
   try { if (typeof carregarOperadoresSugeridos === 'function') carregarOperadoresSugeridos(); } catch(e) {}
+  try { if (typeof atualizarUIIdentificacaoOperador === 'function') atualizarUIIdentificacaoOperador(); } catch(e) {}
   if (!savedUserName || !savedUserName.trim()) {
     abrirPopup('popup-identificacao-operador');
     var identInput = document.getElementById('ident-operador-nome');

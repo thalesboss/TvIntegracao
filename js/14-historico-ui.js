@@ -202,23 +202,40 @@
       }
     }
 
-    // Checa texto de título ou equipamento com limites
-    var textoItem = ((item.equipamento || '') + ' ' + (item.titulo || '')).toUpperCase();
+    // Checa item.equipamento explícito
+    if (item.equipamento && typeof item.equipamento === 'string') {
+      var eqLimpo = item.equipamento.trim().toUpperCase();
+      eqLimpo = eqLimpo.replace(/^(JUIZ DE FORA|UBERLÂNDIA|UBERLANDIA|UBERABA|DIVINÓPOLIS|DIVINOPOLIS|ARAXÁ|ARAXA|CENTRAL TÉCNICA|CENTRAL TECNICA)\s*—\s*/i, '').trim();
+
+      for (var a = 0; a < alvosDashboard.length; a++) {
+        if (eqLimpo === alvosDashboard[a].toUpperCase() || eqLimpo.replace(/\s+/g, '') === alvosDashboard[a].replace(/\s+/g, '')) {
+          return alvosDashboard[a];
+        }
+      }
+
+      var genericList = [
+        'EQUIPAMENTO', 'GERAL', 'SISTEMA', 'CENTRAL TÉCNICA', 'CENTRAL TECNICA',
+        'TRANSMISSÃO', 'TRANSMISSAO', 'EQUIPAMENTOS DE TRANSMISSÃO / CTRS',
+        'MATERIAIS DE COMPRA', 'EQUIPAMENTO / MATERIAL RECEBIDO', 'SEM EQUIPAMENTO', 'OUTROS'
+      ];
+      if (!genericList.includes(eqLimpo) && eqLimpo.length >= 3 && !eqLimpo.includes('REQUISICAO') && !eqLimpo.includes('RECEBIMENTO')) {
+        return eqLimpo;
+      }
+    }
+
+    // Checa texto de título para alvos cadastrados
+    var textoTitulo = (item.titulo || '').toUpperCase();
     for (var k = 0; k < alvosDashboard.length; k++) {
       var alvo = alvosDashboard[k].toUpperCase();
       var alvoEscapado = alvo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       var reg = new RegExp('(^|[^A-Z0-9])' + alvoEscapado + '([^A-Z0-9]|$)', 'i');
-      if (reg.test(textoItem)) {
+      if (reg.test(textoTitulo)) {
         return alvosDashboard[k];
       }
     }
 
-    // 2. Extração limpa para outros equipamentos
-    var base = (item.equipamento || item.titulo || '').trim();
-    base = base.replace(/^(juiz de fora|uberl[aâ]ndia|uberaba|divin[oó]polis|arax[aá]|central t[eé]cnica|rede integra[cç][aã]o)\s*—\s*/i, '');
-    base = base.replace(/^(falha em|ocorr[eê]ncia em|problema em)\s*/i, '');
-    base = base.replace(/\s*\([^)]*\)\s*$/i, '');
-    return base.trim();
+    // Não adivinha nem agrupa itens com títulos ou categorias genéricas
+    return '';
   }
   window.identificarEquipamentoItem = identificarEquipamentoItem;
 
@@ -236,9 +253,10 @@
 
     if (normA.length < 2 || normB.length < 2) return false;
 
-    var stopwords = ['equipamento', 'geral', 'sistema', 'central tecnica', 'transmissao', 'manutencao', 'relatorio', 'ocorrencia'];
+    var stopwords = ['equipamento', 'geral', 'sistema', 'central tecnica', 'transmissao', 'manutencao', 'relatorio', 'ocorrencia', 'checklist', 'ctrs', 'compras', 'recebimento'];
     if (stopwords.includes(normA) || stopwords.includes(normB)) return false;
 
+    // Regra estrita: apenas itens com o mesmo nome exato de equipamento são vinculados
     return normA === normB;
   }
   window.saoDoMesmoEquipamento = saoDoMesmoEquipamento;
@@ -292,7 +310,7 @@
         '</div>' +
         '<div style="font-size:12.5px;color:var(--txt);font-weight:700;display:flex;align-items:center;gap:6px;">' +
           '<i data-lucide="hard-drive" style="width:14px;height:14px;stroke-width:2;color:var(--blue);"></i>' +
-          '<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + eqNomeIdentificado + '</span>' +
+          '<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHTML(eqNomeIdentificado) + '</span>' +
         '</div>' +
       '</div>';
 
@@ -312,12 +330,12 @@
         return (
           '<div class="mini-oc' + (eMeu ? ' mine' : '') + '" onclick="verDetalhesHistorico(\'' + rel.id + '\')" style="margin-bottom:8px;padding:10px 12px;border-radius:var(--r-md);border:1px solid var(--border-lt);background:var(--surface);cursor:pointer;transition:all 0.15s ease;" onmouseover="this.style.borderColor=\'var(--blue)\';this.style.boxShadow=\'0 2px 8px rgba(0,113,227,0.08)\';" onmouseout="this.style.borderColor=\'var(--border-lt)\';this.style.boxShadow=\'none\';">' +
             '<div class="mini-top" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px;">' +
-              '<span class="mini-title" style="font-weight:600;font-size:12px;color:var(--txt);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;">' + rel.titulo + '</span>' +
-              '<span class="tag tag-g" style="font-size:9.5px;padding:1px 6px;white-space:nowrap;">' + statusTexto + '</span>' +
+              '<span class="mini-title" style="font-weight:600;font-size:12px;color:var(--txt);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;">' + escapeHTML(rel.titulo || '') + '</span>' +
+              '<span class="tag tag-g" style="font-size:9.5px;padding:1px 6px;white-space:nowrap;">' + escapeHTML(statusTexto) + '</span>' +
             '</div>' +
             '<div style="font-size:11px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;margin-top:4px;">' +
-              '<span><i data-lucide="calendar" style="width:10px;height:10px;vertical-align:-1px;"></i> ' + dataFmt + '</span>' +
-              '<span>Por: ' + respFmt + '</span>' +
+              '<span><i data-lucide="calendar" style="width:10px;height:10px;vertical-align:-1px;"></i> ' + escapeHTML(dataFmt) + '</span>' +
+              '<span>Por: ' + escapeHTML(respFmt) + '</span>' +
             '</div>' +
           '</div>'
         );
@@ -472,11 +490,11 @@
               return (
                 '<div style="background:var(--surface);padding:8px 12px;border-radius:var(--r-md);border:1px solid var(--border-lt);font-size:11.5px;line-height:1.5;">' +
                   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
-                    '<strong style="color:var(--txt);display:flex;align-items:center;gap:5px;"><i data-lucide="user-check" style="width:12px;height:12px;color:var(--blue);"></i> ' + (ed.autor || 'Operador') + '</strong>' +
-                    '<span style="color:var(--muted);font-size:10.5px;">' + (ed.dataHora || '') + '</span>' +
+                    '<strong style="color:var(--txt);display:flex;align-items:center;gap:5px;"><i data-lucide="user-check" style="width:12px;height:12px;color:var(--blue);"></i> ' + escapeHTML(ed.autor || 'Operador') + '</strong>' +
+                    '<span style="color:var(--muted);font-size:10.5px;">' + escapeHTML(ed.dataHora || '') + '</span>' +
                   '</div>' +
                   '<ul style="margin:0;padding-left:16px;color:var(--txt2);">' +
-                    (ed.mudancas || []).map(function(m){ return '<li>' + m + '</li>'; }).join('') +
+                    (ed.mudancas || []).map(function(m){ return '<li>' + escapeHTML(m) + '</li>'; }).join('') +
                   '</ul>' +
                 '</div>'
               );
@@ -493,12 +511,12 @@
             'Informações de Origem e Registro' +
           '</h4>' +
           '<div style="font-size:12px;color:var(--txt2);line-height:1.6;">' +
-            '<strong>Equipamento / Recurso:</strong> ' + equip + '<br/>' +
-            '<strong>Criado por:</strong> ' + autorCri + ' (' + dataCri + ')<br/>' +
-            '<strong>Localidade:</strong> ' + localidade + '<br/>' +
-            '<strong>Categoria:</strong> ' + categoria + '<br/>' +
+            '<strong>Equipamento / Recurso:</strong> ' + escapeHTML(equip) + '<br/>' +
+            '<strong>Criado por:</strong> ' + escapeHTML(autorCri) + ' (' + escapeHTML(dataCri) + ')<br/>' +
+            '<strong>Localidade:</strong> ' + escapeHTML(localidade) + '<br/>' +
+            '<strong>Categoria:</strong> ' + escapeHTML(categoria) + '<br/>' +
             '<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
-              '<strong>Descrição Registrada:</strong><br/>' + descCri +
+              '<strong>Descrição Registrada:</strong><br/>' + escapeHTML(descCri) +
             '</div>' +
           '</div>' +
         '</div>' +
@@ -510,11 +528,11 @@
             'Informações de Resolução e Fechamento' +
           '</h4>' +
           '<div style="font-size:12px;color:var(--txt2);line-height:1.6;">' +
-            '<strong>Responsável pela Resolução:</strong> ' + respRes + '<br/>' +
-            '<strong>Data/Hora de Resolução:</strong> ' + dataRes + '<br/>' +
-            '<strong>Status Final:</strong> <span style="color:var(--green);font-weight:600;">' + statusFinal + '</span><br/>' +
+            '<strong>Responsável pela Resolução:</strong> ' + escapeHTML(respRes) + '<br/>' +
+            '<strong>Data/Hora de Resolução:</strong> ' + escapeHTML(dataRes) + '<br/>' +
+            '<strong>Status Final:</strong> <span style="color:var(--green);font-weight:600;">' + escapeHTML(statusFinal) + '</span><br/>' +
             '<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
-              '<strong>O que foi realizado:</strong><br/>' + descRes +
+              '<strong>O que foi realizado:</strong><br/>' + escapeHTML(descRes) +
             '</div>' +
           '</div>' +
         '</div>';

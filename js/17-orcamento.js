@@ -122,6 +122,19 @@
   }
   window.atualizarFmtValorNovoOrcamento = atualizarFmtValorNovoOrcamento;
 
+  function pertenceAPracaAtivaOrcamento(item) {
+    if (!item) return false;
+    var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+    var isUberlandia = pracaAtiva.indexOf('Uber') !== -1;
+    var itemPraca = item.praca || '';
+    if (isUberlandia) {
+      return itemPraca.indexOf('Uber') !== -1;
+    } else {
+      return !itemPraca || itemPraca.indexOf('Juiz') !== -1;
+    }
+  }
+  window.pertenceAPracaAtivaOrcamento = pertenceAPracaAtivaOrcamento;
+
   function renderOrcamento() {
     syncAnoOrcamentoUI();
     var tbody = document.getElementById('orc-itens-tbody');
@@ -129,11 +142,13 @@
 
     if (!Array.isArray(orcamentoSeedData)) orcamentoSeedData = [];
 
+    var itensDaPraca = orcamentoSeedData.filter(pertenceAPracaAtivaOrcamento);
+
     var totalGeral = 0;
     var totalCapex = 0;
     var totalOpex = 0;
 
-    orcamentoSeedData.forEach(function(item) {
+    itensDaPraca.forEach(function(item) {
       var val = Number(item.valor) || 0;
       totalGeral += val;
       if (item.tipo === 'CAPEX') totalCapex += val;
@@ -163,18 +178,18 @@
     if (barOpexFill) barOpexFill.style.width = (totalGeral > 0 ? pctOpex : 50) + '%';
 
     /* Atualiza contadores nas abas pills */
-    var countCapex = orcamentoSeedData.filter(function(i){ return i.tipo === 'CAPEX'; }).length;
-    var countOpex = orcamentoSeedData.filter(function(i){ return i.tipo === 'OPEX'; }).length;
+    var countCapex = itensDaPraca.filter(function(i){ return i.tipo === 'CAPEX'; }).length;
+    var countOpex = itensDaPraca.filter(function(i){ return i.tipo === 'OPEX'; }).length;
     var tabTodos = document.getElementById('orc-tab-todos');
     var tabCapex = document.getElementById('orc-tab-capex');
     var tabOpex = document.getElementById('orc-tab-opex');
 
-    if (tabTodos) tabTodos.textContent = 'Todas as Linhas (' + orcamentoSeedData.length + ')';
+    if (tabTodos) tabTodos.textContent = 'Todas as Linhas (' + itensDaPraca.length + ')';
     if (tabCapex) tabCapex.textContent = 'Equipamentos (' + countCapex + ')';
     if (tabOpex) tabOpex.textContent = 'Manutenção (' + countOpex + ')';
 
     /* Filtra itens para exibição na tabela */
-    var itensExibir = orcamentoSeedData.filter(function(item) {
+    var itensExibir = itensDaPraca.filter(function(item) {
       if (filtroOrcamentoAtivo === 'CAPEX') return item.tipo === 'CAPEX';
       if (filtroOrcamentoAtivo === 'OPEX') return item.tipo === 'OPEX';
       return true;
@@ -250,7 +265,10 @@
     if (valEl) valEl.value = '';
     if (justEl) justEl.value = '';
     if (tipoEl) tipoEl.selectedIndex = 0;
-    if (pracaEl) pracaEl.selectedIndex = 0;
+    if (pracaEl) {
+      if (typeof getPracaAtual === 'function') pracaEl.value = getPracaAtual();
+      else pracaEl.selectedIndex = 0;
+    }
     if (prioEl) prioEl.selectedIndex = 1;
 
     atualizarFmtValorNovoOrcamento(0);

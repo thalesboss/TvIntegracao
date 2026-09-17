@@ -1,5 +1,5 @@
-﻿/* ═══════════════════════════════════════════════════════════════════════════
-   macOS QUICK LOOK LIGHTBOX (VISUALIZADOR EM ALTA RESOLUÇÃO)
+/* ═══════════════════════════════════════════════════════════════════════════
+   VISUALIZADOR RÁPIDO DE MÍDIA EM ALTA RESOLUÇÃO (LIGHTBOX)
    ═══════════════════════════════════════════════════════════════════════════ */
 .quicklook-overlay {
   background: rgba(245, 245, 247, 0.55) !important;
@@ -107,7 +107,8 @@
   user-select: none;
 }
 
-/* ── Apple Intelligence Style Floating Beta Capsule ── */
+/* ── Indicador Flutuante de Versão Beta ── */
+.beta-capsule,
 .apple-beta-capsule {
   position: absolute;
   top: -7px;

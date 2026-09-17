@@ -1,4 +1,4 @@
-﻿/* ═══════════════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════════════
    PAGES & SCROLL AREA
    ═══════════════════════════════════════════════════════════════════════════ */
 .page {
@@ -8,9 +8,86 @@
   background: #F8F9FA;
   height: 100%;
 }
+@keyframes pageFadeInScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.988);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .page.active {
   display: flex;
   flex-direction: column;
+  animation: pageFadeInScale 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
+}
+
+/* Card Interativo para Adicionar Equipamento */
+.dash-card-add {
+  padding: 13px;
+  min-height: 140px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1.5px dashed rgba(0, 122, 255, 0.4);
+  border-radius: var(--r-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+.dash-card-add:hover {
+  background: #FFFFFF;
+  border-color: var(--blue);
+  box-shadow: 0 4px 14px rgba(0, 122, 255, 0.15);
+  transform: translateY(-2px);
+}
+.dash-card-add .dash-card-add-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--blue-lt);
+  color: var(--blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+.dash-card-add:hover .dash-card-add-icon {
+  background: var(--blue);
+  color: #FFFFFF;
+  transform: scale(1.08);
+}
+.dash-card-add .dash-card-add-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--blue);
+  letter-spacing: -0.01em;
+}
+
+.dash-card-new-anim {
+  animation: pageFadeInScale 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.praca-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3.5px 10px;
+  border-radius: 20px;
+  background: rgba(0, 122, 255, 0.08);
+  color: #007AFF;
+  border: 1px solid rgba(0, 122, 255, 0.2);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: var(--shadow-sm);
+  user-select: none;
 }
 
 .scroll-area {

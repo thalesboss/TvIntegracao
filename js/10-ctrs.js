@@ -45,6 +45,23 @@
   }
   window.salvarRascunhoRelatorioTV = salvarRascunhoRelatorioTV;
 
+  function obterOpcoesEquipamentosHTML(selectedVal) {
+    var equips = [];
+    if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
+      equips = Object.keys(dashboardMetrics.equipamento);
+    }
+    if (equips.length === 0) {
+      equips = ['LIVE U1', 'LIVE U2', 'LIVE U3', 'LIVE U4', 'LIVE U SMART', 'REDAÇÃO', 'KMJ', 'NET PRAÇA', 'NET PORTARIA', 'FORMATOS NET', 'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR'];
+    }
+    var html = '<option value="">Selecione o equipamento...</option>';
+    equips.forEach(function(eq) {
+      var isSel = (eq === selectedVal) ? ' selected' : '';
+      html += '<option value="' + escapeHTML(eq) + '"' + isSel + '>' + escapeHTML(eq) + '</option>';
+    });
+    return html;
+  }
+  window.obterOpcoesEquipamentosHTML = obterOpcoesEquipamentosHTML;
+
   function adicionarTransmissaoCTRS(silencioso) {
     var container = document.getElementById('ctrs-acc-container');
     if (!container) return;
@@ -64,21 +81,8 @@
           '<div class="frow"><label>Cidade / Bairro</label><input type="text" placeholder="Ex: Centro — Juiz de Fora"/></div>' +
           '<div class="frow">' +
             '<label>Infraestrutura da Transmissão</label>' +
-            '<select>' +
-              '<option value="">Selecione o equipamento...</option>' +
-              '<option value="LIVE U1">LIVE U1</option>' +
-              '<option value="LIVE U2">LIVE U2</option>' +
-              '<option value="LIVE U3">LIVE U3</option>' +
-              '<option value="LIVE U4">LIVE U4</option>' +
-              '<option value="LIVE U SMART">LIVE U SMART</option>' +
-              '<option value="REDAÇÃO">REDAÇÃO</option>' +
-              '<option value="KMJ">KMJ</option>' +
-              '<option value="NET PRAÇA">NET PRAÇA</option>' +
-              '<option value="NET PORTARIA">NET PORTARIA</option>' +
-              '<option value="FORMATOS NET">FORMATOS NET</option>' +
-              '<option value="NET 2º ANDAR">NET 2º ANDAR</option>' +
-              '<option value="NET 3º ANDAR">NET 3º ANDAR</option>' +
-              '<option value="NET 4º ANDAR">NET 4º ANDAR</option>' +
+            '<select class="ctrs-infra-select">' +
+              obterOpcoesEquipamentosHTML() +
             '</select>' +
           '</div>' +
           '<div class="frow"><label>Hora Abertura Sinal</label><input type="time"/></div>' +
@@ -558,51 +562,57 @@
         status:      'aberta',
         criado:      Date.now(),
         dataCriacao: nowStr,
-        resolucao:   null
+        resolucao:   null,
+        praca:       praca
       };
       ocorrencias = [novaOc].concat(ocorrencias);
     });
 
     if (novasOcorrenciasCriadas > 0) {
-      save(ocorrencias);
+      save(ocorrencias, null, true);
     }
 
     /* Registra o Relatório no Histórico */
+    var isUberlandia = praca.indexOf('Uber') !== -1;
+    var tituloRelatorio = isUberlandia ? ('Relatório de Transmissão — ' + tipo) : ('Checklist CTRS — ' + tipo + ' (' + praca + ')');
     var novoHist = {
       id:            'h_ctrs_' + Date.now(),
       tipo:          'relatorio',
-      subtipo:       'CTRS Transmissão',
-      titulo:        'Checklist CTRS — ' + tipo + ' (' + praca + ')',
+      subtipo:       isUberlandia ? 'Relatório Transmissão' : 'CTRS Transmissão',
+      titulo:        tituloRelatorio,
       equipamento:   'Equipamentos de Transmissão / CTRS',
       categoria:     'Transmissão CTRS',
       local:         praca,
       dataCriacao:   nowStr,
       criadoPor:     getUsuarioAtual(),
-      descCriacao:   'Relatório TV enviado. ' + (falhasEncontradas.length > 0 ? (falhasEncontradas.length + ' falha(s) identificada(s) e convertida(s) em ocorrência(s).') : 'Sem falhas registradas.'),
+      descCriacao:   'Relatório TV registrado. ' + (falhasEncontradas.length > 0 ? (falhasEncontradas.length + ' falha(s) identificada(s) e convertida(s) em ocorrência(s).') : 'Sem falhas registradas.'),
       status:        'Concluído',
       dataResolucao: nowStr,
       resolvidoPor:  getUsuarioAtual(),
-      descResolucao: 'Relatório processado e sincronizado automaticamente.'
+      descResolucao: 'Relatório processado e sincronizado com a base de dados da emissora.',
+      praca:         praca
     };
 
     historicoSeedData = [novoHist].concat(historicoSeedData);
-    saveHistorico(historicoSeedData);
+    saveHistorico(historicoSeedData, novoHist);
 
     // Limpa o rascunho e o formulário do CTRS para a próxima transmissão
     limparFormularioCTRS(false);
 
     renderAll();
 
+    var avisoEnvio = '\n\n💡 Nota: O envio automático direto por e-mail ainda não está disponível atualmente e será liberado em breve!\nPara enviar o relatório agora aos destinatários, utilize o botão "Copiar para o Outlook" e cole direto na sua mensagem de e-mail.';
+
     if (novasOcorrenciasCriadas > 0) {
       if (typeof adicionarNotificacao === 'function') {
         adicionarNotificacao('Ocorrência Criada do Relatório', novasOcorrenciasCriadas + ' falha(s) do relatório convertida(s) em Ocorrência Ativa no Dashboard!', 'warning');
       }
-      alert('Relatório TV registrado no sistema!\n\n⚠️ Foi identificada falha e ' + novasOcorrenciasCriadas + ' nova Ocorrência foi gerada AUTOMATICAMENTE no Dashboard!\n\nNota: A função de envio por e-mail ainda não está disponível.');
+      alert('Relatório TV registrado no sistema!\n\n⚠️ Foi identificada falha e ' + novasOcorrenciasCriadas + ' nova Ocorrência foi gerada AUTOMATICAMENTE no Dashboard!' + avisoEnvio);
     } else {
       if (typeof adicionarNotificacao === 'function') {
-        adicionarNotificacao('Relatório TV Enviado', 'Relatório processado com sucesso.', 'success');
+        adicionarNotificacao('Relatório TV Salvo', 'Relatório processado e registrado com sucesso.', 'success');
       }
-      alert('Relatório TV registrado com sucesso no Histórico!\n\nNota: A função de envio por e-mail ainda não está disponível.');
+      alert('Relatório registrado com sucesso no Histórico!' + avisoEnvio);
     }
   }
   window.enviarRelatorioTV = enviarRelatorioTV;

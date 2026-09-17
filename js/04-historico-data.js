@@ -14,14 +14,18 @@
   } catch(e) {}
   window.historicoSeedData = historicoSeedData;
 
-  function saveHistorico(list) {
+  function saveHistorico(list, itemAdicionado) {
     historicoSeedData = list || [];
     window.historicoSeedData = historicoSeedData;
     try {
       localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(historicoSeedData));
     } catch(e) {}
-    if (typeof DBService !== 'undefined' && DBService && typeof DBService.pushRemote === 'function') {
-      DBService.pushRemote('historico', historicoSeedData);
+    if (typeof DBService !== 'undefined' && DBService) {
+      if (itemAdicionado && typeof DBService.pushHistoricoItem === 'function') {
+        DBService.pushHistoricoItem(itemAdicionado);
+      } else if (typeof DBService.pushRemote === 'function') {
+        DBService.pushRemote('historico', historicoSeedData);
+      }
     }
   }
 
@@ -34,6 +38,7 @@
     (historicoSeedData || []).forEach(function(item) {
       if (item && item.id) {
         if (item.status === 'lixeira' || idsNaLixeira.includes(item.id)) return;
+        if (typeof pertenceAPracaAtiva === 'function' && !pertenceAPracaAtiva(item)) return;
         mapa[item.id] = true;
         lista.push(item);
       }
@@ -43,6 +48,7 @@
     (ocorrencias || []).forEach(function(oc) {
       if (!oc || !oc.id) return;
       if (oc.status === 'lixeira' || idsNaLixeira.includes(oc.id)) return;
+      if (typeof pertenceAPracaAtiva === 'function' && !pertenceAPracaAtiva(oc)) return;
       var isResolvidaOuArquivada = (oc.status === 'resolvida' || oc.status === 'arquivada' || (oc.resolucao && oc.resolucao.statusRes));
       if (isResolvidaOuArquivada) {
         var histId = 'h_oc_' + oc.id;
@@ -61,9 +67,9 @@
             tipo:          'ocorrencia',
             subtipo:       oc.cat || 'Equipamento',
             titulo:        oc.titulo,
-            equipamento:   oc.local ? (oc.local + ' — ' + (oc.cat || 'Equipamento')) : (oc.cat || oc.titulo),
+            equipamento:   oc.equipamento || (oc.tags && oc.tags[1]) || '',
             categoria:     oc.cat || 'Equipamento',
-            local:         oc.local || 'Central Técnica',
+            local:         oc.local || (oc.praca || 'Central Técnica'),
             dataCriacao:   nowFmt,
             criadoPor:     oc.resp || 'Sistema',
             descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
@@ -72,7 +78,8 @@
             resolvidoPor:  resPor,
             descResolucao: resDesc,
             tags:          oc.tags || [],
-            anexos:        anexosLista
+            anexos:        anexosLista,
+            praca:         oc.praca || (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora')
           };
           mapa[oc.id] = true;
           mapa[histId] = true;

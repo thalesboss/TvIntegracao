@@ -1,9 +1,9 @@
 /* ===========================================================================
    CHECKLIST DIÁRIO & ROTINAS PREVENTIVAS
-   Inspirado no Apple Reminders / macOS Human Interface Guidelines (HIG)
+   Interface de Gestão de Atividades Diárias & Procedimentos Preventivos
    =========================================================================== */
 
-/* Fundo com desfoque e profundidade Liquid Glass */
+/* Fundo com desfoque e profundidade suave */
 .checklist-scroll-area {
   padding: 72px 24px 40px 24px !important; /* Respeita a altura da topbar (52px) perfeitamente centralizado */
   background: 
@@ -15,13 +15,13 @@
 }
 
 .checklist-wrapper {
-  max-width: 1180px; /* Alargado para acomodar perfeitamente o Split View Apple */
+  max-width: 1180px; /* Espaçamento otimizado para o painel de visualização dividida */
   width: 100%;
   margin: 0 auto;
   padding: 8px 10px 40px;
 }
 
-/* ── Apple Split View: Grid de Duas Colunas ── */
+/* ── Painel Dividido (Split View): Grade de Duas Colunas ── */
 .reminders-split-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -59,7 +59,7 @@
   color: #af52de;
 }
 
-/* ── Banner de Resumo / Apple Progress com Frosted Glass ── */
+/* ── Painel de Progresso com Efeito Translúcido (Glassmorphism) ── */
 .reminders-hero {
   background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(24px) saturate(180%);
@@ -145,7 +145,7 @@
   color: var(--muted, #8e8e93);
 }
 
-/* ── Apple Quick Filter Cards ── */
+/* ── Cartões de Filtro Rápido de Tarefas ── */
 .reminders-cards-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -224,7 +224,7 @@
   margin-top: 8px;
 }
 
-/* ── Nova Tarefa Rápida (Input estilo Apple) ── */
+/* ── Inserção Rápida de Tarefa ── */
 .reminders-add-box {
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(20px) saturate(180%);
@@ -378,7 +378,7 @@
   background: rgba(255, 255, 255, 0.95);
 }
 
-/* ── Checkbox Circular Apple com Animação Elástica ── */
+/* ── Caixa de Seleção Circular com Transição Suave ── */
 .reminder-checkbox {
   width: 22px;
   height: 22px;
@@ -416,12 +416,18 @@
 .reminder-item.completed .reminder-checkbox {
   background: #34c759;
   border-color: #34c759;
-  animation: appleCheckBounce 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.35) forwards;
+  animation: checkBounce 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.35) forwards;
 }
 
 .reminder-item.completed .reminder-checkbox i {
   opacity: 1;
   transform: scale(1) rotate(0deg);
+}
+
+@keyframes checkBounce {
+  0% { transform: scale(0.85); }
+  50% { transform: scale(1.18); }
+  100% { transform: scale(1); }
 }
 
 @keyframes appleCheckBounce {

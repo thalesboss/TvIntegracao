@@ -100,7 +100,7 @@
   function comprimirImagemSeNecessario(file, callback) {
     if (!file || !file.type || !file.type.startsWith('image/') || file.type === 'image/svg+xml') {
       var reader = new FileReader();
-      reader.onload = function(e) { callback(e.target.result); };
+      reader.onload = function(e) { callback(e.target.result, file); };
       reader.readAsDataURL(file);
       return;
     }
@@ -126,11 +126,19 @@
         canvas.height = height;
         var ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
-        var compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        callback(compressedDataUrl);
+        var compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+
+        if (typeof canvas.toBlob === 'function') {
+          canvas.toBlob(function(blob) {
+            var compressedBlob = blob || file;
+            callback(compressedDataUrl, compressedBlob);
+          }, 'image/jpeg', 0.82);
+        } else {
+          callback(compressedDataUrl, file);
+        }
       };
       img.onerror = function() {
-        callback(e.target.result);
+        callback(e.target.result, file);
       };
       img.src = e.target.result;
     };
@@ -147,17 +155,18 @@
 
     fileList.forEach(function(file) {
       var mediaId = 'med_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-      comprimirImagemSeNecessario(file, function(dataUrl) {
+      comprimirImagemSeNecessario(file, function(dataUrl, blobOuFile) {
+        var finalFile = blobOuFile || file;
         var mediaObj = {
           id: mediaId,
           name: file.name,
-          type: file.type || 'application/octet-stream',
-          size: file.size,
+          type: (finalFile && finalFile.type) ? finalFile.type : (file.type || 'image/jpeg'),
+          size: (finalFile && finalFile.size) ? finalFile.size : file.size,
           dataUrl: dataUrl,
-          fileObj: file
+          fileObj: finalFile
         };
         uploadedFilesStore[containerId].push(mediaObj);
-        salvarMidiaIDB(mediaId, dataUrl, { name: file.name, type: file.type });
+        salvarMidiaIDB(mediaId, dataUrl, { name: file.name, type: mediaObj.type, size: mediaObj.size });
         pending--;
         if (pending === 0) {
           renderPreviewsForContainer(containerId);
