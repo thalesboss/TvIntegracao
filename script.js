@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════
    POPUP — funções base globais
 ═══════════════════════════════════════════ */
 function abrirPopup(id) {
@@ -7,6 +7,9 @@ function abrirPopup(id) {
     el.removeAttribute('hidden');
     el.style.setProperty('display', 'flex', 'important');
     el.style.pointerEvents = 'auto';
+  }
+  if ((id === 'popup-nova-oc' || id === 'popup-editar-oc') && typeof atualizarSelectEquipamentosNovaOc === 'function') {
+    atualizarSelectEquipamentosNovaOc();
   }
 }
 function fecharPopup(id) {
@@ -95,8 +98,6 @@ document.addEventListener('click', function(e) {
     fecharPopup(e.target.id);
   }
 });
-
-
 document.addEventListener('DOMContentLoaded', function () {
   console.log('✅ [Sistema TV] Versão 7.9 — Blindagem de Testes: Sincronização Otimizada, Anti-XSS e Cache Resiliente');
 
@@ -897,8 +898,6 @@ document.addEventListener('DOMContentLoaded', function () {
   function getArquivadas() { return ocorrencias.filter(function(o){ return o && o.status === 'arquivada' && pertenceAPracaAtiva(o); }); }
   function getResolvidas() { return ocorrencias.filter(function(o){ return o && o.status === 'resolvida' && pertenceAPracaAtiva(o); }); }
 
-
-
   /* ═══════════════════════════════════════════
      HELPERS DE RENDER
   ═══════════════════════════════════════════ */
@@ -1228,8 +1227,6 @@ document.addEventListener('DOMContentLoaded', function () {
       abertasHTML +
       resolvidasHTML;
   }
-
-
   /* ═══════════════════════════════════════════
      HISTÓRICO GERAL — ESTRUTURA DE DADOS
   ═══════════════════════════════════════════ */
@@ -1359,8 +1356,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return '<span class="tag tag-blue-soft">Registro</span>';
   }
-
-
   /* ─── Render: Dashboard Resolvidas & Power BI ─── */
   var resolvidasFiltro = 'todas';
 
@@ -1509,8 +1504,12 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
       var ab  = getAbertas().length;
       var res = getResolvidas().length;
-      var atrasadas = ocorrencias.filter(function(o){ return isOcorrenciaVencida(o); }).length;
-      var diaAnt    = ocorrencias.filter(function(o){ return o && o.status==='aberta' && isOcorrenciaDiaAnterior(o); }).length;
+      var atrasadas = ocorrencias.filter(function(o){
+        return isOcorrenciaVencida(o) && (typeof pertenceAPracaAtiva !== 'function' || pertenceAPracaAtiva(o));
+      }).length;
+      var diaAnt = ocorrencias.filter(function(o){
+        return o && o.status==='aberta' && isOcorrenciaDiaAnterior(o) && (typeof pertenceAPracaAtiva !== 'function' || pertenceAPracaAtiva(o));
+      }).length;
 
       var els = {
         r: document.querySelector('.sn-r'),
@@ -1587,12 +1586,13 @@ document.addEventListener('DOMContentLoaded', function () {
   /* ─── renderAll: atualiza TUDO de uma vez com isolamento de falhas e diffing de performance ─── */
   var lastRenderSignature = '';
   function calcularAssinaturaEstado() {
-    var ocSig = (ocorrencias || []).map(function(o){ return (o.id||'') + '_' + (o.status||'') + '_' + (o.prio||''); }).join('|');
+    var pracaSig = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'JF';
+    var ocSig = (ocorrencias || []).filter(function(o){ return typeof pertenceAPracaAtiva !== 'function' || pertenceAPracaAtiva(o); }).map(function(o){ return (o.id||'') + '_' + (o.status||'') + '_' + (o.prio||''); }).join('|');
     var lixSig = (lixeiraData || []).map(function(i){ return (i.id||'') + '_' + (i.expiraEm||''); }).join('|');
     var notifSig = (notificacoesStore || []).map(function(n){ return (n.id||'') + '_' + (n.lida?1:0); }).join('|');
     var histCount = getHistoricoCompleto().length;
     var horaMinuto = new Date().getMinutes();
-    return ocSig + '#' + lixSig + '#' + notifSig + '#' + histCount + '#' + horaMinuto;
+    return pracaSig + '#' + ocSig + '#' + lixSig + '#' + notifSig + '#' + histCount + '#' + horaMinuto;
   }
 
   function renderAll(forcar) {
@@ -1637,8 +1637,6 @@ document.addEventListener('DOMContentLoaded', function () {
     page.addEventListener('change', acao);
   }
   window.registrarAutosaveListener = registrarAutosaveListener;
-
-
   /* ═══════════════════════════════════════════
      POPUP ENTRADA
   /* ═══════════════════════════════════════════
@@ -1867,10 +1865,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // 5. Esconder / Exibir Recebimento de Materiais (somente Juiz de Fora)
-    var secRec = document.getElementById('sidebar-section-recebimento');
     var btnRec = document.getElementById('sidebar-btn-recebimento');
-    if (secRec) secRec.style.display = isUberlandia ? 'none' : '';
     if (btnRec) btnRec.style.display = isUberlandia ? 'none' : '';
+
+    // Manter o cabeçalho de seção "Suprimentos & Compras" visível para compras/orçamento terem seu próprio bloco
+    var secCompras = document.getElementById('sidebar-section-compras') || document.getElementById('sidebar-section-recebimento');
+    if (secCompras) {
+      secCompras.style.display = '';
+      secCompras.textContent = isUberlandia ? 'Compras & Orçamento' : 'Suprimentos & Compras';
+    }
 
     // Esconder / Exibir pílula de Recebimento no Histórico
     var histPillRec = document.getElementById('hist-pill-recebimento');
@@ -1914,25 +1917,30 @@ document.addEventListener('DOMContentLoaded', function () {
     var upPraca = document.getElementById('up-praca');
     if (upPraca) upPraca.textContent = p;
 
-    // 8. Notificar e re-renderizar módulos com dados da praça selecionada
+    // 8. Atualizar equipamentos do Relatório (CTRS) dinamicamente para a praça ativa
+    try {
+      if (typeof window.atualizarSelectsEquipamentosCTRS === 'function') {
+        window.atualizarSelectsEquipamentosCTRS();
+      }
+    } catch(eEq) {}
+
+    // 9. Notificar e re-renderizar módulos com dados da praça selecionada
     try {
       if (typeof window.carregarDashboardMetricsStore === 'function') {
         window.carregarDashboardMetricsStore();
       }
-      if (typeof window.renderDashboards === 'function') {
-        window.renderDashboards();
+      if (typeof window.renderAll === 'function') {
+        window.renderAll(true);
+      } else {
+        if (typeof window.renderDashboards === 'function') window.renderDashboards();
+        if (typeof window.renderCards === 'function') window.renderCards();
+        if (typeof window.renderHistorico === 'function') window.renderHistorico();
+        if (typeof window.renderArquivados === 'function') window.renderArquivados();
+        if (typeof window.renderOrcamento === 'function') window.renderOrcamento();
+        if (typeof window.updateStats === 'function') window.updateStats();
       }
-      if (typeof window.renderCards === 'function') {
-        window.renderCards();
-      }
-      if (typeof window.renderHistorico === 'function') {
-        window.renderHistorico();
-      }
-      if (typeof window.renderArquivados === 'function') {
-        window.renderArquivados();
-      }
-      if (typeof window.renderOrcamento === 'function') {
-        window.renderOrcamento();
+      if (typeof window.renderChecklist === 'function') {
+        window.renderChecklist();
       }
       if (typeof window.atualizarBadgesNotificacoes === 'function') {
         window.atualizarBadgesNotificacoes();
@@ -1950,8 +1958,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.trocarPracaConfig = trocarPracaConfig;
-
-
 
   /* ═══════════════════════════════════════════
      INDEXEDDB LOCAL MEDIA CACHE (Para vídeos e fotos de qualquer tamanho)
@@ -2054,6 +2060,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function comprimirImagemSeNecessario(file, callback) {
     if (!file || !file.type || !file.type.startsWith('image/') || file.type === 'image/svg+xml') {
+      if (file && file.type && file.type.startsWith('video/')) {
+        try {
+          var vidUrl = URL.createObjectURL(file);
+          callback(vidUrl, file);
+          return;
+        } catch(eVid) {}
+      }
       var reader = new FileReader();
       reader.onload = function(e) { callback(e.target.result, file); };
       reader.readAsDataURL(file);
@@ -2193,7 +2206,25 @@ document.addEventListener('DOMContentLoaded', function () {
       } else if (isVid) {
         var vidBox = document.createElement('div');
         vidBox.className = 'prev-vid';
-        vidBox.innerHTML = '<i data-lucide="film" style="width:24px;height:24px;stroke-width:1.5;color:var(--blue);"></i><span style="font-size:9px;color:var(--blue);font-weight:800;margin-top:2px;">VÍDEO</span>';
+        vidBox.style.position = 'relative';
+        vidBox.style.overflow = 'hidden';
+        if (file.dataUrl) {
+          var vEl = document.createElement('video');
+          vEl.src = file.dataUrl;
+          vEl.preload = 'metadata';
+          vEl.muted = true;
+          vEl.style.width = '100%';
+          vEl.style.height = '100%';
+          vEl.style.objectFit = 'cover';
+          vEl.style.borderRadius = 'var(--r-sm)';
+          vidBox.appendChild(vEl);
+          var playBadge = document.createElement('div');
+          playBadge.innerHTML = '▶';
+          playBadge.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;text-shadow:0 1px 4px rgba(0,0,0,0.8);pointer-events:none;';
+          vidBox.appendChild(playBadge);
+        } else {
+          vidBox.innerHTML = '<i data-lucide="film" style="width:24px;height:24px;stroke-width:1.5;color:var(--blue);"></i><span style="font-size:9px;color:var(--blue);font-weight:800;margin-top:2px;">VÍDEO</span>';
+        }
         item.appendChild(vidBox);
       } else {
         var docBox = document.createElement('div');
@@ -2202,11 +2233,14 @@ document.addEventListener('DOMContentLoaded', function () {
         item.appendChild(docBox);
       }
 
-      var nome = document.createElement('div');
-      nome.className = 'prev-name';
-      var displayName = file.name || 'Anexo';
-      nome.textContent = displayName.length > 12 ? displayName.substring(0, 9) + '…' : displayName;
-      item.appendChild(nome);
+      // Não exibe o nome do arquivo embaixo das fotos (mantém apenas para arquivos/vídeos/docs)
+      if (!isImg) {
+        var nome = document.createElement('div');
+        nome.className = 'prev-name';
+        var displayName = file.name || 'Anexo';
+        nome.textContent = displayName.length > 12 ? displayName.substring(0, 9) + '…' : displayName;
+        item.appendChild(nome);
+      }
 
       container.appendChild(item);
     });
@@ -2228,8 +2262,6 @@ document.addEventListener('DOMContentLoaded', function () {
       };
     }
   });
-
-
   /* ═══════════════════════════════════════════
      RECEBIMENTOS DE EQUIPAMENTOS
   ═══════════════════════════════════════════ */
@@ -2476,8 +2508,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-recebimento', salvarRascunhoRecebimento);
   }
-
-
   /* ═══════════════════════════════════════════
      REQUISIÇÃO DE COMPRAS E VENDAS
   ═══════════════════════════════════════════ */
@@ -2741,8 +2771,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-compras', salvarRascunhoCompra);
   }
-
-
   /* ═══════════════════════════════════════════
      ENVIO DE RELATÓRIO TV (CTRS) E GERADOR AUTOMÁTICO DE OCORRÊNCIAS
   ═══════════════════════════════════════════ */
@@ -2791,21 +2819,70 @@ document.addEventListener('DOMContentLoaded', function () {
   window.salvarRascunhoRelatorioTV = salvarRascunhoRelatorioTV;
 
   function obterOpcoesEquipamentosHTML(selectedVal) {
+    var praca = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+    var isUberlandia = praca.indexOf('Uber') !== -1;
     var equips = [];
+
     if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
       equips = Object.keys(dashboardMetrics.equipamento);
     }
-    if (equips.length === 0) {
-      equips = ['LIVE U1', 'LIVE U2', 'LIVE U3', 'LIVE U4', 'LIVE U SMART', 'REDAÇÃO', 'KMJ', 'NET PRAÇA', 'NET PORTARIA', 'FORMATOS NET', 'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR'];
+
+    if (isUberlandia) {
+      // Em Uberlândia: usa estritamente os equipamentos cadastrados pelos operadores de UDI
+      var html = '<option value="">Selecione o equipamento...</option>';
+      if (equips.length === 0) {
+        html += '<option value="" disabled style="color:var(--muted);">Nenhum equipamento cadastrado ainda</option>';
+      } else {
+        equips.forEach(function(eq) {
+          var isSel = (eq === selectedVal) ? ' selected' : '';
+          html += '<option value="' + escapeHTML(eq) + '"' + isSel + '>' + escapeHTML(eq) + '</option>';
+        });
+      }
+      html += '<option value="__novo__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo Equipamento...</option>';
+      return html;
+    } else {
+      // Juiz de Fora: usa os equipamentos do dashboard ou fallback dos 13 de JF
+      if (equips.length === 0) {
+        equips = ['LIVE U1', 'LIVE U2', 'LIVE U3', 'LIVE U4', 'LIVE U SMART', 'REDAÇÃO', 'KMJ', 'NET PRAÇA', 'NET PORTARIA', 'FORMATOS NET', 'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR'];
+      }
+      var html = '<option value="">Selecione o equipamento...</option>';
+      equips.forEach(function(eq) {
+        var isSel = (eq === selectedVal) ? ' selected' : '';
+        html += '<option value="' + escapeHTML(eq) + '"' + isSel + '>' + escapeHTML(eq) + '</option>';
+      });
+      html += '<option value="__novo__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo Equipamento...</option>';
+      return html;
     }
-    var html = '<option value="">Selecione o equipamento...</option>';
-    equips.forEach(function(eq) {
-      var isSel = (eq === selectedVal) ? ' selected' : '';
-      html += '<option value="' + escapeHTML(eq) + '"' + isSel + '>' + escapeHTML(eq) + '</option>';
-    });
-    return html;
   }
   window.obterOpcoesEquipamentosHTML = obterOpcoesEquipamentosHTML;
+
+  function atualizarSelectsEquipamentosCTRS() {
+    var selects = document.querySelectorAll('#ctrs-acc-container select.ctrs-infra-select, #ctrs-acc-container .acc-block select:nth-of-type(1)');
+    if (!selects || selects.length === 0) {
+      selects = document.querySelectorAll('.ctrs-infra-select');
+    }
+    selects.forEach(function(sel) {
+      var currentVal = sel.value;
+      sel.innerHTML = obterOpcoesEquipamentosHTML(currentVal);
+      if (currentVal && currentVal !== '__novo__') {
+        sel.value = currentVal;
+      }
+      if (!sel._hasNovoEqListener) {
+        sel._hasNovoEqListener = true;
+        sel.addEventListener('change', function() {
+          if (this.value === '__novo__') {
+            this.value = '';
+            if (typeof abrirModalNovoEquipamento === 'function') {
+              abrirModalNovoEquipamento();
+            } else if (typeof abrirPopup === 'function') {
+              abrirPopup('popup-novo-equipamento');
+            }
+          }
+        });
+      }
+    });
+  }
+  window.atualizarSelectsEquipamentosCTRS = atualizarSelectsEquipamentosCTRS;
 
   function adicionarTransmissaoCTRS(silencioso) {
     var container = document.getElementById('ctrs-acc-container');
@@ -3365,8 +3442,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-ctrs', salvarRascunhoRelatorioTV);
   }
-
-
   /* ═══════════════════════════════════════════
      CHECKLIST DIÁRIO & MONITORAMENTO DE ROTINAS OPERACIONAIS — SUPABASE
   ═══════════════════════════════════════════ */
@@ -3380,18 +3455,24 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
       var hojeStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
       if (checklistUltimaDataVerificada !== hojeStr) {
-        console.log('[Checklist] 🕛 Meia-noite detectada: Novo dia (' + hojeStr + '). Desmarcando tarefas de rotina no Supabase...');
+        console.log('[Checklist] 🕛 Meia-noite detectada: Novo dia (' + hojeStr + '). Verificando ciclo de tarefas...');
         checklistUltimaDataVerificada = hojeStr;
         if (Array.isArray(checklistItems) && checklistItems.length > 0) {
           checklistItems.forEach(function(it) {
+            // Itens com recorrência ativa são geridos estritamente pelo motor verificarRecorrenciasChecklist
+            if (it.recorrencia && it.recorrencia.tipo && it.recorrencia.tipo !== 'nenhuma') {
+              return;
+            }
+            // Apenas tarefas sem recorrência programada resetam na virada comum de dia
             it.concluido = false;
             it.concluidoEm = null;
             if (it.padrao) salvarRotinaPadraoNuvem(it);
             else salvarLembretePessoalNuvem(it);
           });
         }
+        verificarRecorrenciasChecklist();
         if (typeof mostrarToast === 'function') {
-          mostrarToast('Novo Dia Iniciado', 'As rotinas foram desmarcadas automaticamente para o plantão de hoje.', 'info');
+          mostrarToast('Novo Dia Iniciado', 'As rotinas foram desmarcadas para o plantão de hoje.', 'info');
         }
       }
     } catch(e) {
@@ -3399,8 +3480,29 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  var CHECKLIST_STORAGE_KEY = 'tv_checklist_itens_cache_v2';
+
+  function carregarChecklistCacheLocal() {
+    try {
+      var raw = localStorage.getItem(CHECKLIST_STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch(e) {}
+    return [];
+  }
+
   function carregarChecklistStore() {
+    // 1. Carrega imediatamente o cache local para que NADA suma ao atualizar a página (F5)
+    var cacheLocal = carregarChecklistCacheLocal();
+    if (cacheLocal && cacheLocal.length > 0) {
+      checklistItems = cacheLocal;
+    }
     verificarReseteMeiaNoite();
+    verificarRecorrenciasChecklist();
     atualizarDataChecklistUI();
     renderChecklist();
     sincronizarChecklistNuvem();
@@ -3410,6 +3512,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function salvarChecklistStore() {
     window.checklistItems = checklistItems;
+    try {
+      localStorage.setItem(CHECKLIST_STORAGE_KEY, JSON.stringify(checklistItems));
+    } catch(e) {}
   }
 
   function atualizarDataChecklistUI() {
@@ -3515,6 +3620,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var tagLabel = getCategoriaLabel(item.categoria);
         var tagClass = 'tag-' + (item.categoria || 'avulso');
         var metaHorario = item.horario ? '<span>·</span><span>' + escapeHTML(item.horario) + '</span>' : '';
+        var recBadgeHTML = getRecorrenciaBadgeHTML(item);
 
         html += '<li class="reminder-item' + completedClass + '" id="chk-item-' + item.id + '">' +
           '<button class="reminder-checkbox" onclick="toggleChecklistItem(\'' + item.id + '\')" title="' + (item.concluido ? 'Desmarcar' : 'Concluir') + '">' +
@@ -3524,10 +3630,14 @@ document.addEventListener('DOMContentLoaded', function () {
             '<div class="reminder-title">' + escapeHTML(item.titulo) + '</div>' +
             '<div class="reminder-meta">' +
               '<span class="reminder-tag ' + tagClass + '">' + tagLabel + '</span>' +
+              recBadgeHTML +
               metaHorario +
             '</div>' +
           '</div>' +
           '<div class="reminder-actions">' +
+            '<button class="reminder-action-btn edit" onclick="abrirModalRecorrencia(\'' + item.id + '\')" title="Editar e Configurar Repetição" aria-label="Editar Rotina">' +
+              '<i data-lucide="pencil" style="width:14px;height:14px;stroke-width:2.2;"></i>' +
+            '</button>' +
             '<button class="reminder-action-btn alert" onclick="criarOcorrenciaDoChecklist(\'' + item.id + '\')" data-tooltip="Falha detectada? Criar ocorrência desta rotina" aria-label="Criar ocorrência desta rotina">' +
               '<i data-lucide="alert-triangle" style="width:14px;height:14px;stroke-width:2.2;"></i>' +
             '</button>' +
@@ -3558,11 +3668,41 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  function getRecorrenciaBadgeHTML(item) {
+    if (!item || !item.recorrencia || !item.recorrencia.tipo || item.recorrencia.tipo === 'nenhuma') {
+      return '';
+    }
+    var rec = item.recorrencia;
+    var label = '';
+    if (rec.tipo === 'horaria') {
+      label = '🔁 A cada ' + (rec.intervaloHoras || 1) + 'h';
+    } else if (rec.tipo === 'diaria') {
+      label = '🔁 Diário às ' + (rec.horario || '08:00');
+    } else if (rec.tipo === 'semanal') {
+      var dNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+      var dList = Array.isArray(rec.diasSemana) ? rec.diasSemana : [1, 3, 5];
+      var strDias = dList.map(function(d){ return dNames[d] || ''; }).filter(Boolean).join(', ');
+      label = '🔁 ' + (strDias || 'Semanal') + ' às ' + (rec.horario || '09:00');
+    }
+    if (!label) return '';
+    return '<span>·</span><span class="reminder-rec-badge" onclick="event.stopPropagation(); abrirModalRecorrencia(\'' + item.id + '\')" title="Clique para editar agendamento">' + escapeHTML(label) + '</span>';
+  }
+  window.getRecorrenciaBadgeHTML = getRecorrenciaBadgeHTML;
+
   function toggleChecklistItem(id) {
     var item = checklistItems.find(function(it) { return it.id === id; });
     if (!item) return;
     item.concluido = !item.concluido;
     item.concluidoEm = item.concluido ? new Date().toISOString() : null;
+
+    // Regra estrita de ciclo:
+    // Ao ser concluída, fixa a próxima data/hora em ciclo futuro para NUNCA voltar antes do tempo!
+    if (item.concluido && item.recorrencia && item.recorrencia.tipo && item.recorrencia.tipo !== 'nenhuma') {
+      item.recorrencia.ultimoCicloConcluido = new Date().toISOString();
+      item.recorrencia.proximaExecucao = calcularProximaExecucao(item.recorrencia, new Date(), true);
+      salvarRecorrenciaLocal(item.id, item.recorrencia);
+    }
+
     salvarChecklistStore();
     renderChecklist();
 
@@ -3872,7 +4012,9 @@ document.addEventListener('DOMContentLoaded', function () {
     .then(function(res) { return res.ok ? res.json() : null; })
     .then(function(cloudItens) {
       if (Array.isArray(cloudItens)) {
+        var recMap = carregarRecorrenciasLocais();
         var itensProcessados = cloudItens.map(function(c) {
+          var rec = c.recorrencia || recMap[c.id] || null;
           return {
             id: c.id,
             titulo: c.titulo,
@@ -3884,7 +4026,8 @@ document.addEventListener('DOMContentLoaded', function () {
               ? 'Rotina TV'
               : (c.criado_em ? 'Criado em ' + new Date(c.criado_em).toLocaleDateString('pt-BR') : 'Pessoal'),
             operador_id: c.operador_id,
-            operador_nome: c.operador_nome
+            operador_nome: c.operador_nome,
+            recorrencia: rec
           };
         });
 
@@ -3899,6 +4042,7 @@ document.addEventListener('DOMContentLoaded', function () {
         checklistItems = itensProcessados.concat(pendentesLocais);
         salvarChecklistStore();
         renderChecklist();
+        verificarRecorrenciasChecklist();
         console.log('[Checklist DB] ✅ ' + itensProcessados.length + ' rotinas carregadas diretamente do banco de dados (Supabase checklist_itens).');
       }
     })
@@ -4038,7 +4182,328 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.excluirLembretePessoalNuvem = excluirLembretePessoalNuvem;
 
+  /* ═══════════════════════════════════════════
+     MOTOR DE RECORRÊNCIA INTELIGENTE
+  ═══════════════════════════════════════════ */
 
+  var itemRecorrenciaAtual = null;
+  var recorrenciaFrequenciaAtiva = 'nenhuma';
+
+  function carregarRecorrenciasLocais() {
+    try {
+      var raw = localStorage.getItem('tv_checklist_recorrencias_v1');
+      return raw ? JSON.parse(raw) : {};
+    } catch(e) {
+      return {};
+    }
+  }
+  window.carregarRecorrenciasLocais = carregarRecorrenciasLocais;
+
+  function salvarRecorrenciaLocal(id, rec) {
+    try {
+      var map = carregarRecorrenciasLocais();
+      if (!rec || rec.tipo === 'nenhuma') {
+        delete map[id];
+      } else {
+        map[id] = rec;
+      }
+      localStorage.setItem('tv_checklist_recorrencias_v1', JSON.stringify(map));
+    } catch(e) {}
+  }
+  window.salvarRecorrenciaLocal = salvarRecorrenciaLocal;
+
+  function abrirModalRecorrencia(id) {
+    var item = checklistItems.find(function(it){ return it.id === id; });
+    if (!item) return;
+
+    itemRecorrenciaAtual = item;
+    var idInput = document.getElementById('rec-item-id');
+    if (idInput) idInput.value = item.id;
+    var titleDisplay = document.getElementById('rec-item-title-display');
+    if (titleDisplay) titleDisplay.textContent = item.titulo;
+    var titleInput = document.getElementById('rec-item-title-input');
+    if (titleInput) titleInput.value = item.titulo || '';
+
+    var rec = item.recorrencia || { tipo: 'nenhuma', intervaloHoras: 1, horario: '08:00', diasSemana: [1, 3, 5] };
+    selecionarFrequenciaRecorrencia(rec.tipo || 'nenhuma');
+
+    var intEl = document.getElementById('rec-intervalo-horas');
+    if (intEl) intEl.value = rec.intervaloHoras || 1;
+
+    var hDiaria = document.getElementById('rec-hora-diaria');
+    if (hDiaria) hDiaria.value = rec.horario || '08:00';
+
+    var hSemanal = document.getElementById('rec-hora-semanal');
+    if (hSemanal) hSemanal.value = rec.horario || '09:00';
+
+    // Configurar pills de dias da semana (D S T Q Q S S)
+    var diasAtivos = Array.isArray(rec.diasSemana) && rec.diasSemana.length > 0 ? rec.diasSemana : [1, 3, 5];
+    var pills = document.querySelectorAll('#rec-dias-semana-wrap .rec-day-pill');
+    pills.forEach(function(btn) {
+      var diaNum = parseInt(btn.getAttribute('data-day'), 10);
+      if (diasAtivos.indexOf(diaNum) !== -1) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    atualizarPreviaProximaExecucao();
+    if (typeof abrirPopup === 'function') {
+      abrirPopup('popup-recorrencia-checklist');
+    }
+    if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+  }
+  window.abrirModalRecorrencia = abrirModalRecorrencia;
+
+  function selecionarFrequenciaRecorrencia(freq) {
+    recorrenciaFrequenciaAtiva = freq;
+    var botoes = ['nenhuma', 'horaria', 'diaria', 'semanal'];
+    botoes.forEach(function(b) {
+      var el = document.getElementById('rec-btn-' + b);
+      if (el) {
+        if (b === freq) el.classList.add('active');
+        else el.classList.remove('active');
+      }
+      var sec = document.getElementById('rec-sec-' + b);
+      if (sec) {
+        sec.style.display = (b === freq) ? 'block' : 'none';
+      }
+    });
+    atualizarPreviaProximaExecucao();
+  }
+  window.selecionarFrequenciaRecorrencia = selecionarFrequenciaRecorrencia;
+
+  function toggleDiaSemanaRecorrencia(btn) {
+    btn.classList.toggle('active');
+    var ativos = document.querySelectorAll('#rec-dias-semana-wrap .rec-day-pill.active');
+    if (ativos.length === 0) {
+      btn.classList.add('active'); // pelo menos 1 dia ativo
+    }
+    atualizarPreviaProximaExecucao();
+  }
+  window.toggleDiaSemanaRecorrencia = toggleDiaSemanaRecorrencia;
+
+  function calcularProximaExecucao(rec, baseDate, jaConcluidoNesteCiclo) {
+    if (!rec || !rec.tipo || rec.tipo === 'nenhuma') return null;
+
+    var base = baseDate ? new Date(baseDate) : new Date();
+    if (isNaN(base.getTime())) base = new Date();
+
+    if (rec.tipo === 'horaria') {
+      var intervalo = parseInt(rec.intervaloHoras, 10) || 1;
+      var next = new Date(base.getTime());
+      next.setHours(next.getHours() + intervalo);
+      next.setMinutes(0, 0, 0);
+      while (next.getTime() <= base.getTime()) {
+        next.setHours(next.getHours() + 1);
+      }
+      return next.toISOString();
+    }
+
+    if (rec.tipo === 'diaria') {
+      var parts = (rec.horario || '08:00').split(':');
+      var targetH = parseInt(parts[0], 10) || 0;
+      var targetM = parseInt(parts[1], 10) || 0;
+
+      var candidate = new Date(base.getFullYear(), base.getMonth(), base.getDate(), targetH, targetM, 0, 0);
+
+      // Se já foi concluída neste ciclo diário (mesmo adiantada ou pontual),
+      // ela NUNCA volta hoje: só volta amanhã no horário programado!
+      if (jaConcluidoNesteCiclo || candidate.getTime() <= base.getTime()) {
+        candidate.setDate(candidate.getDate() + 1);
+      }
+      return candidate.toISOString();
+    }
+
+    if (rec.tipo === 'semanal') {
+      var partsSem = (rec.horario || '09:00').split(':');
+      var sH = parseInt(partsSem[0], 10) || 0;
+      var sM = parseInt(partsSem[1], 10) || 0;
+      var dias = Array.isArray(rec.diasSemana) && rec.diasSemana.length > 0 ? rec.diasSemana : [1, 3, 5];
+
+      var cDate = new Date(base.getFullYear(), base.getMonth(), base.getDate(), sH, sM, 0, 0);
+
+      // Se concluída hoje, pula o dia de hoje imediatamente
+      if (jaConcluidoNesteCiclo || cDate.getTime() <= base.getTime()) {
+        cDate.setDate(cDate.getDate() + 1);
+      }
+
+      // Procura o próximo dia da semana programado (até 7 dias)
+      for (var i = 0; i < 7; i++) {
+        var dayOfWeek = cDate.getDay();
+        if (dias.indexOf(dayOfWeek) !== -1) {
+          return cDate.toISOString();
+        }
+        cDate.setDate(cDate.getDate() + 1);
+      }
+      return cDate.toISOString();
+    }
+
+    return null;
+  }
+  window.calcularProximaExecucao = calcularProximaExecucao;
+
+  function obterConfigRecorrenciaDoModal() {
+    var freq = recorrenciaFrequenciaAtiva;
+    var rec = {
+      tipo: freq,
+      intervaloHoras: 1,
+      horario: '08:00',
+      diasSemana: [1, 3, 5],
+      proximaExecucao: null,
+      ultimoCicloConcluido: null
+    };
+
+    if (freq === 'horaria') {
+      var intEl = document.getElementById('rec-intervalo-horas');
+      rec.intervaloHoras = intEl ? parseInt(intEl.value, 10) : 1;
+    } else if (freq === 'diaria') {
+      var hEl = document.getElementById('rec-hora-diaria');
+      rec.horario = hEl ? hEl.value : '08:00';
+    } else if (freq === 'semanal') {
+      var hsEl = document.getElementById('rec-hora-semanal');
+      rec.horario = hsEl ? hsEl.value : '09:00';
+      var dias = [];
+      document.querySelectorAll('#rec-dias-semana-wrap .rec-day-pill.active').forEach(function(p){
+        dias.push(parseInt(p.getAttribute('data-day'), 10));
+      });
+      rec.diasSemana = dias.length > 0 ? dias : [1, 3, 5];
+    }
+    return rec;
+  }
+
+  function atualizarPreviaProximaExecucao() {
+    var textoEl = document.getElementById('rec-previa-texto');
+    var subEl = document.getElementById('rec-previa-sub');
+    if (!textoEl || !subEl) return;
+
+    var freq = recorrenciaFrequenciaAtiva;
+    if (freq === 'nenhuma') {
+      textoEl.textContent = 'Sem repetição programada.';
+      subEl.textContent = 'Esta rotina só será concluída uma única vez.';
+      return;
+    }
+
+    var tempRec = obterConfigRecorrenciaDoModal();
+    var proxISO = calcularProximaExecucao(tempRec, new Date(), true);
+    if (!proxISO) {
+      textoEl.textContent = 'Programação configurada.';
+      subEl.textContent = '';
+      return;
+    }
+
+    var d = new Date(proxISO);
+    var diasNomes = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+    var diaSemana = diasNomes[d.getDay()];
+    var horaFmt = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    var dataFmt = ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2);
+
+    textoEl.textContent = 'Próxima execução: ' + diaSemana + ' (' + dataFmt + ') às ' + horaFmt;
+    subEl.textContent = 'Ao ser marcada como concluída, permanecerá concluída até esta data/hora, quando voltará automaticamente para a lista alertando o plantão.';
+  }
+  window.atualizarPreviaProximaExecucao = atualizarPreviaProximaExecucao;
+
+  function salvarRecorrenciaItem() {
+    var itemId = document.getElementById('rec-item-id').value;
+    var item = checklistItems.find(function(it){ return it.id === itemId; });
+    if (!item) return;
+
+    var novaRec = obterConfigRecorrenciaDoModal();
+    if (novaRec.tipo !== 'nenhuma') {
+      novaRec.proximaExecucao = calcularProximaExecucao(novaRec, new Date(), !!item.concluido);
+    } else {
+      novaRec.proximaExecucao = null;
+    }
+
+    var titleInput = document.getElementById('rec-item-title-input');
+    if (titleInput && titleInput.value.trim()) {
+      item.titulo = titleInput.value.trim();
+    }
+
+    item.recorrencia = novaRec;
+    salvarRecorrenciaLocal(item.id, novaRec);
+    salvarChecklistStore();
+    renderChecklist();
+
+    if (item.padrao) salvarRotinaPadraoNuvem(item);
+    else salvarLembretePessoalNuvem(item);
+
+    if (typeof fecharPopup === 'function') {
+      fecharPopup('popup-recorrencia-checklist');
+    }
+    if (typeof mostrarToast === 'function') {
+      var msg = novaRec.tipo === 'nenhuma' ? 'Repetição desativada.' : 'Repetição agendada com sucesso!';
+      mostrarToast('Agendamento', msg, 'success');
+    }
+  }
+  window.salvarRecorrenciaItem = salvarRecorrenciaItem;
+
+  function removerRecorrenciaItem() {
+    selecionarFrequenciaRecorrencia('nenhuma');
+    salvarRecorrenciaItem();
+  }
+  window.removerRecorrenciaItem = removerRecorrenciaItem;
+
+  function verificarRecorrenciasChecklist() {
+    if (!Array.isArray(checklistItems) || checklistItems.length === 0) return;
+
+    var agora = Date.now();
+    var houveMudanca = false;
+
+    checklistItems.forEach(function(it) {
+      if (!it || !it.concluido) return;
+      if (!it.recorrencia || !it.recorrencia.tipo || it.recorrencia.tipo === 'nenhuma') return;
+
+      var proxISO = it.recorrencia.proximaExecucao;
+      if (!proxISO) return;
+
+      var proxTime = new Date(proxISO).getTime();
+      if (!isNaN(proxTime) && agora >= proxTime) {
+        console.log('[Checklist] ⏰ Ciclo expirado para: "' + it.titulo + '". Desmarcando dos concluídos e alertando...');
+        
+        // Período expirado: rotina sai dos concluídos e volta para os pendentes!
+        it.concluido = false;
+        it.concluidoEm = null;
+        it.recorrencia.proximaExecucao = calcularProximaExecucao(it.recorrencia, new Date(), false);
+        houveMudanca = true;
+
+        // Dispara Notificação Sonora e Toast
+        if (typeof mostrarToast === 'function') {
+          mostrarToast('⏰ Hora da Rotina!', 'Procedimento pendente de checagem: ' + it.titulo, 'warning');
+        }
+        if (typeof tocarSomNotificacao === 'function') {
+          try { tocarSomNotificacao(); } catch(e){}
+        }
+        if (typeof window.adicionarNotificacao === 'function') {
+          window.adicionarNotificacao('Rotina Agendada', 'Procedimento pendente de checagem: ' + it.titulo, 'alerta');
+        }
+
+        // Persiste o novo ciclo
+        if (it.padrao) salvarRotinaPadraoNuvem(it);
+        else salvarLembretePessoalNuvem(it);
+        salvarRecorrenciaLocal(it.id, it.recorrencia);
+      }
+    });
+
+    if (houveMudanca) {
+      salvarChecklistStore();
+      renderChecklist();
+    }
+  }
+  window.verificarRecorrenciasChecklist = verificarRecorrenciasChecklist;
+
+  // Intervalo periódico a cada 30 segundos para checagem ativa de ciclos
+  setInterval(function() {
+    verificarReseteMeiaNoite();
+    verificarRecorrenciasChecklist();
+  }, 30000);
+
+  // Verificação ao retornar foco à página
+  window.addEventListener('focus', function() {
+    verificarReseteMeiaNoite();
+    verificarRecorrenciasChecklist();
+  });
 
   /* ═══════════════════════════════════════════
      POPUP: NOVA OCORRÊNCIA
@@ -4082,6 +4547,46 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  function atualizarSelectEquipamentosNovaOc() {
+    var praca = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+    var isUberlandia = praca.indexOf('Uber') !== -1;
+    var equips = [];
+    if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
+      equips = Object.keys(dashboardMetrics.equipamento);
+    }
+
+    var selNova = document.getElementById('nova-equipamento');
+    var selEdit = document.getElementById('edit-oc-equipamento');
+
+    [selNova, selEdit].forEach(function(sel) {
+      if (!sel) return;
+      var curVal = sel.value;
+      var html = '<option value="">Sem equipamento específico</option>';
+
+      if (isUberlandia) {
+        // Em Uberlândia: estritamente os equipamentos cadastrados pela equipe local
+        if (equips.length === 0) {
+          html += '<option value="" disabled style="color:var(--muted);">Nenhum equipamento cadastrado ainda em Uberlândia</option>';
+        } else {
+          equips.forEach(function(eq) {
+            html += '<option value="' + escapeHTML(eq) + '">' + escapeHTML(eq) + '</option>';
+          });
+        }
+      } else {
+        // Juiz de Fora: equipamentos do dashboard ou os 13 padrão de JF
+        if (equips.length === 0) {
+          equips = ['LIVE U1', 'LIVE U2', 'LIVE U3', 'LIVE U4', 'LIVE U SMART', 'REDAÇÃO', 'KMJ', 'NET PRAÇA', 'NET PORTARIA', 'FORMATOS NET', 'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR'];
+        }
+        equips.forEach(function(eq) {
+          html += '<option value="' + escapeHTML(eq) + '">' + escapeHTML(eq) + '</option>';
+        });
+      }
+      sel.innerHTML = html;
+      if (curVal) sel.value = curVal;
+    });
+  }
+  window.atualizarSelectEquipamentosNovaOc = atualizarSelectEquipamentosNovaOc;
+
   function criarNovaOcorrencia() {
     var tituloVal = novaTitulo ? novaTitulo.value.trim() : '';
     var descVal = novaDesc ? novaDesc.value.trim() : '';
@@ -4106,6 +4611,13 @@ document.addEventListener('DOMContentLoaded', function () {
     var userAtual = getUsuarioAtual();
     var isMine = (respVal === userAtual || respVal === 'Operador' || respVal.indexOf(userAtual) !== -1 || respVal.indexOf('Você') !== -1);
 
+    var telVal = document.getElementById('nova-telejornal') ? document.getElementById('nova-telejornal').value : '';
+    var eqVal  = document.getElementById('nova-equipamento') ? document.getElementById('nova-equipamento').value : '';
+
+    var tagsArr = ['Nova'];
+    if (telVal) tagsArr.push(telVal);
+    if (eqVal)  tagsArr.push(eqVal);
+
     var anexosFinais = (uploadedFilesStore['nova-previews'] || []).slice();
     var novo = {
       id:          'oc_' + Date.now(),
@@ -4115,9 +4627,11 @@ document.addEventListener('DOMContentLoaded', function () {
       resp:        respVal || 'Todos do turno',
       local:       document.getElementById('nova-local') ? document.getElementById('nova-local').value.trim() : '',
       prazo:       document.getElementById('nova-prazo') ? document.getElementById('nova-prazo').value : '',
+      telejornal:  telVal || null,
+      equipamento: eqVal || null,
       desc:        descVal,
       mine:        isMine,
-      tags:        ['Nova'],
+      tags:        tagsArr,
       status:      'aberta',
       criado:      Date.now(),
       dataCriacao: formatDataHoraLocal(),
@@ -4125,6 +4639,23 @@ document.addEventListener('DOMContentLoaded', function () {
       anexos:      anexosFinais,
       praca:       (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora')
     };
+
+    // Atualizar métricas dos Dashboards correspondentes em tempo real
+    var atualizouDash = false;
+    if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics) {
+      if (telVal && dashboardMetrics.telejornal && dashboardMetrics.telejornal[telVal]) {
+        dashboardMetrics.telejornal[telVal].nc = (dashboardMetrics.telejornal[telVal].nc || 0) + 1;
+        atualizouDash = true;
+      }
+      if (eqVal && dashboardMetrics.equipamento && dashboardMetrics.equipamento[eqVal]) {
+        dashboardMetrics.equipamento[eqVal].nc = (dashboardMetrics.equipamento[eqVal].nc || 0) + 1;
+        atualizouDash = true;
+      }
+      if (atualizouDash) {
+        if (typeof salvarDashboardMetricsStore === 'function') salvarDashboardMetricsStore();
+        if (typeof renderDashboards === 'function') renderDashboards();
+      }
+    }
 
     ocorrencias = [novo].concat(ocorrencias);
     window.ocorrencias = ocorrencias;
@@ -4145,6 +4676,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (document.getElementById('nova-cat'))  document.getElementById('nova-cat').selectedIndex  = 0;
     if (document.getElementById('nova-local')) document.getElementById('nova-local').value = '';
     if (document.getElementById('nova-prazo')) document.getElementById('nova-prazo').value = '';
+    if (document.getElementById('nova-telejornal')) document.getElementById('nova-telejornal').value = '';
+    if (document.getElementById('nova-equipamento')) document.getElementById('nova-equipamento').value = '';
     validarNova();
   }
   window.criarNovaOcorrencia = criarNovaOcorrencia;
@@ -4225,6 +4758,14 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('edit-oc-prazo').value = oc.prazo || '';
     document.getElementById('edit-oc-desc').value = oc.desc || '';
 
+    atualizarSelectEquipamentosNovaOc();
+    if (document.getElementById('edit-oc-telejornal')) {
+      document.getElementById('edit-oc-telejornal').value = oc.telejornal || '';
+    }
+    if (document.getElementById('edit-oc-equipamento')) {
+      document.getElementById('edit-oc-equipamento').value = oc.equipamento || '';
+    }
+
     var subEl = document.getElementById('edit-oc-subtitle');
     if (subEl) subEl.textContent = 'Editando ocorrência: ' + (oc.titulo || oc.id) + ' — aberto para toda a equipe.';
 
@@ -4245,6 +4786,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var resp = document.getElementById('edit-oc-resp').value;
     var local = document.getElementById('edit-oc-local').value.trim();
     var prazo = document.getElementById('edit-oc-prazo').value;
+    var telVal = document.getElementById('edit-oc-telejornal') ? document.getElementById('edit-oc-telejornal').value : '';
+    var eqVal  = document.getElementById('edit-oc-equipamento') ? document.getElementById('edit-oc-equipamento').value : '';
     var desc = document.getElementById('edit-oc-desc').value.trim();
 
     if (!titulo) {
@@ -4280,6 +4823,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (cat !== (anterior.cat || '')) mudancas.push('Categoria alterada de ' + (anterior.cat || '') + ' para ' + cat);
     if (resp !== (anterior.resp || '')) mudancas.push('Responsável alterado de ' + (anterior.resp || '') + ' para ' + resp);
     if (local !== (anterior.local || '')) mudancas.push('Local alterado de "' + (anterior.local || '') + '" para "' + local + '"');
+    if (telVal !== (anterior.telejornal || '')) mudancas.push('Telejornal alterado para ' + (telVal || 'Nenhum'));
+    if (eqVal !== (anterior.equipamento || '')) mudancas.push('Equipamento alterado para ' + (eqVal || 'Nenhum'));
     if (prazo !== (anterior.prazo || '')) mudancas.push('Prazo alterado para ' + (prazo || 'Sem prazo'));
     if (desc !== (anterior.desc || '')) mudancas.push('Descrição detalhada atualizada');
     if (anexosAtualizados.length !== ((anterior.anexos || []).length)) mudancas.push('Anexos atualizados (' + anexosAtualizados.length + ' arquivos)');
@@ -4300,6 +4845,8 @@ document.addEventListener('DOMContentLoaded', function () {
       resp:             resp,
       local:            local,
       prazo:            prazo,
+      telejornal:       telVal || null,
+      equipamento:      eqVal || null,
       desc:             desc,
       mine:             isMine,
       anexos:           anexosAtualizados,
@@ -4319,8 +4866,6 @@ document.addEventListener('DOMContentLoaded', function () {
   window.salvarEdicaoOcorrencia = salvarEdicaoOcorrencia;
 
   var itemDetalhesAtual = null;
-
-
   /* ═══════════════════════════════════════════
      SISTEMA DE LIXEIRA (Retenção 7 dias / Notificação 24h) — BANCO DE DADOS SUPABASE
   ═══════════════════════════════════════════ */
@@ -4907,8 +5452,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (btnConfirmar) {
     btnConfirmar.addEventListener('click', confirmarResolucao);
   }
-
-
   /* ═══════════════════════════════════════════
      CONFIGURAÇÕES
   ═══════════════════════════════════════════ */
@@ -5463,7 +6006,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.aplicarCodigoCriptografadoAgora = aplicarCodigoCriptografadoAgora;
-
   /* ═══════════════════════════════════════════
      HISTÓRICO GERAL (Funções de Renderização e Filtros)
   ═══════════════════════════════════════════ */
@@ -5918,17 +6460,36 @@ document.addEventListener('DOMContentLoaded', function () {
           '<div style="display:flex;flex-direction:column;gap:10px;">';
 
       anexos.forEach(function(anx) {
+        if (!anx) return;
+        var fName = (anx.name || anx.nome || anx.fileName || '').toLowerCase();
         var fType = (anx.type || '').toLowerCase();
-        var fName = (anx.name || '').toLowerCase();
-        var isImg = fType.startsWith('image/') || fName.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i);
-        var mediaSrc = anx.url || anx.dataUrl || '';
+        var mediaSrc = anx.url || anx.dataUrl || (typeof anx === 'string' ? anx : '');
+        if (!mediaSrc && anx.caminho) mediaSrc = anx.caminho;
+
+        var isImg = fType.startsWith('image/') || 
+                    mediaSrc.startsWith('data:image/') || 
+                    fName.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i) ||
+                    mediaSrc.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i);
+
+        var isVid = fType.startsWith('video/') || 
+                    mediaSrc.startsWith('data:video/') || 
+                    fName.match(/\.(mp4|webm|mov|mkv|avi|ogg)$/i) ||
+                    mediaSrc.match(/\.(mp4|webm|mov|mkv|avi|ogg)(\?.*)?$/i);
 
         if (isImg && mediaSrc) {
-          var safeName = (anx.name ? anx.name.replace(/'/g, "\\'") : 'Imagem Anexa');
           mediaHTML +=
             '<div style="text-align:center;background:var(--surface);padding:8px;border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
-              '<img src="' + mediaSrc + '" alt="' + (anx.name || 'Imagem') + '" loading="lazy" style="max-width:100%;max-height:300px;border-radius:var(--r-md);cursor:pointer;object-fit:contain;transition:transform 0.15s ease;" onmouseover="this.style.transform=\'scale(1.01)\'" onmouseout="this.style.transform=\'scale(1)\'" onclick="abrirQuickLook(this.src, \'' + safeName + '\')"/>' +
-              '<div style="font-size:11px;color:var(--blue);font-weight:600;margin-top:6px;cursor:pointer;" onclick="abrirQuickLook(\'' + mediaSrc + '\', \'' + safeName + '\')">📷 ' + (anx.name || 'Imagem') + ' (clique para ampliar no Quick Look)</div>' +
+              '<img src="' + mediaSrc + '" alt="Imagem Anexa" loading="lazy" style="max-width:100%;max-height:300px;border-radius:var(--r-md);cursor:pointer;object-fit:contain;transition:transform 0.15s ease;" onmouseover="this.style.transform=\'scale(1.01)\'" onmouseout="this.style.transform=\'scale(1)\'" onclick="abrirQuickLook(this.src, \'Imagem Anexa\')"/>' +
+              '<div style="font-size:11px;color:var(--blue);font-weight:600;margin-top:6px;cursor:pointer;" onclick="var img=this.previousElementSibling; if(img) abrirQuickLook(img.src, \'Imagem Anexa\');">🔍 Clique para ampliar</div>' +
+            '</div>';
+        } else if (isVid && mediaSrc) {
+          mediaHTML +=
+            '<div style="background:var(--surface);padding:10px;border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
+              '<video src="' + mediaSrc + '" controls style="width:100%;max-height:360px;border-radius:var(--r-md);background:#000;" preload="metadata"></video>' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding:0 2px;">' +
+                '<span style="font-size:11.5px;color:var(--txt);font-weight:600;">🎬 Vídeo Anexado</span>' +
+                '<a href="' + mediaSrc + '" target="_blank" download="video_anexo" class="btn btn-ghost btn-xs">Baixar Vídeo</a>' +
+              '</div>' +
             '</div>';
         } else if (mediaSrc) {
           mediaHTML +=
@@ -6090,8 +6651,6 @@ document.addEventListener('DOMContentLoaded', function () {
     verDetalhesHistoricoDirect(item);
   }
   window.verDetalhesOcorrencia = verDetalhesOcorrencia;
-
-
   /* ═══════════════════════════════════════════
      SISTEMA DE TOAST NOTIFICATIONS & CENTRAL DE ALERTAS
   ═══════════════════════════════════════════ */
@@ -6477,8 +7036,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.limparTodasNotificacoes = limparTodasNotificacoes;
-
-
   /* ═══════════════════════════════════════════
      SISTEMA DE EXPORTAÇÃO E CONSOLIDAÇÃO POWER BI
   ═══════════════════════════════════════════ */
@@ -6831,6 +7388,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     renderDashboards();
+    try {
+      if (typeof window.atualizarSelectsEquipamentosCTRS === 'function') {
+        window.atualizarSelectsEquipamentosCTRS();
+      }
+    } catch(eEq) {}
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.salvarNovoEquipamentoDashboard = salvarNovoEquipamentoDashboard;
@@ -7080,8 +7642,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (barCancEq) barCancEq.style.height = eqTotal > 0 ? Math.max(eqPctCanc * 0.85, 4) + '%' : '4px';
   }
   window.renderResumoTransmissoesGerais = renderResumoTransmissoesGerais;
-
-
   /* ═══════════════════════════════════════════
      PLANEJAMENTO ORÇAMENTÁRIO (ANO ATUAL + 1) — BANCO DE DADOS SUPABASE
   ═══════════════════════════════════════════ */
@@ -7726,8 +8286,6 @@ document.addEventListener('DOMContentLoaded', function () {
     alert('Relatório de Orçamento ' + anoOrcamento + ' exportado com sucesso em formato consolidado (CAPEX/OPEX).');
   }
   window.exportarOrcamentoExcel = exportarOrcamentoExcel;
-
-
   /* ═══════════════════════════════════════════
      FLUXO DE INICIALIZAÇÃO E IDENTIFICAÇÃO DO OPERADOR
   ═══════════════════════════════════════════ */

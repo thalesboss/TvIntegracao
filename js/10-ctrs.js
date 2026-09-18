@@ -46,21 +46,70 @@
   window.salvarRascunhoRelatorioTV = salvarRascunhoRelatorioTV;
 
   function obterOpcoesEquipamentosHTML(selectedVal) {
+    var praca = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+    var isUberlandia = praca.indexOf('Uber') !== -1;
     var equips = [];
+
     if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
       equips = Object.keys(dashboardMetrics.equipamento);
     }
-    if (equips.length === 0) {
-      equips = ['LIVE U1', 'LIVE U2', 'LIVE U3', 'LIVE U4', 'LIVE U SMART', 'REDAÇÃO', 'KMJ', 'NET PRAÇA', 'NET PORTARIA', 'FORMATOS NET', 'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR'];
+
+    if (isUberlandia) {
+      // Em Uberlândia: usa estritamente os equipamentos cadastrados pelos operadores de UDI
+      var html = '<option value="">Selecione o equipamento...</option>';
+      if (equips.length === 0) {
+        html += '<option value="" disabled style="color:var(--muted);">Nenhum equipamento cadastrado ainda</option>';
+      } else {
+        equips.forEach(function(eq) {
+          var isSel = (eq === selectedVal) ? ' selected' : '';
+          html += '<option value="' + escapeHTML(eq) + '"' + isSel + '>' + escapeHTML(eq) + '</option>';
+        });
+      }
+      html += '<option value="__novo__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo Equipamento...</option>';
+      return html;
+    } else {
+      // Juiz de Fora: usa os equipamentos do dashboard ou fallback dos 13 de JF
+      if (equips.length === 0) {
+        equips = ['LIVE U1', 'LIVE U2', 'LIVE U3', 'LIVE U4', 'LIVE U SMART', 'REDAÇÃO', 'KMJ', 'NET PRAÇA', 'NET PORTARIA', 'FORMATOS NET', 'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR'];
+      }
+      var html = '<option value="">Selecione o equipamento...</option>';
+      equips.forEach(function(eq) {
+        var isSel = (eq === selectedVal) ? ' selected' : '';
+        html += '<option value="' + escapeHTML(eq) + '"' + isSel + '>' + escapeHTML(eq) + '</option>';
+      });
+      html += '<option value="__novo__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo Equipamento...</option>';
+      return html;
     }
-    var html = '<option value="">Selecione o equipamento...</option>';
-    equips.forEach(function(eq) {
-      var isSel = (eq === selectedVal) ? ' selected' : '';
-      html += '<option value="' + escapeHTML(eq) + '"' + isSel + '>' + escapeHTML(eq) + '</option>';
-    });
-    return html;
   }
   window.obterOpcoesEquipamentosHTML = obterOpcoesEquipamentosHTML;
+
+  function atualizarSelectsEquipamentosCTRS() {
+    var selects = document.querySelectorAll('#ctrs-acc-container select.ctrs-infra-select, #ctrs-acc-container .acc-block select:nth-of-type(1)');
+    if (!selects || selects.length === 0) {
+      selects = document.querySelectorAll('.ctrs-infra-select');
+    }
+    selects.forEach(function(sel) {
+      var currentVal = sel.value;
+      sel.innerHTML = obterOpcoesEquipamentosHTML(currentVal);
+      if (currentVal && currentVal !== '__novo__') {
+        sel.value = currentVal;
+      }
+      if (!sel._hasNovoEqListener) {
+        sel._hasNovoEqListener = true;
+        sel.addEventListener('change', function() {
+          if (this.value === '__novo__') {
+            this.value = '';
+            if (typeof abrirModalNovoEquipamento === 'function') {
+              abrirModalNovoEquipamento();
+            } else if (typeof abrirPopup === 'function') {
+              abrirPopup('popup-novo-equipamento');
+            }
+          }
+        });
+      }
+    });
+  }
+  window.atualizarSelectsEquipamentosCTRS = atualizarSelectsEquipamentosCTRS;
 
   function adicionarTransmissaoCTRS(silencioso) {
     var container = document.getElementById('ctrs-acc-container');

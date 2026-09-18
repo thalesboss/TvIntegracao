@@ -146,8 +146,12 @@
     try {
       var ab  = getAbertas().length;
       var res = getResolvidas().length;
-      var atrasadas = ocorrencias.filter(function(o){ return isOcorrenciaVencida(o); }).length;
-      var diaAnt    = ocorrencias.filter(function(o){ return o && o.status==='aberta' && isOcorrenciaDiaAnterior(o); }).length;
+      var atrasadas = ocorrencias.filter(function(o){
+        return isOcorrenciaVencida(o) && (typeof pertenceAPracaAtiva !== 'function' || pertenceAPracaAtiva(o));
+      }).length;
+      var diaAnt = ocorrencias.filter(function(o){
+        return o && o.status==='aberta' && isOcorrenciaDiaAnterior(o) && (typeof pertenceAPracaAtiva !== 'function' || pertenceAPracaAtiva(o));
+      }).length;
 
       var els = {
         r: document.querySelector('.sn-r'),
@@ -224,12 +228,13 @@
   /* ─── renderAll: atualiza TUDO de uma vez com isolamento de falhas e diffing de performance ─── */
   var lastRenderSignature = '';
   function calcularAssinaturaEstado() {
-    var ocSig = (ocorrencias || []).map(function(o){ return (o.id||'') + '_' + (o.status||'') + '_' + (o.prio||''); }).join('|');
+    var pracaSig = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'JF';
+    var ocSig = (ocorrencias || []).filter(function(o){ return typeof pertenceAPracaAtiva !== 'function' || pertenceAPracaAtiva(o); }).map(function(o){ return (o.id||'') + '_' + (o.status||'') + '_' + (o.prio||''); }).join('|');
     var lixSig = (lixeiraData || []).map(function(i){ return (i.id||'') + '_' + (i.expiraEm||''); }).join('|');
     var notifSig = (notificacoesStore || []).map(function(n){ return (n.id||'') + '_' + (n.lida?1:0); }).join('|');
     var histCount = getHistoricoCompleto().length;
     var horaMinuto = new Date().getMinutes();
-    return ocSig + '#' + lixSig + '#' + notifSig + '#' + histCount + '#' + horaMinuto;
+    return pracaSig + '#' + ocSig + '#' + lixSig + '#' + notifSig + '#' + histCount + '#' + horaMinuto;
   }
 
   function renderAll(forcar) {

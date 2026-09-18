@@ -99,6 +99,13 @@
 
   function comprimirImagemSeNecessario(file, callback) {
     if (!file || !file.type || !file.type.startsWith('image/') || file.type === 'image/svg+xml') {
+      if (file && file.type && file.type.startsWith('video/')) {
+        try {
+          var vidUrl = URL.createObjectURL(file);
+          callback(vidUrl, file);
+          return;
+        } catch(eVid) {}
+      }
       var reader = new FileReader();
       reader.onload = function(e) { callback(e.target.result, file); };
       reader.readAsDataURL(file);
@@ -238,7 +245,25 @@
       } else if (isVid) {
         var vidBox = document.createElement('div');
         vidBox.className = 'prev-vid';
-        vidBox.innerHTML = '<i data-lucide="film" style="width:24px;height:24px;stroke-width:1.5;color:var(--blue);"></i><span style="font-size:9px;color:var(--blue);font-weight:800;margin-top:2px;">VÍDEO</span>';
+        vidBox.style.position = 'relative';
+        vidBox.style.overflow = 'hidden';
+        if (file.dataUrl) {
+          var vEl = document.createElement('video');
+          vEl.src = file.dataUrl;
+          vEl.preload = 'metadata';
+          vEl.muted = true;
+          vEl.style.width = '100%';
+          vEl.style.height = '100%';
+          vEl.style.objectFit = 'cover';
+          vEl.style.borderRadius = 'var(--r-sm)';
+          vidBox.appendChild(vEl);
+          var playBadge = document.createElement('div');
+          playBadge.innerHTML = '▶';
+          playBadge.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;text-shadow:0 1px 4px rgba(0,0,0,0.8);pointer-events:none;';
+          vidBox.appendChild(playBadge);
+        } else {
+          vidBox.innerHTML = '<i data-lucide="film" style="width:24px;height:24px;stroke-width:1.5;color:var(--blue);"></i><span style="font-size:9px;color:var(--blue);font-weight:800;margin-top:2px;">VÍDEO</span>';
+        }
         item.appendChild(vidBox);
       } else {
         var docBox = document.createElement('div');
@@ -247,11 +272,14 @@
         item.appendChild(docBox);
       }
 
-      var nome = document.createElement('div');
-      nome.className = 'prev-name';
-      var displayName = file.name || 'Anexo';
-      nome.textContent = displayName.length > 12 ? displayName.substring(0, 9) + '…' : displayName;
-      item.appendChild(nome);
+      // Não exibe o nome do arquivo embaixo das fotos (mantém apenas para arquivos/vídeos/docs)
+      if (!isImg) {
+        var nome = document.createElement('div');
+        nome.className = 'prev-name';
+        var displayName = file.name || 'Anexo';
+        nome.textContent = displayName.length > 12 ? displayName.substring(0, 9) + '…' : displayName;
+        item.appendChild(nome);
+      }
 
       container.appendChild(item);
     });

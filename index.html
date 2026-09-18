@@ -213,6 +213,24 @@
           <input id="nova-local" type="text" placeholder="Ex: Estúdio A, Sala de Edição..."/>
         </div>
       </div>
+      <div class="fg2">
+        <div class="frow">
+          <label for="nova-telejornal">Telejornal Relacionado <span class="opt-badge">Opcional</span></label>
+          <select id="nova-telejornal">
+            <option value="" selected>Sem telejornal / Geral</option>
+            <option value="INTEGRAÇÃO NOTÍCIA">INTEGRAÇÃO NOTÍCIA</option>
+            <option value="MG1">MG1</option>
+            <option value="MG2">MG2</option>
+            <option value="GIRO MG2">GIRO MG2</option>
+          </select>
+        </div>
+        <div class="frow">
+          <label for="nova-equipamento">Equipamento Relacionado <span class="opt-badge">Opcional</span></label>
+          <select id="nova-equipamento">
+            <option value="" selected>Sem equipamento específico</option>
+          </select>
+        </div>
+      </div>
       <div class="frow">
         <label for="nova-prazo">Prazo Estimado <span class="opt-badge">Opcional</span></label>
         <input id="nova-prazo" type="time" style="max-width:150px;"/>
@@ -223,12 +241,12 @@
         <div id="nova-counter" class="char-count">Mínimo 50 caracteres</div>
       </div>
       <div class="frow">
-        <label>Anexar fotos ou arquivos <span class="opt-badge">Opcional</span></label>
+        <label>Anexar fotos, vídeos ou arquivos <span class="opt-badge">Opcional</span></label>
         <div class="upload-area" id="nova-upload-area" role="button" tabindex="0">
-          <input id="nova-arquivos" type="file" accept="image/*,.pdf,application/pdf" multiple />
+          <input id="nova-arquivos" type="file" accept="image/*,video/*,.pdf,application/pdf" multiple />
           <div class="u-ico"><i data-lucide="paperclip" style="width:18px;height:18px;stroke-width:2;"></i></div>
-          <p class="u-txt">Clique para selecionar fotos ou PDFs</p>
-          <p class="u-sub">JPG, PNG, PDF — múltiplos arquivos permitidos</p>
+          <p class="u-txt">Clique para selecionar fotos, vídeos ou PDFs</p>
+          <p class="u-sub">JPG, PNG, MP4, WEBM, MOV, PDF — múltiplos arquivos permitidos</p>
         </div>
         <div id="nova-previews" class="upload-previews"></div>
       </div>
@@ -298,6 +316,24 @@
           <input id="edit-oc-local" type="text" placeholder="Ex: Estúdio A, Juiz de Fora..."/>
         </div>
       </div>
+      <div class="fg2">
+        <div class="frow">
+          <label for="edit-oc-telejornal">Telejornal Relacionado <span class="opt-badge">Opcional</span></label>
+          <select id="edit-oc-telejornal">
+            <option value="" selected>Sem telejornal / Geral</option>
+            <option value="INTEGRAÇÃO NOTÍCIA">INTEGRAÇÃO NOTÍCIA</option>
+            <option value="MG1">MG1</option>
+            <option value="MG2">MG2</option>
+            <option value="GIRO MG2">GIRO MG2</option>
+          </select>
+        </div>
+        <div class="frow">
+          <label for="edit-oc-equipamento">Equipamento Relacionado <span class="opt-badge">Opcional</span></label>
+          <select id="edit-oc-equipamento">
+            <option value="" selected>Sem equipamento específico</option>
+          </select>
+        </div>
+      </div>
       <div class="frow">
         <label for="edit-oc-prazo">Prazo Estimado <span class="opt-badge">Opcional</span></label>
         <input id="edit-oc-prazo" type="time" style="max-width:150px;"/>
@@ -307,12 +343,12 @@
         <textarea id="edit-oc-desc" placeholder="Descreva a ocorrência em detalhes..." style="min-height:90px;"></textarea>
       </div>
       <div class="frow">
-        <label>Anexar fotos ou arquivos <span class="opt-badge">Opcional</span></label>
+        <label>Anexar fotos, vídeos ou arquivos <span class="opt-badge">Opcional</span></label>
         <div class="upload-area" id="edit-oc-upload-area" role="button" tabindex="0">
-          <input id="edit-oc-arquivos" type="file" accept="image/*,.pdf,application/pdf" multiple />
+          <input id="edit-oc-arquivos" type="file" accept="image/*,video/*,.pdf,application/pdf" multiple />
           <div class="u-ico"><i data-lucide="paperclip" style="width:18px;height:18px;stroke-width:2;"></i></div>
-          <p class="u-txt">Clique para selecionar fotos ou PDFs</p>
-          <p class="u-sub">JPG, PNG, PDF — múltiplos arquivos permitidos</p>
+          <p class="u-txt">Clique para selecionar fotos, vídeos ou PDFs</p>
+          <p class="u-sub">JPG, PNG, MP4, WEBM, MOV, PDF — múltiplos arquivos permitidos</p>
         </div>
         <div id="edit-oc-previews" class="upload-previews"></div>
       </div>
@@ -437,6 +473,112 @@
     </div>
   </div>
 </div>
+
+<!-- ═══════════════════════════════════════
+     POPUP: RECORRÊNCIA E AGENDAMENTO 
+═══════════════════════════════════════ -->
+<div class="overlay" id="popup-recorrencia-checklist" hidden role="dialog" aria-modal="true" aria-labelledby="rec-title">
+  <div class="modal" style="max-width:460px;border-radius:18px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.18);">
+    <div class="modal-header" style="padding:16px 20px;border-bottom:1px solid var(--border-lt);display:flex;align-items:center;gap:12px;">
+      <div class="modal-icon" style="background:linear-gradient(135deg, #007aff, #5856d6);width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;">
+        <i data-lucide="pencil" style="width:18px;height:18px;color:#fff;stroke-width:2.2;"></i>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <h2 id="rec-title" style="font-size:15px;font-weight:700;color:var(--txt);margin:0;">Editar Rotina & Agendamento</h2>
+        <p style="font-size:12px;color:var(--muted);margin:2px 0 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="rec-item-title-display">Configurar ciclo de verificação</p>
+      </div>
+      <button class="modal-close-btn" onclick="fecharPopup('popup-recorrencia-checklist')" title="Fechar" style="margin-left:auto;"><i data-lucide="x" style="width:15px;height:15px;stroke-width:2.2;"></i></button>
+    </div>
+
+    <div class="modal-body" style="padding:18px 20px;display:flex;flex-direction:column;gap:16px;background:var(--bg);">
+      <input type="hidden" id="rec-item-id" value="" />
+
+      <!-- Nome / Título da Rotina -->
+      <div style="background:var(--surface);border-radius:12px;padding:12px 14px;border:1px solid var(--border-lt);">
+        <label for="rec-item-title-input" style="font-size:12px;font-weight:600;color:var(--txt);display:block;margin-bottom:6px;">Nome do Procedimento / Lembrete</label>
+        <input type="text" id="rec-item-title-input" class="form-input" style="width:100%;font-size:13.5px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);box-sizing:border-box;" placeholder="Nome da rotina..." />
+      </div>
+
+      <!-- Controle de Frequência -->
+      <div style="background:var(--surface);padding:4px;border-radius:11px;display:grid;grid-template-columns:repeat(4, 1fr);gap:4px;border:1px solid var(--border-lt);">
+        <button type="button" class="rec-segment-btn active" id="rec-btn-nenhuma" onclick="selecionarFrequenciaRecorrencia('nenhuma')">Nenhuma</button>
+        <button type="button" class="rec-segment-btn" id="rec-btn-horaria" onclick="selecionarFrequenciaRecorrencia('horaria')">Horária</button>
+        <button type="button" class="rec-segment-btn" id="rec-btn-diaria" onclick="selecionarFrequenciaRecorrencia('diaria')">Diária</button>
+        <button type="button" class="rec-segment-btn" id="rec-btn-semanal" onclick="selecionarFrequenciaRecorrencia('semanal')">Semanal</button>
+      </div>
+
+      <!-- Configuração: Horária -->
+      <div id="rec-sec-horaria" class="rec-config-sec" style="display:none;">
+        <div style="background:var(--surface);border-radius:12px;padding:14px;border:1px solid var(--border-lt);">
+          <label style="font-size:12px;font-weight:600;color:var(--txt);display:block;margin-bottom:8px;">Intervalo de Repetição</label>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <select id="rec-intervalo-horas" class="form-input" style="flex:1;font-size:13px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);" onchange="atualizarPreviaProximaExecucao()">
+              <option value="1" selected>A cada 1 hora</option>
+              <option value="2">A cada 2 horas</option>
+              <option value="3">A cada 3 horas</option>
+              <option value="4">A cada 4 horas</option>
+              <option value="6">A cada 6 horas</option>
+              <option value="8">A cada 8 horas</option>
+              <option value="12">A cada 12 horas</option>
+            </select>
+          </div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:8px;">A rotina sairá dos concluídos automaticamente e alertará o plantão a cada intervalo programado.</div>
+        </div>
+      </div>
+
+      <!-- Configuração: Diária -->
+      <div id="rec-sec-diaria" class="rec-config-sec" style="display:none;">
+        <div style="background:var(--surface);border-radius:12px;padding:14px;border:1px solid var(--border-lt);">
+          <label style="font-size:12px;font-weight:600;color:var(--txt);display:block;margin-bottom:8px;">Horário de Checagem Diária</label>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <input type="time" id="rec-hora-diaria" class="form-input" value="08:00" style="flex:1;font-size:14px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);" onchange="atualizarPreviaProximaExecucao()" />
+          </div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:8px;">Todos os dias nesse horário ela sairá dos concluídos e notificará a equipe.</div>
+        </div>
+      </div>
+
+      <!-- Configuração: Semanal -->
+      <div id="rec-sec-semanal" class="rec-config-sec" style="display:none;">
+        <div style="background:var(--surface);border-radius:12px;padding:14px;border:1px solid var(--border-lt);display:flex;flex-direction:column;gap:12px;">
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--txt);display:block;margin-bottom:8px;">Dias da Semana</label>
+            <div style="display:flex;justify-content:space-between;gap:6px;" id="rec-dias-semana-wrap">
+              <button type="button" class="rec-day-pill" data-day="0" onclick="toggleDiaSemanaRecorrencia(this)" title="Domingo">D</button>
+              <button type="button" class="rec-day-pill active" data-day="1" onclick="toggleDiaSemanaRecorrencia(this)" title="Segunda-feira">S</button>
+              <button type="button" class="rec-day-pill" data-day="2" onclick="toggleDiaSemanaRecorrencia(this)" title="Terça-feira">T</button>
+              <button type="button" class="rec-day-pill active" data-day="3" onclick="toggleDiaSemanaRecorrencia(this)" title="Quarta-feira">Q</button>
+              <button type="button" class="rec-day-pill" data-day="4" onclick="toggleDiaSemanaRecorrencia(this)" title="Quinta-feira">Q</button>
+              <button type="button" class="rec-day-pill active" data-day="5" onclick="toggleDiaSemanaRecorrencia(this)" title="Sexta-feira">S</button>
+              <button type="button" class="rec-day-pill" data-day="6" onclick="toggleDiaSemanaRecorrencia(this)" title="Sábado">S</button>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:var(--txt);display:block;margin-bottom:8px;">Horário</label>
+            <input type="time" id="rec-hora-semanal" class="form-input" value="09:00" style="width:100%;font-size:14px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);" onchange="atualizarPreviaProximaExecucao()" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Informativo  da Próxima Execução -->
+      <div id="rec-previa-card" style="background:rgba(0,122,255,0.06);border:1px solid rgba(0,122,255,0.2);border-radius:12px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;">
+        <i data-lucide="info" style="width:16px;height:16px;color:#007aff;margin-top:2px;flex-shrink:0;"></i>
+        <div style="font-size:12px;line-height:1.45;color:var(--txt);">
+          <strong id="rec-previa-texto">Sem repetição programada.</strong>
+          <div id="rec-previa-sub" style="font-size:11px;color:var(--muted);margin-top:2px;">Esta rotina só será concluída uma única vez.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer" style="padding:14px 20px;border-top:1px solid var(--border-lt);display:flex;justify-content:space-between;background:var(--surface);">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="removerRecorrenciaItem()" style="color:var(--red);font-weight:600;">Desativar Repetição</button>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="fecharPopup('popup-recorrencia-checklist')">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="salvarRecorrenciaItem()" style="background:#007aff;border-color:#007aff;padding:6px 16px;">Salvar Programação</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <!-- ═══════════════════════════════════════
      POPUP: VISUALIZADOR DE MÍDIA EM ALTA RESOLUÇÃO (LIGHTBOX)
@@ -869,7 +1011,7 @@
       <i data-lucide="clock" style="width:15px;height:15px;stroke-width:2;"></i>
       <span class="s-label">Histórico</span>
     </div>
-    <div class="s-section" id="sidebar-section-recebimento">Recebimento</div>
+    <div class="s-section" id="sidebar-section-compras">Recebimento & Compras</div>
     <div class="s-btn" id="sidebar-btn-recebimento" onclick="irPara('recebimento',this)" role="button" tabindex="0">
       <i data-lucide="package-check" style="width:15px;height:15px;stroke-width:2;"></i>
       <span class="s-label">Recebimento de Materiais</span>
@@ -1112,7 +1254,7 @@
               <input type="text" id="reminders-new-padrao-input" class="reminders-add-input" placeholder="Nova rotina padrão da TV... (Enter)" onkeydown="if(event.key==='Enter') adicionarRotinaPadrao();"/>
               <select id="reminders-new-padrao-cat" class="reminders-category-select">
                 <option value="rotina" selected>Geral TV</option>
-                <option value="ctrs">CTRS</option>
+                <option value="TI">TI</option>
                 <option value="estudio">Estúdio</option>
                 <option value="infra">Infra</option>
               </select>
@@ -1223,7 +1365,7 @@
                 <div class="frow"><label>Cidade / Bairro</label><input type="text" placeholder="Ex: Centro — Juiz de Fora"/></div>
                 <div class="frow">
                   <label>Infraestrutura da Transmissão</label>
-                  <select>
+                  <select class="ctrs-infra-select">
                     <option value="">Selecione o equipamento...</option>
                     <option value="LIVE U1">LIVE U1</option>
                     <option value="LIVE U2">LIVE U2</option>
@@ -1259,7 +1401,7 @@
                 <div class="frow"><label>Cidade / Bairro</label><input type="text"/></div>
                 <div class="frow">
                   <label>Infraestrutura da Transmissão</label>
-                  <select>
+                  <select class="ctrs-infra-select">
                     <option value="">Selecione o equipamento...</option>
                     <option value="LIVE U1">LIVE U1</option>
                     <option value="LIVE U2">LIVE U2</option>
@@ -1293,7 +1435,7 @@
                 <div class="frow"><label>Cidade / Bairro</label><input type="text"/></div>
                 <div class="frow">
                   <label>Infraestrutura da Transmissão</label>
-                  <select>
+                  <select class="ctrs-infra-select">
                     <option value="">Selecione o equipamento...</option>
                     <option value="LIVE U1">LIVE U1</option>
                     <option value="LIVE U2">LIVE U2</option>
@@ -1327,7 +1469,7 @@
                 <div class="frow"><label>Cidade / Bairro</label><input type="text"/></div>
                 <div class="frow">
                   <label>Infraestrutura da Transmissão</label>
-                  <select>
+                  <select class="ctrs-infra-select">
                     <option value="">Selecione o equipamento...</option>
                     <option value="LIVE U1">LIVE U1</option>
                     <option value="LIVE U2">LIVE U2</option>

@@ -226,10 +226,15 @@
     }
 
     // 5. Esconder / Exibir Recebimento de Materiais (somente Juiz de Fora)
-    var secRec = document.getElementById('sidebar-section-recebimento');
     var btnRec = document.getElementById('sidebar-btn-recebimento');
-    if (secRec) secRec.style.display = isUberlandia ? 'none' : '';
     if (btnRec) btnRec.style.display = isUberlandia ? 'none' : '';
+
+    // Manter o cabeçalho de seção "Suprimentos & Compras" visível para compras/orçamento terem seu próprio bloco
+    var secCompras = document.getElementById('sidebar-section-compras') || document.getElementById('sidebar-section-recebimento');
+    if (secCompras) {
+      secCompras.style.display = '';
+      secCompras.textContent = isUberlandia ? 'Compras & Orçamento' : 'Suprimentos & Compras';
+    }
 
     // Esconder / Exibir pílula de Recebimento no Histórico
     var histPillRec = document.getElementById('hist-pill-recebimento');
@@ -273,25 +278,30 @@
     var upPraca = document.getElementById('up-praca');
     if (upPraca) upPraca.textContent = p;
 
-    // 8. Notificar e re-renderizar módulos com dados da praça selecionada
+    // 8. Atualizar equipamentos do Relatório (CTRS) dinamicamente para a praça ativa
+    try {
+      if (typeof window.atualizarSelectsEquipamentosCTRS === 'function') {
+        window.atualizarSelectsEquipamentosCTRS();
+      }
+    } catch(eEq) {}
+
+    // 9. Notificar e re-renderizar módulos com dados da praça selecionada
     try {
       if (typeof window.carregarDashboardMetricsStore === 'function') {
         window.carregarDashboardMetricsStore();
       }
-      if (typeof window.renderDashboards === 'function') {
-        window.renderDashboards();
+      if (typeof window.renderAll === 'function') {
+        window.renderAll(true);
+      } else {
+        if (typeof window.renderDashboards === 'function') window.renderDashboards();
+        if (typeof window.renderCards === 'function') window.renderCards();
+        if (typeof window.renderHistorico === 'function') window.renderHistorico();
+        if (typeof window.renderArquivados === 'function') window.renderArquivados();
+        if (typeof window.renderOrcamento === 'function') window.renderOrcamento();
+        if (typeof window.updateStats === 'function') window.updateStats();
       }
-      if (typeof window.renderCards === 'function') {
-        window.renderCards();
-      }
-      if (typeof window.renderHistorico === 'function') {
-        window.renderHistorico();
-      }
-      if (typeof window.renderArquivados === 'function') {
-        window.renderArquivados();
-      }
-      if (typeof window.renderOrcamento === 'function') {
-        window.renderOrcamento();
+      if (typeof window.renderChecklist === 'function') {
+        window.renderChecklist();
       }
       if (typeof window.atualizarBadgesNotificacoes === 'function') {
         window.atualizarBadgesNotificacoes();

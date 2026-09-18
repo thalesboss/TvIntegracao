@@ -11,18 +11,24 @@
     try {
       var hojeStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
       if (checklistUltimaDataVerificada !== hojeStr) {
-        console.log('[Checklist] 🕛 Meia-noite detectada: Novo dia (' + hojeStr + '). Desmarcando tarefas de rotina no Supabase...');
+        console.log('[Checklist] 🕛 Meia-noite detectada: Novo dia (' + hojeStr + '). Verificando ciclo de tarefas...');
         checklistUltimaDataVerificada = hojeStr;
         if (Array.isArray(checklistItems) && checklistItems.length > 0) {
           checklistItems.forEach(function(it) {
+            // Itens com recorrência ativa são geridos estritamente pelo motor verificarRecorrenciasChecklist
+            if (it.recorrencia && it.recorrencia.tipo && it.recorrencia.tipo !== 'nenhuma') {
+              return;
+            }
+            // Apenas tarefas sem recorrência programada resetam na virada comum de dia
             it.concluido = false;
             it.concluidoEm = null;
             if (it.padrao) salvarRotinaPadraoNuvem(it);
             else salvarLembretePessoalNuvem(it);
           });
         }
+        verificarRecorrenciasChecklist();
         if (typeof mostrarToast === 'function') {
-          mostrarToast('Novo Dia Iniciado', 'As rotinas foram desmarcadas automaticamente para o plantão de hoje.', 'info');
+          mostrarToast('Novo Dia Iniciado', 'As rotinas foram desmarcadas para o plantão de hoje.', 'info');
         }
       }
     } catch(e) {
@@ -30,8 +36,29 @@
     }
   }
 
+  var CHECKLIST_STORAGE_KEY = 'tv_checklist_itens_cache_v2';
+
+  function carregarChecklistCacheLocal() {
+    try {
+      var raw = localStorage.getItem(CHECKLIST_STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch(e) {}
+    return [];
+  }
+
   function carregarChecklistStore() {
+    // 1. Carrega imediatamente o cache local para que NADA suma ao atualizar a página (F5)
+    var cacheLocal = carregarChecklistCacheLocal();
+    if (cacheLocal && cacheLocal.length > 0) {
+      checklistItems = cacheLocal;
+    }
     verificarReseteMeiaNoite();
+    verificarRecorrenciasChecklist();
     atualizarDataChecklistUI();
     renderChecklist();
     sincronizarChecklistNuvem();
@@ -41,6 +68,9 @@
 
   function salvarChecklistStore() {
     window.checklistItems = checklistItems;
+    try {
+      localStorage.setItem(CHECKLIST_STORAGE_KEY, JSON.stringify(checklistItems));
+    } catch(e) {}
   }
 
   function atualizarDataChecklistUI() {
@@ -146,6 +176,7 @@
         var tagLabel = getCategoriaLabel(item.categoria);
         var tagClass = 'tag-' + (item.categoria || 'avulso');
         var metaHorario = item.horario ? '<span>·</span><span>' + escapeHTML(item.horario) + '</span>' : '';
+        var recBadgeHTML = getRecorrenciaBadgeHTML(item);
 
         html += '<li class="reminder-item' + completedClass + '" id="chk-item-' + item.id + '">' +
           '<button class="reminder-checkbox" onclick="toggleChecklistItem(\'' + item.id + '\')" title="' + (item.concluido ? 'Desmarcar' : 'Concluir') + '">' +
@@ -155,10 +186,14 @@
             '<div class="reminder-title">' + escapeHTML(item.titulo) + '</div>' +
             '<div class="reminder-meta">' +
               '<span class="reminder-tag ' + tagClass + '">' + tagLabel + '</span>' +
+              recBadgeHTML +
               metaHorario +
             '</div>' +
           '</div>' +
           '<div class="reminder-actions">' +
+            '<button class="reminder-action-btn edit" onclick="abrirModalRecorrencia(\'' + item.id + '\')" title="Editar e Configurar Repetição" aria-label="Editar Rotina">' +
+              '<i data-lucide="pencil" style="width:14px;height:14px;stroke-width:2.2;"></i>' +
+            '</button>' +
             '<button class="reminder-action-btn alert" onclick="criarOcorrenciaDoChecklist(\'' + item.id + '\')" data-tooltip="Falha detectada? Criar ocorrência desta rotina" aria-label="Criar ocorrência desta rotina">' +
               '<i data-lucide="alert-triangle" style="width:14px;height:14px;stroke-width:2.2;"></i>' +
             '</button>' +
@@ -189,11 +224,41 @@
     }
   }
 
+  function getRecorrenciaBadgeHTML(item) {
+    if (!item || !item.recorrencia || !item.recorrencia.tipo || item.recorrencia.tipo === 'nenhuma') {
+      return '';
+    }
+    var rec = item.recorrencia;
+    var label = '';
+    if (rec.tipo === 'horaria') {
+      label = '🔁 A cada ' + (rec.intervaloHoras || 1) + 'h';
+    } else if (rec.tipo === 'diaria') {
+      label = '🔁 Diário às ' + (rec.horario || '08:00');
+    } else if (rec.tipo === 'semanal') {
+      var dNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+      var dList = Array.isArray(rec.diasSemana) ? rec.diasSemana : [1, 3, 5];
+      var strDias = dList.map(function(d){ return dNames[d] || ''; }).filter(Boolean).join(', ');
+      label = '🔁 ' + (strDias || 'Semanal') + ' às ' + (rec.horario || '09:00');
+    }
+    if (!label) return '';
+    return '<span>·</span><span class="reminder-rec-badge" onclick="event.stopPropagation(); abrirModalRecorrencia(\'' + item.id + '\')" title="Clique para editar agendamento">' + escapeHTML(label) + '</span>';
+  }
+  window.getRecorrenciaBadgeHTML = getRecorrenciaBadgeHTML;
+
   function toggleChecklistItem(id) {
     var item = checklistItems.find(function(it) { return it.id === id; });
     if (!item) return;
     item.concluido = !item.concluido;
     item.concluidoEm = item.concluido ? new Date().toISOString() : null;
+
+    // Regra estrita de ciclo:
+    // Ao ser concluída, fixa a próxima data/hora em ciclo futuro para NUNCA voltar antes do tempo!
+    if (item.concluido && item.recorrencia && item.recorrencia.tipo && item.recorrencia.tipo !== 'nenhuma') {
+      item.recorrencia.ultimoCicloConcluido = new Date().toISOString();
+      item.recorrencia.proximaExecucao = calcularProximaExecucao(item.recorrencia, new Date(), true);
+      salvarRecorrenciaLocal(item.id, item.recorrencia);
+    }
+
     salvarChecklistStore();
     renderChecklist();
 
@@ -503,7 +568,9 @@
     .then(function(res) { return res.ok ? res.json() : null; })
     .then(function(cloudItens) {
       if (Array.isArray(cloudItens)) {
+        var recMap = carregarRecorrenciasLocais();
         var itensProcessados = cloudItens.map(function(c) {
+          var rec = c.recorrencia || recMap[c.id] || null;
           return {
             id: c.id,
             titulo: c.titulo,
@@ -515,7 +582,8 @@
               ? 'Rotina TV'
               : (c.criado_em ? 'Criado em ' + new Date(c.criado_em).toLocaleDateString('pt-BR') : 'Pessoal'),
             operador_id: c.operador_id,
-            operador_nome: c.operador_nome
+            operador_nome: c.operador_nome,
+            recorrencia: rec
           };
         });
 
@@ -530,6 +598,7 @@
         checklistItems = itensProcessados.concat(pendentesLocais);
         salvarChecklistStore();
         renderChecklist();
+        verificarRecorrenciasChecklist();
         console.log('[Checklist DB] ✅ ' + itensProcessados.length + ' rotinas carregadas diretamente do banco de dados (Supabase checklist_itens).');
       }
     })
@@ -668,4 +737,327 @@
     });
   }
   window.excluirLembretePessoalNuvem = excluirLembretePessoalNuvem;
+
+  /* ═══════════════════════════════════════════
+     MOTOR DE RECORRÊNCIA INTELIGENTE
+  ═══════════════════════════════════════════ */
+
+  var itemRecorrenciaAtual = null;
+  var recorrenciaFrequenciaAtiva = 'nenhuma';
+
+  function carregarRecorrenciasLocais() {
+    try {
+      var raw = localStorage.getItem('tv_checklist_recorrencias_v1');
+      return raw ? JSON.parse(raw) : {};
+    } catch(e) {
+      return {};
+    }
+  }
+  window.carregarRecorrenciasLocais = carregarRecorrenciasLocais;
+
+  function salvarRecorrenciaLocal(id, rec) {
+    try {
+      var map = carregarRecorrenciasLocais();
+      if (!rec || rec.tipo === 'nenhuma') {
+        delete map[id];
+      } else {
+        map[id] = rec;
+      }
+      localStorage.setItem('tv_checklist_recorrencias_v1', JSON.stringify(map));
+    } catch(e) {}
+  }
+  window.salvarRecorrenciaLocal = salvarRecorrenciaLocal;
+
+  function abrirModalRecorrencia(id) {
+    var item = checklistItems.find(function(it){ return it.id === id; });
+    if (!item) return;
+
+    itemRecorrenciaAtual = item;
+    var idInput = document.getElementById('rec-item-id');
+    if (idInput) idInput.value = item.id;
+    var titleDisplay = document.getElementById('rec-item-title-display');
+    if (titleDisplay) titleDisplay.textContent = item.titulo;
+    var titleInput = document.getElementById('rec-item-title-input');
+    if (titleInput) titleInput.value = item.titulo || '';
+
+    var rec = item.recorrencia || { tipo: 'nenhuma', intervaloHoras: 1, horario: '08:00', diasSemana: [1, 3, 5] };
+    selecionarFrequenciaRecorrencia(rec.tipo || 'nenhuma');
+
+    var intEl = document.getElementById('rec-intervalo-horas');
+    if (intEl) intEl.value = rec.intervaloHoras || 1;
+
+    var hDiaria = document.getElementById('rec-hora-diaria');
+    if (hDiaria) hDiaria.value = rec.horario || '08:00';
+
+    var hSemanal = document.getElementById('rec-hora-semanal');
+    if (hSemanal) hSemanal.value = rec.horario || '09:00';
+
+    // Configurar pills de dias da semana (D S T Q Q S S)
+    var diasAtivos = Array.isArray(rec.diasSemana) && rec.diasSemana.length > 0 ? rec.diasSemana : [1, 3, 5];
+    var pills = document.querySelectorAll('#rec-dias-semana-wrap .rec-day-pill');
+    pills.forEach(function(btn) {
+      var diaNum = parseInt(btn.getAttribute('data-day'), 10);
+      if (diasAtivos.indexOf(diaNum) !== -1) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    atualizarPreviaProximaExecucao();
+    if (typeof abrirPopup === 'function') {
+      abrirPopup('popup-recorrencia-checklist');
+    }
+    if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+  }
+  window.abrirModalRecorrencia = abrirModalRecorrencia;
+
+  function selecionarFrequenciaRecorrencia(freq) {
+    recorrenciaFrequenciaAtiva = freq;
+    var botoes = ['nenhuma', 'horaria', 'diaria', 'semanal'];
+    botoes.forEach(function(b) {
+      var el = document.getElementById('rec-btn-' + b);
+      if (el) {
+        if (b === freq) el.classList.add('active');
+        else el.classList.remove('active');
+      }
+      var sec = document.getElementById('rec-sec-' + b);
+      if (sec) {
+        sec.style.display = (b === freq) ? 'block' : 'none';
+      }
+    });
+    atualizarPreviaProximaExecucao();
+  }
+  window.selecionarFrequenciaRecorrencia = selecionarFrequenciaRecorrencia;
+
+  function toggleDiaSemanaRecorrencia(btn) {
+    btn.classList.toggle('active');
+    var ativos = document.querySelectorAll('#rec-dias-semana-wrap .rec-day-pill.active');
+    if (ativos.length === 0) {
+      btn.classList.add('active'); // pelo menos 1 dia ativo
+    }
+    atualizarPreviaProximaExecucao();
+  }
+  window.toggleDiaSemanaRecorrencia = toggleDiaSemanaRecorrencia;
+
+  function calcularProximaExecucao(rec, baseDate, jaConcluidoNesteCiclo) {
+    if (!rec || !rec.tipo || rec.tipo === 'nenhuma') return null;
+
+    var base = baseDate ? new Date(baseDate) : new Date();
+    if (isNaN(base.getTime())) base = new Date();
+
+    if (rec.tipo === 'horaria') {
+      var intervalo = parseInt(rec.intervaloHoras, 10) || 1;
+      var next = new Date(base.getTime());
+      next.setHours(next.getHours() + intervalo);
+      next.setMinutes(0, 0, 0);
+      while (next.getTime() <= base.getTime()) {
+        next.setHours(next.getHours() + 1);
+      }
+      return next.toISOString();
+    }
+
+    if (rec.tipo === 'diaria') {
+      var parts = (rec.horario || '08:00').split(':');
+      var targetH = parseInt(parts[0], 10) || 0;
+      var targetM = parseInt(parts[1], 10) || 0;
+
+      var candidate = new Date(base.getFullYear(), base.getMonth(), base.getDate(), targetH, targetM, 0, 0);
+
+      // Se já foi concluída neste ciclo diário (mesmo adiantada ou pontual),
+      // ela NUNCA volta hoje: só volta amanhã no horário programado!
+      if (jaConcluidoNesteCiclo || candidate.getTime() <= base.getTime()) {
+        candidate.setDate(candidate.getDate() + 1);
+      }
+      return candidate.toISOString();
+    }
+
+    if (rec.tipo === 'semanal') {
+      var partsSem = (rec.horario || '09:00').split(':');
+      var sH = parseInt(partsSem[0], 10) || 0;
+      var sM = parseInt(partsSem[1], 10) || 0;
+      var dias = Array.isArray(rec.diasSemana) && rec.diasSemana.length > 0 ? rec.diasSemana : [1, 3, 5];
+
+      var cDate = new Date(base.getFullYear(), base.getMonth(), base.getDate(), sH, sM, 0, 0);
+
+      // Se concluída hoje, pula o dia de hoje imediatamente
+      if (jaConcluidoNesteCiclo || cDate.getTime() <= base.getTime()) {
+        cDate.setDate(cDate.getDate() + 1);
+      }
+
+      // Procura o próximo dia da semana programado (até 7 dias)
+      for (var i = 0; i < 7; i++) {
+        var dayOfWeek = cDate.getDay();
+        if (dias.indexOf(dayOfWeek) !== -1) {
+          return cDate.toISOString();
+        }
+        cDate.setDate(cDate.getDate() + 1);
+      }
+      return cDate.toISOString();
+    }
+
+    return null;
+  }
+  window.calcularProximaExecucao = calcularProximaExecucao;
+
+  function obterConfigRecorrenciaDoModal() {
+    var freq = recorrenciaFrequenciaAtiva;
+    var rec = {
+      tipo: freq,
+      intervaloHoras: 1,
+      horario: '08:00',
+      diasSemana: [1, 3, 5],
+      proximaExecucao: null,
+      ultimoCicloConcluido: null
+    };
+
+    if (freq === 'horaria') {
+      var intEl = document.getElementById('rec-intervalo-horas');
+      rec.intervaloHoras = intEl ? parseInt(intEl.value, 10) : 1;
+    } else if (freq === 'diaria') {
+      var hEl = document.getElementById('rec-hora-diaria');
+      rec.horario = hEl ? hEl.value : '08:00';
+    } else if (freq === 'semanal') {
+      var hsEl = document.getElementById('rec-hora-semanal');
+      rec.horario = hsEl ? hsEl.value : '09:00';
+      var dias = [];
+      document.querySelectorAll('#rec-dias-semana-wrap .rec-day-pill.active').forEach(function(p){
+        dias.push(parseInt(p.getAttribute('data-day'), 10));
+      });
+      rec.diasSemana = dias.length > 0 ? dias : [1, 3, 5];
+    }
+    return rec;
+  }
+
+  function atualizarPreviaProximaExecucao() {
+    var textoEl = document.getElementById('rec-previa-texto');
+    var subEl = document.getElementById('rec-previa-sub');
+    if (!textoEl || !subEl) return;
+
+    var freq = recorrenciaFrequenciaAtiva;
+    if (freq === 'nenhuma') {
+      textoEl.textContent = 'Sem repetição programada.';
+      subEl.textContent = 'Esta rotina só será concluída uma única vez.';
+      return;
+    }
+
+    var tempRec = obterConfigRecorrenciaDoModal();
+    var proxISO = calcularProximaExecucao(tempRec, new Date(), true);
+    if (!proxISO) {
+      textoEl.textContent = 'Programação configurada.';
+      subEl.textContent = '';
+      return;
+    }
+
+    var d = new Date(proxISO);
+    var diasNomes = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+    var diaSemana = diasNomes[d.getDay()];
+    var horaFmt = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    var dataFmt = ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2);
+
+    textoEl.textContent = 'Próxima execução: ' + diaSemana + ' (' + dataFmt + ') às ' + horaFmt;
+    subEl.textContent = 'Ao ser marcada como concluída, permanecerá concluída até esta data/hora, quando voltará automaticamente para a lista alertando o plantão.';
+  }
+  window.atualizarPreviaProximaExecucao = atualizarPreviaProximaExecucao;
+
+  function salvarRecorrenciaItem() {
+    var itemId = document.getElementById('rec-item-id').value;
+    var item = checklistItems.find(function(it){ return it.id === itemId; });
+    if (!item) return;
+
+    var novaRec = obterConfigRecorrenciaDoModal();
+    if (novaRec.tipo !== 'nenhuma') {
+      novaRec.proximaExecucao = calcularProximaExecucao(novaRec, new Date(), !!item.concluido);
+    } else {
+      novaRec.proximaExecucao = null;
+    }
+
+    var titleInput = document.getElementById('rec-item-title-input');
+    if (titleInput && titleInput.value.trim()) {
+      item.titulo = titleInput.value.trim();
+    }
+
+    item.recorrencia = novaRec;
+    salvarRecorrenciaLocal(item.id, novaRec);
+    salvarChecklistStore();
+    renderChecklist();
+
+    if (item.padrao) salvarRotinaPadraoNuvem(item);
+    else salvarLembretePessoalNuvem(item);
+
+    if (typeof fecharPopup === 'function') {
+      fecharPopup('popup-recorrencia-checklist');
+    }
+    if (typeof mostrarToast === 'function') {
+      var msg = novaRec.tipo === 'nenhuma' ? 'Repetição desativada.' : 'Repetição agendada com sucesso!';
+      mostrarToast('Agendamento', msg, 'success');
+    }
+  }
+  window.salvarRecorrenciaItem = salvarRecorrenciaItem;
+
+  function removerRecorrenciaItem() {
+    selecionarFrequenciaRecorrencia('nenhuma');
+    salvarRecorrenciaItem();
+  }
+  window.removerRecorrenciaItem = removerRecorrenciaItem;
+
+  function verificarRecorrenciasChecklist() {
+    if (!Array.isArray(checklistItems) || checklistItems.length === 0) return;
+
+    var agora = Date.now();
+    var houveMudanca = false;
+
+    checklistItems.forEach(function(it) {
+      if (!it || !it.concluido) return;
+      if (!it.recorrencia || !it.recorrencia.tipo || it.recorrencia.tipo === 'nenhuma') return;
+
+      var proxISO = it.recorrencia.proximaExecucao;
+      if (!proxISO) return;
+
+      var proxTime = new Date(proxISO).getTime();
+      if (!isNaN(proxTime) && agora >= proxTime) {
+        console.log('[Checklist] ⏰ Ciclo expirado para: "' + it.titulo + '". Desmarcando dos concluídos e alertando...');
+        
+        // Período expirado: rotina sai dos concluídos e volta para os pendentes!
+        it.concluido = false;
+        it.concluidoEm = null;
+        it.recorrencia.proximaExecucao = calcularProximaExecucao(it.recorrencia, new Date(), false);
+        houveMudanca = true;
+
+        // Dispara Notificação Sonora e Toast
+        if (typeof mostrarToast === 'function') {
+          mostrarToast('⏰ Hora da Rotina!', 'Procedimento pendente de checagem: ' + it.titulo, 'warning');
+        }
+        if (typeof tocarSomNotificacao === 'function') {
+          try { tocarSomNotificacao(); } catch(e){}
+        }
+        if (typeof window.adicionarNotificacao === 'function') {
+          window.adicionarNotificacao('Rotina Agendada', 'Procedimento pendente de checagem: ' + it.titulo, 'alerta');
+        }
+
+        // Persiste o novo ciclo
+        if (it.padrao) salvarRotinaPadraoNuvem(it);
+        else salvarLembretePessoalNuvem(it);
+        salvarRecorrenciaLocal(it.id, it.recorrencia);
+      }
+    });
+
+    if (houveMudanca) {
+      salvarChecklistStore();
+      renderChecklist();
+    }
+  }
+  window.verificarRecorrenciasChecklist = verificarRecorrenciasChecklist;
+
+  // Intervalo periódico a cada 30 segundos para checagem ativa de ciclos
+  setInterval(function() {
+    verificarReseteMeiaNoite();
+    verificarRecorrenciasChecklist();
+  }, 30000);
+
+  // Verificação ao retornar foco à página
+  window.addEventListener('focus', function() {
+    verificarReseteMeiaNoite();
+    verificarRecorrenciasChecklist();
+  });
 

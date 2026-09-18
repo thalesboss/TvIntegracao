@@ -8,6 +8,9 @@ function abrirPopup(id) {
     el.style.setProperty('display', 'flex', 'important');
     el.style.pointerEvents = 'auto';
   }
+  if ((id === 'popup-nova-oc' || id === 'popup-editar-oc') && typeof atualizarSelectEquipamentosNovaOc === 'function') {
+    atualizarSelectEquipamentosNovaOc();
+  }
 }
 function fecharPopup(id) {
   var el = document.getElementById(id);

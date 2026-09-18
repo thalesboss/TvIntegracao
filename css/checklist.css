@@ -585,3 +585,94 @@
   margin-bottom: 10px;
   opacity: 0.5;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   RECORRÊNCIA E AGENDAMENTO
+   ═══════════════════════════════════════════════════════════ */
+
+/* Segmento */
+.rec-segment-btn {
+  border: none;
+  background: transparent;
+  padding: 8px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted, #8e8e93);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+  user-select: none;
+}
+
+.rec-segment-btn:hover:not(.active) {
+  color: var(--txt, #1c1c1e);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.rec-segment-btn.active {
+  background: #ffffff;
+  color: #007aff;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 0.5px 1px rgba(0, 0, 0, 0.06);
+}
+
+/* Pilular Circulares dos dias (D S T Q Q S S) */
+.rec-day-pill {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-lt, #e5e5ea);
+  background: var(--surface, #ffffff);
+  color: var(--txt, #1c1c1e);
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+  user-select: none;
+}
+
+.rec-day-pill:hover:not(.active) {
+  background: rgba(0, 122, 255, 0.08);
+  border-color: rgba(0, 122, 255, 0.3);
+  color: #007aff;
+}
+
+.rec-day-pill.active {
+  background: #007aff;
+  color: #ffffff;
+  border-color: #007aff;
+  box-shadow: 0 3px 10px rgba(0, 122, 255, 0.35);
+  transform: scale(1.04);
+}
+
+/* Badge de Recorrência nos Itens */
+.reminder-rec-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  background: rgba(88, 86, 214, 0.1);
+  color: #5856d6;
+  border: 1px solid rgba(88, 86, 214, 0.2);
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reminder-rec-badge:hover {
+  background: rgba(88, 86, 214, 0.18);
+  border-color: rgba(88, 86, 214, 0.4);
+}
+
+.reminder-action-btn.repeat:hover {
+  color: #007aff;
+  background: rgba(0, 122, 255, 0.1);
+}

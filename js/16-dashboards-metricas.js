@@ -350,6 +350,11 @@
     }
 
     renderDashboards();
+    try {
+      if (typeof window.atualizarSelectsEquipamentosCTRS === 'function') {
+        window.atualizarSelectsEquipamentosCTRS();
+      }
+    } catch(eEq) {}
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.salvarNovoEquipamentoDashboard = salvarNovoEquipamentoDashboard;

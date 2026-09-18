@@ -452,17 +452,36 @@
           '<div style="display:flex;flex-direction:column;gap:10px;">';
 
       anexos.forEach(function(anx) {
+        if (!anx) return;
+        var fName = (anx.name || anx.nome || anx.fileName || '').toLowerCase();
         var fType = (anx.type || '').toLowerCase();
-        var fName = (anx.name || '').toLowerCase();
-        var isImg = fType.startsWith('image/') || fName.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i);
-        var mediaSrc = anx.url || anx.dataUrl || '';
+        var mediaSrc = anx.url || anx.dataUrl || (typeof anx === 'string' ? anx : '');
+        if (!mediaSrc && anx.caminho) mediaSrc = anx.caminho;
+
+        var isImg = fType.startsWith('image/') || 
+                    mediaSrc.startsWith('data:image/') || 
+                    fName.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i) ||
+                    mediaSrc.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i);
+
+        var isVid = fType.startsWith('video/') || 
+                    mediaSrc.startsWith('data:video/') || 
+                    fName.match(/\.(mp4|webm|mov|mkv|avi|ogg)$/i) ||
+                    mediaSrc.match(/\.(mp4|webm|mov|mkv|avi|ogg)(\?.*)?$/i);
 
         if (isImg && mediaSrc) {
-          var safeName = (anx.name ? anx.name.replace(/'/g, "\\'") : 'Imagem Anexa');
           mediaHTML +=
             '<div style="text-align:center;background:var(--surface);padding:8px;border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
-              '<img src="' + mediaSrc + '" alt="' + (anx.name || 'Imagem') + '" loading="lazy" style="max-width:100%;max-height:300px;border-radius:var(--r-md);cursor:pointer;object-fit:contain;transition:transform 0.15s ease;" onmouseover="this.style.transform=\'scale(1.01)\'" onmouseout="this.style.transform=\'scale(1)\'" onclick="abrirQuickLook(this.src, \'' + safeName + '\')"/>' +
-              '<div style="font-size:11px;color:var(--blue);font-weight:600;margin-top:6px;cursor:pointer;" onclick="abrirQuickLook(\'' + mediaSrc + '\', \'' + safeName + '\')">📷 ' + (anx.name || 'Imagem') + ' (clique para ampliar no Quick Look)</div>' +
+              '<img src="' + mediaSrc + '" alt="Imagem Anexa" loading="lazy" style="max-width:100%;max-height:300px;border-radius:var(--r-md);cursor:pointer;object-fit:contain;transition:transform 0.15s ease;" onmouseover="this.style.transform=\'scale(1.01)\'" onmouseout="this.style.transform=\'scale(1)\'" onclick="abrirQuickLook(this.src, \'Imagem Anexa\')"/>' +
+              '<div style="font-size:11px;color:var(--blue);font-weight:600;margin-top:6px;cursor:pointer;" onclick="var img=this.previousElementSibling; if(img) abrirQuickLook(img.src, \'Imagem Anexa\');">🔍 Clique para ampliar</div>' +
+            '</div>';
+        } else if (isVid && mediaSrc) {
+          mediaHTML +=
+            '<div style="background:var(--surface);padding:10px;border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
+              '<video src="' + mediaSrc + '" controls style="width:100%;max-height:360px;border-radius:var(--r-md);background:#000;" preload="metadata"></video>' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding:0 2px;">' +
+                '<span style="font-size:11.5px;color:var(--txt);font-weight:600;">🎬 Vídeo Anexado</span>' +
+                '<a href="' + mediaSrc + '" target="_blank" download="video_anexo" class="btn btn-ghost btn-xs">Baixar Vídeo</a>' +
+              '</div>' +
             '</div>';
         } else if (mediaSrc) {
           mediaHTML +=
