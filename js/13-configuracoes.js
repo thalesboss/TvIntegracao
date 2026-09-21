@@ -170,11 +170,28 @@
 
     localStorage.setItem(USER_NAME_STORAGE_KEY, nome);
     atualizarNomeOperadorUI(nome);
-    try { if (typeof obterOuCriarOperadorPorNome === 'function') obterOuCriarOperadorPorNome(nome); } catch(e) {}
+    try {
+      if (typeof obterOuCriarOperadorPorNome === 'function') {
+        await new Promise(function(resolve) {
+          obterOuCriarOperadorPorNome(nome, function(id) {
+            resolve(id);
+          });
+          setTimeout(resolve, 2500);
+        });
+      }
+    } catch(e) {}
+    try { if (typeof carregarOperadoresSugeridos === 'function') carregarOperadoresSugeridos(); } catch(e) {}
 
     var pracaEl = document.getElementById('ident-operador-praca');
     if (pracaEl && pracaEl.value && typeof setPracaAtual === 'function') {
       setPracaAtual(pracaEl.value);
+    }
+
+    if (typeof DBService !== 'undefined' && typeof DBService.syncRemote === 'function') {
+      await DBService.syncRemote(true);
+    }
+    if (typeof renderAll === 'function') {
+      renderAll(true);
     }
 
     fecharPopup('popup-identificacao-operador');
@@ -191,21 +208,6 @@
     }
   }
   window.confirmarIdentificacaoOperador = confirmarIdentificacaoOperador;
-
-  function toggleVisibilidadeChaveAcesso() {
-    var input = document.getElementById('ident-chave-acesso');
-    var ico = document.getElementById('ident-chave-eye');
-    if (!input) return;
-    if (input.type === 'password') {
-      input.type = 'text';
-      if (ico) ico.setAttribute('data-lucide', 'eye-off');
-    } else {
-      input.type = 'password';
-      if (ico) ico.setAttribute('data-lucide', 'eye');
-    }
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-  }
-  window.toggleVisibilidadeChaveAcesso = toggleVisibilidadeChaveAcesso;
 
   function mutarNotificacoes(mutado) {
     var dot   = document.querySelector('.notif-dot');

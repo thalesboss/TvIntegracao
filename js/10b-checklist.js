@@ -481,6 +481,7 @@
     }
     return { url: url ? url.replace(/\/+$/, '') : '', key: key };
   }
+  window.getDBCredentials = getDBCredentials;
 
   function carregarOperadoresSugeridos() {
     var datalist = document.getElementById('lista-operadores-sugeridos');
@@ -556,7 +557,7 @@
       queryFilter = 'padrao=eq.true';
     }
 
-    var endpoint = db.url + '/rest/v1/checklist_itens?select=*&' + queryFilter + '&order=criado_em.asc';
+    var endpoint = db.url + '/rest/v1/checklist_itens?select=*&categoria=not.in.(reporter,rc)&' + queryFilter + '&order=criado_em.asc';
 
     fetch(endpoint, {
       headers: {
@@ -568,6 +569,9 @@
     .then(function(res) { return res.ok ? res.json() : null; })
     .then(function(cloudItens) {
       if (Array.isArray(cloudItens)) {
+        cloudItens = cloudItens.filter(function(c) {
+          return c && c.categoria !== 'reporter' && c.categoria !== 'rc';
+        });
         var recMap = carregarRecorrenciasLocais();
         var itensProcessados = cloudItens.map(function(c) {
           var rec = c.recorrencia || recMap[c.id] || null;

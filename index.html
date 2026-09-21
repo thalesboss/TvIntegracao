@@ -79,12 +79,7 @@
           <span id="ident-chave-label">Chave de Acesso *</span>
           <span id="ident-chave-hint" style="font-size:11px;font-weight:400;color:var(--muted);">Senha de acesso</span>
         </label>
-        <div style="position:relative;display:flex;align-items:center;">
-          <input type="password" id="ident-chave-acesso" placeholder="Digite sua chave de acesso..." style="width:100%;font-size:13px;padding:9px 36px 9px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);" autocomplete="current-password" />
-          <button type="button" onclick="toggleVisibilidadeChaveAcesso()" title="Mostrar/Ocultar chave" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);display:flex;align-items:center;justify-content:center;">
-            <i data-lucide="eye" id="ident-chave-eye" style="width:16px;height:16px;"></i>
-          </button>
-        </div>
+        <input type="password" id="ident-chave-acesso" placeholder="Digite sua chave de acesso..." style="width:100%;font-size:13px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);" autocomplete="current-password" />
         <div id="ident-chave-msg" style="font-size:11.5px;margin-top:4px;display:none;line-height:1.4;"></div>
       </div>
     </div>
@@ -827,6 +822,42 @@
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════
+     POPUP: NOVO PROFISSIONAL EQUIPE (REPÓRTER / RC)
+═══════════════════════════════════════ -->
+<div class="overlay" id="popup-novo-profissional" hidden role="dialog" aria-modal="true" aria-labelledby="novo-prof-title">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <div class="modal-icon" style="background:var(--blue);">
+        <i data-lucide="user-plus" style="width:17px;height:17px;color:#fff;stroke-width:2;"></i>
+      </div>
+      <div>
+        <h3 class="modal-title" id="novo-prof-title">Cadastrar Profissional</h3>
+        <p class="modal-subtitle" id="novo-prof-subtitle">Cadastrar repórter ou operador de câmera</p>
+      </div>
+      <button class="modal-close-btn" onclick="fecharPopup('popup-novo-profissional')" title="Fechar"><i data-lucide="x" style="width:15px;height:15px;"></i></button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
+      <input type="hidden" id="novo-prof-tipo" value="reporter" />
+      <div class="frow">
+        <label for="novo-prof-nome" id="novo-prof-nome-label">Nome Completo *</label>
+        <input id="novo-prof-nome" type="text" placeholder="Ex: Nome Sobrenome" style="font-weight:600;" onkeydown="if(event.key==='Enter') salvarNovoProfissionalEquipe()" />
+      </div>
+      <div class="frow">
+        <label for="novo-prof-categoria">Função / Cargo</label>
+        <select id="novo-prof-categoria" onchange="document.getElementById('novo-prof-tipo').value = this.value">
+          <option value="reporter">Repórter</option>
+          <option value="rc">Repórter Cinematográfico (RC)</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;">
+      <button class="btn btn-ghost" onclick="fecharPopup('popup-novo-profissional')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarNovoProfissionalEquipe()">Cadastrar Profissional</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- ═══════════════════════════════════════
      POPUP: PROPOR ITEM NO ORÇAMENTO
@@ -1386,9 +1417,9 @@
                 <div class="frow"><label>Hora Final (Teste OK)</label><input type="time"/></div>
                 <div class="frow"><label>Qualidade do Áudio</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>
                 <div class="frow"><label>Qualidade do Vídeo</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>
-                <div class="frow"><label>Repórter</label><input type="text" placeholder="Nome do repórter"/></div>
+                <div class="frow"><label>Repórter</label><select class="ctrs-reporter-select"><option value="">Selecione o repórter...</option></select></div>
                 <div class="frow"><label>Entradas</label><input type="text" placeholder="Ex: 2 entradas conformes — externo"/></div>
-                <div class="frow"><label>Repórter Cinematográfico</label><input type="text" placeholder="Nome do RC"/></div>
+                <div class="frow"><label>Repórter Cinematográfico</label><select class="ctrs-rc-select"><option value="">Selecione o RC...</option></select></div>
                 <div class="frow"><label>Status da Transmissão</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>
               </div>
               <div class="frow"><label>Observações</label><textarea placeholder="Descreva as falhas ou observações. Se nenhuma, deixe em branco."></textarea></div>
@@ -1421,8 +1452,8 @@
                 <div class="frow"><label>Hora Abertura Sinal</label><input type="time"/></div><div class="frow"><label>Hora Final (Teste OK)</label><input type="time"/></div>
                 <div class="frow"><label>Qualidade do Áudio</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>
                 <div class="frow"><label>Qualidade do Vídeo</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>
-                <div class="frow"><label>Repórter</label><input type="text"/></div><div class="frow"><label>Entradas</label><input type="text"/></div>
-                <div class="frow"><label>Repórter Cinematográfico</label><input type="text"/></div>
+                <div class="frow"><label>Repórter</label><select class="ctrs-reporter-select"><option value="">Selecione o repórter...</option></select></div><div class="frow"><label>Entradas</label><input type="text"/></div>
+                <div class="frow"><label>Repórter Cinematográfico</label><select class="ctrs-rc-select"><option value="">Selecione o RC...</option></select></div>
                 <div class="frow"><label>Status da Transmissão</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>
               </div>
               <div class="frow"><label>Observações</label><textarea></textarea></div>
@@ -1455,8 +1486,8 @@
                 <div class="frow"><label>Hora Abertura Sinal</label><input type="time"/></div><div class="frow"><label>Hora Final (Teste OK)</label><input type="time"/></div>
                 <div class="frow"><label>Qualidade do Áudio</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>
                 <div class="frow"><label>Qualidade do Vídeo</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>
-                <div class="frow"><label>Repórter</label><input type="text"/></div><div class="frow"><label>Entradas</label><input type="text"/></div>
-                <div class="frow"><label>Repórter Cinematográfico</label><input type="text"/></div>
+                <div class="frow"><label>Repórter</label><select class="ctrs-reporter-select"><option value="">Selecione o repórter...</option></select></div><div class="frow"><label>Entradas</label><input type="text"/></div>
+                <div class="frow"><label>Repórter Cinematográfico</label><select class="ctrs-rc-select"><option value="">Selecione o RC...</option></select></div>
                 <div class="frow"><label>Status da Transmissão</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>
               </div>
               <div class="frow"><label>Observações</label><textarea></textarea></div>
@@ -1489,8 +1520,8 @@
                 <div class="frow"><label>Hora Abertura Sinal</label><input type="time"/></div><div class="frow"><label>Hora Final (Teste OK)</label><input type="time"/></div>
                 <div class="frow"><label>Qualidade do Áudio</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>
                 <div class="frow"><label>Qualidade do Vídeo</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>
-                <div class="frow"><label>Repórter</label><input type="text"/></div><div class="frow"><label>Entradas</label><input type="text"/></div>
-                <div class="frow"><label>Repórter Cinematográfico</label><input type="text"/></div>
+                <div class="frow"><label>Repórter</label><select class="ctrs-reporter-select"><option value="">Selecione o repórter...</option></select></div><div class="frow"><label>Entradas</label><input type="text"/></div>
+                <div class="frow"><label>Repórter Cinematográfico</label><select class="ctrs-rc-select"><option value="">Selecione o RC...</option></select></div>
                 <div class="frow"><label>Status da Transmissão</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>
               </div>
               <div class="frow"><label>Observações</label><textarea></textarea></div>
@@ -2510,8 +2541,17 @@
 
 </div><!-- /main -->
 
+<script>
+  // Pacote Criptografado Global (AES-256-GCM + PBKDF2)
+  // Descriptografado em tempo de execução via Chave de Acesso da Equipe (@Integra2620)
+  window.ENCRYPTED_TV_CREDENTIALS = {
+    salt: '9f6ca6650ad6670436a478d785b65dbd',
+    iv: '289b276d312c24f6a3d6102e',
+    data: '9c1e2b61b20cc9d3596ad6bb98944e2acce2ffeaab2e2e43c669d3a2a6918f761be4d464e984b4255195293aaa0d6cf993381959d332101d0d01bec6a89f08421d11a8e26be003711dd3602b37cad059ef6eefd47bc0615a9b26b050bcc25ca36a98cb18b46541aeb86b07cf32206a4e8699adaa0f8493e124'
+  };
+</script>
 <script src="config.js" onerror="window.ENV_CONFIG=window.ENV_CONFIG||{};"></script>
-<script src="script.js?v=8.0"></script>
+<script src="script.js?v=8.7"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof lucide !== 'undefined') lucide.createIcons();

@@ -84,10 +84,7 @@
   window.obterOpcoesEquipamentosHTML = obterOpcoesEquipamentosHTML;
 
   function atualizarSelectsEquipamentosCTRS() {
-    var selects = document.querySelectorAll('#ctrs-acc-container select.ctrs-infra-select, #ctrs-acc-container .acc-block select:nth-of-type(1)');
-    if (!selects || selects.length === 0) {
-      selects = document.querySelectorAll('.ctrs-infra-select');
-    }
+    var selects = document.querySelectorAll('.ctrs-infra-select');
     selects.forEach(function(sel) {
       var currentVal = sel.value;
       sel.innerHTML = obterOpcoesEquipamentosHTML(currentVal);
@@ -110,6 +107,398 @@
     });
   }
   window.atualizarSelectsEquipamentosCTRS = atualizarSelectsEquipamentosCTRS;
+
+  /* ═══════════════════════════════════════════
+     EQUIPE DE JORNALISMO (REPÓRTERES E RCs)
+     Separado estritamente por Praça (Juiz de Fora e Uberlândia)
+     Sincronizado na Nuvem (Supabase checklist_itens)
+     Zero nomes em código fonte / Git
+  ═══════════════════════════════════════════ */
+  var EQUIPE_STORAGE_KEY = 'tv_equipe_jornalismo_v3';
+
+  function normalizarPracaEquipe(praca) {
+    var p = (praca || '').toLowerCase();
+    if (p.indexOf('uber') !== -1 || p.indexOf('udi') !== -1) {
+      return 'Uberlândia';
+    }
+    return 'Juiz de Fora';
+  }
+  window.normalizarPracaEquipe = normalizarPracaEquipe;
+
+  function carregarEquipeLocal() {
+    var padrao = {
+      'Juiz de Fora': { reporteres: [], rcs: [] },
+      'Uberlândia': { reporteres: [], rcs: [] }
+    };
+    try {
+      localStorage.removeItem('tv_equipe_jornalismo_v1');
+      localStorage.removeItem('tv_equipe_jornalismo_v2');
+      localStorage.removeItem('tv_equipe_jornalismo');
+      var raw = localStorage.getItem(EQUIPE_STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          var filtrarValidos = function(lista) {
+            if (!Array.isArray(lista)) return [];
+            return lista.filter(function(it) {
+              var n = (typeof it === 'string' ? it : (it.nome || it.titulo || '')).trim();
+              var low = n.toLowerCase();
+              return n && low.indexOf('exclusivo') === -1 && low.indexOf('teste') === -1 && n.indexOf('Ã') === -1;
+            });
+          };
+          if (parsed['Juiz de Fora']) {
+            padrao['Juiz de Fora'].reporteres = filtrarValidos(parsed['Juiz de Fora'].reporteres);
+            padrao['Juiz de Fora'].rcs = filtrarValidos(parsed['Juiz de Fora'].rcs);
+          }
+          if (parsed['Uberlândia']) {
+            padrao['Uberlândia'].reporteres = filtrarValidos(parsed['Uberlândia'].reporteres);
+            padrao['Uberlândia'].rcs = filtrarValidos(parsed['Uberlândia'].rcs);
+          }
+          return padrao;
+        }
+      }
+    } catch(e) {}
+    return padrao;
+  }
+  window.carregarEquipeLocal = carregarEquipeLocal;
+
+  function salvarEquipeLocal(dados) {
+    try {
+      localStorage.setItem(EQUIPE_STORAGE_KEY, JSON.stringify(dados));
+    } catch(e) {
+      console.warn('Erro ao salvar equipe local:', e);
+    }
+  }
+  window.salvarEquipeLocal = salvarEquipeLocal;
+
+  function obterOpcoesReporteresHTML(selectedVal) {
+    var praca = normalizarPracaEquipe(typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora');
+    var equipe = carregarEquipeLocal();
+    var lista = (equipe[praca] && Array.isArray(equipe[praca].reporteres)) ? equipe[praca].reporteres : [];
+    var isConectado = (typeof isEstacaoConectadaTV === 'function') ? isEstacaoConectadaTV() : false;
+    var html = '<option value="">Selecione o repórter...</option>';
+    
+    var jaSelecionado = false;
+    lista.forEach(function(rep) {
+      var nome = typeof rep === 'string' ? rep : (rep.nome || rep.titulo || '');
+      if (!nome) return;
+      var isSel = (nome === selectedVal);
+      if (isSel) jaSelecionado = true;
+      html += '<option value="' + escapeHTML(nome) + '"' + (isSel ? ' selected' : '') + '>' + escapeHTML(nome) + '</option>';
+    });
+
+    var outraPraca = (praca === 'Juiz de Fora') ? 'Uberlândia' : 'Juiz de Fora';
+    var pertenceOutraPraca = equipe[outraPraca] && (
+      (equipe[outraPraca].reporteres || []).some(function(r){ return (r.nome || r.titulo || r) === selectedVal; })
+    );
+
+    if (!pertenceOutraPraca && selectedVal && !jaSelecionado && selectedVal !== '__novo_reporter__') {
+      html += '<option value="' + escapeHTML(selectedVal) + '" selected>' + escapeHTML(selectedVal) + '</option>';
+    }
+
+    if (isConectado) {
+      html += '<option value="__novo_reporter__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo Repórter...</option>';
+    }
+    return html;
+  }
+  window.obterOpcoesReporteresHTML = obterOpcoesReporteresHTML;
+
+  function obterOpcoesRCsHTML(selectedVal) {
+    var praca = normalizarPracaEquipe(typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora');
+    var equipe = carregarEquipeLocal();
+    var lista = (equipe[praca] && Array.isArray(equipe[praca].rcs)) ? equipe[praca].rcs : [];
+    var isConectado = (typeof isEstacaoConectadaTV === 'function') ? isEstacaoConectadaTV() : false;
+    var html = '<option value="">Selecione o RC...</option>';
+
+    var jaSelecionado = false;
+    lista.forEach(function(rc) {
+      var nome = typeof rc === 'string' ? rc : (rc.nome || rc.titulo || '');
+      if (!nome) return;
+      var isSel = (nome === selectedVal);
+      if (isSel) jaSelecionado = true;
+      html += '<option value="' + escapeHTML(nome) + '"' + (isSel ? ' selected' : '') + '>' + escapeHTML(nome) + '</option>';
+    });
+
+    var outraPraca = (praca === 'Juiz de Fora') ? 'Uberlândia' : 'Juiz de Fora';
+    var pertenceOutraPraca = equipe[outraPraca] && (
+      (equipe[outraPraca].rcs || []).some(function(r){ return (r.nome || r.titulo || r) === selectedVal; })
+    );
+
+    if (!pertenceOutraPraca && selectedVal && !jaSelecionado && selectedVal !== '__novo_rc__') {
+      html += '<option value="' + escapeHTML(selectedVal) + '" selected>' + escapeHTML(selectedVal) + '</option>';
+    }
+
+    if (isConectado) {
+      html += '<option value="__novo_rc__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo RC...</option>';
+    }
+    return html;
+  }
+  window.obterOpcoesRCsHTML = obterOpcoesRCsHTML;
+
+  function atualizarSelectsProfissionaisCTRS() {
+    var repSelects = document.querySelectorAll('.ctrs-reporter-select');
+    repSelects.forEach(function(sel) {
+      var currentVal = sel.value;
+      sel.innerHTML = obterOpcoesReporteresHTML(currentVal);
+      if (currentVal && currentVal !== '__novo_reporter__') {
+        var match = Array.from(sel.options).some(function(o){ return o.value === currentVal; });
+        sel.value = match ? currentVal : '';
+      }
+      if (!sel._hasNovoProfListener) {
+        sel._hasNovoProfListener = true;
+        sel.addEventListener('change', function() {
+          if (this.value === '__novo_reporter__') {
+            this.value = '';
+            abrirModalNovoProfissional('reporter', this);
+          }
+        });
+      }
+    });
+
+    var rcSelects = document.querySelectorAll('.ctrs-rc-select');
+    rcSelects.forEach(function(sel) {
+      var currentVal = sel.value;
+      sel.innerHTML = obterOpcoesRCsHTML(currentVal);
+      if (currentVal && currentVal !== '__novo_rc__') {
+        var match = Array.from(sel.options).some(function(o){ return o.value === currentVal; });
+        sel.value = match ? currentVal : '';
+      }
+      if (!sel._hasNovoProfListener) {
+        sel._hasNovoProfListener = true;
+        sel.addEventListener('change', function() {
+          if (this.value === '__novo_rc__') {
+            this.value = '';
+            abrirModalNovoProfissional('rc', this);
+          }
+        });
+      }
+    });
+  }
+  window.atualizarSelectsProfissionaisCTRS = atualizarSelectsProfissionaisCTRS;
+
+  function abrirModalNovoProfissional(tipo, triggeringSelect) {
+    if (typeof isEstacaoConectadaTV === 'function' && !isEstacaoConectadaTV()) {
+      alert('Atenção: Apenas operadores conectados ao banco de dados podem cadastrar novos profissionais.');
+      return;
+    }
+
+    tipo = (tipo === 'rc') ? 'rc' : 'reporter';
+    window._profTriggeringSelect = triggeringSelect || null;
+    var pracaAtiva = normalizarPracaEquipe(typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora');
+
+    var tipoEl = document.getElementById('novo-prof-tipo');
+    var catEl  = document.getElementById('novo-prof-categoria');
+    var nomeEl = document.getElementById('novo-prof-nome');
+    var titEl  = document.getElementById('novo-prof-title');
+    var subEl  = document.getElementById('novo-prof-subtitle');
+
+    if (tipoEl) tipoEl.value = tipo;
+    if (catEl)  catEl.value = tipo;
+    if (nomeEl) {
+      nomeEl.value = '';
+      setTimeout(function() { nomeEl.focus(); }, 150);
+    }
+
+    if (titEl) {
+      titEl.textContent = (tipo === 'rc') ? 'Cadastrar Novo RC (' + pracaAtiva + ')' : 'Cadastrar Novo Repórter (' + pracaAtiva + ')';
+    }
+    if (subEl) {
+      subEl.textContent = (tipo === 'rc')
+        ? 'Cadastre o Repórter Cinematográfico para a praça ' + pracaAtiva
+        : 'Cadastre o Repórter para a praça ' + pracaAtiva;
+    }
+
+    abrirPopup('popup-novo-profissional');
+  }
+  window.abrirModalNovoProfissional = abrirModalNovoProfissional;
+
+  function obterCredenciaisDB() {
+    if (typeof getDBCredentials === 'function') return getDBCredentials();
+    if (typeof window !== 'undefined' && typeof window.getDBCredentials === 'function') return window.getDBCredentials();
+    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
+    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
+    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
+      url = window.ENV_CONFIG.SUPABASE_URL;
+    }
+    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
+      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
+    }
+    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
+  }
+
+  async function salvarNovoProfissionalEquipe() {
+    if (typeof isEstacaoConectadaTV === 'function' && !isEstacaoConectadaTV()) {
+      alert('Você precisa estar conectado ao banco de dados para cadastrar profissionais.');
+      return;
+    }
+
+    var tipoEl = document.getElementById('novo-prof-tipo');
+    var nomeEl = document.getElementById('novo-prof-nome');
+    var nome = (nomeEl ? nomeEl.value : '').trim();
+    var tipo = (tipoEl ? tipoEl.value : 'reporter').toLowerCase();
+    var pracaAtiva = normalizarPracaEquipe(typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora');
+
+    if (!nome) {
+      alert('Por favor, informe o nome do profissional.');
+      if (nomeEl) nomeEl.focus();
+      return;
+    }
+
+    var equipe = carregarEquipeLocal();
+    var chaveLista = (tipo === 'rc') ? 'rcs' : 'reporteres';
+    if (!equipe[pracaAtiva]) equipe[pracaAtiva] = { reporteres: [], rcs: [] };
+
+    var existe = equipe[pracaAtiva][chaveLista].some(function(item) {
+      var n = typeof item === 'string' ? item : (item.nome || item.titulo || '');
+      return n.toLowerCase() === nome.toLowerCase();
+    });
+
+    if (existe) {
+      alert('Este profissional já está cadastrado em ' + pracaAtiva + '.');
+      return;
+    }
+
+    var profId = 'prof_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+    var novoItem = { id: profId, nome: nome, categoria: tipo, praca: pracaAtiva };
+    equipe[pracaAtiva][chaveLista].push(novoItem);
+    salvarEquipeLocal(equipe);
+
+    var targetSelect = window._profTriggeringSelect;
+
+    fecharPopup('popup-novo-profissional');
+
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Profissional Cadastrado', nome + ' adicionado a ' + pracaAtiva + '.', 'success');
+    }
+
+    atualizarSelectsProfissionaisCTRS();
+
+    if (targetSelect) {
+      try {
+        targetSelect.value = nome;
+      } catch(e) {}
+    }
+
+    // Sincroniza diretamente no Supabase em checklist_itens
+    var db = obterCredenciaisDB();
+    if (db && db.url && db.key) {
+      try {
+        var payload = {
+          id: profId,
+          titulo: nome,
+          categoria: tipo,
+          operador_nome: pracaAtiva,
+          padrao: false,
+          concluido: false
+        };
+        var res = await fetch(db.url.replace(/\/$/, '') + '/rest/v1/checklist_itens', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': db.key,
+            'Authorization': 'Bearer ' + db.key,
+            'Prefer': 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          var errText = await res.text();
+          console.error('[Equipe Nuvem] Erro ao salvar profissional no banco:', res.status, errText);
+        } else {
+          console.log('[Equipe Nuvem] ✅ Profissional sincronizado na nuvem com sucesso:', nome, '(' + pracaAtiva + ')');
+        }
+      } catch(eNuvem) {
+        console.warn('[Equipe Nuvem] Falha de conexão ao enviar para nuvem:', eNuvem);
+      }
+    }
+  }
+  window.salvarNovoProfissionalEquipe = salvarNovoProfissionalEquipe;
+
+  function removerProfissionalEquipe(id, tipo, nome, praca) {
+    praca = normalizarPracaEquipe(praca || (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora'));
+    if (!confirm('Deseja realmente remover "' + nome + '" de ' + praca + '?')) {
+      return;
+    }
+
+    var equipe = carregarEquipeLocal();
+    var chaveLista = (tipo === 'rc') ? 'rcs' : 'reporteres';
+    if (equipe[praca]) {
+      equipe[praca][chaveLista] = equipe[praca][chaveLista].filter(function(item) {
+        var itemId = typeof item === 'string' ? item : (item.id || item.nome);
+        return itemId !== id && item.nome !== nome;
+      });
+    }
+
+    salvarEquipeLocal(equipe);
+    atualizarSelectsProfissionaisCTRS();
+
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Profissional Removido', nome + ' foi removido da equipe.', 'info');
+    }
+
+    var db = obterCredenciaisDB();
+    if (db && db.url && db.key && id) {
+      try {
+        fetch(db.url.replace(/\/$/, '') + '/rest/v1/checklist_itens?id=eq.' + encodeURIComponent(id), {
+          method: 'DELETE',
+          headers: {
+            'apikey': db.key,
+            'Authorization': 'Bearer ' + db.key
+          }
+        }).catch(function(err) { console.error('[Equipe Nuvem] Erro ao excluir:', err); });
+      } catch(eDel) {
+        console.warn('[Equipe Nuvem] Falha ao excluir na nuvem:', eDel);
+      }
+    }
+  }
+  window.removerProfissionalEquipe = removerProfissionalEquipe;
+
+  async function sincronizarEquipeNuvem() {
+    var db = obterCredenciaisDB();
+    if (!db || !db.url || !db.key) return;
+
+    try {
+      var url = db.url.replace(/\/$/, '') + '/rest/v1/checklist_itens?select=id,titulo,categoria,operador_nome&categoria=in.(reporter,rc)&order=titulo.asc&limit=1000';
+      var res = await fetch(url, {
+        headers: {
+          'apikey': db.key,
+          'Authorization': 'Bearer ' + db.key,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+      if (!res.ok) return;
+      var data = await res.json();
+      if (!Array.isArray(data)) return;
+
+      var repMap = {
+        'Juiz de Fora': { reporteres: [], rcs: [] },
+        'Uberlândia': { reporteres: [], rcs: [] }
+      };
+
+      data.forEach(function(item) {
+        if (!item || !item.titulo) return;
+        var titulo = item.titulo.trim();
+        var low = titulo.toLowerCase();
+        // Filtrar qualquer resquício de itens de teste antigos
+        if (low.indexOf('exclusivo') !== -1 || low.indexOf('teste') !== -1 || titulo.indexOf('Ã') !== -1) return;
+        
+        var pNorm = normalizarPracaEquipe(item.operador_nome);
+        var p = { id: item.id, nome: titulo, categoria: item.categoria, praca: pNorm };
+        if (item.categoria === 'rc') {
+          repMap[pNorm].rcs.push(p);
+        } else {
+          repMap[pNorm].reporteres.push(p);
+        }
+      });
+
+      salvarEquipeLocal(repMap);
+      atualizarSelectsProfissionaisCTRS();
+    } catch(err) {
+      console.warn('[Equipe Nuvem] Erro ao sincronizar equipe:', err);
+    }
+  }
+  window.sincronizarEquipeNuvem = sincronizarEquipeNuvem;
 
   function adicionarTransmissaoCTRS(silencioso) {
     var container = document.getElementById('ctrs-acc-container');
@@ -138,9 +527,9 @@
           '<div class="frow"><label>Hora Final (Teste OK)</label><input type="time"/></div>' +
           '<div class="frow"><label>Qualidade do Áudio</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
           '<div class="frow"><label>Qualidade do Vídeo</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
-          '<div class="frow"><label>Repórter</label><input type="text" placeholder="Nome do repórter"/></div>' +
+          '<div class="frow"><label>Repórter</label><select class="ctrs-reporter-select">' + obterOpcoesReporteresHTML() + '</select></div>' +
           '<div class="frow"><label>Entradas</label><input type="text" placeholder="Ex: 2 entradas conformes — externo"/></div>' +
-          '<div class="frow"><label>Repórter Cinematográfico</label><input type="text" placeholder="Nome do RC"/></div>' +
+          '<div class="frow"><label>Repórter Cinematográfico</label><select class="ctrs-rc-select">' + obterOpcoesRCsHTML() + '</select></div>' +
           '<div class="frow"><label>Status da Transmissão</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
         '</div>' +
         '<div class="frow"><label>Observações</label><textarea placeholder="Descreva as falhas. Se nenhuma, deixe em branco."></textarea></div>' +
@@ -153,6 +542,8 @@
       '</div>';
 
     container.appendChild(div);
+    atualizarSelectsProfissionaisCTRS();
+    atualizarSelectsEquipamentosCTRS();
     if (typeof lucide !== 'undefined') lucide.createIcons();
     if (!silencioso) {
       salvarRascunhoRelatorioTV(true);
@@ -200,10 +591,9 @@
       var dataEl  = document.getElementById('ctrs-data');
       var pracaEl = document.getElementById('ctrs-praca');
       var tipoEl  = document.getElementById('ctrs-tipo');
-      var obsEl   = document.getElementById('ctrs-obs');
-
+      var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+      if (pracaEl) pracaEl.value = pracaAtiva;
       if (dataEl && dados.data)   dataEl.value = dados.data;
-      if (pracaEl && dados.praca) pracaEl.value = dados.praca;
       if (tipoEl && dados.tipo)   tipoEl.value = dados.tipo;
       if (obsEl && dados.obs)     obsEl.value = dados.obs;
 

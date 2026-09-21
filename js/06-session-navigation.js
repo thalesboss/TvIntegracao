@@ -128,6 +128,14 @@
     if (name === 'config') {
       try { carregarCredenciaisSupabaseConfig(); } catch(e) {}
     }
+    if (name === 'ctrs' || name === 'relatorio') {
+      var ctrsPraca = document.getElementById('ctrs-praca');
+      if (ctrsPraca && typeof getPracaAtual === 'function') {
+        ctrsPraca.value = getPracaAtual();
+      }
+      try { atualizarSelectsProfissionaisCTRS(); } catch(e) {}
+      try { atualizarSelectsEquipamentosCTRS(); } catch(e) {}
+    }
   }
   window.irPara = irPara;
 

@@ -149,8 +149,13 @@ document.addEventListener('DOMContentLoaded', function () {
   };
   window.TVCrypto = TVCrypto;
 
-  // Pacote Criptografado Global (pode ser definido em config.js, no script ou via localStorage)
-  window.ENCRYPTED_TV_CREDENTIALS = window.ENCRYPTED_TV_CREDENTIALS || (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS) || null;
+  // Pacote Criptografado Global de Alta Segurança (AES-256-GCM + PBKDF2)
+  // Descriptografado exclusivamente em memória pela Chave de Acesso da Equipe
+  window.ENCRYPTED_TV_CREDENTIALS = window.ENCRYPTED_TV_CREDENTIALS || (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS) || {
+    salt: '9f6ca6650ad6670436a478d785b65dbd',
+    iv: '289b276d312c24f6a3d6102e',
+    data: '9c1e2b61b20cc9d3596ad6bb98944e2acce2ffeaab2e2e43c669d3a2a6918f761be4d464e984b4255195293aaa0d6cf993381959d332101d0d01bec6a89f08421d11a8e26be003711dd3602b37cad059ef6eefd47bc0615a9b26b050bcc25ca36a98cb18b46541aeb86b07cf32206a4e8699adaa0f8493e124'
+  };
 
   function isEstacaoConectadaTV() {
     var u = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
@@ -220,7 +225,7 @@ document.addEventListener('DOMContentLoaded', function () {
         carregarCredenciaisSupabaseConfig();
       }
       if (typeof DBService.syncRemote === 'function') {
-        DBService.syncRemote();
+        await DBService.syncRemote(true);
       }
 
       return { ok: true, creds: creds };
@@ -427,130 +432,139 @@ document.addEventListener('DOMContentLoaded', function () {
     },
 
     syncRemote: function(force) {
-      var now = Date.now();
-      if (!force && this._lastSyncTime && (now - this._lastSyncTime < 15000)) {
-        return; // Evita chamadas repetidas desnecessárias em menos de 15 segundos
-      }
-      this._lastSyncTime = now;
-
       if (!this.url) this.url = (envConfig && envConfig.SUPABASE_URL && envConfig.SUPABASE_URL.indexOf('seu-projeto') === -1) ? envConfig.SUPABASE_URL : (localStorage.getItem('tv_supabase_url') || '');
       if (!this.key) this.key = (envConfig && envConfig.SUPABASE_ANON_KEY && envConfig.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) ? envConfig.SUPABASE_ANON_KEY : (localStorage.getItem('tv_supabase_key') || '');
       if (!this.url || !this.key) {
         updateCloudStatus(false, 'Modo Local');
-        return;
+        return Promise.resolve(false);
       }
+
+      var now = Date.now();
+      if (!force && this._lastSyncTime && (now - this._lastSyncTime < 15000)) {
+        return Promise.resolve(false); // Evita chamadas repetidas desnecessárias em menos de 15 segundos
+      }
+      this._lastSyncTime = now;
       this.mode = 'supabase';
       var self = this;
-      try {
-        // 1. Sincroniza Ocorrências em tempo real (Supabase REST) com limite inteligente
-        var urlOc = self.url.replace(/\/$/, '') + '/rest/v1/ocorrencias?select=*&order=criado.desc&limit=100';
-        fetch(urlOc, {
-          headers: {
-            'apikey': self.key,
-            'Authorization': 'Bearer ' + self.key,
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache'
-          },
-          cache: 'no-cache'
-        })
-        .then(function(res) {
-          if (res.ok) {
-            updateCloudStatus(true);
-            return res.json();
-          }
-          updateCloudStatus(false);
-          return null;
-        })
-        .then(function(remoteData) {
-          if (Array.isArray(remoteData)) {
-            var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
-            ocorrencias = mesclarOcorrencias(ocorrencias, remoteData, idsNaLixeira);
-            window.ocorrencias = ocorrencias;
-            try {
-              localStorage.setItem(OCORRENCIAS_CACHE_KEY, JSON.stringify(ocorrencias));
-            } catch(e) {}
-            var oldSig = (window._lastOcSyncSig || '');
-            var newSig = ocorrencias.map(function(o){ return o.id + '_' + o.status + '_' + (o.criado || 0); }).join('|');
-            if (oldSig !== newSig) {
-              window._lastOcSyncSig = newSig;
-              if (typeof renderAll === 'function') renderAll();
-            }
-          }
-        })
-        .catch(function(err) {
-          updateCloudStatus(false);
-          console.warn('[DBService Cloud Sync] Offline ou conectando ao Supabase...', err);
-        });
 
-        // 2. Sincroniza Histórico em tempo real (Supabase REST) com limite inteligente
-        var urlHist = self.url.replace(/\/$/, '') + '/rest/v1/historico?select=*&order=dataCriacao.desc&limit=100';
-        fetch(urlHist, {
-          headers: {
-            'apikey': self.key,
-            'Authorization': 'Bearer ' + self.key,
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache'
-          },
-          cache: 'no-cache'
-        })
-        .then(function(res) { return res.ok ? res.json() : null; })
-        .then(function(remoteHist) {
-          if (Array.isArray(remoteHist)) {
-            var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
-            var remoteFiltered = remoteHist.filter(function(h){
-              if (!h) return false;
-              if (h.status === 'lixeira') return false;
-              if (idsNaLixeira.includes(h.id)) return false;
-              return true;
-            });
-            var mapHist = {};
-            remoteFiltered.forEach(function(h){ mapHist[h.id] = h; });
-            (historicoSeedData || []).forEach(function(localH){
-              if (localH && localH.id && !mapHist[localH.id]) {
-                if (!idsNaLixeira.includes(localH.id) && localH.status !== 'lixeira') {
-                  remoteFiltered.push(localH);
+      return new Promise(function(resolveSync) {
+        try {
+          // 1. Sincroniza Ocorrências em tempo real (Supabase REST) com limite inteligente
+          var urlOc = self.url.replace(/\/$/, '') + '/rest/v1/ocorrencias?select=*&order=criado.desc&limit=100';
+          var pOc = fetch(urlOc, {
+            headers: {
+              'apikey': self.key,
+              'Authorization': 'Bearer ' + self.key,
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            },
+            cache: 'no-cache'
+          })
+          .then(function(res) {
+            if (res.ok) {
+              updateCloudStatus(true);
+              return res.json();
+            }
+            updateCloudStatus(false);
+            return null;
+          })
+          .then(function(remoteData) {
+            if (Array.isArray(remoteData)) {
+              var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
+              ocorrencias = mesclarOcorrencias(ocorrencias, remoteData, idsNaLixeira);
+              window.ocorrencias = ocorrencias;
+              try {
+                localStorage.setItem(OCORRENCIAS_CACHE_KEY, JSON.stringify(ocorrencias));
+              } catch(e) {}
+              window._lastOcSyncSig = ocorrencias.map(function(o){ return o.id + '_' + o.status + '_' + (o.criado || 0); }).join('|');
+              if (typeof renderAll === 'function') renderAll(true);
+            }
+          })
+          .catch(function(err) {
+            updateCloudStatus(false);
+            console.warn('[DBService Cloud Sync] Offline ou conectando ao Supabase...', err);
+          });
+
+          // 2. Sincroniza Histórico em tempo real (Supabase REST) com limite inteligente
+          var urlHist = self.url.replace(/\/$/, '') + '/rest/v1/historico?select=*&order=dataCriacao.desc&limit=100';
+          var pHist = fetch(urlHist, {
+            headers: {
+              'apikey': self.key,
+              'Authorization': 'Bearer ' + self.key,
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            },
+            cache: 'no-cache'
+          })
+          .then(function(res) { return res.ok ? res.json() : null; })
+          .then(function(remoteHist) {
+            if (Array.isArray(remoteHist)) {
+              var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
+              var remoteFiltered = remoteHist.filter(function(h){
+                if (!h) return false;
+                if (h.status === 'lixeira') return false;
+                if (idsNaLixeira.includes(h.id)) return false;
+                return true;
+              });
+              var mapHist = {};
+              remoteFiltered.forEach(function(h){ mapHist[h.id] = h; });
+              (historicoSeedData || []).forEach(function(localH){
+                if (localH && localH.id && !mapHist[localH.id]) {
+                  if (!idsNaLixeira.includes(localH.id) && localH.status !== 'lixeira') {
+                    remoteFiltered.push(localH);
+                  }
                 }
-              }
-            });
-            historicoSeedData = remoteFiltered;
-            try {
-              localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(historicoSeedData));
-            } catch(e) {}
-            var oldHistSig = (window._lastHistSyncSig || '');
-            var newHistSig = historicoSeedData.map(function(h){ return h.id + '_' + (h.status || ''); }).join('|');
-            if (oldHistSig !== newHistSig) {
-              window._lastHistSyncSig = newHistSig;
-              if (typeof renderAll === 'function') renderAll();
+              });
+              historicoSeedData = remoteFiltered;
+              try {
+                localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(historicoSeedData));
+              } catch(e) {}
+              window._lastHistSyncSig = historicoSeedData.map(function(h){ return h.id + '_' + (h.status || ''); }).join('|');
+              if (typeof renderAll === 'function') renderAll(true);
             }
-          }
-        })
-        .catch(function(err) {
-          console.warn('[DBService Cloud Sync Hist] Offline ou conectando ao Supabase...', err);
-        });
+          })
+          .catch(function(err) {
+            console.warn('[DBService Cloud Sync Hist] Offline ou conectando ao Supabase...', err);
+          });
 
-        // 3. Sincroniza Checklist e Rotinas em tempo real (Supabase)
-        try {
-          if (typeof sincronizarChecklistNuvem === 'function') sincronizarChecklistNuvem();
-        } catch(eChk) {}
+          // 3. Sincroniza Checklist e Rotinas em tempo real (Supabase)
+          try {
+            if (typeof sincronizarChecklistNuvem === 'function') sincronizarChecklistNuvem();
+          } catch(eChk) {}
 
-        // 4. Sincroniza Orçamentos em tempo real (Supabase)
-        try {
-          if (typeof sincronizarOrcamentoNuvem === 'function') sincronizarOrcamentoNuvem();
-        } catch(eOrc) {}
+          // 4. Sincroniza Orçamentos em tempo real (Supabase)
+          try {
+            if (typeof sincronizarOrcamentoNuvem === 'function') sincronizarOrcamentoNuvem();
+          } catch(eOrc) {}
 
-        // 5. Sincroniza Lixeira em tempo real (Supabase)
-        try {
-          if (typeof sincronizarLixeiraNuvem === 'function') sincronizarLixeiraNuvem();
-        } catch(eLix) {}
+          // 5. Sincroniza Lixeira em tempo real (Supabase)
+          try {
+            if (typeof sincronizarLixeiraNuvem === 'function') sincronizarLixeiraNuvem();
+          } catch(eLix) {}
 
-        // 6. Sincroniza Notificações em tempo real (Supabase)
-        try {
-          if (typeof sincronizarNotificacoesNuvem === 'function') sincronizarNotificacoesNuvem();
-        } catch(eNot) {}
-      } catch (e) {
-        updateCloudStatus(false);
-        console.warn('[DBService Cloud Sync] Exceção:', e);
-      }
+          // 6. Sincroniza Notificações em tempo real (Supabase)
+          try {
+            if (typeof sincronizarNotificacoesNuvem === 'function') sincronizarNotificacoesNuvem();
+          } catch(eNot) {}
+
+          // 7. Sincroniza Equipe de Jornalismo (Repórteres e RCs) em tempo real (Supabase)
+          try {
+            if (typeof sincronizarEquipeNuvem === 'function') sincronizarEquipeNuvem();
+          } catch(eEq) {}
+
+          Promise.all([pOc, pHist]).then(function() {
+            if (typeof renderAll === 'function') renderAll(true);
+            resolveSync(true);
+          }).catch(function() {
+            if (typeof renderAll === 'function') renderAll(true);
+            resolveSync(false);
+          });
+        } catch (e) {
+          updateCloudStatus(false);
+          console.warn('[DBService Cloud Sync] Exceção:', e);
+          resolveSync(false);
+        }
+      });
     }
   };
   window.DBService = DBService;
@@ -591,7 +605,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (typeof callback === 'function') callback(op.id);
         if (typeof sincronizarChecklistNuvem === 'function') sincronizarChecklistNuvem();
       } else {
-        var novoId = 'op_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+        var novoId = (window.crypto && typeof window.crypto.randomUUID === 'function')
+          ? window.crypto.randomUUID()
+          : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+              var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+              return v.toString(16);
+            });
         var payload = { id: novoId, nome: nomeNorm, ativo: true };
         fetch(dbUrl + '/rest/v1/operadores', {
           method: 'POST',

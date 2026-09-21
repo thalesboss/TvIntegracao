@@ -249,8 +249,13 @@ document.addEventListener('DOMContentLoaded', function () {
   };
   window.TVCrypto = TVCrypto;
 
-  // Pacote Criptografado Global (pode ser definido em config.js, no script ou via localStorage)
-  window.ENCRYPTED_TV_CREDENTIALS = window.ENCRYPTED_TV_CREDENTIALS || (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS) || null;
+  // Pacote Criptografado Global de Alta Segurança (AES-256-GCM + PBKDF2)
+  // Descriptografado exclusivamente em memória pela Chave de Acesso da Equipe
+  window.ENCRYPTED_TV_CREDENTIALS = window.ENCRYPTED_TV_CREDENTIALS || (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS) || {
+    salt: '9f6ca6650ad6670436a478d785b65dbd',
+    iv: '289b276d312c24f6a3d6102e',
+    data: '9c1e2b61b20cc9d3596ad6bb98944e2acce2ffeaab2e2e43c669d3a2a6918f761be4d464e984b4255195293aaa0d6cf993381959d332101d0d01bec6a89f08421d11a8e26be003711dd3602b37cad059ef6eefd47bc0615a9b26b050bcc25ca36a98cb18b46541aeb86b07cf32206a4e8699adaa0f8493e124'
+  };
 
   function isEstacaoConectadaTV() {
     var u = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
@@ -320,7 +325,7 @@ document.addEventListener('DOMContentLoaded', function () {
         carregarCredenciaisSupabaseConfig();
       }
       if (typeof DBService.syncRemote === 'function') {
-        DBService.syncRemote();
+        await DBService.syncRemote(true);
       }
 
       return { ok: true, creds: creds };
@@ -527,130 +532,139 @@ document.addEventListener('DOMContentLoaded', function () {
     },
 
     syncRemote: function(force) {
-      var now = Date.now();
-      if (!force && this._lastSyncTime && (now - this._lastSyncTime < 15000)) {
-        return; // Evita chamadas repetidas desnecessárias em menos de 15 segundos
-      }
-      this._lastSyncTime = now;
-
       if (!this.url) this.url = (envConfig && envConfig.SUPABASE_URL && envConfig.SUPABASE_URL.indexOf('seu-projeto') === -1) ? envConfig.SUPABASE_URL : (localStorage.getItem('tv_supabase_url') || '');
       if (!this.key) this.key = (envConfig && envConfig.SUPABASE_ANON_KEY && envConfig.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) ? envConfig.SUPABASE_ANON_KEY : (localStorage.getItem('tv_supabase_key') || '');
       if (!this.url || !this.key) {
         updateCloudStatus(false, 'Modo Local');
-        return;
+        return Promise.resolve(false);
       }
+
+      var now = Date.now();
+      if (!force && this._lastSyncTime && (now - this._lastSyncTime < 15000)) {
+        return Promise.resolve(false); // Evita chamadas repetidas desnecessárias em menos de 15 segundos
+      }
+      this._lastSyncTime = now;
       this.mode = 'supabase';
       var self = this;
-      try {
-        // 1. Sincroniza Ocorrências em tempo real (Supabase REST) com limite inteligente
-        var urlOc = self.url.replace(/\/$/, '') + '/rest/v1/ocorrencias?select=*&order=criado.desc&limit=100';
-        fetch(urlOc, {
-          headers: {
-            'apikey': self.key,
-            'Authorization': 'Bearer ' + self.key,
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache'
-          },
-          cache: 'no-cache'
-        })
-        .then(function(res) {
-          if (res.ok) {
-            updateCloudStatus(true);
-            return res.json();
-          }
-          updateCloudStatus(false);
-          return null;
-        })
-        .then(function(remoteData) {
-          if (Array.isArray(remoteData)) {
-            var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
-            ocorrencias = mesclarOcorrencias(ocorrencias, remoteData, idsNaLixeira);
-            window.ocorrencias = ocorrencias;
-            try {
-              localStorage.setItem(OCORRENCIAS_CACHE_KEY, JSON.stringify(ocorrencias));
-            } catch(e) {}
-            var oldSig = (window._lastOcSyncSig || '');
-            var newSig = ocorrencias.map(function(o){ return o.id + '_' + o.status + '_' + (o.criado || 0); }).join('|');
-            if (oldSig !== newSig) {
-              window._lastOcSyncSig = newSig;
-              if (typeof renderAll === 'function') renderAll();
-            }
-          }
-        })
-        .catch(function(err) {
-          updateCloudStatus(false);
-          console.warn('[DBService Cloud Sync] Offline ou conectando ao Supabase...', err);
-        });
 
-        // 2. Sincroniza Histórico em tempo real (Supabase REST) com limite inteligente
-        var urlHist = self.url.replace(/\/$/, '') + '/rest/v1/historico?select=*&order=dataCriacao.desc&limit=100';
-        fetch(urlHist, {
-          headers: {
-            'apikey': self.key,
-            'Authorization': 'Bearer ' + self.key,
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache'
-          },
-          cache: 'no-cache'
-        })
-        .then(function(res) { return res.ok ? res.json() : null; })
-        .then(function(remoteHist) {
-          if (Array.isArray(remoteHist)) {
-            var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
-            var remoteFiltered = remoteHist.filter(function(h){
-              if (!h) return false;
-              if (h.status === 'lixeira') return false;
-              if (idsNaLixeira.includes(h.id)) return false;
-              return true;
-            });
-            var mapHist = {};
-            remoteFiltered.forEach(function(h){ mapHist[h.id] = h; });
-            (historicoSeedData || []).forEach(function(localH){
-              if (localH && localH.id && !mapHist[localH.id]) {
-                if (!idsNaLixeira.includes(localH.id) && localH.status !== 'lixeira') {
-                  remoteFiltered.push(localH);
+      return new Promise(function(resolveSync) {
+        try {
+          // 1. Sincroniza Ocorrências em tempo real (Supabase REST) com limite inteligente
+          var urlOc = self.url.replace(/\/$/, '') + '/rest/v1/ocorrencias?select=*&order=criado.desc&limit=100';
+          var pOc = fetch(urlOc, {
+            headers: {
+              'apikey': self.key,
+              'Authorization': 'Bearer ' + self.key,
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            },
+            cache: 'no-cache'
+          })
+          .then(function(res) {
+            if (res.ok) {
+              updateCloudStatus(true);
+              return res.json();
+            }
+            updateCloudStatus(false);
+            return null;
+          })
+          .then(function(remoteData) {
+            if (Array.isArray(remoteData)) {
+              var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
+              ocorrencias = mesclarOcorrencias(ocorrencias, remoteData, idsNaLixeira);
+              window.ocorrencias = ocorrencias;
+              try {
+                localStorage.setItem(OCORRENCIAS_CACHE_KEY, JSON.stringify(ocorrencias));
+              } catch(e) {}
+              window._lastOcSyncSig = ocorrencias.map(function(o){ return o.id + '_' + o.status + '_' + (o.criado || 0); }).join('|');
+              if (typeof renderAll === 'function') renderAll(true);
+            }
+          })
+          .catch(function(err) {
+            updateCloudStatus(false);
+            console.warn('[DBService Cloud Sync] Offline ou conectando ao Supabase...', err);
+          });
+
+          // 2. Sincroniza Histórico em tempo real (Supabase REST) com limite inteligente
+          var urlHist = self.url.replace(/\/$/, '') + '/rest/v1/historico?select=*&order=dataCriacao.desc&limit=100';
+          var pHist = fetch(urlHist, {
+            headers: {
+              'apikey': self.key,
+              'Authorization': 'Bearer ' + self.key,
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            },
+            cache: 'no-cache'
+          })
+          .then(function(res) { return res.ok ? res.json() : null; })
+          .then(function(remoteHist) {
+            if (Array.isArray(remoteHist)) {
+              var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
+              var remoteFiltered = remoteHist.filter(function(h){
+                if (!h) return false;
+                if (h.status === 'lixeira') return false;
+                if (idsNaLixeira.includes(h.id)) return false;
+                return true;
+              });
+              var mapHist = {};
+              remoteFiltered.forEach(function(h){ mapHist[h.id] = h; });
+              (historicoSeedData || []).forEach(function(localH){
+                if (localH && localH.id && !mapHist[localH.id]) {
+                  if (!idsNaLixeira.includes(localH.id) && localH.status !== 'lixeira') {
+                    remoteFiltered.push(localH);
+                  }
                 }
-              }
-            });
-            historicoSeedData = remoteFiltered;
-            try {
-              localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(historicoSeedData));
-            } catch(e) {}
-            var oldHistSig = (window._lastHistSyncSig || '');
-            var newHistSig = historicoSeedData.map(function(h){ return h.id + '_' + (h.status || ''); }).join('|');
-            if (oldHistSig !== newHistSig) {
-              window._lastHistSyncSig = newHistSig;
-              if (typeof renderAll === 'function') renderAll();
+              });
+              historicoSeedData = remoteFiltered;
+              try {
+                localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(historicoSeedData));
+              } catch(e) {}
+              window._lastHistSyncSig = historicoSeedData.map(function(h){ return h.id + '_' + (h.status || ''); }).join('|');
+              if (typeof renderAll === 'function') renderAll(true);
             }
-          }
-        })
-        .catch(function(err) {
-          console.warn('[DBService Cloud Sync Hist] Offline ou conectando ao Supabase...', err);
-        });
+          })
+          .catch(function(err) {
+            console.warn('[DBService Cloud Sync Hist] Offline ou conectando ao Supabase...', err);
+          });
 
-        // 3. Sincroniza Checklist e Rotinas em tempo real (Supabase)
-        try {
-          if (typeof sincronizarChecklistNuvem === 'function') sincronizarChecklistNuvem();
-        } catch(eChk) {}
+          // 3. Sincroniza Checklist e Rotinas em tempo real (Supabase)
+          try {
+            if (typeof sincronizarChecklistNuvem === 'function') sincronizarChecklistNuvem();
+          } catch(eChk) {}
 
-        // 4. Sincroniza Orçamentos em tempo real (Supabase)
-        try {
-          if (typeof sincronizarOrcamentoNuvem === 'function') sincronizarOrcamentoNuvem();
-        } catch(eOrc) {}
+          // 4. Sincroniza Orçamentos em tempo real (Supabase)
+          try {
+            if (typeof sincronizarOrcamentoNuvem === 'function') sincronizarOrcamentoNuvem();
+          } catch(eOrc) {}
 
-        // 5. Sincroniza Lixeira em tempo real (Supabase)
-        try {
-          if (typeof sincronizarLixeiraNuvem === 'function') sincronizarLixeiraNuvem();
-        } catch(eLix) {}
+          // 5. Sincroniza Lixeira em tempo real (Supabase)
+          try {
+            if (typeof sincronizarLixeiraNuvem === 'function') sincronizarLixeiraNuvem();
+          } catch(eLix) {}
 
-        // 6. Sincroniza Notificações em tempo real (Supabase)
-        try {
-          if (typeof sincronizarNotificacoesNuvem === 'function') sincronizarNotificacoesNuvem();
-        } catch(eNot) {}
-      } catch (e) {
-        updateCloudStatus(false);
-        console.warn('[DBService Cloud Sync] Exceção:', e);
-      }
+          // 6. Sincroniza Notificações em tempo real (Supabase)
+          try {
+            if (typeof sincronizarNotificacoesNuvem === 'function') sincronizarNotificacoesNuvem();
+          } catch(eNot) {}
+
+          // 7. Sincroniza Equipe de Jornalismo (Repórteres e RCs) em tempo real (Supabase)
+          try {
+            if (typeof sincronizarEquipeNuvem === 'function') sincronizarEquipeNuvem();
+          } catch(eEq) {}
+
+          Promise.all([pOc, pHist]).then(function() {
+            if (typeof renderAll === 'function') renderAll(true);
+            resolveSync(true);
+          }).catch(function() {
+            if (typeof renderAll === 'function') renderAll(true);
+            resolveSync(false);
+          });
+        } catch (e) {
+          updateCloudStatus(false);
+          console.warn('[DBService Cloud Sync] Exceção:', e);
+          resolveSync(false);
+        }
+      });
     }
   };
   window.DBService = DBService;
@@ -691,7 +705,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (typeof callback === 'function') callback(op.id);
         if (typeof sincronizarChecklistNuvem === 'function') sincronizarChecklistNuvem();
       } else {
-        var novoId = 'op_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+        var novoId = (window.crypto && typeof window.crypto.randomUUID === 'function')
+          ? window.crypto.randomUUID()
+          : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+              var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+              return v.toString(16);
+            });
         var payload = { id: novoId, nome: nomeNorm, ativo: true };
         fetch(dbUrl + '/rest/v1/operadores', {
           method: 'POST',
@@ -1766,6 +1785,14 @@ document.addEventListener('DOMContentLoaded', function () {
     if (el) el.classList.add('active');
     if (name === 'config') {
       try { carregarCredenciaisSupabaseConfig(); } catch(e) {}
+    }
+    if (name === 'ctrs' || name === 'relatorio') {
+      var ctrsPraca = document.getElementById('ctrs-praca');
+      if (ctrsPraca && typeof getPracaAtual === 'function') {
+        ctrsPraca.value = getPracaAtual();
+      }
+      try { atualizarSelectsProfissionaisCTRS(); } catch(e) {}
+      try { atualizarSelectsEquipamentosCTRS(); } catch(e) {}
     }
   }
   window.irPara = irPara;
@@ -2857,10 +2884,7 @@ document.addEventListener('DOMContentLoaded', function () {
   window.obterOpcoesEquipamentosHTML = obterOpcoesEquipamentosHTML;
 
   function atualizarSelectsEquipamentosCTRS() {
-    var selects = document.querySelectorAll('#ctrs-acc-container select.ctrs-infra-select, #ctrs-acc-container .acc-block select:nth-of-type(1)');
-    if (!selects || selects.length === 0) {
-      selects = document.querySelectorAll('.ctrs-infra-select');
-    }
+    var selects = document.querySelectorAll('.ctrs-infra-select');
     selects.forEach(function(sel) {
       var currentVal = sel.value;
       sel.innerHTML = obterOpcoesEquipamentosHTML(currentVal);
@@ -2883,6 +2907,398 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   window.atualizarSelectsEquipamentosCTRS = atualizarSelectsEquipamentosCTRS;
+
+  /* ═══════════════════════════════════════════
+     EQUIPE DE JORNALISMO (REPÓRTERES E RCs)
+     Separado estritamente por Praça (Juiz de Fora e Uberlândia)
+     Sincronizado na Nuvem (Supabase checklist_itens)
+     Zero nomes em código fonte / Git
+  ═══════════════════════════════════════════ */
+  var EQUIPE_STORAGE_KEY = 'tv_equipe_jornalismo_v3';
+
+  function normalizarPracaEquipe(praca) {
+    var p = (praca || '').toLowerCase();
+    if (p.indexOf('uber') !== -1 || p.indexOf('udi') !== -1) {
+      return 'Uberlândia';
+    }
+    return 'Juiz de Fora';
+  }
+  window.normalizarPracaEquipe = normalizarPracaEquipe;
+
+  function carregarEquipeLocal() {
+    var padrao = {
+      'Juiz de Fora': { reporteres: [], rcs: [] },
+      'Uberlândia': { reporteres: [], rcs: [] }
+    };
+    try {
+      localStorage.removeItem('tv_equipe_jornalismo_v1');
+      localStorage.removeItem('tv_equipe_jornalismo_v2');
+      localStorage.removeItem('tv_equipe_jornalismo');
+      var raw = localStorage.getItem(EQUIPE_STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          var filtrarValidos = function(lista) {
+            if (!Array.isArray(lista)) return [];
+            return lista.filter(function(it) {
+              var n = (typeof it === 'string' ? it : (it.nome || it.titulo || '')).trim();
+              var low = n.toLowerCase();
+              return n && low.indexOf('exclusivo') === -1 && low.indexOf('teste') === -1 && n.indexOf('Ã') === -1;
+            });
+          };
+          if (parsed['Juiz de Fora']) {
+            padrao['Juiz de Fora'].reporteres = filtrarValidos(parsed['Juiz de Fora'].reporteres);
+            padrao['Juiz de Fora'].rcs = filtrarValidos(parsed['Juiz de Fora'].rcs);
+          }
+          if (parsed['Uberlândia']) {
+            padrao['Uberlândia'].reporteres = filtrarValidos(parsed['Uberlândia'].reporteres);
+            padrao['Uberlândia'].rcs = filtrarValidos(parsed['Uberlândia'].rcs);
+          }
+          return padrao;
+        }
+      }
+    } catch(e) {}
+    return padrao;
+  }
+  window.carregarEquipeLocal = carregarEquipeLocal;
+
+  function salvarEquipeLocal(dados) {
+    try {
+      localStorage.setItem(EQUIPE_STORAGE_KEY, JSON.stringify(dados));
+    } catch(e) {
+      console.warn('Erro ao salvar equipe local:', e);
+    }
+  }
+  window.salvarEquipeLocal = salvarEquipeLocal;
+
+  function obterOpcoesReporteresHTML(selectedVal) {
+    var praca = normalizarPracaEquipe(typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora');
+    var equipe = carregarEquipeLocal();
+    var lista = (equipe[praca] && Array.isArray(equipe[praca].reporteres)) ? equipe[praca].reporteres : [];
+    var isConectado = (typeof isEstacaoConectadaTV === 'function') ? isEstacaoConectadaTV() : false;
+    var html = '<option value="">Selecione o repórter...</option>';
+    
+    var jaSelecionado = false;
+    lista.forEach(function(rep) {
+      var nome = typeof rep === 'string' ? rep : (rep.nome || rep.titulo || '');
+      if (!nome) return;
+      var isSel = (nome === selectedVal);
+      if (isSel) jaSelecionado = true;
+      html += '<option value="' + escapeHTML(nome) + '"' + (isSel ? ' selected' : '') + '>' + escapeHTML(nome) + '</option>';
+    });
+
+    var outraPraca = (praca === 'Juiz de Fora') ? 'Uberlândia' : 'Juiz de Fora';
+    var pertenceOutraPraca = equipe[outraPraca] && (
+      (equipe[outraPraca].reporteres || []).some(function(r){ return (r.nome || r.titulo || r) === selectedVal; })
+    );
+
+    if (!pertenceOutraPraca && selectedVal && !jaSelecionado && selectedVal !== '__novo_reporter__') {
+      html += '<option value="' + escapeHTML(selectedVal) + '" selected>' + escapeHTML(selectedVal) + '</option>';
+    }
+
+    if (isConectado) {
+      html += '<option value="__novo_reporter__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo Repórter...</option>';
+    }
+    return html;
+  }
+  window.obterOpcoesReporteresHTML = obterOpcoesReporteresHTML;
+
+  function obterOpcoesRCsHTML(selectedVal) {
+    var praca = normalizarPracaEquipe(typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora');
+    var equipe = carregarEquipeLocal();
+    var lista = (equipe[praca] && Array.isArray(equipe[praca].rcs)) ? equipe[praca].rcs : [];
+    var isConectado = (typeof isEstacaoConectadaTV === 'function') ? isEstacaoConectadaTV() : false;
+    var html = '<option value="">Selecione o RC...</option>';
+
+    var jaSelecionado = false;
+    lista.forEach(function(rc) {
+      var nome = typeof rc === 'string' ? rc : (rc.nome || rc.titulo || '');
+      if (!nome) return;
+      var isSel = (nome === selectedVal);
+      if (isSel) jaSelecionado = true;
+      html += '<option value="' + escapeHTML(nome) + '"' + (isSel ? ' selected' : '') + '>' + escapeHTML(nome) + '</option>';
+    });
+
+    var outraPraca = (praca === 'Juiz de Fora') ? 'Uberlândia' : 'Juiz de Fora';
+    var pertenceOutraPraca = equipe[outraPraca] && (
+      (equipe[outraPraca].rcs || []).some(function(r){ return (r.nome || r.titulo || r) === selectedVal; })
+    );
+
+    if (!pertenceOutraPraca && selectedVal && !jaSelecionado && selectedVal !== '__novo_rc__') {
+      html += '<option value="' + escapeHTML(selectedVal) + '" selected>' + escapeHTML(selectedVal) + '</option>';
+    }
+
+    if (isConectado) {
+      html += '<option value="__novo_rc__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo RC...</option>';
+    }
+    return html;
+  }
+  window.obterOpcoesRCsHTML = obterOpcoesRCsHTML;
+
+  function atualizarSelectsProfissionaisCTRS() {
+    var repSelects = document.querySelectorAll('.ctrs-reporter-select');
+    repSelects.forEach(function(sel) {
+      var currentVal = sel.value;
+      sel.innerHTML = obterOpcoesReporteresHTML(currentVal);
+      if (currentVal && currentVal !== '__novo_reporter__') {
+        var match = Array.from(sel.options).some(function(o){ return o.value === currentVal; });
+        sel.value = match ? currentVal : '';
+      }
+      if (!sel._hasNovoProfListener) {
+        sel._hasNovoProfListener = true;
+        sel.addEventListener('change', function() {
+          if (this.value === '__novo_reporter__') {
+            this.value = '';
+            abrirModalNovoProfissional('reporter', this);
+          }
+        });
+      }
+    });
+
+    var rcSelects = document.querySelectorAll('.ctrs-rc-select');
+    rcSelects.forEach(function(sel) {
+      var currentVal = sel.value;
+      sel.innerHTML = obterOpcoesRCsHTML(currentVal);
+      if (currentVal && currentVal !== '__novo_rc__') {
+        var match = Array.from(sel.options).some(function(o){ return o.value === currentVal; });
+        sel.value = match ? currentVal : '';
+      }
+      if (!sel._hasNovoProfListener) {
+        sel._hasNovoProfListener = true;
+        sel.addEventListener('change', function() {
+          if (this.value === '__novo_rc__') {
+            this.value = '';
+            abrirModalNovoProfissional('rc', this);
+          }
+        });
+      }
+    });
+  }
+  window.atualizarSelectsProfissionaisCTRS = atualizarSelectsProfissionaisCTRS;
+
+  function abrirModalNovoProfissional(tipo, triggeringSelect) {
+    if (typeof isEstacaoConectadaTV === 'function' && !isEstacaoConectadaTV()) {
+      alert('Atenção: Apenas operadores conectados ao banco de dados podem cadastrar novos profissionais.');
+      return;
+    }
+
+    tipo = (tipo === 'rc') ? 'rc' : 'reporter';
+    window._profTriggeringSelect = triggeringSelect || null;
+    var pracaAtiva = normalizarPracaEquipe(typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora');
+
+    var tipoEl = document.getElementById('novo-prof-tipo');
+    var catEl  = document.getElementById('novo-prof-categoria');
+    var nomeEl = document.getElementById('novo-prof-nome');
+    var titEl  = document.getElementById('novo-prof-title');
+    var subEl  = document.getElementById('novo-prof-subtitle');
+
+    if (tipoEl) tipoEl.value = tipo;
+    if (catEl)  catEl.value = tipo;
+    if (nomeEl) {
+      nomeEl.value = '';
+      setTimeout(function() { nomeEl.focus(); }, 150);
+    }
+
+    if (titEl) {
+      titEl.textContent = (tipo === 'rc') ? 'Cadastrar Novo RC (' + pracaAtiva + ')' : 'Cadastrar Novo Repórter (' + pracaAtiva + ')';
+    }
+    if (subEl) {
+      subEl.textContent = (tipo === 'rc')
+        ? 'Cadastre o Repórter Cinematográfico para a praça ' + pracaAtiva
+        : 'Cadastre o Repórter para a praça ' + pracaAtiva;
+    }
+
+    abrirPopup('popup-novo-profissional');
+  }
+  window.abrirModalNovoProfissional = abrirModalNovoProfissional;
+
+  function obterCredenciaisDB() {
+    if (typeof getDBCredentials === 'function') return getDBCredentials();
+    if (typeof window !== 'undefined' && typeof window.getDBCredentials === 'function') return window.getDBCredentials();
+    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
+    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
+    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
+      url = window.ENV_CONFIG.SUPABASE_URL;
+    }
+    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
+      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
+    }
+    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
+  }
+
+  async function salvarNovoProfissionalEquipe() {
+    if (typeof isEstacaoConectadaTV === 'function' && !isEstacaoConectadaTV()) {
+      alert('Você precisa estar conectado ao banco de dados para cadastrar profissionais.');
+      return;
+    }
+
+    var tipoEl = document.getElementById('novo-prof-tipo');
+    var nomeEl = document.getElementById('novo-prof-nome');
+    var nome = (nomeEl ? nomeEl.value : '').trim();
+    var tipo = (tipoEl ? tipoEl.value : 'reporter').toLowerCase();
+    var pracaAtiva = normalizarPracaEquipe(typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora');
+
+    if (!nome) {
+      alert('Por favor, informe o nome do profissional.');
+      if (nomeEl) nomeEl.focus();
+      return;
+    }
+
+    var equipe = carregarEquipeLocal();
+    var chaveLista = (tipo === 'rc') ? 'rcs' : 'reporteres';
+    if (!equipe[pracaAtiva]) equipe[pracaAtiva] = { reporteres: [], rcs: [] };
+
+    var existe = equipe[pracaAtiva][chaveLista].some(function(item) {
+      var n = typeof item === 'string' ? item : (item.nome || item.titulo || '');
+      return n.toLowerCase() === nome.toLowerCase();
+    });
+
+    if (existe) {
+      alert('Este profissional já está cadastrado em ' + pracaAtiva + '.');
+      return;
+    }
+
+    var profId = 'prof_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+    var novoItem = { id: profId, nome: nome, categoria: tipo, praca: pracaAtiva };
+    equipe[pracaAtiva][chaveLista].push(novoItem);
+    salvarEquipeLocal(equipe);
+
+    var targetSelect = window._profTriggeringSelect;
+
+    fecharPopup('popup-novo-profissional');
+
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Profissional Cadastrado', nome + ' adicionado a ' + pracaAtiva + '.', 'success');
+    }
+
+    atualizarSelectsProfissionaisCTRS();
+
+    if (targetSelect) {
+      try {
+        targetSelect.value = nome;
+      } catch(e) {}
+    }
+
+    // Sincroniza diretamente no Supabase em checklist_itens
+    var db = obterCredenciaisDB();
+    if (db && db.url && db.key) {
+      try {
+        var payload = {
+          id: profId,
+          titulo: nome,
+          categoria: tipo,
+          operador_nome: pracaAtiva,
+          padrao: false,
+          concluido: false
+        };
+        var res = await fetch(db.url.replace(/\/$/, '') + '/rest/v1/checklist_itens', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': db.key,
+            'Authorization': 'Bearer ' + db.key,
+            'Prefer': 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          var errText = await res.text();
+          console.error('[Equipe Nuvem] Erro ao salvar profissional no banco:', res.status, errText);
+        } else {
+          console.log('[Equipe Nuvem] ✅ Profissional sincronizado na nuvem com sucesso:', nome, '(' + pracaAtiva + ')');
+        }
+      } catch(eNuvem) {
+        console.warn('[Equipe Nuvem] Falha de conexão ao enviar para nuvem:', eNuvem);
+      }
+    }
+  }
+  window.salvarNovoProfissionalEquipe = salvarNovoProfissionalEquipe;
+
+  function removerProfissionalEquipe(id, tipo, nome, praca) {
+    praca = normalizarPracaEquipe(praca || (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora'));
+    if (!confirm('Deseja realmente remover "' + nome + '" de ' + praca + '?')) {
+      return;
+    }
+
+    var equipe = carregarEquipeLocal();
+    var chaveLista = (tipo === 'rc') ? 'rcs' : 'reporteres';
+    if (equipe[praca]) {
+      equipe[praca][chaveLista] = equipe[praca][chaveLista].filter(function(item) {
+        var itemId = typeof item === 'string' ? item : (item.id || item.nome);
+        return itemId !== id && item.nome !== nome;
+      });
+    }
+
+    salvarEquipeLocal(equipe);
+    atualizarSelectsProfissionaisCTRS();
+
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Profissional Removido', nome + ' foi removido da equipe.', 'info');
+    }
+
+    var db = obterCredenciaisDB();
+    if (db && db.url && db.key && id) {
+      try {
+        fetch(db.url.replace(/\/$/, '') + '/rest/v1/checklist_itens?id=eq.' + encodeURIComponent(id), {
+          method: 'DELETE',
+          headers: {
+            'apikey': db.key,
+            'Authorization': 'Bearer ' + db.key
+          }
+        }).catch(function(err) { console.error('[Equipe Nuvem] Erro ao excluir:', err); });
+      } catch(eDel) {
+        console.warn('[Equipe Nuvem] Falha ao excluir na nuvem:', eDel);
+      }
+    }
+  }
+  window.removerProfissionalEquipe = removerProfissionalEquipe;
+
+  async function sincronizarEquipeNuvem() {
+    var db = obterCredenciaisDB();
+    if (!db || !db.url || !db.key) return;
+
+    try {
+      var url = db.url.replace(/\/$/, '') + '/rest/v1/checklist_itens?select=id,titulo,categoria,operador_nome&categoria=in.(reporter,rc)&order=titulo.asc&limit=1000';
+      var res = await fetch(url, {
+        headers: {
+          'apikey': db.key,
+          'Authorization': 'Bearer ' + db.key,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+      if (!res.ok) return;
+      var data = await res.json();
+      if (!Array.isArray(data)) return;
+
+      var repMap = {
+        'Juiz de Fora': { reporteres: [], rcs: [] },
+        'Uberlândia': { reporteres: [], rcs: [] }
+      };
+
+      data.forEach(function(item) {
+        if (!item || !item.titulo) return;
+        var titulo = item.titulo.trim();
+        var low = titulo.toLowerCase();
+        // Filtrar qualquer resquício de itens de teste antigos
+        if (low.indexOf('exclusivo') !== -1 || low.indexOf('teste') !== -1 || titulo.indexOf('Ã') !== -1) return;
+        
+        var pNorm = normalizarPracaEquipe(item.operador_nome);
+        var p = { id: item.id, nome: titulo, categoria: item.categoria, praca: pNorm };
+        if (item.categoria === 'rc') {
+          repMap[pNorm].rcs.push(p);
+        } else {
+          repMap[pNorm].reporteres.push(p);
+        }
+      });
+
+      salvarEquipeLocal(repMap);
+      atualizarSelectsProfissionaisCTRS();
+    } catch(err) {
+      console.warn('[Equipe Nuvem] Erro ao sincronizar equipe:', err);
+    }
+  }
+  window.sincronizarEquipeNuvem = sincronizarEquipeNuvem;
 
   function adicionarTransmissaoCTRS(silencioso) {
     var container = document.getElementById('ctrs-acc-container');
@@ -2911,9 +3327,9 @@ document.addEventListener('DOMContentLoaded', function () {
           '<div class="frow"><label>Hora Final (Teste OK)</label><input type="time"/></div>' +
           '<div class="frow"><label>Qualidade do Áudio</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
           '<div class="frow"><label>Qualidade do Vídeo</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
-          '<div class="frow"><label>Repórter</label><input type="text" placeholder="Nome do repórter"/></div>' +
+          '<div class="frow"><label>Repórter</label><select class="ctrs-reporter-select">' + obterOpcoesReporteresHTML() + '</select></div>' +
           '<div class="frow"><label>Entradas</label><input type="text" placeholder="Ex: 2 entradas conformes — externo"/></div>' +
-          '<div class="frow"><label>Repórter Cinematográfico</label><input type="text" placeholder="Nome do RC"/></div>' +
+          '<div class="frow"><label>Repórter Cinematográfico</label><select class="ctrs-rc-select">' + obterOpcoesRCsHTML() + '</select></div>' +
           '<div class="frow"><label>Status da Transmissão</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
         '</div>' +
         '<div class="frow"><label>Observações</label><textarea placeholder="Descreva as falhas. Se nenhuma, deixe em branco."></textarea></div>' +
@@ -2926,6 +3342,8 @@ document.addEventListener('DOMContentLoaded', function () {
       '</div>';
 
     container.appendChild(div);
+    atualizarSelectsProfissionaisCTRS();
+    atualizarSelectsEquipamentosCTRS();
     if (typeof lucide !== 'undefined') lucide.createIcons();
     if (!silencioso) {
       salvarRascunhoRelatorioTV(true);
@@ -2973,10 +3391,9 @@ document.addEventListener('DOMContentLoaded', function () {
       var dataEl  = document.getElementById('ctrs-data');
       var pracaEl = document.getElementById('ctrs-praca');
       var tipoEl  = document.getElementById('ctrs-tipo');
-      var obsEl   = document.getElementById('ctrs-obs');
-
+      var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+      if (pracaEl) pracaEl.value = pracaAtiva;
       if (dataEl && dados.data)   dataEl.value = dados.data;
-      if (pracaEl && dados.praca) pracaEl.value = dados.praca;
       if (tipoEl && dados.tipo)   tipoEl.value = dados.tipo;
       if (obsEl && dados.obs)     obsEl.value = dados.obs;
 
@@ -3925,6 +4342,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return { url: url ? url.replace(/\/+$/, '') : '', key: key };
   }
+  window.getDBCredentials = getDBCredentials;
 
   function carregarOperadoresSugeridos() {
     var datalist = document.getElementById('lista-operadores-sugeridos');
@@ -4000,7 +4418,7 @@ document.addEventListener('DOMContentLoaded', function () {
       queryFilter = 'padrao=eq.true';
     }
 
-    var endpoint = db.url + '/rest/v1/checklist_itens?select=*&' + queryFilter + '&order=criado_em.asc';
+    var endpoint = db.url + '/rest/v1/checklist_itens?select=*&categoria=not.in.(reporter,rc)&' + queryFilter + '&order=criado_em.asc';
 
     fetch(endpoint, {
       headers: {
@@ -4012,6 +4430,9 @@ document.addEventListener('DOMContentLoaded', function () {
     .then(function(res) { return res.ok ? res.json() : null; })
     .then(function(cloudItens) {
       if (Array.isArray(cloudItens)) {
+        cloudItens = cloudItens.filter(function(c) {
+          return c && c.categoria !== 'reporter' && c.categoria !== 'rc';
+        });
         var recMap = carregarRecorrenciasLocais();
         var itensProcessados = cloudItens.map(function(c) {
           var rec = c.recorrencia || recMap[c.id] || null;
@@ -5624,11 +6045,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
     localStorage.setItem(USER_NAME_STORAGE_KEY, nome);
     atualizarNomeOperadorUI(nome);
-    try { if (typeof obterOuCriarOperadorPorNome === 'function') obterOuCriarOperadorPorNome(nome); } catch(e) {}
+    try {
+      if (typeof obterOuCriarOperadorPorNome === 'function') {
+        await new Promise(function(resolve) {
+          obterOuCriarOperadorPorNome(nome, function(id) {
+            resolve(id);
+          });
+          setTimeout(resolve, 2500);
+        });
+      }
+    } catch(e) {}
+    try { if (typeof carregarOperadoresSugeridos === 'function') carregarOperadoresSugeridos(); } catch(e) {}
 
     var pracaEl = document.getElementById('ident-operador-praca');
     if (pracaEl && pracaEl.value && typeof setPracaAtual === 'function') {
       setPracaAtual(pracaEl.value);
+    }
+
+    if (typeof DBService !== 'undefined' && typeof DBService.syncRemote === 'function') {
+      await DBService.syncRemote(true);
+    }
+    if (typeof renderAll === 'function') {
+      renderAll(true);
     }
 
     fecharPopup('popup-identificacao-operador');
@@ -5645,21 +6083,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.confirmarIdentificacaoOperador = confirmarIdentificacaoOperador;
-
-  function toggleVisibilidadeChaveAcesso() {
-    var input = document.getElementById('ident-chave-acesso');
-    var ico = document.getElementById('ident-chave-eye');
-    if (!input) return;
-    if (input.type === 'password') {
-      input.type = 'text';
-      if (ico) ico.setAttribute('data-lucide', 'eye-off');
-    } else {
-      input.type = 'password';
-      if (ico) ico.setAttribute('data-lucide', 'eye');
-    }
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-  }
-  window.toggleVisibilidadeChaveAcesso = toggleVisibilidadeChaveAcesso;
 
   function mutarNotificacoes(mutado) {
     var dot   = document.querySelector('.notif-dot');
@@ -8300,10 +8723,10 @@ document.addEventListener('DOMContentLoaded', function () {
   try { carregarDashboardMetricsStore(); } catch(e) {}
   try { carregarOrcamentoStore(); } catch(e) {}
   try { carregarChecklistStore(); } catch(e) {}
+  try { if (typeof atualizarSelectsProfissionaisCTRS === 'function') atualizarSelectsProfissionaisCTRS(); } catch(e) {}
+  try { if (typeof sincronizarEquipeNuvem === 'function') sincronizarEquipeNuvem(); } catch(e) {}
   try { if (typeof DBService !== 'undefined' && DBService.init) DBService.init(); } catch(e) {}
   renderAll(true);
-
-  DBService.syncRemote();
 
   // Sincronização inteligente: periódica a cada 2 minutos se a aba estiver visível, e ao focar na janela
   setInterval(function() {

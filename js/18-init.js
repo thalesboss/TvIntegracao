@@ -12,10 +12,10 @@
   try { carregarDashboardMetricsStore(); } catch(e) {}
   try { carregarOrcamentoStore(); } catch(e) {}
   try { carregarChecklistStore(); } catch(e) {}
+  try { if (typeof atualizarSelectsProfissionaisCTRS === 'function') atualizarSelectsProfissionaisCTRS(); } catch(e) {}
+  try { if (typeof sincronizarEquipeNuvem === 'function') sincronizarEquipeNuvem(); } catch(e) {}
   try { if (typeof DBService !== 'undefined' && DBService.init) DBService.init(); } catch(e) {}
   renderAll(true);
-
-  DBService.syncRemote();
 
   // Sincronização inteligente: periódica a cada 2 minutos se a aba estiver visível, e ao focar na janela
   setInterval(function() {
