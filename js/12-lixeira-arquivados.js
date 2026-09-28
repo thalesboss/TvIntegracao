@@ -26,6 +26,7 @@
     window.lixeiraData = lixeiraData;
     atualizarBadgesLixeira();
   }
+  window.saveLixeira = saveLixeira;
 
   function sincronizarLixeiraNuvem() {
     var db = getLixeiraDBCredentials();
@@ -100,11 +101,23 @@
   }
   window.excluirItemLixeiraNuvem = excluirItemLixeiraNuvem;
 
+  function pertenceAPracaAtivaLixeira(item) {
+    if (!item) return false;
+    if (typeof pertenceAPracaAtiva === 'function') {
+      if (item.ocOriginal && pertenceAPracaAtiva(item.ocOriginal)) return true;
+      if (item.histOriginal && pertenceAPracaAtiva(item.histOriginal)) return true;
+      return pertenceAPracaAtiva(item);
+    }
+    return true;
+  }
+  window.pertenceAPracaAtivaLixeira = pertenceAPracaAtivaLixeira;
+
   function atualizarBadgesLixeira() {
     var badge = document.querySelector('.lixeira-badge');
     if (badge) {
-      if (lixeiraData && lixeiraData.length > 0) {
-        badge.textContent = lixeiraData.length;
+      var listaDaPraca = (lixeiraData || []).filter(pertenceAPracaAtivaLixeira);
+      if (listaDaPraca.length > 0) {
+        badge.textContent = listaDaPraca.length;
         badge.style.display = 'inline-flex';
       } else {
         badge.style.display = 'none';
@@ -173,6 +186,7 @@
       }
 
       // 2. Adiciona à Lixeira com retenção de 7 dias
+      var itemPraca = (oc && oc.praca) || (hist && hist.praca) || (typeof normalizarPracaOcorrencia === 'function' ? normalizarPracaOcorrencia(null, (oc && oc.local) || (hist && hist.local), titulo) : 'Juiz de Fora');
       var itemLixeira = {
         id: idParaSalvar,
         dataExclusao: Date.now(),
@@ -181,7 +195,8 @@
         ocOriginal: oc ? Object.assign({}, oc) : null,
         histOriginal: hist ? Object.assign({}, hist) : null,
         excluidoPor: getUsuarioAtual(),
-        notificado24h: false
+        notificado24h: false,
+        praca: itemPraca
       };
 
       lixeiraData = [itemLixeira].concat(lixeiraData.filter(function(i){ return i.id !== idParaSalvar; }));
@@ -242,7 +257,9 @@
     atualizarBadgesLixeira();
     if (!container) return;
 
-    if (!lixeiraData || lixeiraData.length === 0) {
+    var listaDaPraca = (lixeiraData || []).filter(pertenceAPracaAtivaLixeira);
+
+    if (listaDaPraca.length === 0) {
       container.innerHTML =
         '<div style="text-align:center;padding:48px 16px;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);">' +
           '<i data-lucide="trash-2" style="width:36px;height:36px;color:var(--muted);stroke-width:1.5;margin-bottom:10px;"></i>' +
@@ -297,7 +314,7 @@
       );
     }
 
-    var secoes = agruparPorDias(lixeiraData, function(item){ return item.dataExclusao; });
+    var secoes = agruparPorDias(listaDaPraca, function(item){ return item.dataExclusao; });
     container.innerHTML = renderSecoesComCards(secoes, renderCardLixeiraHTML);
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
@@ -557,7 +574,10 @@
       resolvidoPor:  usuarioLogado,
       descResolucao: descResolucao,
       tags:          tagsHist,
-      anexos:        anexosCombinados
+      anexos:        anexosCombinados,
+      praca:         (typeof normalizarPracaOcorrencia === 'function')
+        ? normalizarPracaOcorrencia(oc.praca, oc.local, oc.titulo, oc.equipamento || (oc.tags && oc.tags[1]))
+        : (oc.praca || (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora'))
     };
 
     historicoSeedData = [novoItemHist].concat(historicoSeedData);

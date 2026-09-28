@@ -30,6 +30,142 @@
     .res-pill.selected-ok   .res-pill-sub,
     .res-pill.selected-warn .res-pill-sub,
     .res-pill.selected-fwd  .res-pill-sub { opacity:.7; color:inherit; }
+
+    /* ─── Relatório Diário / Ronda Técnica (Uberlândia) ─── */
+    .ronda-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .ronda-card {
+      background: var(--surface);
+      border: 1px solid var(--border-lt);
+      border-radius: var(--r-lg);
+      padding: 18px 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .ronda-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-lt);
+    }
+    .ronda-card-header h3 {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--txt);
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ronda-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 12px;
+      background: #FAFAFA;
+      border: 1px solid var(--border-lt);
+      border-radius: var(--r-md);
+      margin-bottom: 7px;
+      transition: all .15s ease;
+    }
+    .ronda-item:hover {
+      border-color: var(--border);
+      background: #FFFFFF;
+    }
+    .ronda-item.has-nc {
+      border-color: #FECACA !important;
+      background: #FEF2F2 !important;
+    }
+    .ronda-item-label {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--txt);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ronda-toggle-group {
+      display: inline-flex;
+      gap: 5px;
+      align-items: center;
+    }
+    .ronda-btn-pill {
+      border: 1px solid var(--border);
+      background: #FFFFFF;
+      color: var(--txt2);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all .12s ease;
+      user-select: none;
+    }
+    .ronda-btn-pill:hover {
+      background: #F1F5F9;
+    }
+    .ronda-btn-pill.conf.active {
+      background: #ECFDF5;
+      color: #059669;
+      border-color: #10B981;
+      font-weight: 700;
+      box-shadow: 0 1px 3px rgba(16, 185, 129, 0.2);
+    }
+    .ronda-btn-pill.nc.active {
+      background: #FEF2F2;
+      color: #DC2626;
+      border-color: #EF4444;
+      font-weight: 700;
+      box-shadow: 0 1px 3px rgba(239, 68, 68, 0.2);
+    }
+    .ronda-metric-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 7px 12px;
+      background: #FAFAFA;
+      border: 1px solid var(--border-lt);
+      border-radius: var(--r-md);
+      margin-bottom: 7px;
+    }
+    .ronda-metric-row label {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--txt);
+      flex: 1;
+      margin: 0;
+    }
+    .ronda-metric-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 140px;
+    }
+    .ronda-metric-input-wrap input {
+      width: 100%;
+      padding: 5px 10px;
+      font-size: 12.5px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #FFF;
+      text-align: right;
+    }
+    .ronda-metric-unit {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      min-width: 24px;
+    }
   </style>
 </head>
 <body>
@@ -610,7 +746,7 @@
       <i data-lucide="clipboard-check" style="width: 24px; height: 24px; stroke-width: 2.2;"></i>
     </div>
     <h3 style="font-size: 16px; font-weight: 700; color: var(--txt); margin-bottom: 8px; letter-spacing: -0.015em;">Relatório Copiado com Sucesso!</h3>
-    <p style="font-size: 13px; color: var(--txt2); line-height: 1.5; margin-bottom: 14px;">
+    <p id="popup-ctrs-outlook-desc" style="font-size: 13px; color: var(--txt2); line-height: 1.5; margin-bottom: 14px;">
       O checklist oficial do CTRS foi formatado e copiado para a área de transferência. Basta abrir o Outlook e pressionar <strong>CTRL + V</strong> para colar a tabela pronta.
     </p>
 
@@ -890,12 +1026,12 @@
         <div class="frow">
           <label for="orc-modal-praca">Praça / Localidade </label>
           <select id="orc-modal-praca">
+            <option value="Rede Integração (Geral)">Rede Integração (Geral)</option>
             <option value="Juiz de Fora">Juiz de Fora</option>
             <option value="Uberlândia">Uberlândia</option>
             <option value="Uberaba">Uberaba</option>
             <option value="Divinópolis">Divinópolis</option>
             <option value="Araxá">Araxá</option>
-            <option value="Rede Integração (Geral)">Rede Integração (Geral)</option>
           </select>
         </div>
       </div>
@@ -1027,12 +1163,16 @@
     </div>
     <div class="s-btn" onclick="irPara('checklist',this)" role="button" tabindex="0">
       <i data-lucide="check-square" style="width:15px;height:15px;stroke-width:2;"></i>
-      <span class="s-label">Checklist Diário</span>
+      <span class="s-label">Rotinas & Lembretes</span>
     </div>
     <div class="s-section">Relatórios</div>
     <div class="s-btn" onclick="irPara('ctrs',this)" role="button" tabindex="0">
       <i data-lucide="radio" style="width:15px;height:15px;stroke-width:2;"></i>
-      <span class="s-label" id="sidebar-label-ctrs">Relatório CTRS</span>
+      <span class="s-label" id="sidebar-label-ctrs">Relatório Transmissões</span>
+    </div>
+    <div class="s-btn" id="sidebar-btn-ronda" onclick="irPara('ronda',this)" role="button" tabindex="0" style="display:none;">
+      <i data-lucide="activity" style="width:15px;height:15px;stroke-width:2;"></i>
+      <span class="s-label">Relatório de Tecnologia</span>
     </div>
     <div class="s-btn" onclick="irPara('arquivados',this)" role="button" tabindex="0">
       <i data-lucide="archive" style="width:15px;height:15px;stroke-width:2;"></i>
@@ -1357,12 +1497,6 @@
   <main class="page" id="page-ctrs" aria-label="CTRS — Checklist de Transmissão ao Vivo">
     <div class="rel-layout">
       <div class="rel-center">
-        <div class="dest-bar">
-          <strong>Envio automático ao salvar:</strong>
-          <span class="dest-tag">Relatório Power BI</span>
-          <span class="dest-tag">E-mail</span>
-          <span class="dest-ref">Processo 1.1.1. P02 – F02</span>
-        </div>
         <div class="form-card">
           <h3><div class="fcard-ico fci-b" style="display:flex;align-items:center;justify-content:center;"><i data-lucide="clipboard" style="width:13px;height:13px;stroke-width:2;"></i></div> Informações Principais</h3>
           <div class="fg3">
@@ -1543,6 +1677,7 @@
             <div class="dest-tags">
               <span class="sb-tag">Relatório Power BI</span>
               <span class="sb-tag">E-mail</span>
+              <span class="sb-tag" style="background:#F1F5F9;color:var(--muted);border-color:var(--border);">Proc. 1.1.1. P02 – F02</span>
             </div>
           </div>
           <div style="display:flex;gap:8px;margin-left:auto;align-items:center;">
@@ -1755,20 +1890,447 @@
     </div>
   </main>
 
+  <!-- ── PÁGINA: RELATÓRIO DIÁRIO — TECNOLOGIA UDI (RONDA TÉCNICA) ── -->
+  <main class="page" id="page-ronda" aria-label="Relatório Diário — Tecnologia UDI">
+    <div class="rel-layout">
+      <div class="rel-center">
+
+        <!-- Barra Superior de Destino e Ações Rápidas -->
+        <div class="dest-bar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <strong>Ronda Técnica Diária:</strong>
+            <span class="dest-tag" style="background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;font-weight:700;">Uberlândia</span>
+            <span class="dest-tag">Operador: <strong id="ronda-operador-badge" style="color:var(--txt);">Operador</strong></span>
+            <span class="dest-ref">Tecnologia & Engenharia</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="marcarTudoConformeRonda()" title="Marcar todos os 26 itens como Conforme com 1 clique">
+              <i data-lucide="check-check" style="width:13px;height:13px;stroke-width:2.2;"></i> Marcar Tudo Conforme
+            </button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="limparFormularioRonda()" title="Limpar seleções">
+              <i data-lucide="rotate-ccw" style="width:12px;height:12px;stroke-width:2;"></i> Limpar
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="salvarRelatorioRonda()" title="Salvar relatório no histórico">
+              <i data-lucide="save" style="width:13px;height:13px;stroke-width:2.2;"></i> Salvar Relatório
+            </button>
+          </div>
+        </div>
+
+        <!-- Banner de Alerta Dinâmico para Não Conformidades -->
+        <div id="ronda-nc-alert" style="display:none;align-items:center;justify-content:space-between;background:#FEF2F2;border:1px solid #FECACA;border-radius:var(--r-md);padding:10px 16px;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <i data-lucide="alert-triangle" style="width:18px;height:18px;color:#DC2626;stroke-width:2.2;"></i>
+            <div>
+              <strong id="ronda-nc-count-badge" style="color:#DC2626;font-size:13px;">1 não conformidade</strong>
+              <p id="ronda-nc-list-txt" style="font-size:12px;color:#7F1D1D;margin:0;"></p>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-primary" onclick="gerarOcorrenciaNaoConformidadesRonda()" style="background:#DC2626;border-color:#DC2626;font-size:12px;">
+            <i data-lucide="alert-circle" style="width:13px;height:13px;stroke-width:2;"></i> Gerar Ocorrência no Dashboard
+          </button>
+        </div>
+
+        <!-- Informações de Identificação -->
+        <div class="form-card" style="margin-bottom:16px;">
+          <h3>
+            <div class="fcard-ico fci-b" style="display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="calendar" style="width:13px;height:13px;stroke-width:2;"></i>
+            </div>
+            Identificação do Plantão
+          </h3>
+          <div class="fg3">
+            <div class="frow">
+              <label for="ronda-data">Dia Trabalhado *</label>
+              <input id="ronda-data" type="date" />
+            </div>
+            <div class="frow">
+              <label>Praça de Operação</label>
+              <input type="text" value="Uberlândia (MG)" readonly style="background:#F8FAFC;font-weight:600;" />
+            </div>
+            <div class="frow">
+              <label>Tempo de Sessão do Turno</label>
+              <input id="ronda-tempo-sessao" type="text" value="Registrado automaticamente" readonly style="background:#F8FAFC;color:var(--muted);" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Grid de Cards por Especialidade Técnica -->
+        <div class="ronda-grid">
+
+          <!-- Card 1: Centro Exibidor & CPA -->
+          <div class="ronda-card">
+            <div class="ronda-card-header">
+              <h3>
+                <i data-lucide="monitor-play" style="width:15px;height:15px;color:#4F46E5;stroke-width:2;"></i>
+                Centro Exibidor
+              </h3>
+              <span class="tag tag-blue-soft">Exibição</span>
+            </div>
+            
+            <div class="ronda-item">
+              <span class="ronda-item-label">SIGNA</span>
+              <div class="ronda-toggle-group" data-item-id="exib_signa">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">SMARTWARE</span>
+              <div class="ronda-toggle-group" data-item-id="exib_smartware">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">MULTIVIEW</span>
+              <div class="ronda-toggle-group" data-item-id="exib_multiview">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">CLEARCOM</span>
+              <div class="ronda-toggle-group" data-item-id="exib_clearcom">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">GLOBOPLAY</span>
+              <div class="ronda-toggle-group" data-item-id="exib_globoplay">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <!-- CPA -->
+            <div class="ronda-card-header" style="margin-top:16px;">
+              <h3>
+                <i data-lucide="sliders" style="width:15px;height:15px;color:#059669;stroke-width:2;"></i>
+                CPA (Controle de Produção)
+              </h3>
+              <span class="tag tag-teal-soft">Estúdios</span>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">FRAMES CPA</span>
+              <div class="ronda-toggle-group" data-item-id="cpa_frames">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">MULTIVIEW CPA</span>
+              <div class="ronda-toggle-group" data-item-id="cpa_multiview">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">RETORNO VIVOS</span>
+              <div class="ronda-toggle-group" data-item-id="cpa_retorno">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">MOCHILINKS (LiveU)</span>
+              <div class="ronda-toggle-group" data-item-id="cpa_mochilinks">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Transmissor & Rotas de Sinais -->
+          <div class="ronda-card">
+            <div class="ronda-card-header">
+              <h3>
+                <i data-lucide="radio" style="width:15px;height:15px;color:#DC2626;stroke-width:2;"></i>
+                Transmissor & Parâmetros de RF
+              </h3>
+              <span class="tag tag-r">Transmissão</span>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">TEMPERATURA DO TRANSMISSOR</span>
+              <div class="ronda-toggle-group" data-item-id="trans_temp">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-metric-row">
+              <label for="ronda-pot-direta">Potência do Transmissor</label>
+              <div class="ronda-metric-input-wrap">
+                <input id="ronda-pot-direta" type="number" step="1" placeholder="Ex: 2450" />
+                <span class="ronda-metric-unit">W</span>
+              </div>
+            </div>
+
+            <div class="ronda-metric-row">
+              <label for="ronda-pot-refletida">Potência Refletida do Transmissor</label>
+              <div class="ronda-metric-input-wrap">
+                <input id="ronda-pot-refletida" type="number" step="1" placeholder="Ex: 15" />
+                <span class="ronda-metric-unit">W</span>
+              </div>
+            </div>
+
+            <!-- Rotas de Contribuição e Recepção -->
+            <div class="ronda-card-header" style="margin-top:16px;">
+              <h3>
+                <i data-lucide="network" style="width:15px;height:15px;color:#0284C7;stroke-width:2;"></i>
+                Rotas de Contribuição & Recepção
+              </h3>
+              <span class="tag tag-blue-soft">Enlaces</span>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">SRT (MAKITO)</span>
+              <div class="ronda-toggle-group" data-item-id="rota_makito">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">SINAIS VIA MPLS</span>
+              <div class="ronda-toggle-group" data-item-id="rota_mpls">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">SINAIS VIA L2L</span>
+              <div class="ronda-toggle-group" data-item-id="rota_l2l">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Receptores de Satélite & Cadeia Uplink -->
+          <div class="ronda-card">
+            <div class="ronda-card-header">
+              <h3>
+                <i data-lucide="satellite" style="width:15px;height:15px;color:#D97706;stroke-width:2;"></i>
+                Receptores de Satélite
+              </h3>
+              <span class="tag tag-y">Downlink</span>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">SAT REDE TIT</span>
+              <div class="ronda-toggle-group" data-item-id="sat_rede_tit">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">SAT SP TIT</span>
+              <div class="ronda-toggle-group" data-item-id="sat_sp_tit">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">SAT BH TIT</span>
+              <div class="ronda-toggle-group" data-item-id="sat_bh_tit">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">SAT EVENTOS</span>
+              <div class="ronda-toggle-group" data-item-id="sat_eventos">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <!-- Níveis C/N -->
+            <div class="ronda-card-header" style="margin-top:14px;">
+              <h3><i data-lucide="bar-chart-2" style="width:14px;height:14px;color:#D97706;"></i> Níveis de Sinal C/N (dB)</h3>
+              <span class="tag tag-gray-soft">Medição</span>
+            </div>
+
+            <div class="ronda-metric-row">
+              <label for="ronda-sat-rede-db">SAT REDE TIT C/N</label>
+              <div class="ronda-metric-input-wrap">
+                <input id="ronda-sat-rede-db" type="number" step="0.1" placeholder="Ex: 14.5" />
+                <span class="ronda-metric-unit">dB</span>
+              </div>
+            </div>
+
+            <div class="ronda-metric-row">
+              <label for="ronda-sat-bh-db">SAT BH C/N</label>
+              <div class="ronda-metric-input-wrap">
+                <input id="ronda-sat-bh-db" type="number" step="0.1" placeholder="Ex: 13.8" />
+                <span class="ronda-metric-unit">dB</span>
+              </div>
+            </div>
+
+            <div class="ronda-metric-row">
+              <label for="ronda-sat-sp-db">SAT SP C/N</label>
+              <div class="ronda-metric-input-wrap">
+                <input id="ronda-sat-sp-db" type="number" step="0.1" placeholder="Ex: 14.2" />
+                <span class="ronda-metric-unit">dB</span>
+              </div>
+            </div>
+
+            <!-- Cadeia Satélite (Uplink) -->
+            <div class="ronda-card-header" style="margin-top:14px;">
+              <h3><i data-lucide="arrow-up-circle" style="width:14px;height:14px;color:#6366F1;"></i> Cadeia Satélite (Uplink)</h3>
+              <span class="tag tag-indigo-soft">Transmissão</span>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">MUX</span>
+              <div class="ronda-toggle-group" data-item-id="sat_mux">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">MODULADOR</span>
+              <div class="ronda-toggle-group" data-item-id="sat_modulador">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">ENCODER</span>
+              <div class="ronda-toggle-group" data-item-id="sat_encoder">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">BUC (Block Upconverter)</span>
+              <div class="ronda-toggle-group" data-item-id="sat_buc">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: Central Técnica & Energia -->
+          <div class="ronda-card">
+            <div class="ronda-card-header">
+              <h3>
+                <i data-lucide="server" style="width:15px;height:15px;color:#0F766E;stroke-width:2;"></i>
+                Central Técnica
+              </h3>
+              <span class="tag tag-teal-soft">Racks & Roteamento</span>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">FRAMES</span>
+              <div class="ronda-toggle-group" data-item-id="ct_frames">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">MULTIVIEW</span>
+              <div class="ronda-toggle-group" data-item-id="ct_multiview">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">CLEARCOM</span>
+              <div class="ronda-toggle-group" data-item-id="ct_clearcom">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">TEMPERATURA CENTRAL</span>
+              <div class="ronda-toggle-group" data-item-id="ct_temp">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <!-- Energia -->
+            <div class="ronda-card-header" style="margin-top:16px;">
+              <h3>
+                <i data-lucide="zap" style="width:15px;height:15px;color:#EAB308;stroke-width:2;"></i>
+                Infraestrutura & Energia
+              </h3>
+              <span class="tag tag-yellow-soft">Elétrica</span>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">GERADOR</span>
+              <div class="ronda-toggle-group" data-item-id="eng_gerador">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+
+            <div class="ronda-item">
+              <span class="ronda-item-label">NO-BREAK</span>
+              <div class="ronda-toggle-group" data-item-id="eng_nobreak">
+                <button type="button" class="ronda-btn-pill conf active" onclick="setRondaStatus(this, 'conf')"><i data-lucide="check" style="width:11px;height:11px;"></i> Conforme</button>
+                <button type="button" class="ronda-btn-pill nc" onclick="setRondaStatus(this, 'nc')"><i data-lucide="x" style="width:11px;height:11px;"></i> Não Conf.</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bloco 5: Relato de Não Conformidades & Ações -->
+        <div class="form-card">
+          <h3>
+            <div class="fcard-ico fci-y" style="display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="message-square" style="width:13px;height:13px;stroke-width:2;"></i>
+            </div>
+            Relato de Não Conformidades & Observações do Horário
+          </h3>
+          <div class="frow">
+            <label for="ronda-obs">Descrição das Não Conformidades e Ações Tomadas</label>
+            <textarea id="ronda-obs" rows="4" placeholder="Descreva aqui eventuais falhas, trocas de equipamentos, contatos com o NOC, manutenções em andamento ou rotinas executadas no turno..."></textarea>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid var(--border-lt);flex-wrap:wrap;gap:10px;">
+            <span style="font-size:12px;color:var(--muted);">O relatório será salvo no histórico geral e sincronizado com a equipe técnica.</span>
+            <div style="display:flex;gap:8px;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="marcarTudoConformeRonda()">
+                <i data-lucide="check-check" style="width:13px;height:13px;stroke-width:2.2;"></i> Marcar Tudo Conforme
+              </button>
+              <button type="button" class="btn btn-primary" onclick="salvarRelatorioRonda()" style="padding:8px 22px;">
+                <i data-lucide="save" style="width:14px;height:14px;stroke-width:2.2;"></i> Salvar Relatório Diário
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
   <!-- ── PÁGINA: RECEBIMENTO DE EQUIPAMENTOS — UNIFICADO ── -->
   <main class="page" id="page-recebimento" aria-label="Recebimento de Equipamentos">
     <div class="rel-layout">
       <div class="rel-center">
-
-        <!-- Banner Informativo -->
-        <div class="dest-bar">
-          <strong>Sincronização e Envio Automático:</strong>
-          <span class="dest-tag">Relatório Power BI</span>
-          <span class="dest-tag">E-mail Engenharia</span>
-          <span class="dest-tag">E-mail Patrimônio</span>
-          <span class="dest-tag">E-mail Recebimento</span>
-          <span class="dest-ref">Processo Recebimento 2.0</span>
-        </div>
 
         <div class="form-card">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;border-bottom:1px solid var(--border-lt);padding-bottom:10px;flex-wrap:wrap;gap:8px;">
@@ -2440,42 +3002,6 @@
         </div>
       </div>
 
-
-      <!-- CONEXÃO COM BANCO DE DADOS EM NUVEM (SUPABASE) -->
-      <div class="form-card">
-        <h3><div class="fcard-ico fci-g" style="display:flex;align-items:center;justify-content:center;"><i data-lucide="cloud" style="width:13px;height:13px;stroke-width:2;"></i></div> Conexão com o Banco de Dados (Supabase)</h3>
-        <p style="font-size:12px;color:var(--muted);margin:0 0 12px 0;">Configure as credenciais para sincronizar suas ocorrências e histórico em tempo real com a nuvem em qualquer navegador.</p>
-        
-        <div class="fg2">
-          <div class="frow">
-            <label for="cfg-supabase-url">URL do Projeto Supabase</label>
-            <input id="cfg-supabase-url" type="url" placeholder="https://seu-projeto.supabase.co" autocomplete="off"/>
-          </div>
-          <div class="frow">
-            <label for="cfg-supabase-key">Publishable / Anon API Key</label>
-            <div style="position:relative;display:flex;align-items:center;">
-              <input id="cfg-supabase-key" type="password" placeholder="sb_publishable_..." style="padding-right:36px;width:100%;" autocomplete="off"/>
-              <button type="button" onclick="toggleMostrarChaveSupabase()" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;display:flex;align-items:center;" title="Mostrar/Ocultar Chave">
-                <i id="ico-toggle-key" data-lucide="eye" style="width:15px;height:15px;"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border-lt);">
-          <div id="cfg-db-status-badge" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted);">
-            <span style="width:8px;height:8px;border-radius:50%;background:#94A3B8;"></span> Verificando conexão...
-          </div>
-          <div style="display:flex;gap:8px;">
-            <button type="button" class="btn btn-sm btn-ghost" onclick="testarConexaoSupabaseConfig()">
-              <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> Testar Conexão
-            </button>
-            <button type="button" class="btn btn-sm btn-primary" onclick="salvarCredenciaisSupabaseConfig()">
-              <i data-lucide="check" style="width:13px;height:13px;"></i> Conectar Banco
-            </button>
-          </div>
-        </div>
-      </div>
 
       <div class="form-card">
         <h3><div class="fcard-ico fci-p" style="display:flex;align-items:center;justify-content:center;"><i data-lucide="sliders-horizontal" style="width:13px;height:13px;stroke-width:2;"></i></div> Preferências</h3>

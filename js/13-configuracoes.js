@@ -125,6 +125,11 @@
       return;
     }
 
+    var pracaEl = document.getElementById('ident-operador-praca');
+    if (pracaEl && pracaEl.value && typeof setPracaAtual === 'function') {
+      setPracaAtual(pracaEl.value);
+    }
+
     var chave = chaveInput ? chaveInput.value.trim() : '';
     var pack = window.ENCRYPTED_TV_CREDENTIALS || (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS);
     var estacaoJaConectada = typeof isEstacaoConectadaTV === 'function' ? isEstacaoConectadaTV() : false;
@@ -181,11 +186,6 @@
       }
     } catch(e) {}
     try { if (typeof carregarOperadoresSugeridos === 'function') carregarOperadoresSugeridos(); } catch(e) {}
-
-    var pracaEl = document.getElementById('ident-operador-praca');
-    if (pracaEl && pracaEl.value && typeof setPracaAtual === 'function') {
-      setPracaAtual(pracaEl.value);
-    }
 
     if (typeof DBService !== 'undefined' && typeof DBService.syncRemote === 'function') {
       await DBService.syncRemote(true);

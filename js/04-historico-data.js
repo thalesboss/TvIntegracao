@@ -79,7 +79,9 @@
             descResolucao: resDesc,
             tags:          oc.tags || [],
             anexos:        anexosLista,
-            praca:         oc.praca || (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora')
+            praca:         (typeof normalizarPracaOcorrencia === 'function')
+              ? normalizarPracaOcorrencia(oc.praca, oc.local, oc.titulo, oc.equipamento || (oc.tags && oc.tags[1]))
+              : (oc.praca || 'Juiz de Fora')
           };
           mapa[oc.id] = true;
           mapa[histId] = true;

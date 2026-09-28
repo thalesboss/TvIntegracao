@@ -244,6 +244,41 @@ document.addEventListener('DOMContentLoaded', function () {
     ? envConfig.SUPABASE_ANON_KEY
     : (localStorage.getItem('tv_supabase_key') || '');
 
+  var JF_EXCLUSIVOS = ['NET PRAÇA', 'NET PORTARIA', 'FORMATOS NET', 'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR', 'KMJ'];
+
+  function normalizarPracaOcorrencia(praca, local, titulo, equipamento) {
+    var l = (local || '').toString();
+    var t = (titulo || '').toString();
+    var p = (praca || '').toString().trim();
+    var eq = (equipamento || '').toString().toUpperCase();
+
+    // 1. Se local ou título contém 'Juiz', é estritamente Juiz de Fora
+    if (l.indexOf('Juiz') !== -1 || t.indexOf('Juiz') !== -1) {
+      return 'Juiz de Fora';
+    }
+
+    // 2. Se local ou título contém 'Uber', é estritamente Uberlândia
+    if (l.indexOf('Uber') !== -1 || t.indexOf('Uber') !== -1) {
+      return 'Uberlândia';
+    }
+
+    // 3. Equipamentos exclusivos de Juiz de Fora
+    for (var i = 0; i < JF_EXCLUSIVOS.length; i++) {
+      if (eq === JF_EXCLUSIVOS[i] || t.toUpperCase().indexOf(JF_EXCLUSIVOS[i]) !== -1) {
+        return 'Juiz de Fora';
+      }
+    }
+
+    // 4. Se tiver praça explicitamente gravada e válida
+    if (p) {
+      return p.indexOf('Uber') !== -1 ? 'Uberlândia' : 'Juiz de Fora';
+    }
+
+    // 5. Padrão estrito para ocorrências legadas: Juiz de Fora (NUNCA usar getPracaAtual() como fallback!)
+    return 'Juiz de Fora';
+  }
+  window.normalizarPracaOcorrencia = normalizarPracaOcorrencia;
+
   var DBService = {
     mode: (SUPABASE_URL && SUPABASE_ANON_KEY) ? 'supabase' : 'local',
     url: SUPABASE_URL,
@@ -281,7 +316,7 @@ document.addEventListener('DOMContentLoaded', function () {
         criado: item.criado || Date.now(),
         dataCriacao: item.dataCriacao || '',
         resolucao: Object.keys(resObj).length > 0 ? resObj : null,
-        praca: item.praca || (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora')
+        praca: normalizarPracaOcorrencia(item.praca, item.local, item.titulo, item.equipamento || (item.tags && item.tags[1]))
       };
     },
 
@@ -641,24 +676,95 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.obterOuCriarOperadorPorNome = obterOuCriarOperadorPorNome;
 
+  /* ── Gerenciador Inteligente de Reconexão com Backoff Progressivo ── */
+  var _cloudConnected = true;
+  var _reconnectTimer = null;
+  var _reconnectAttempt = 0;
+  var _isReconnecting = false;
+
+  function iniciarReconexaoAutomatica() {
+    // Só tenta reconectar se estiver desconectado e não houver tentativa já agendada ou em curso
+    if (_cloudConnected || _reconnectTimer || _isReconnecting) return;
+
+    _reconnectAttempt++;
+    // Intervalos com backoff progressivo: 10s, 15s, 22s, 33s... até teto de 60s
+    // Garante que não bombardeia nem incha o banco de dados com requisições repetidas
+    var delayMs = Math.min(10000 * Math.pow(1.5, _reconnectAttempt - 1), 60000);
+    console.log('[DBService] Banco desconectado. Tentativa de reconexão #' + _reconnectAttempt + ' agendada em ' + (Math.round(delayMs / 1000)) + 's...');
+
+    _reconnectTimer = setTimeout(async function() {
+      _reconnectTimer = null;
+      if (_cloudConnected) return;
+
+      _isReconnecting = true;
+      try {
+        if (typeof DBService !== 'undefined' && DBService && typeof DBService.syncRemote === 'function') {
+          var ok = await DBService.syncRemote(true);
+          if (ok !== false) {
+            console.log('[DBService] ✅ Conexão com o banco restabelecida com sucesso!');
+            _cloudConnected = true;
+            _reconnectAttempt = 0;
+            _isReconnecting = false;
+            updateCloudStatus(true, 'Nuvem Conectada');
+            if (typeof mostrarToast === 'function') {
+              mostrarToast('Conexão Restabelecida', 'O banco de dados foi reconectado e os dados estão sincronizados.', 'success');
+            }
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('[DBService] Tentativa de reconexão falhou:', err);
+      }
+      _isReconnecting = false;
+      // Se ainda estiver desconectado, agenda a próxima com backoff
+      if (!_cloudConnected) {
+        iniciarReconexaoAutomatica();
+      }
+    }, delayMs);
+  }
+
+  function tentarReconectarImediato() {
+    if (_cloudConnected) return;
+    if (_reconnectTimer) {
+      clearTimeout(_reconnectTimer);
+      _reconnectTimer = null;
+    }
+    _reconnectAttempt = 0;
+    iniciarReconexaoAutomatica();
+  }
+  window.tentarReconectarImediato = tentarReconectarImediato;
+
   function updateCloudStatus(isOnline, customText) {
     var indicator = document.getElementById('cloud-status-indicator');
-    if (!indicator) return;
     if (isOnline) {
-      indicator.className = 'cloud-status online';
-      indicator.title = 'Conectado ao Supabase em tempo real';
-      indicator.innerHTML = '<span class="cloud-dot"></span><span class="cloud-text">' + (customText || 'Nuvem Conectada') + '</span>';
+      _cloudConnected = true;
+      _reconnectAttempt = 0;
+      if (_reconnectTimer) {
+        clearTimeout(_reconnectTimer);
+        _reconnectTimer = null;
+      }
+      if (indicator) {
+        indicator.className = 'cloud-status online';
+        indicator.title = 'Conectado ao Supabase em tempo real';
+        indicator.innerHTML = '<span class="cloud-dot"></span><span class="cloud-text">' + (customText || 'Nuvem Conectada') + '</span>';
+      }
     } else {
-      indicator.className = 'cloud-status offline';
-      indicator.title = 'Offline ou sem conexão com a nuvem (dados salvos localmente no cache)';
-      indicator.innerHTML = '<span class="cloud-dot"></span><span class="cloud-text">' + (customText || 'Modo Local') + '</span>';
+      _cloudConnected = false;
+      if (indicator) {
+        indicator.className = 'cloud-status offline';
+        indicator.title = 'Desconectado do banco — reconectando automaticamente... (dados salvos localmente no cache)';
+        indicator.innerHTML = '<span class="cloud-dot"></span><span class="cloud-text">' + (customText || 'Reconectando...') + '</span>';
+      }
+      // Inicia a reconexão automática com backoff apenas quando desconectar
+      iniciarReconexaoAutomatica();
     }
   }
   window.updateCloudStatus = updateCloudStatus;
+  window._isCloudConnected = function() { return _cloudConnected; };
 
   window.addEventListener('online', function() {
-    updateCloudStatus(true, 'Nuvem Conectada');
-    if (typeof DBService !== 'undefined' && DBService.syncRemote) DBService.syncRemote();
+    console.log('[DBService] Rede online detectada. Verificando conexão com o banco...');
+    tentarReconectarImediato();
   });
   window.addEventListener('offline', function() {
     updateCloudStatus(false, 'Modo Local');
@@ -697,7 +803,7 @@ document.addEventListener('DOMContentLoaded', function () {
       dataCriacao: o.dataCriacao || formatDataHoraLocal(o.criado),
       resolucao: res,
       anexos: anx,
-      praca: o.praca || (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora')
+      praca: normalizarPracaOcorrencia(o.praca, o.local, o.titulo, o.equipamento || (o.tags && o.tags[1]))
     };
   }
 
@@ -757,6 +863,8 @@ document.addEventListener('DOMContentLoaded', function () {
           }
         }
       } catch(e) {}
+    } else {
+      ocorrencias = ocorrencias.map(sanitizeOcorrencia).filter(Boolean);
     }
     return ocorrencias || [];
   }
@@ -786,12 +894,11 @@ document.addEventListener('DOMContentLoaded', function () {
         var parsed = JSON.parse(rawCache);
         if (Array.isArray(parsed) && parsed.length > 0) {
           var limpos = parsed.filter(function(o){ return o && !String(o.id).startsWith('oc_init_'); });
-          if (limpos.length !== parsed.length) {
-            try {
-              localStorage.setItem(OCORRENCIAS_CACHE_KEY, JSON.stringify(limpos));
-            } catch(eClean) {}
-          }
-          return limpos.map(sanitizeOcorrencia).filter(Boolean);
+          var sanitizados = limpos.map(sanitizeOcorrencia).filter(Boolean);
+          try {
+            localStorage.setItem(OCORRENCIAS_CACHE_KEY, JSON.stringify(sanitizados));
+          } catch(eClean) {}
+          return sanitizados;
         }
       }
     } catch(e) {}
@@ -803,17 +910,15 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!item) return false;
     var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var isUberlandia = pracaAtiva.indexOf('Uber') !== -1;
-    var itemPraca = item.praca || item.local || '';
-    if (isUberlandia) {
-      return itemPraca.indexOf('Uber') !== -1;
-    } else {
-      // Juiz de Fora: item.praca contém 'Juiz' ou não possui praça preenchida (legado)
-      return !itemPraca || itemPraca.indexOf('Juiz') !== -1;
-    }
+    var itemPraca = normalizarPracaOcorrencia(item.praca, item.local, item.titulo, item.equipamento || (item.tags && item.tags[1]));
+    return isUberlandia ? (itemPraca === 'Uberlândia') : (itemPraca === 'Juiz de Fora');
   }
   window.pertenceAPracaAtiva = pertenceAPracaAtiva;
 
   function getAbertas()    { return ocorrencias.filter(function(o){ return o && o.status === 'aberta' && pertenceAPracaAtiva(o); }); }
   function getArquivadas() { return ocorrencias.filter(function(o){ return o && o.status === 'arquivada' && pertenceAPracaAtiva(o); }); }
   function getResolvidas() { return ocorrencias.filter(function(o){ return o && o.status === 'resolvida' && pertenceAPracaAtiva(o); }); }
+  window.getAbertas = getAbertas;
+  window.getArquivadas = getArquivadas;
+  window.getResolvidas = getResolvidas;
 

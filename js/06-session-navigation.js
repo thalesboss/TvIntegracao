@@ -102,8 +102,8 @@
     recebimento1: { page:'page-recebimento',  title:'Recebimento de Materiais',                 chip:'Registro patrimonial e anexo de fotos/vídeos' },
     recebimento2: { page:'page-recebimento',  title:'Recebimento de Materiais',                 chip:'Registro patrimonial e anexo de fotos/vídeos' },
     dashboard:    { page:'page-dashboard',    title:'Ocorrências',                              chip: function() { return 'Logado há: ' + getTempoLogadoStr(); } },
-    checklist:    { page:'page-checklist',    title:'Checklist Diário & Rotinas',               chip:'Monitoramento preventivo e rotinas do turno' },
-    ctrs:         { page:'page-ctrs',         title:'Checklist de Transmissão — CTRS',          chip:'Preencher após cada jornal' },
+    checklist:    { page:'page-checklist',    title:'Rotinas & Lembretes',                      chip:'Monitoramento preventivo e rotinas do turno' },
+    ctrs:         { page:'page-ctrs',         title:'Relatório de Transmissões',                chip:'Preencher após cada jornal' },
     arquivados:   { page:'page-arquivados',   title:'Ocorrências Arquivadas',                   chip:'Verificação e acompanhamento do próximo turno' },
     historico:    { page:'page-historico',    title:'Histórico Geral de Registros',             chip:'Ocorrências, Relatórios e Recebimentos' },
     lixeira:      { page:'page-lixeira',      title:'Lixeira',                                  chip:'Itens excluídos retidos por 7 dias' },
@@ -112,6 +112,7 @@
     dashboard_transmissoes: { page:'page-dashboard-ocorrencias',  title:'Dashboard Transmissões — Transmissões ao Vivo',  chip:'Transmissões em Tempo Real' },
     compras_vendas:{ page:'page-compras-vendas', title:'Solicitação de Compras',                chip:'Preencher solicitação de compra' },
     orcamento:     { page:'page-orcamento',      title: 'Orçamento Anual', chip: function() { return 'Ciclo ' + (new Date().getFullYear() + 1); } },
+    ronda:         { page:'page-ronda',          title:'Relatório Diário — Tecnologia UDI',        chip:'Ronda técnica de plantão e infraestrutura' },
     config:        { page:'page-config',         title:'Configurações',                            chip:'Perfil e preferências'      }
   };
 
@@ -135,6 +136,12 @@
       }
       try { atualizarSelectsProfissionaisCTRS(); } catch(e) {}
       try { atualizarSelectsEquipamentosCTRS(); } catch(e) {}
+    }
+    if (name === 'ronda') {
+      try {
+        if (typeof carregarRascunhoRonda === 'function') carregarRascunhoRonda();
+        if (typeof verificarNaoConformidadesRonda === 'function') verificarNaoConformidadesRonda();
+      } catch(e) {}
     }
   }
   window.irPara = irPara;
@@ -215,27 +222,31 @@
       nomeEl.textContent = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
     }
 
-    // 2. Atualizar menu lateral: CTRS vs Relatório
+    // 2. Atualizar menu lateral: Relatório Transmissões
     var ctrsLabel = document.getElementById('sidebar-label-ctrs');
     if (ctrsLabel) {
-      ctrsLabel.textContent = isUberlandia ? 'Relatório' : 'Relatório CTRS';
+      ctrsLabel.textContent = 'Relatório Transmissões';
     }
 
-    // 3. Atualizar pageMap para título dinâmico de CTRS
+    // 3. Atualizar pageMap para título dinâmico de Transmissões
     if (pageMap && pageMap.ctrs) {
-      pageMap.ctrs.title = isUberlandia ? 'Relatório de Transmissão ao Vivo' : 'Checklist de Transmissão — CTRS';
+      pageMap.ctrs.title = isUberlandia ? 'Relatório de Transmissões' : 'Relatório de Transmissões (CTRS)';
       pageMap.ctrs.chip  = isUberlandia ? 'Preencher após cada transmissão / jornal' : 'Preencher após cada jornal';
     }
 
     // 4. Se a página CTRS estiver aberta ou tiver cabeçalho no HTML, atualizar
     var ctrsPageHeader = document.querySelector('#page-ctrs .sec-header h2');
     if (ctrsPageHeader) {
-      ctrsPageHeader.textContent = isUberlandia ? 'Relatório de Transmissão ao Vivo' : 'Checklist de Transmissão — CTRS';
+      ctrsPageHeader.textContent = isUberlandia ? 'Relatório de Transmissões' : 'Relatório de Transmissões (CTRS)';
     }
 
     // 5. Esconder / Exibir Recebimento de Materiais (somente Juiz de Fora)
     var btnRec = document.getElementById('sidebar-btn-recebimento');
     if (btnRec) btnRec.style.display = isUberlandia ? 'none' : '';
+
+    // 5b. Esconder / Exibir Relatório Diário de Tecnologia / Ronda (somente Uberlândia)
+    var btnRonda = document.getElementById('sidebar-btn-ronda');
+    if (btnRonda) btnRonda.style.display = isUberlandia ? '' : 'none';
 
     // Manter o cabeçalho de seção "Suprimentos & Compras" visível para compras/orçamento terem seu próprio bloco
     var secCompras = document.getElementById('sidebar-section-compras') || document.getElementById('sidebar-section-recebimento');
@@ -257,6 +268,10 @@
     // Se estiver atualmente na página de recebimento e mudar para Uberlândia, redirecionar para dashboard
     var activePage = document.querySelector('.page.active');
     if (isUberlandia && activePage && activePage.id === 'page-recebimento') {
+      irPara('dashboard');
+    }
+    // Se estiver atualmente na página de ronda e mudar para Juiz de Fora, redirecionar para dashboard
+    if (!isUberlandia && activePage && activePage.id === 'page-ronda') {
       irPara('dashboard');
     }
 
@@ -293,7 +308,14 @@
       }
     } catch(eEq) {}
 
-    // 9. Notificar e re-renderizar módulos com dados da praça selecionada
+    // 9. Re-sanitizar ocorrências em memória para consistência estrita de praça
+    try {
+      if (Array.isArray(window.ocorrencias) && typeof sanitizeOcorrencia === 'function') {
+        window.ocorrencias = window.ocorrencias.map(sanitizeOcorrencia).filter(Boolean);
+      }
+    } catch(eSan) {}
+
+    // 10. Notificar e re-renderizar módulos com dados da praça selecionada
     try {
       if (typeof window.carregarDashboardMetricsStore === 'function') {
         window.carregarDashboardMetricsStore();

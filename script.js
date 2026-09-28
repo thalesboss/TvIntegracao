@@ -1,4 +1,4 @@
-﻿/* ═══════════════════════════════════════════
+/* ═══════════════════════════════════════════
    POPUP — funções base globais
 ═══════════════════════════════════════════ */
 function abrirPopup(id) {
@@ -98,6 +98,8 @@ document.addEventListener('click', function(e) {
     fecharPopup(e.target.id);
   }
 });
+
+
 document.addEventListener('DOMContentLoaded', function () {
   console.log('✅ [Sistema TV] Versão 7.9 — Blindagem de Testes: Sincronização Otimizada, Anti-XSS e Cache Resiliente');
 
@@ -344,6 +346,41 @@ document.addEventListener('DOMContentLoaded', function () {
     ? envConfig.SUPABASE_ANON_KEY
     : (localStorage.getItem('tv_supabase_key') || '');
 
+  var JF_EXCLUSIVOS = ['NET PRAÇA', 'NET PORTARIA', 'FORMATOS NET', 'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR', 'KMJ'];
+
+  function normalizarPracaOcorrencia(praca, local, titulo, equipamento) {
+    var l = (local || '').toString();
+    var t = (titulo || '').toString();
+    var p = (praca || '').toString().trim();
+    var eq = (equipamento || '').toString().toUpperCase();
+
+    // 1. Se local ou título contém 'Juiz', é estritamente Juiz de Fora
+    if (l.indexOf('Juiz') !== -1 || t.indexOf('Juiz') !== -1) {
+      return 'Juiz de Fora';
+    }
+
+    // 2. Se local ou título contém 'Uber', é estritamente Uberlândia
+    if (l.indexOf('Uber') !== -1 || t.indexOf('Uber') !== -1) {
+      return 'Uberlândia';
+    }
+
+    // 3. Equipamentos exclusivos de Juiz de Fora
+    for (var i = 0; i < JF_EXCLUSIVOS.length; i++) {
+      if (eq === JF_EXCLUSIVOS[i] || t.toUpperCase().indexOf(JF_EXCLUSIVOS[i]) !== -1) {
+        return 'Juiz de Fora';
+      }
+    }
+
+    // 4. Se tiver praça explicitamente gravada e válida
+    if (p) {
+      return p.indexOf('Uber') !== -1 ? 'Uberlândia' : 'Juiz de Fora';
+    }
+
+    // 5. Padrão estrito para ocorrências legadas: Juiz de Fora (NUNCA usar getPracaAtual() como fallback!)
+    return 'Juiz de Fora';
+  }
+  window.normalizarPracaOcorrencia = normalizarPracaOcorrencia;
+
   var DBService = {
     mode: (SUPABASE_URL && SUPABASE_ANON_KEY) ? 'supabase' : 'local',
     url: SUPABASE_URL,
@@ -381,7 +418,7 @@ document.addEventListener('DOMContentLoaded', function () {
         criado: item.criado || Date.now(),
         dataCriacao: item.dataCriacao || '',
         resolucao: Object.keys(resObj).length > 0 ? resObj : null,
-        praca: item.praca || (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora')
+        praca: normalizarPracaOcorrencia(item.praca, item.local, item.titulo, item.equipamento || (item.tags && item.tags[1]))
       };
     },
 
@@ -741,24 +778,95 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.obterOuCriarOperadorPorNome = obterOuCriarOperadorPorNome;
 
+  /* ── Gerenciador Inteligente de Reconexão com Backoff Progressivo ── */
+  var _cloudConnected = true;
+  var _reconnectTimer = null;
+  var _reconnectAttempt = 0;
+  var _isReconnecting = false;
+
+  function iniciarReconexaoAutomatica() {
+    // Só tenta reconectar se estiver desconectado e não houver tentativa já agendada ou em curso
+    if (_cloudConnected || _reconnectTimer || _isReconnecting) return;
+
+    _reconnectAttempt++;
+    // Intervalos com backoff progressivo: 10s, 15s, 22s, 33s... até teto de 60s
+    // Garante que não bombardeia nem incha o banco de dados com requisições repetidas
+    var delayMs = Math.min(10000 * Math.pow(1.5, _reconnectAttempt - 1), 60000);
+    console.log('[DBService] Banco desconectado. Tentativa de reconexão #' + _reconnectAttempt + ' agendada em ' + (Math.round(delayMs / 1000)) + 's...');
+
+    _reconnectTimer = setTimeout(async function() {
+      _reconnectTimer = null;
+      if (_cloudConnected) return;
+
+      _isReconnecting = true;
+      try {
+        if (typeof DBService !== 'undefined' && DBService && typeof DBService.syncRemote === 'function') {
+          var ok = await DBService.syncRemote(true);
+          if (ok !== false) {
+            console.log('[DBService] ✅ Conexão com o banco restabelecida com sucesso!');
+            _cloudConnected = true;
+            _reconnectAttempt = 0;
+            _isReconnecting = false;
+            updateCloudStatus(true, 'Nuvem Conectada');
+            if (typeof mostrarToast === 'function') {
+              mostrarToast('Conexão Restabelecida', 'O banco de dados foi reconectado e os dados estão sincronizados.', 'success');
+            }
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('[DBService] Tentativa de reconexão falhou:', err);
+      }
+      _isReconnecting = false;
+      // Se ainda estiver desconectado, agenda a próxima com backoff
+      if (!_cloudConnected) {
+        iniciarReconexaoAutomatica();
+      }
+    }, delayMs);
+  }
+
+  function tentarReconectarImediato() {
+    if (_cloudConnected) return;
+    if (_reconnectTimer) {
+      clearTimeout(_reconnectTimer);
+      _reconnectTimer = null;
+    }
+    _reconnectAttempt = 0;
+    iniciarReconexaoAutomatica();
+  }
+  window.tentarReconectarImediato = tentarReconectarImediato;
+
   function updateCloudStatus(isOnline, customText) {
     var indicator = document.getElementById('cloud-status-indicator');
-    if (!indicator) return;
     if (isOnline) {
-      indicator.className = 'cloud-status online';
-      indicator.title = 'Conectado ao Supabase em tempo real';
-      indicator.innerHTML = '<span class="cloud-dot"></span><span class="cloud-text">' + (customText || 'Nuvem Conectada') + '</span>';
+      _cloudConnected = true;
+      _reconnectAttempt = 0;
+      if (_reconnectTimer) {
+        clearTimeout(_reconnectTimer);
+        _reconnectTimer = null;
+      }
+      if (indicator) {
+        indicator.className = 'cloud-status online';
+        indicator.title = 'Conectado ao Supabase em tempo real';
+        indicator.innerHTML = '<span class="cloud-dot"></span><span class="cloud-text">' + (customText || 'Nuvem Conectada') + '</span>';
+      }
     } else {
-      indicator.className = 'cloud-status offline';
-      indicator.title = 'Offline ou sem conexão com a nuvem (dados salvos localmente no cache)';
-      indicator.innerHTML = '<span class="cloud-dot"></span><span class="cloud-text">' + (customText || 'Modo Local') + '</span>';
+      _cloudConnected = false;
+      if (indicator) {
+        indicator.className = 'cloud-status offline';
+        indicator.title = 'Desconectado do banco — reconectando automaticamente... (dados salvos localmente no cache)';
+        indicator.innerHTML = '<span class="cloud-dot"></span><span class="cloud-text">' + (customText || 'Reconectando...') + '</span>';
+      }
+      // Inicia a reconexão automática com backoff apenas quando desconectar
+      iniciarReconexaoAutomatica();
     }
   }
   window.updateCloudStatus = updateCloudStatus;
+  window._isCloudConnected = function() { return _cloudConnected; };
 
   window.addEventListener('online', function() {
-    updateCloudStatus(true, 'Nuvem Conectada');
-    if (typeof DBService !== 'undefined' && DBService.syncRemote) DBService.syncRemote();
+    console.log('[DBService] Rede online detectada. Verificando conexão com o banco...');
+    tentarReconectarImediato();
   });
   window.addEventListener('offline', function() {
     updateCloudStatus(false, 'Modo Local');
@@ -797,7 +905,7 @@ document.addEventListener('DOMContentLoaded', function () {
       dataCriacao: o.dataCriacao || formatDataHoraLocal(o.criado),
       resolucao: res,
       anexos: anx,
-      praca: o.praca || (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora')
+      praca: normalizarPracaOcorrencia(o.praca, o.local, o.titulo, o.equipamento || (o.tags && o.tags[1]))
     };
   }
 
@@ -857,6 +965,8 @@ document.addEventListener('DOMContentLoaded', function () {
           }
         }
       } catch(e) {}
+    } else {
+      ocorrencias = ocorrencias.map(sanitizeOcorrencia).filter(Boolean);
     }
     return ocorrencias || [];
   }
@@ -886,12 +996,11 @@ document.addEventListener('DOMContentLoaded', function () {
         var parsed = JSON.parse(rawCache);
         if (Array.isArray(parsed) && parsed.length > 0) {
           var limpos = parsed.filter(function(o){ return o && !String(o.id).startsWith('oc_init_'); });
-          if (limpos.length !== parsed.length) {
-            try {
-              localStorage.setItem(OCORRENCIAS_CACHE_KEY, JSON.stringify(limpos));
-            } catch(eClean) {}
-          }
-          return limpos.map(sanitizeOcorrencia).filter(Boolean);
+          var sanitizados = limpos.map(sanitizeOcorrencia).filter(Boolean);
+          try {
+            localStorage.setItem(OCORRENCIAS_CACHE_KEY, JSON.stringify(sanitizados));
+          } catch(eClean) {}
+          return sanitizados;
         }
       }
     } catch(e) {}
@@ -903,19 +1012,19 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!item) return false;
     var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var isUberlandia = pracaAtiva.indexOf('Uber') !== -1;
-    var itemPraca = item.praca || item.local || '';
-    if (isUberlandia) {
-      return itemPraca.indexOf('Uber') !== -1;
-    } else {
-      // Juiz de Fora: item.praca contém 'Juiz' ou não possui praça preenchida (legado)
-      return !itemPraca || itemPraca.indexOf('Juiz') !== -1;
-    }
+    var itemPraca = normalizarPracaOcorrencia(item.praca, item.local, item.titulo, item.equipamento || (item.tags && item.tags[1]));
+    return isUberlandia ? (itemPraca === 'Uberlândia') : (itemPraca === 'Juiz de Fora');
   }
   window.pertenceAPracaAtiva = pertenceAPracaAtiva;
 
   function getAbertas()    { return ocorrencias.filter(function(o){ return o && o.status === 'aberta' && pertenceAPracaAtiva(o); }); }
   function getArquivadas() { return ocorrencias.filter(function(o){ return o && o.status === 'arquivada' && pertenceAPracaAtiva(o); }); }
   function getResolvidas() { return ocorrencias.filter(function(o){ return o && o.status === 'resolvida' && pertenceAPracaAtiva(o); }); }
+  window.getAbertas = getAbertas;
+  window.getArquivadas = getArquivadas;
+  window.getResolvidas = getResolvidas;
+
+
 
   /* ═══════════════════════════════════════════
      HELPERS DE RENDER
@@ -1246,6 +1355,8 @@ document.addEventListener('DOMContentLoaded', function () {
       abertasHTML +
       resolvidasHTML;
   }
+
+
   /* ═══════════════════════════════════════════
      HISTÓRICO GERAL — ESTRUTURA DE DADOS
   ═══════════════════════════════════════════ */
@@ -1327,7 +1438,9 @@ document.addEventListener('DOMContentLoaded', function () {
             descResolucao: resDesc,
             tags:          oc.tags || [],
             anexos:        anexosLista,
-            praca:         oc.praca || (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora')
+            praca:         (typeof normalizarPracaOcorrencia === 'function')
+              ? normalizarPracaOcorrencia(oc.praca, oc.local, oc.titulo, oc.equipamento || (oc.tags && oc.tags[1]))
+              : (oc.praca || 'Juiz de Fora')
           };
           mapa[oc.id] = true;
           mapa[histId] = true;
@@ -1375,6 +1488,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return '<span class="tag tag-blue-soft">Registro</span>';
   }
+
+
   /* ─── Render: Dashboard Resolvidas & Power BI ─── */
   var resolvidasFiltro = 'todas';
 
@@ -1656,6 +1771,8 @@ document.addEventListener('DOMContentLoaded', function () {
     page.addEventListener('change', acao);
   }
   window.registrarAutosaveListener = registrarAutosaveListener;
+
+
   /* ═══════════════════════════════════════════
      POPUP ENTRADA
   /* ═══════════════════════════════════════════
@@ -1760,8 +1877,8 @@ document.addEventListener('DOMContentLoaded', function () {
     recebimento1: { page:'page-recebimento',  title:'Recebimento de Materiais',                 chip:'Registro patrimonial e anexo de fotos/vídeos' },
     recebimento2: { page:'page-recebimento',  title:'Recebimento de Materiais',                 chip:'Registro patrimonial e anexo de fotos/vídeos' },
     dashboard:    { page:'page-dashboard',    title:'Ocorrências',                              chip: function() { return 'Logado há: ' + getTempoLogadoStr(); } },
-    checklist:    { page:'page-checklist',    title:'Checklist Diário & Rotinas',               chip:'Monitoramento preventivo e rotinas do turno' },
-    ctrs:         { page:'page-ctrs',         title:'Checklist de Transmissão — CTRS',          chip:'Preencher após cada jornal' },
+    checklist:    { page:'page-checklist',    title:'Rotinas & Lembretes',                      chip:'Monitoramento preventivo e rotinas do turno' },
+    ctrs:         { page:'page-ctrs',         title:'Relatório de Transmissões',                chip:'Preencher após cada jornal' },
     arquivados:   { page:'page-arquivados',   title:'Ocorrências Arquivadas',                   chip:'Verificação e acompanhamento do próximo turno' },
     historico:    { page:'page-historico',    title:'Histórico Geral de Registros',             chip:'Ocorrências, Relatórios e Recebimentos' },
     lixeira:      { page:'page-lixeira',      title:'Lixeira',                                  chip:'Itens excluídos retidos por 7 dias' },
@@ -1770,6 +1887,7 @@ document.addEventListener('DOMContentLoaded', function () {
     dashboard_transmissoes: { page:'page-dashboard-ocorrencias',  title:'Dashboard Transmissões — Transmissões ao Vivo',  chip:'Transmissões em Tempo Real' },
     compras_vendas:{ page:'page-compras-vendas', title:'Solicitação de Compras',                chip:'Preencher solicitação de compra' },
     orcamento:     { page:'page-orcamento',      title: 'Orçamento Anual', chip: function() { return 'Ciclo ' + (new Date().getFullYear() + 1); } },
+    ronda:         { page:'page-ronda',          title:'Relatório Diário — Tecnologia UDI',        chip:'Ronda técnica de plantão e infraestrutura' },
     config:        { page:'page-config',         title:'Configurações',                            chip:'Perfil e preferências'      }
   };
 
@@ -1793,6 +1911,12 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       try { atualizarSelectsProfissionaisCTRS(); } catch(e) {}
       try { atualizarSelectsEquipamentosCTRS(); } catch(e) {}
+    }
+    if (name === 'ronda') {
+      try {
+        if (typeof carregarRascunhoRonda === 'function') carregarRascunhoRonda();
+        if (typeof verificarNaoConformidadesRonda === 'function') verificarNaoConformidadesRonda();
+      } catch(e) {}
     }
   }
   window.irPara = irPara;
@@ -1873,27 +1997,31 @@ document.addEventListener('DOMContentLoaded', function () {
       nomeEl.textContent = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
     }
 
-    // 2. Atualizar menu lateral: CTRS vs Relatório
+    // 2. Atualizar menu lateral: Relatório Transmissões
     var ctrsLabel = document.getElementById('sidebar-label-ctrs');
     if (ctrsLabel) {
-      ctrsLabel.textContent = isUberlandia ? 'Relatório' : 'Relatório CTRS';
+      ctrsLabel.textContent = 'Relatório Transmissões';
     }
 
-    // 3. Atualizar pageMap para título dinâmico de CTRS
+    // 3. Atualizar pageMap para título dinâmico de Transmissões
     if (pageMap && pageMap.ctrs) {
-      pageMap.ctrs.title = isUberlandia ? 'Relatório de Transmissão ao Vivo' : 'Checklist de Transmissão — CTRS';
+      pageMap.ctrs.title = isUberlandia ? 'Relatório de Transmissões' : 'Relatório de Transmissões (CTRS)';
       pageMap.ctrs.chip  = isUberlandia ? 'Preencher após cada transmissão / jornal' : 'Preencher após cada jornal';
     }
 
     // 4. Se a página CTRS estiver aberta ou tiver cabeçalho no HTML, atualizar
     var ctrsPageHeader = document.querySelector('#page-ctrs .sec-header h2');
     if (ctrsPageHeader) {
-      ctrsPageHeader.textContent = isUberlandia ? 'Relatório de Transmissão ao Vivo' : 'Checklist de Transmissão — CTRS';
+      ctrsPageHeader.textContent = isUberlandia ? 'Relatório de Transmissões' : 'Relatório de Transmissões (CTRS)';
     }
 
     // 5. Esconder / Exibir Recebimento de Materiais (somente Juiz de Fora)
     var btnRec = document.getElementById('sidebar-btn-recebimento');
     if (btnRec) btnRec.style.display = isUberlandia ? 'none' : '';
+
+    // 5b. Esconder / Exibir Relatório Diário de Tecnologia / Ronda (somente Uberlândia)
+    var btnRonda = document.getElementById('sidebar-btn-ronda');
+    if (btnRonda) btnRonda.style.display = isUberlandia ? '' : 'none';
 
     // Manter o cabeçalho de seção "Suprimentos & Compras" visível para compras/orçamento terem seu próprio bloco
     var secCompras = document.getElementById('sidebar-section-compras') || document.getElementById('sidebar-section-recebimento');
@@ -1915,6 +2043,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // Se estiver atualmente na página de recebimento e mudar para Uberlândia, redirecionar para dashboard
     var activePage = document.querySelector('.page.active');
     if (isUberlandia && activePage && activePage.id === 'page-recebimento') {
+      irPara('dashboard');
+    }
+    // Se estiver atualmente na página de ronda e mudar para Juiz de Fora, redirecionar para dashboard
+    if (!isUberlandia && activePage && activePage.id === 'page-ronda') {
       irPara('dashboard');
     }
 
@@ -1951,7 +2083,14 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     } catch(eEq) {}
 
-    // 9. Notificar e re-renderizar módulos com dados da praça selecionada
+    // 9. Re-sanitizar ocorrências em memória para consistência estrita de praça
+    try {
+      if (Array.isArray(window.ocorrencias) && typeof sanitizeOcorrencia === 'function') {
+        window.ocorrencias = window.ocorrencias.map(sanitizeOcorrencia).filter(Boolean);
+      }
+    } catch(eSan) {}
+
+    // 10. Notificar e re-renderizar módulos com dados da praça selecionada
     try {
       if (typeof window.carregarDashboardMetricsStore === 'function') {
         window.carregarDashboardMetricsStore();
@@ -1985,6 +2124,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.trocarPracaConfig = trocarPracaConfig;
+
+
 
   /* ═══════════════════════════════════════════
      INDEXEDDB LOCAL MEDIA CACHE (Para vídeos e fotos de qualquer tamanho)
@@ -2289,6 +2430,8 @@ document.addEventListener('DOMContentLoaded', function () {
       };
     }
   });
+
+
   /* ═══════════════════════════════════════════
      RECEBIMENTOS DE EQUIPAMENTOS
   ═══════════════════════════════════════════ */
@@ -2535,6 +2678,8 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-recebimento', salvarRascunhoRecebimento);
   }
+
+
   /* ═══════════════════════════════════════════
      REQUISIÇÃO DE COMPRAS E VENDAS
   ═══════════════════════════════════════════ */
@@ -2798,6 +2943,8 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-compras', salvarRascunhoCompra);
   }
+
+
   /* ═══════════════════════════════════════════
      ENVIO DE RELATÓRIO TV (CTRS) E GERADOR AUTOMÁTICO DE OCORRÊNCIAS
   ═══════════════════════════════════════════ */
@@ -3556,6 +3703,8 @@ document.addEventListener('DOMContentLoaded', function () {
         '</table>';
     });
 
+    var isUberlandia = praca.indexOf('Uber') !== -1;
+
     var htmlCompleto =
       '<div style="font-family:Arial, Helvetica, sans-serif; color:#000000; max-width:820px; margin:0 auto; padding:10px;">' +
         '<!-- CABEÇALHO OFICIAL ENGENHARIA -->' +
@@ -3566,7 +3715,7 @@ document.addEventListener('DOMContentLoaded', function () {
             '</td>' +
             '<td style="text-align:center; vertical-align:middle; border:1px solid #000000; padding:6px; font-weight:bold; font-size:12px; line-height:1.4;">' +
               'Processo Engenharia 1.1.1 – P02 – F02<br/>' +
-              'Checklist de Transmissão ao Vivo CTRS' +
+              (isUberlandia ? 'Relatório de Transmissão ao Vivo' : 'Checklist de Transmissão ao Vivo CTRS') +
             '</td>' +
             '<td style="width:140px; text-align:center; vertical-align:middle; border:1px solid #000000; padding:6px; font-size:11px;">' +
               'Formulário<br/>' +
@@ -3653,7 +3802,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     return {
       html: htmlCompleto,
-      assunto: 'Transmissão ao Vivo - CTRS - ' + (inCheck ? 'IN' : (mg1Check ? 'MG1' : (mg2Check ? 'MG2' : 'OUTROS'))) + ' - ' + praca + ' - ' + dataFmt
+      assunto: (isUberlandia ? 'Transmissão ao Vivo - ' : 'Transmissão ao Vivo - CTRS - ') + (inCheck ? 'IN' : (mg1Check ? 'MG1' : (mg2Check ? 'MG2' : 'OUTROS'))) + ' - ' + praca + ' - ' + dataFmt
     };
   }
 
@@ -3704,6 +3853,15 @@ document.addEventListener('DOMContentLoaded', function () {
     var assuntoEl = document.getElementById('ctrs-outlook-assunto');
     if (assuntoEl) {
       assuntoEl.textContent = assunto;
+    }
+
+    var pracaAtual = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+    var isUdi = pracaAtual.indexOf('Uber') !== -1 || (assunto && assunto.indexOf('Uberlândia') !== -1);
+    var descEl = document.getElementById('popup-ctrs-outlook-desc');
+    if (descEl) {
+      descEl.innerHTML = isUdi
+        ? 'O relatório oficial de transmissão foi formatado e copiado para a área de transferência. Basta abrir o Outlook e pressionar <strong>CTRL + V</strong> para colar a tabela pronta.'
+        : 'O checklist oficial do CTRS foi formatado e copiado para a área de transferência. Basta abrir o Outlook e pressionar <strong>CTRL + V</strong> para colar a tabela pronta.';
     }
 
     var copiado = false;
@@ -3859,6 +4017,8 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-ctrs', salvarRascunhoRelatorioTV);
   }
+
+
   /* ═══════════════════════════════════════════
      CHECKLIST DIÁRIO & MONITORAMENTO DE ROTINAS OPERACIONAIS — SUPABASE
   ═══════════════════════════════════════════ */
@@ -4926,6 +5086,410 @@ document.addEventListener('DOMContentLoaded', function () {
     verificarRecorrenciasChecklist();
   });
 
+
+
+/* ═══════════════════════════════════════════
+   RELATÓRIO DIÁRIO — TECNOLOGIA UDI (RONDA TÉCNICA)
+   Módulo exclusivo da praça de Uberlândia para acompanhamento de
+   Centro Exibidor, Transmissores, Recepção Satélite, CPA, Central e Energia.
+═══════════════════════════════════════════ */
+
+(function () {
+  var RONDA_DRAFT_KEY = 'tv_rascunho_ronda_udi_v1';
+
+  var RONDA_ITEMS = [
+    // Centro Exibidor
+    { id: 'exib_signa',      secao: 'exibidor',     nome: 'SIGNA (Automação / Exibição)' },
+    { id: 'exib_smartware',  secao: 'exibidor',     nome: 'SMARTWARE' },
+    { id: 'exib_multiview',  secao: 'exibidor',     nome: 'MULTIVIEW' },
+    { id: 'exib_clearcom',   secao: 'exibidor',     nome: 'CLEARCOM (Intercomunicação)' },
+    { id: 'exib_globoplay',  secao: 'exibidor',     nome: 'GLOBOPLAY (Sinal OTT)' },
+
+    // Transmissor & RF
+    { id: 'trans_temp',      secao: 'transmissor',  nome: 'TEMPERATURA DO TRANSMISSOR' },
+
+    // Receptores de Satélite
+    { id: 'sat_rede_tit',    secao: 'satelite',     nome: 'SAT REDE TIT' },
+    { id: 'sat_sp_tit',      secao: 'satelite',     nome: 'SAT SP TIT' },
+    { id: 'sat_bh_tit',      secao: 'satelite',     nome: 'SAT BH TIT' },
+    { id: 'sat_eventos',     secao: 'satelite',     nome: 'SAT EVENTOS' },
+
+    // Rotas de Contribuição e Recepção
+    { id: 'rota_makito',     secao: 'rotas',        nome: 'SRT (MAKITO)' },
+    { id: 'rota_mpls',       secao: 'rotas',        nome: 'SINAIS VIA MPLS' },
+    { id: 'rota_l2l',        secao: 'rotas',        nome: 'SINAIS VIA L2L' },
+
+    // Central Técnica
+    { id: 'ct_frames',       secao: 'central',      nome: 'FRAMES' },
+    { id: 'ct_multiview',    secao: 'central',      nome: 'MULTIVIEW' },
+    { id: 'ct_clearcom',     secao: 'central',      nome: 'CLEARCOM' },
+    { id: 'ct_temp',         secao: 'central',      nome: 'TEMPERATURA CENTRAL' },
+
+    // CPA (Controle de Produção e Áudio)
+    { id: 'cpa_frames',      secao: 'cpa',          nome: 'FRAMES CPA' },
+    { id: 'cpa_multiview',   secao: 'cpa',          nome: 'MULTIVIEW CPA' },
+    { id: 'cpa_retorno',     secao: 'cpa',          nome: 'RETORNO VIVOS' },
+    { id: 'cpa_mochilinks',  secao: 'cpa',          nome: 'MOCHILINKS (LiveU / Links)' },
+
+    // Cadeia Satélite (Uplink)
+    { id: 'sat_mux',         secao: 'cadeia_sat',   nome: 'MUX' },
+    { id: 'sat_modulador',   secao: 'cadeia_sat',   nome: 'MODULADOR' },
+    { id: 'sat_encoder',     secao: 'cadeia_sat',   nome: 'ENCODER' },
+    { id: 'sat_buc',         secao: 'cadeia_sat',   nome: 'BUC (Block Upconverter)' },
+
+    // Infraestrutura e Energia
+    { id: 'eng_gerador',     secao: 'energia',      nome: 'GERADOR' },
+    { id: 'eng_nobreak',     secao: 'energia',      nome: 'NO-BREAK' }
+  ];
+
+  window.RONDA_ITEMS_UDI = RONDA_ITEMS;
+
+  function setRondaStatus(btn, status) {
+    if (!btn) return;
+    var group = btn.closest('.ronda-toggle-group');
+    if (!group) return;
+    var parentItem = btn.closest('.ronda-item');
+
+    var buttons = group.querySelectorAll('.ronda-btn-pill');
+    buttons.forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+
+    if (parentItem) {
+      if (status === 'nc') {
+        parentItem.classList.add('has-nc');
+      } else {
+        parentItem.classList.remove('has-nc');
+      }
+    }
+
+    verificarNaoConformidadesRonda();
+    salvarRascunhoRondaDebounced();
+  }
+  window.setRondaStatus = setRondaStatus;
+
+  function marcarTudoConformeRonda() {
+    var container = document.getElementById('page-ronda');
+    if (!container) return;
+
+    var confButtons = container.querySelectorAll('.ronda-btn-pill.conf');
+    confButtons.forEach(function (btn) {
+      var group = btn.closest('.ronda-toggle-group');
+      if (group) {
+        group.querySelectorAll('.ronda-btn-pill').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+      }
+      var parentItem = btn.closest('.ronda-item');
+      if (parentItem) parentItem.classList.remove('has-nc');
+    });
+
+    verificarNaoConformidadesRonda();
+    salvarRascunhoRondaDebounced();
+
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Ronda Técnica', 'Todos os sistemas marcados como Conforme.', 'success');
+    }
+  }
+  window.marcarTudoConformeRonda = marcarTudoConformeRonda;
+
+  function limparFormularioRonda() {
+    var container = document.getElementById('page-ronda');
+    if (!container) return;
+
+    if (!confirm('Deseja limpar todos os campos do Relatório Diário de Tecnologia?')) return;
+
+    container.querySelectorAll('.ronda-btn-pill').forEach(function (btn) {
+      btn.classList.remove('active');
+    });
+    container.querySelectorAll('.ronda-item').forEach(function (it) {
+      it.classList.remove('has-nc');
+    });
+
+    var numInputs = container.querySelectorAll('input[type="number"], textarea');
+    numInputs.forEach(function (inp) { inp.value = ''; });
+
+    try { localStorage.removeItem(RONDA_DRAFT_KEY); } catch(e) {}
+    verificarNaoConformidadesRonda();
+
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Formulário Limpo', 'Os campos foram reiniciados.', 'info');
+    }
+  }
+  window.limparFormularioRonda = limparFormularioRonda;
+
+  function obterNaoConformidadesRonda() {
+    var container = document.getElementById('page-ronda');
+    if (!container) return [];
+
+    var ncs = [];
+    var ncButtons = container.querySelectorAll('.ronda-btn-pill.nc.active');
+    ncButtons.forEach(function (btn) {
+      var group = btn.closest('.ronda-toggle-group');
+      var itemKey = group ? group.getAttribute('data-item-id') : null;
+      var parentItem = btn.closest('.ronda-item');
+      var labelEl = parentItem ? parentItem.querySelector('.ronda-item-label') : null;
+      var nome = labelEl ? labelEl.textContent.trim() : (itemKey || 'Item');
+      ncs.push({ id: itemKey, nome: nome });
+    });
+    return ncs;
+  }
+  window.obterNaoConformidadesRonda = obterNaoConformidadesRonda;
+
+  function verificarNaoConformidadesRonda() {
+    var ncs = obterNaoConformidadesRonda();
+    var banner = document.getElementById('ronda-nc-alert');
+    var badge = document.getElementById('ronda-nc-count-badge');
+    var listTxt = document.getElementById('ronda-nc-list-txt');
+
+    if (!banner) return;
+
+    if (ncs.length > 0) {
+      banner.style.display = 'flex';
+      if (badge) badge.textContent = ncs.length + (ncs.length === 1 ? ' não conformidade' : ' não conformidades');
+      if (listTxt) {
+        listTxt.textContent = 'Detectado em: ' + ncs.map(function (n) { return n.nome; }).join(', ');
+      }
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+  window.verificarNaoConformidadesRonda = verificarNaoConformidadesRonda;
+
+  function gerarOcorrenciaNaoConformidadesRonda() {
+    var ncs = obterNaoConformidadesRonda();
+    if (ncs.length === 0) {
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('Tudo Conforme', 'Nenhuma não conformidade detectada para abertura de ocorrência.', 'info');
+      }
+      return;
+    }
+
+    var nomesStr = ncs.map(function (n) { return n.nome; }).join(', ');
+    var descAuto = 'Não conformidade técnica registrada na Ronda Diária de Tecnologia (Uberlândia) pelo operador ' +
+      getUsuarioAtual() + ' em ' + formatDataHoraLocal() + '.\n\nSistemas afetados:\n- ' +
+      ncs.map(function (n) { return n.nome; }).join('\n- ') +
+      '\n\nFavor verificar parâmetros e atuar na normalização dos equipamentos.';
+
+    var popNova = document.getElementById('popup-nova-oc');
+    if (popNova && typeof abrirPopup === 'function') {
+      abrirPopup('popup-nova-oc');
+      var titEl = document.getElementById('nova-titulo');
+      var catEl = document.getElementById('nova-cat');
+      var locEl = document.getElementById('nova-local');
+      var descEl = document.getElementById('nova-desc');
+      var prioEl = document.getElementById('nova-prio');
+
+      if (titEl) titEl.value = 'Falha / Anomalia na Ronda UDI: ' + (ncs[0] ? ncs[0].nome : 'Sistemas');
+      if (catEl) catEl.value = 'Equipamento';
+      if (locEl) locEl.value = 'Uberlândia — Central / Transmissor';
+      if (prioEl) prioEl.value = 'Alta';
+      if (descEl) descEl.value = descAuto;
+      if (titEl) setTimeout(function(){ titEl.focus(); }, 150);
+    }
+  }
+  window.gerarOcorrenciaNaoConformidadesRonda = gerarOcorrenciaNaoConformidadesRonda;
+
+  function salvarRelatorioRonda() {
+    var dataEl = document.getElementById('ronda-data');
+    var obsEl  = document.getElementById('ronda-obs');
+    var potEl  = document.getElementById('ronda-pot-direta');
+    var refEl  = document.getElementById('ronda-pot-refletida');
+    var satRedeDb = document.getElementById('ronda-sat-rede-db');
+    var satBhDb   = document.getElementById('ronda-sat-bh-db');
+    var satSpDb   = document.getElementById('ronda-sat-sp-db');
+
+    var dataVal = (dataEl && dataEl.value) ? dataEl.value : (new Date().toISOString().split('T')[0]);
+    var obsVal  = obsEl ? obsEl.value.trim() : '';
+    var potVal  = potEl ? potEl.value.trim() : '';
+    var refVal  = refEl ? refEl.value.trim() : '';
+    var ncs     = obterNaoConformidadesRonda();
+    var usuario = getUsuarioAtual();
+    var nowFmt  = formatDataHoraLocal();
+
+    // Mapeamento dos status de todos os itens
+    var statusMap = {};
+    RONDA_ITEMS.forEach(function (item) {
+      var group = document.querySelector('.ronda-toggle-group[data-item-id="' + item.id + '"]');
+      if (group) {
+        var activeBtn = group.querySelector('.ronda-btn-pill.active');
+        if (activeBtn) {
+          statusMap[item.id] = activeBtn.classList.contains('nc') ? 'NC' : 'C';
+        } else {
+          statusMap[item.id] = 'C'; // Padrão conforme
+        }
+      }
+    });
+
+    var resumoItens = [];
+    if (potVal) resumoItens.push('Potência: ' + potVal + ' W (Refletida: ' + (refVal || '0') + ' W)');
+    if (satRedeDb && satRedeDb.value) resumoItens.push('SAT Rede C/N: ' + satRedeDb.value + ' dB');
+    if (ncs.length > 0) {
+      resumoItens.push('⚠️ Não conformidades: ' + ncs.map(function(n){ return n.nome; }).join(', '));
+    } else {
+      resumoItens.push('✅ Todos os 26 sistemas avaliados em conformidade operacional.');
+    }
+
+    var descFinal = 'Relatório diário de tecnologia e ronda de infraestrutura executado em Uberlândia.\n\n' +
+      resumoItens.join('\n') +
+      (obsVal ? ('\n\nObservações do plantão:\n' + obsVal) : '');
+
+    var novoRelatorio = {
+      id:            'rel_udi_' + Date.now(),
+      tipo:          'relatorio',
+      subtipo:       'Tecnologia UDI',
+      titulo:        'Relatório Diário — Tecnologia UDI (' + dataVal + ')',
+      equipamento:   'Infraestrutura & Transmissão UDI',
+      categoria:     'Ronda Técnica',
+      local:         'Uberlândia',
+      praca:         'Uberlândia',
+      dataCriacao:   nowFmt,
+      criadoPor:     usuario,
+      descCriacao:   descFinal,
+      status:        ncs.length > 0 ? 'Com Não Conformidade' : 'Conforme',
+      tags:          ['Ronda Técnica', 'Uberlândia', ncs.length > 0 ? 'NC' : '100% Conforme'],
+      detalhesRonda: {
+        data: dataVal,
+        operador: usuario,
+        tempoSessao: (typeof getTempoLogadoStr === 'function') ? getTempoLogadoStr() : '',
+        potenciaW: potVal,
+        refletidaW: refVal,
+        satRedeDb: satRedeDb ? satRedeDb.value : '',
+        satBhDb: satBhDb ? satBhDb.value : '',
+        satSpDb: satSpDb ? satSpDb.value : '',
+        statusSistemas: statusMap,
+        naoConformidades: ncs.map(function(n){ return n.nome; }),
+        obs: obsVal
+      }
+    };
+
+    // 1. Salvar no histórico de Uberlândia
+    if (Array.isArray(window.historicoSeedData)) {
+      window.historicoSeedData = [novoRelatorio].concat(window.historicoSeedData);
+      if (typeof saveHistorico === 'function') {
+        saveHistorico(window.historicoSeedData, novoRelatorio);
+      }
+    }
+
+    // 2. Limpar rascunho
+    try { localStorage.removeItem(RONDA_DRAFT_KEY); } catch(e) {}
+
+    // 3. Notificar sucesso e re-renderizar histórico
+    if (typeof renderAll === 'function') renderAll(true);
+
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Relatório Registrado', 'Relatório Diário de Tecnologia UDI gravado no Histórico com sucesso!', 'success');
+    }
+
+    // 4. Se houver NC, sugerir abrir ocorrência
+    if (ncs.length > 0) {
+      setTimeout(function () {
+        if (confirm('O relatório foi salvo contendo ' + ncs.length + ' não conformidade(s).\n\nDeseja registrar uma ocorrência no Dashboard agora?')) {
+          gerarOcorrenciaNaoConformidadesRonda();
+        }
+      }, 500);
+    }
+  }
+  window.salvarRelatorioRonda = salvarRelatorioRonda;
+
+  /* ── Rascunho Automático Local (Autosave para não perder nada ao fechar ou atualizar) ── */
+  var saveDraftTimeout = null;
+  function salvarRascunhoRondaDebounced() {
+    clearTimeout(saveDraftTimeout);
+    saveDraftTimeout = setTimeout(salvarRascunhoRonda, 400);
+  }
+
+  function salvarRascunhoRonda() {
+    var container = document.getElementById('page-ronda');
+    if (!container) return;
+
+    var statusMap = {};
+    RONDA_ITEMS.forEach(function (item) {
+      var group = container.querySelector('.ronda-toggle-group[data-item-id="' + item.id + '"]');
+      if (group) {
+        var active = group.querySelector('.ronda-btn-pill.active');
+        if (active) statusMap[item.id] = active.classList.contains('nc') ? 'nc' : 'conf';
+      }
+    });
+
+    var draft = {
+      data: document.getElementById('ronda-data') ? document.getElementById('ronda-data').value : '',
+      obs: document.getElementById('ronda-obs') ? document.getElementById('ronda-obs').value : '',
+      pot: document.getElementById('ronda-pot-direta') ? document.getElementById('ronda-pot-direta').value : '',
+      ref: document.getElementById('ronda-pot-refletida') ? document.getElementById('ronda-pot-refletida').value : '',
+      satRede: document.getElementById('ronda-sat-rede-db') ? document.getElementById('ronda-sat-rede-db').value : '',
+      satBh: document.getElementById('ronda-sat-bh-db') ? document.getElementById('ronda-sat-bh-db').value : '',
+      satSp: document.getElementById('ronda-sat-sp-db') ? document.getElementById('ronda-sat-sp-db').value : '',
+      status: statusMap
+    };
+
+    try {
+      localStorage.setItem(RONDA_DRAFT_KEY, JSON.stringify(draft));
+    } catch(e) {}
+  }
+
+  function carregarRascunhoRonda() {
+    var container = document.getElementById('page-ronda');
+    if (!container) return;
+
+    // Atualiza data atual se vazia
+    var dataEl = document.getElementById('ronda-data');
+    if (dataEl && !dataEl.value) {
+      dataEl.value = new Date().toISOString().split('T')[0];
+    }
+
+    // Atualiza nome do operador se vazio
+    var opEl = document.getElementById('ronda-operador-badge');
+    if (opEl) {
+      opEl.textContent = getUsuarioAtual();
+    }
+
+    try {
+      var raw = localStorage.getItem(RONDA_DRAFT_KEY);
+      if (!raw) return;
+      var draft = JSON.parse(raw);
+      if (!draft) return;
+
+      if (draft.data && dataEl) dataEl.value = draft.data;
+      if (draft.obs && document.getElementById('ronda-obs')) document.getElementById('ronda-obs').value = draft.obs;
+      if (draft.pot && document.getElementById('ronda-pot-direta')) document.getElementById('ronda-pot-direta').value = draft.pot;
+      if (draft.ref && document.getElementById('ronda-pot-refletida')) document.getElementById('ronda-pot-refletida').value = draft.ref;
+      if (draft.satRede && document.getElementById('ronda-sat-rede-db')) document.getElementById('ronda-sat-rede-db').value = draft.satRede;
+      if (draft.satBh && document.getElementById('ronda-sat-bh-db')) document.getElementById('ronda-sat-bh-db').value = draft.satBh;
+      if (draft.satSp && document.getElementById('ronda-sat-sp-db')) document.getElementById('ronda-sat-sp-db').value = draft.satSp;
+
+      if (draft.status && typeof draft.status === 'object') {
+        Object.keys(draft.status).forEach(function (id) {
+          var val = draft.status[id];
+          var group = container.querySelector('.ronda-toggle-group[data-item-id="' + id + '"]');
+          if (group) {
+            var btn = group.querySelector('.ronda-btn-pill.' + val);
+            if (btn) {
+              group.querySelectorAll('.ronda-btn-pill').forEach(function(b){ b.classList.remove('active'); });
+              btn.classList.add('active');
+              var parent = group.closest('.ronda-item');
+              if (parent) {
+                if (val === 'nc') parent.classList.add('has-nc');
+                else parent.classList.remove('has-nc');
+              }
+            }
+          }
+        });
+      }
+      verificarNaoConformidadesRonda();
+    } catch(e) {}
+  }
+  window.carregarRascunhoRonda = carregarRascunhoRonda;
+
+  // Registrar listeners de input para autosave nos campos numéricos
+  document.addEventListener('DOMContentLoaded', function () {
+    var container = document.getElementById('page-ronda');
+    if (container) {
+      container.addEventListener('input', salvarRascunhoRondaDebounced);
+    }
+  });
+
+})();
+
+
   /* ═══════════════════════════════════════════
      POPUP: NOVA OCORRÊNCIA
   ═══════════════════════════════════════════ */
@@ -5287,6 +5851,8 @@ document.addEventListener('DOMContentLoaded', function () {
   window.salvarEdicaoOcorrencia = salvarEdicaoOcorrencia;
 
   var itemDetalhesAtual = null;
+
+
   /* ═══════════════════════════════════════════
      SISTEMA DE LIXEIRA (Retenção 7 dias / Notificação 24h) — BANCO DE DADOS SUPABASE
   ═══════════════════════════════════════════ */
@@ -5315,6 +5881,7 @@ document.addEventListener('DOMContentLoaded', function () {
     window.lixeiraData = lixeiraData;
     atualizarBadgesLixeira();
   }
+  window.saveLixeira = saveLixeira;
 
   function sincronizarLixeiraNuvem() {
     var db = getLixeiraDBCredentials();
@@ -5389,11 +5956,23 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.excluirItemLixeiraNuvem = excluirItemLixeiraNuvem;
 
+  function pertenceAPracaAtivaLixeira(item) {
+    if (!item) return false;
+    if (typeof pertenceAPracaAtiva === 'function') {
+      if (item.ocOriginal && pertenceAPracaAtiva(item.ocOriginal)) return true;
+      if (item.histOriginal && pertenceAPracaAtiva(item.histOriginal)) return true;
+      return pertenceAPracaAtiva(item);
+    }
+    return true;
+  }
+  window.pertenceAPracaAtivaLixeira = pertenceAPracaAtivaLixeira;
+
   function atualizarBadgesLixeira() {
     var badge = document.querySelector('.lixeira-badge');
     if (badge) {
-      if (lixeiraData && lixeiraData.length > 0) {
-        badge.textContent = lixeiraData.length;
+      var listaDaPraca = (lixeiraData || []).filter(pertenceAPracaAtivaLixeira);
+      if (listaDaPraca.length > 0) {
+        badge.textContent = listaDaPraca.length;
         badge.style.display = 'inline-flex';
       } else {
         badge.style.display = 'none';
@@ -5462,6 +6041,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       // 2. Adiciona à Lixeira com retenção de 7 dias
+      var itemPraca = (oc && oc.praca) || (hist && hist.praca) || (typeof normalizarPracaOcorrencia === 'function' ? normalizarPracaOcorrencia(null, (oc && oc.local) || (hist && hist.local), titulo) : 'Juiz de Fora');
       var itemLixeira = {
         id: idParaSalvar,
         dataExclusao: Date.now(),
@@ -5470,7 +6050,8 @@ document.addEventListener('DOMContentLoaded', function () {
         ocOriginal: oc ? Object.assign({}, oc) : null,
         histOriginal: hist ? Object.assign({}, hist) : null,
         excluidoPor: getUsuarioAtual(),
-        notificado24h: false
+        notificado24h: false,
+        praca: itemPraca
       };
 
       lixeiraData = [itemLixeira].concat(lixeiraData.filter(function(i){ return i.id !== idParaSalvar; }));
@@ -5531,7 +6112,9 @@ document.addEventListener('DOMContentLoaded', function () {
     atualizarBadgesLixeira();
     if (!container) return;
 
-    if (!lixeiraData || lixeiraData.length === 0) {
+    var listaDaPraca = (lixeiraData || []).filter(pertenceAPracaAtivaLixeira);
+
+    if (listaDaPraca.length === 0) {
       container.innerHTML =
         '<div style="text-align:center;padding:48px 16px;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);">' +
           '<i data-lucide="trash-2" style="width:36px;height:36px;color:var(--muted);stroke-width:1.5;margin-bottom:10px;"></i>' +
@@ -5586,7 +6169,7 @@ document.addEventListener('DOMContentLoaded', function () {
       );
     }
 
-    var secoes = agruparPorDias(lixeiraData, function(item){ return item.dataExclusao; });
+    var secoes = agruparPorDias(listaDaPraca, function(item){ return item.dataExclusao; });
     container.innerHTML = renderSecoesComCards(secoes, renderCardLixeiraHTML);
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
@@ -5846,7 +6429,10 @@ document.addEventListener('DOMContentLoaded', function () {
       resolvidoPor:  usuarioLogado,
       descResolucao: descResolucao,
       tags:          tagsHist,
-      anexos:        anexosCombinados
+      anexos:        anexosCombinados,
+      praca:         (typeof normalizarPracaOcorrencia === 'function')
+        ? normalizarPracaOcorrencia(oc.praca, oc.local, oc.titulo, oc.equipamento || (oc.tags && oc.tags[1]))
+        : (oc.praca || (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora'))
     };
 
     historicoSeedData = [novoItemHist].concat(historicoSeedData);
@@ -5873,6 +6459,8 @@ document.addEventListener('DOMContentLoaded', function () {
   if (btnConfirmar) {
     btnConfirmar.addEventListener('click', confirmarResolucao);
   }
+
+
   /* ═══════════════════════════════════════════
      CONFIGURAÇÕES
   ═══════════════════════════════════════════ */
@@ -6000,6 +6588,11 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
 
+    var pracaEl = document.getElementById('ident-operador-praca');
+    if (pracaEl && pracaEl.value && typeof setPracaAtual === 'function') {
+      setPracaAtual(pracaEl.value);
+    }
+
     var chave = chaveInput ? chaveInput.value.trim() : '';
     var pack = window.ENCRYPTED_TV_CREDENTIALS || (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS);
     var estacaoJaConectada = typeof isEstacaoConectadaTV === 'function' ? isEstacaoConectadaTV() : false;
@@ -6056,11 +6649,6 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     } catch(e) {}
     try { if (typeof carregarOperadoresSugeridos === 'function') carregarOperadoresSugeridos(); } catch(e) {}
-
-    var pracaEl = document.getElementById('ident-operador-praca');
-    if (pracaEl && pracaEl.value && typeof setPracaAtual === 'function') {
-      setPracaAtual(pracaEl.value);
-    }
 
     if (typeof DBService !== 'undefined' && typeof DBService.syncRemote === 'function') {
       await DBService.syncRemote(true);
@@ -6429,6 +7017,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.aplicarCodigoCriptografadoAgora = aplicarCodigoCriptografadoAgora;
+
   /* ═══════════════════════════════════════════
      HISTÓRICO GERAL (Funções de Renderização e Filtros)
   ═══════════════════════════════════════════ */
@@ -7074,6 +7663,8 @@ document.addEventListener('DOMContentLoaded', function () {
     verDetalhesHistoricoDirect(item);
   }
   window.verDetalhesOcorrencia = verDetalhesOcorrencia;
+
+
   /* ═══════════════════════════════════════════
      SISTEMA DE TOAST NOTIFICATIONS & CENTRAL DE ALERTAS
   ═══════════════════════════════════════════ */
@@ -7459,6 +8050,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.limparTodasNotificacoes = limparTodasNotificacoes;
+
+
   /* ═══════════════════════════════════════════
      SISTEMA DE EXPORTAÇÃO E CONSOLIDAÇÃO POWER BI
   ═══════════════════════════════════════════ */
@@ -8065,6 +8658,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (barCancEq) barCancEq.style.height = eqTotal > 0 ? Math.max(eqPctCanc * 0.85, 4) + '%' : '4px';
   }
   window.renderResumoTransmissoesGerais = renderResumoTransmissoesGerais;
+
+
   /* ═══════════════════════════════════════════
      PLANEJAMENTO ORÇAMENTÁRIO (ANO ATUAL + 1) — BANCO DE DADOS SUPABASE
   ═══════════════════════════════════════════ */
@@ -8709,6 +9304,8 @@ document.addEventListener('DOMContentLoaded', function () {
     alert('Relatório de Orçamento ' + anoOrcamento + ' exportado com sucesso em formato consolidado (CAPEX/OPEX).');
   }
   window.exportarOrcamentoExcel = exportarOrcamentoExcel;
+
+
   /* ═══════════════════════════════════════════
      FLUXO DE INICIALIZAÇÃO E IDENTIFICAÇÃO DO OPERADOR
   ═══════════════════════════════════════════ */
@@ -8728,19 +9325,27 @@ document.addEventListener('DOMContentLoaded', function () {
   try { if (typeof DBService !== 'undefined' && DBService.init) DBService.init(); } catch(e) {}
   renderAll(true);
 
-  // Sincronização inteligente: periódica a cada 2 minutos se a aba estiver visível, e ao focar na janela
+  // Sincronização inteligente: periódica a cada 2 minutos APENAS se a aba estiver visível e conectada
   setInterval(function() {
     if (document.hidden) return; // Se a aba estiver minimizada ou em segundo plano, economiza tráfego
+    if (typeof _isCloudConnected === 'function' && !_isCloudConnected()) {
+      return; // Se desconectado, o gerenciador de reconexão já cuida com backoff para não inchar o banco
+    }
     if (typeof DBService !== 'undefined' && DBService && typeof DBService.syncRemote === 'function') {
       DBService.syncRemote();
     }
-  }, 120000); // 2 minutos (redução imediata de 96% no consumo de rede)
+  }, 120000); // 2 minutos
 
   var lastFocusSync = 0;
   window.addEventListener('focus', function() {
     var now = Date.now();
     if (now - lastFocusSync < 60000) return; // Limite de 1 sincronização por minuto ao alternar abas
     lastFocusSync = now;
+    if (typeof _isCloudConnected === 'function' && !_isCloudConnected()) {
+      // Ao voltar à aba se estiver desconectado, tenta reconexão imediata
+      if (typeof tentarReconectarImediato === 'function') tentarReconectarImediato();
+      return;
+    }
     if (typeof DBService !== 'undefined' && DBService && typeof DBService.syncRemote === 'function') {
       DBService.syncRemote();
     }
@@ -8749,6 +9354,19 @@ document.addEventListener('DOMContentLoaded', function () {
   var savedUserName = localStorage.getItem(USER_NAME_STORAGE_KEY);
   try { if (typeof carregarOperadoresSugeridos === 'function') carregarOperadoresSugeridos(); } catch(e) {}
   try { if (typeof atualizarUIIdentificacaoOperador === 'function') atualizarUIIdentificacaoOperador(); } catch(e) {}
+
+  var identPracaSelect = document.getElementById('ident-operador-praca');
+  if (identPracaSelect) {
+    if (typeof getPracaAtual === 'function') {
+      identPracaSelect.value = getPracaAtual();
+    }
+    identPracaSelect.addEventListener('change', function() {
+      if (typeof setPracaAtual === 'function') {
+        setPracaAtual(this.value);
+      }
+    });
+  }
+
   if (!savedUserName || !savedUserName.trim()) {
     abrirPopup('popup-identificacao-operador');
     var identInput = document.getElementById('ident-operador-nome');

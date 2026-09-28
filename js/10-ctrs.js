@@ -756,6 +756,8 @@
         '</table>';
     });
 
+    var isUberlandia = praca.indexOf('Uber') !== -1;
+
     var htmlCompleto =
       '<div style="font-family:Arial, Helvetica, sans-serif; color:#000000; max-width:820px; margin:0 auto; padding:10px;">' +
         '<!-- CABEÇALHO OFICIAL ENGENHARIA -->' +
@@ -766,7 +768,7 @@
             '</td>' +
             '<td style="text-align:center; vertical-align:middle; border:1px solid #000000; padding:6px; font-weight:bold; font-size:12px; line-height:1.4;">' +
               'Processo Engenharia 1.1.1 – P02 – F02<br/>' +
-              'Checklist de Transmissão ao Vivo CTRS' +
+              (isUberlandia ? 'Relatório de Transmissão ao Vivo' : 'Checklist de Transmissão ao Vivo CTRS') +
             '</td>' +
             '<td style="width:140px; text-align:center; vertical-align:middle; border:1px solid #000000; padding:6px; font-size:11px;">' +
               'Formulário<br/>' +
@@ -853,7 +855,7 @@
 
     return {
       html: htmlCompleto,
-      assunto: 'Transmissão ao Vivo - CTRS - ' + (inCheck ? 'IN' : (mg1Check ? 'MG1' : (mg2Check ? 'MG2' : 'OUTROS'))) + ' - ' + praca + ' - ' + dataFmt
+      assunto: (isUberlandia ? 'Transmissão ao Vivo - ' : 'Transmissão ao Vivo - CTRS - ') + (inCheck ? 'IN' : (mg1Check ? 'MG1' : (mg2Check ? 'MG2' : 'OUTROS'))) + ' - ' + praca + ' - ' + dataFmt
     };
   }
 
@@ -904,6 +906,15 @@
     var assuntoEl = document.getElementById('ctrs-outlook-assunto');
     if (assuntoEl) {
       assuntoEl.textContent = assunto;
+    }
+
+    var pracaAtual = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+    var isUdi = pracaAtual.indexOf('Uber') !== -1 || (assunto && assunto.indexOf('Uberlândia') !== -1);
+    var descEl = document.getElementById('popup-ctrs-outlook-desc');
+    if (descEl) {
+      descEl.innerHTML = isUdi
+        ? 'O relatório oficial de transmissão foi formatado e copiado para a área de transferência. Basta abrir o Outlook e pressionar <strong>CTRL + V</strong> para colar a tabela pronta.'
+        : 'O checklist oficial do CTRS foi formatado e copiado para a área de transferência. Basta abrir o Outlook e pressionar <strong>CTRL + V</strong> para colar a tabela pronta.';
     }
 
     var copiado = false;
