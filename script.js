@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════
    POPUP — funções base globais
 ═══════════════════════════════════════════ */
 function abrirPopup(id) {
@@ -98,8 +98,6 @@ document.addEventListener('click', function(e) {
     fecharPopup(e.target.id);
   }
 });
-
-
 document.addEventListener('DOMContentLoaded', function () {
   console.log('✅ [Sistema TV] Versão 7.9 — Blindagem de Testes: Sincronização Otimizada, Anti-XSS e Cache Resiliente');
 
@@ -1024,8 +1022,6 @@ document.addEventListener('DOMContentLoaded', function () {
   window.getArquivadas = getArquivadas;
   window.getResolvidas = getResolvidas;
 
-
-
   /* ═══════════════════════════════════════════
      HELPERS DE RENDER
   ═══════════════════════════════════════════ */
@@ -1355,8 +1351,6 @@ document.addEventListener('DOMContentLoaded', function () {
       abertasHTML +
       resolvidasHTML;
   }
-
-
   /* ═══════════════════════════════════════════
      HISTÓRICO GERAL — ESTRUTURA DE DADOS
   ═══════════════════════════════════════════ */
@@ -1488,8 +1482,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return '<span class="tag tag-blue-soft">Registro</span>';
   }
-
-
   /* ─── Render: Dashboard Resolvidas & Power BI ─── */
   var resolvidasFiltro = 'todas';
 
@@ -1771,8 +1763,6 @@ document.addEventListener('DOMContentLoaded', function () {
     page.addEventListener('change', acao);
   }
   window.registrarAutosaveListener = registrarAutosaveListener;
-
-
   /* ═══════════════════════════════════════════
      POPUP ENTRADA
   /* ═══════════════════════════════════════════
@@ -2125,8 +2115,6 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.trocarPracaConfig = trocarPracaConfig;
 
-
-
   /* ═══════════════════════════════════════════
      INDEXEDDB LOCAL MEDIA CACHE (Para vídeos e fotos de qualquer tamanho)
   ═══════════════════════════════════════════ */
@@ -2430,8 +2418,6 @@ document.addEventListener('DOMContentLoaded', function () {
       };
     }
   });
-
-
   /* ═══════════════════════════════════════════
      RECEBIMENTOS DE EQUIPAMENTOS
   ═══════════════════════════════════════════ */
@@ -2678,8 +2664,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-recebimento', salvarRascunhoRecebimento);
   }
-
-
   /* ═══════════════════════════════════════════
      REQUISIÇÃO DE COMPRAS E VENDAS
   ═══════════════════════════════════════════ */
@@ -2943,8 +2927,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-compras', salvarRascunhoCompra);
   }
-
-
   /* ═══════════════════════════════════════════
      ENVIO DE RELATÓRIO TV (CTRS) E GERADOR AUTOMÁTICO DE OCORRÊNCIAS
   ═══════════════════════════════════════════ */
@@ -3472,12 +3454,12 @@ document.addEventListener('DOMContentLoaded', function () {
           '</div>' +
           '<div class="frow"><label>Hora Abertura Sinal</label><input type="time"/></div>' +
           '<div class="frow"><label>Hora Final (Teste OK)</label><input type="time"/></div>' +
-          '<div class="frow"><label>Qualidade do Áudio</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
-          '<div class="frow"><label>Qualidade do Vídeo</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
+          '<div class="frow"><label>Qualidade do Áudio</label><select><option value="" selected>Selecione...</option><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
+          '<div class="frow"><label>Qualidade do Vídeo</label><select><option value="" selected>Selecione...</option><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
           '<div class="frow"><label>Repórter</label><select class="ctrs-reporter-select">' + obterOpcoesReporteresHTML() + '</select></div>' +
           '<div class="frow"><label>Entradas</label><input type="text" placeholder="Ex: 2 entradas conformes — externo"/></div>' +
           '<div class="frow"><label>Repórter Cinematográfico</label><select class="ctrs-rc-select">' + obterOpcoesRCsHTML() + '</select></div>' +
-          '<div class="frow"><label>Status da Transmissão</label><select><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
+          '<div class="frow"><label>Status da Transmissão</label><select><option value="" selected>Selecione...</option><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
         '</div>' +
         '<div class="frow"><label>Observações</label><textarea placeholder="Descreva as falhas. Se nenhuma, deixe em branco."></textarea></div>' +
         '<div style="display:flex;justify-content:flex-end;padding-top:10px;border-top:1px solid var(--border-lt);margin-top:10px;">' +
@@ -3555,16 +3537,23 @@ document.addEventListener('DOMContentLoaded', function () {
         dados.transmissoes.forEach(function(tx, idx) {
           if (accBlocks[idx]) {
             var inputs = accBlocks[idx].querySelectorAll('input, select, textarea');
+            var temDadosTx = !!(tx.cidade || tx.infra || tx.horaAbert || tx.horaFim || tx.reporter || tx.entradas || tx.rc || tx.falhas);
             if (inputs[0] && tx.cidade !== undefined)    inputs[0].value = tx.cidade;
             if (inputs[1] && tx.infra !== undefined)     inputs[1].value = tx.infra;
             if (inputs[2] && tx.horaAbert !== undefined) inputs[2].value = tx.horaAbert;
             if (inputs[3] && tx.horaFim !== undefined)   inputs[3].value = tx.horaFim;
-            if (inputs[4] && tx.audioQ !== undefined)    inputs[4].value = tx.audioQ;
-            if (inputs[5] && tx.videoQ !== undefined)    inputs[5].value = tx.videoQ;
+            if (inputs[4] && tx.audioQ !== undefined) {
+              if (idx === 0 || temDadosTx || (tx.audioQ !== 'C' && tx.audioQ !== '')) inputs[4].value = tx.audioQ;
+            }
+            if (inputs[5] && tx.videoQ !== undefined) {
+              if (idx === 0 || temDadosTx || (tx.videoQ !== 'C' && tx.videoQ !== '')) inputs[5].value = tx.videoQ;
+            }
             if (inputs[6] && tx.reporter !== undefined)  inputs[6].value = tx.reporter;
             if (inputs[7] && tx.entradas !== undefined)  inputs[7].value = tx.entradas;
             if (inputs[8] && tx.rc !== undefined)        inputs[8].value = tx.rc;
-            if (inputs[9] && tx.statusTx !== undefined)  inputs[9].value = tx.statusTx;
+            if (inputs[9] && tx.statusTx !== undefined) {
+              if (idx === 0 || temDadosTx || (tx.statusTx !== 'C' && tx.statusTx !== '')) inputs[9].value = tx.statusTx;
+            }
             if (inputs[10] && tx.falhas !== undefined)   inputs[10].value = tx.falhas;
           }
         });
@@ -3615,31 +3604,47 @@ document.addEventListener('DOMContentLoaded', function () {
       return val.trim();
     };
 
-    var formatQualidade = function(val) {
-      if (!val) return 'C';
+    var formatQualidade = function(val, defaultVal) {
+      if (!val) return defaultVal || '';
       var v = val.trim();
       if (v.startsWith('NC') || v.startsWith('Não Conforme')) return 'NC';
       if (v.startsWith('NA') || v.startsWith('Não se Aplica')) return 'NA';
-      return 'C';
+      if (v.startsWith('C') || v.startsWith('Conforme')) return 'C';
+      return defaultVal || '';
     };
 
     var accBlocks = document.querySelectorAll('#page-ctrs .acc-block');
     var transmissoesHTML = '';
+    var totalTransmissoesIncluidas = 0;
 
     accBlocks.forEach(function(acc, idx) {
-      var num = idx + 1;
       var inputs = acc.querySelectorAll('input, select, textarea');
       var cidade    = (inputs[0] && inputs[0].value.trim()) || '';
       var infra     = (inputs[1] && inputs[1].value.trim()) || '';
       var horaAbert = formatTimeVal(inputs[2] ? inputs[2].value : '');
       var horaFim   = formatTimeVal(inputs[3] ? inputs[3].value : '');
-      var audioQ    = formatQualidade(inputs[4] ? inputs[4].value : '');
-      var videoQ    = formatQualidade(inputs[5] ? inputs[5].value : '');
+      var rawAudio  = inputs[4] ? inputs[4].value.trim() : '';
+      var rawVideo  = inputs[5] ? inputs[5].value.trim() : '';
       var reporter  = (inputs[6] && inputs[6].value.trim()) || '';
       var entradas  = (inputs[7] && inputs[7].value.trim()) || '';
       var rc        = (inputs[8] && inputs[8].value.trim()) || '';
-      var statusTx  = formatQualidade(inputs[9] ? inputs[9].value : '');
+      var rawStatus = inputs[9] ? inputs[9].value.trim() : '';
       var falhas    = (inputs[10] && inputs[10].value.trim()) || '';
+
+      // Transmissão 1 é sempre incluída (pois pelo menos 1 transmissão sempre existirá).
+      // Transmissões 2 em diante só são incluídas no relatório se tiverem sido preenchidas/utilizadas.
+      var foiUtilizada = !!(cidade || infra || horaAbert || horaFim || reporter || entradas || rc || falhas || rawAudio || rawVideo || rawStatus);
+      if (idx > 0 && !foiUtilizada) {
+        return;
+      }
+
+      totalTransmissoesIncluidas++;
+      var num = totalTransmissoesIncluidas;
+
+      // Se a transmissão foi utilizada, padroniza como 'C' (Conforme) caso o usuário não tenha alterado
+      var audioQ   = formatQualidade(rawAudio, 'C');
+      var videoQ   = formatQualidade(rawVideo, 'C');
+      var statusTx = formatQualidade(rawStatus, 'C');
 
       var reporterCompleto = reporter;
       if (entradas) {
@@ -4017,8 +4022,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-ctrs', salvarRascunhoRelatorioTV);
   }
-
-
   /* ═══════════════════════════════════════════
      CHECKLIST DIÁRIO & MONITORAMENTO DE ROTINAS OPERACIONAIS — SUPABASE
   ═══════════════════════════════════════════ */
@@ -5086,8 +5089,6 @@ document.addEventListener('DOMContentLoaded', function () {
     verificarRecorrenciasChecklist();
   });
 
-
-
 /* ═══════════════════════════════════════════
    RELATÓRIO DIÁRIO — TECNOLOGIA UDI (RONDA TÉCNICA)
    Módulo exclusivo da praça de Uberlândia para acompanhamento de
@@ -5488,8 +5489,6 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
 })();
-
-
   /* ═══════════════════════════════════════════
      POPUP: NOVA OCORRÊNCIA
   ═══════════════════════════════════════════ */
@@ -5851,8 +5850,6 @@ document.addEventListener('DOMContentLoaded', function () {
   window.salvarEdicaoOcorrencia = salvarEdicaoOcorrencia;
 
   var itemDetalhesAtual = null;
-
-
   /* ═══════════════════════════════════════════
      SISTEMA DE LIXEIRA (Retenção 7 dias / Notificação 24h) — BANCO DE DADOS SUPABASE
   ═══════════════════════════════════════════ */
@@ -6459,8 +6456,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (btnConfirmar) {
     btnConfirmar.addEventListener('click', confirmarResolucao);
   }
-
-
   /* ═══════════════════════════════════════════
      CONFIGURAÇÕES
   ═══════════════════════════════════════════ */
@@ -7017,7 +7012,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.aplicarCodigoCriptografadoAgora = aplicarCodigoCriptografadoAgora;
-
   /* ═══════════════════════════════════════════
      HISTÓRICO GERAL (Funções de Renderização e Filtros)
   ═══════════════════════════════════════════ */
@@ -7663,8 +7657,6 @@ document.addEventListener('DOMContentLoaded', function () {
     verDetalhesHistoricoDirect(item);
   }
   window.verDetalhesOcorrencia = verDetalhesOcorrencia;
-
-
   /* ═══════════════════════════════════════════
      SISTEMA DE TOAST NOTIFICATIONS & CENTRAL DE ALERTAS
   ═══════════════════════════════════════════ */
@@ -8050,8 +8042,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.limparTodasNotificacoes = limparTodasNotificacoes;
-
-
   /* ═══════════════════════════════════════════
      SISTEMA DE EXPORTAÇÃO E CONSOLIDAÇÃO POWER BI
   ═══════════════════════════════════════════ */
@@ -8658,8 +8648,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (barCancEq) barCancEq.style.height = eqTotal > 0 ? Math.max(eqPctCanc * 0.85, 4) + '%' : '4px';
   }
   window.renderResumoTransmissoesGerais = renderResumoTransmissoesGerais;
-
-
   /* ═══════════════════════════════════════════
      PLANEJAMENTO ORÇAMENTÁRIO (ANO ATUAL + 1) — BANCO DE DADOS SUPABASE
   ═══════════════════════════════════════════ */
@@ -9304,8 +9292,6 @@ document.addEventListener('DOMContentLoaded', function () {
     alert('Relatório de Orçamento ' + anoOrcamento + ' exportado com sucesso em formato consolidado (CAPEX/OPEX).');
   }
   window.exportarOrcamentoExcel = exportarOrcamentoExcel;
-
-
   /* ═══════════════════════════════════════════
      FLUXO DE INICIALIZAÇÃO E IDENTIFICAÇÃO DO OPERADOR
   ═══════════════════════════════════════════ */
