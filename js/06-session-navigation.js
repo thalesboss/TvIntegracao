@@ -128,6 +128,7 @@
     if (el) el.classList.add('active');
     if (name === 'config') {
       try { carregarCredenciaisSupabaseConfig(); } catch(e) {}
+      try { if (typeof atualizarUIStatusBancoConfig === 'function') atualizarUIStatusBancoConfig(); } catch(e) {}
     }
     if (name === 'ctrs' || name === 'relatorio') {
       var ctrsPraca = document.getElementById('ctrs-praca');

@@ -111,10 +111,40 @@
   /* ═══════════════════════════════════════════
      EQUIPE DE JORNALISMO (REPÓRTERES E RCs)
      Separado estritamente por Praça (Juiz de Fora e Uberlândia)
-     Sincronizado na Nuvem (Supabase checklist_itens)
-     Zero nomes em código fonte / Git
+     Sincronizado na Nuvem (Supabase checklist_itens) com Fallback Local
   ═══════════════════════════════════════════ */
   var EQUIPE_STORAGE_KEY = 'tv_equipe_jornalismo_v3';
+
+  var EQUIPE_PADRAO_JF = {
+    reporteres: [
+      'Ana Paula Cruzeiro',
+      'Ariane',
+      'Bruno',
+      'Elton',
+      'Ester',
+      'Érica',
+      'Gabriel',
+      'Inácio',
+      'Larissa',
+      'Letícia Damasceno',
+      'Letícia Nary',
+      'Marcus',
+      'Maria',
+      'Nayara',
+      'Landim',
+      '- (Sem Repórter)'
+    ],
+    rcs: [
+      'Evandro',
+      'Humberto',
+      'Rodrigo Neves',
+      'Rodrigo Soares',
+      'Rodrigo Souza',
+      'Sidney',
+      'Wesley',
+      '- (Sem Cinegrafista)'
+    ]
+  };
 
   function normalizarPracaEquipe(praca) {
     var p = (praca || '').toLowerCase();
@@ -127,7 +157,10 @@
 
   function carregarEquipeLocal() {
     var padrao = {
-      'Juiz de Fora': { reporteres: [], rcs: [] },
+      'Juiz de Fora': {
+        reporteres: EQUIPE_PADRAO_JF.reporteres.slice(),
+        rcs: EQUIPE_PADRAO_JF.rcs.slice()
+      },
       'Uberlândia': { reporteres: [], rcs: [] }
     };
     try {
@@ -146,10 +179,42 @@
               return n && low.indexOf('exclusivo') === -1 && low.indexOf('teste') === -1 && n.indexOf('Ã') === -1;
             });
           };
+
           if (parsed['Juiz de Fora']) {
-            padrao['Juiz de Fora'].reporteres = filtrarValidos(parsed['Juiz de Fora'].reporteres);
-            padrao['Juiz de Fora'].rcs = filtrarValidos(parsed['Juiz de Fora'].rcs);
+            var jfRep = filtrarValidos(parsed['Juiz de Fora'].reporteres);
+            var jfRC  = filtrarValidos(parsed['Juiz de Fora'].rcs);
+
+            var repMapNomes = {};
+            var repFinal = [];
+            EQUIPE_PADRAO_JF.reporteres.forEach(function(nom) {
+              repMapNomes[nom.toLowerCase()] = true;
+              repFinal.push(nom);
+            });
+            jfRep.forEach(function(it) {
+              var n = typeof it === 'string' ? it : (it.nome || it.titulo || '');
+              if (n && !repMapNomes[n.toLowerCase()]) {
+                repMapNomes[n.toLowerCase()] = true;
+                repFinal.push(typeof it === 'object' ? (it.nome || it.titulo) : it);
+              }
+            });
+            padrao['Juiz de Fora'].reporteres = repFinal;
+
+            var rcMapNomes = {};
+            var rcFinal = [];
+            EQUIPE_PADRAO_JF.rcs.forEach(function(nom) {
+              rcMapNomes[nom.toLowerCase()] = true;
+              rcFinal.push(nom);
+            });
+            jfRC.forEach(function(it) {
+              var n = typeof it === 'string' ? it : (it.nome || it.titulo || '');
+              if (n && !rcMapNomes[n.toLowerCase()]) {
+                rcMapNomes[n.toLowerCase()] = true;
+                rcFinal.push(typeof it === 'object' ? (it.nome || it.titulo) : it);
+              }
+            });
+            padrao['Juiz de Fora'].rcs = rcFinal;
           }
+
           if (parsed['Uberlândia']) {
             padrao['Uberlândia'].reporteres = filtrarValidos(parsed['Uberlândia'].reporteres);
             padrao['Uberlândia'].rcs = filtrarValidos(parsed['Uberlândia'].rcs);
@@ -175,7 +240,6 @@
     var praca = normalizarPracaEquipe(typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora');
     var equipe = carregarEquipeLocal();
     var lista = (equipe[praca] && Array.isArray(equipe[praca].reporteres)) ? equipe[praca].reporteres : [];
-    var isConectado = (typeof isEstacaoConectadaTV === 'function') ? isEstacaoConectadaTV() : false;
     var html = '<option value="">Selecione o repórter...</option>';
     
     var jaSelecionado = false;
@@ -196,9 +260,7 @@
       html += '<option value="' + escapeHTML(selectedVal) + '" selected>' + escapeHTML(selectedVal) + '</option>';
     }
 
-    if (isConectado) {
-      html += '<option value="__novo_reporter__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo Repórter...</option>';
-    }
+    html += '<option value="__novo_reporter__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo Repórter...</option>';
     return html;
   }
   window.obterOpcoesReporteresHTML = obterOpcoesReporteresHTML;
@@ -207,7 +269,6 @@
     var praca = normalizarPracaEquipe(typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora');
     var equipe = carregarEquipeLocal();
     var lista = (equipe[praca] && Array.isArray(equipe[praca].rcs)) ? equipe[praca].rcs : [];
-    var isConectado = (typeof isEstacaoConectadaTV === 'function') ? isEstacaoConectadaTV() : false;
     var html = '<option value="">Selecione o RC...</option>';
 
     var jaSelecionado = false;
@@ -228,9 +289,7 @@
       html += '<option value="' + escapeHTML(selectedVal) + '" selected>' + escapeHTML(selectedVal) + '</option>';
     }
 
-    if (isConectado) {
-      html += '<option value="__novo_rc__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo RC...</option>';
-    }
+    html += '<option value="__novo_rc__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo RC...</option>';
     return html;
   }
   window.obterOpcoesRCsHTML = obterOpcoesRCsHTML;
@@ -277,11 +336,6 @@
   window.atualizarSelectsProfissionaisCTRS = atualizarSelectsProfissionaisCTRS;
 
   function abrirModalNovoProfissional(tipo, triggeringSelect) {
-    if (typeof isEstacaoConectadaTV === 'function' && !isEstacaoConectadaTV()) {
-      alert('Atenção: Apenas operadores conectados ao banco de dados podem cadastrar novos profissionais.');
-      return;
-    }
-
     tipo = (tipo === 'rc') ? 'rc' : 'reporter';
     window._profTriggeringSelect = triggeringSelect || null;
     var pracaAtiva = normalizarPracaEquipe(typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora');
@@ -327,11 +381,6 @@
   }
 
   async function salvarNovoProfissionalEquipe() {
-    if (typeof isEstacaoConectadaTV === 'function' && !isEstacaoConectadaTV()) {
-      alert('Você precisa estar conectado ao banco de dados para cadastrar profissionais.');
-      return;
-    }
-
     var tipoEl = document.getElementById('novo-prof-tipo');
     var nomeEl = document.getElementById('novo-prof-nome');
     var nome = (nomeEl ? nomeEl.value : '').trim();

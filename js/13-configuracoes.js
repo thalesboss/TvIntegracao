@@ -112,7 +112,7 @@
   window.atualizarNomeUsuario = atualizarNomeOperadorUI;
   window.atualizarNomeOperadorUI = atualizarNomeOperadorUI;
 
-  async function confirmarIdentificacaoOperador() {
+  async function confirmarIdentificacaoOperador(entrarModoLocal) {
     var input = document.getElementById('ident-operador-nome');
     var chaveInput = document.getElementById('ident-chave-acesso');
     var msgEl = document.getElementById('ident-chave-msg');
@@ -134,8 +134,20 @@
     var pack = window.ENCRYPTED_TV_CREDENTIALS || (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS);
     var estacaoJaConectada = typeof isEstacaoConectadaTV === 'function' ? isEstacaoConectadaTV() : false;
 
-    // Se o usuário digitou uma chave, valida e conecta
-    if (chave) {
+    // Se optou conscientemente por entrar em Modo Local
+    if (entrarModoLocal) {
+      localStorage.removeItem('tv_supabase_url');
+      localStorage.removeItem('tv_supabase_key');
+      if (typeof DBService !== 'undefined' && DBService) {
+        DBService.url = '';
+        DBService.key = '';
+        DBService.mode = 'local';
+      }
+      if (typeof updateCloudStatus === 'function') {
+        updateCloudStatus(false, 'Modo Local');
+      }
+    } else if (chave) {
+      // Se digitou uma chave, valida e conecta
       if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-right:6px;vertical-align:middle;"></span> Validando...';
@@ -167,7 +179,7 @@
       if (msgEl) {
         msgEl.style.display = 'block';
         msgEl.style.color = '#DC2626';
-        msgEl.textContent = 'Por favor, digite a Chave de Acesso da TV para conectar esta estação ao banco de dados.';
+        msgEl.innerHTML = 'Por favor, digite a Chave de Acesso para conectar à nuvem ou clique em <strong>"Entrar em Modo Local"</strong>.';
       }
       if (chaveInput) chaveInput.focus();
       return;
@@ -215,7 +227,188 @@
     if (dot)   dot.style.display   = mutado ? 'none' : '';
     if (badge) badge.style.display = mutado ? 'none' : '';
   }
-  window.mutarNotificacoes = mutarNotificacoes;
+  /* ── Gerenciamento de Conexão com o Banco de Dados (Supabase / Modo Local) ── */
+  function abrirModalConectarBanco() {
+    var input = document.getElementById('conectar-banco-chave');
+    var msg = document.getElementById('conectar-banco-msg');
+    var btn = document.getElementById('btn-executar-conectar-banco');
+    if (input) {
+      input.value = '';
+      input.type = 'password';
+    }
+    var ico = document.getElementById('ico-toggle-conectar-chave');
+    if (ico) ico.setAttribute('data-lucide', 'eye');
+    if (msg) {
+      msg.style.display = 'none';
+      msg.textContent = '';
+    }
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="cloud" style="width:14px;height:14px;stroke-width:2.2;"></i><span>Conectar ao Banco</span>';
+    }
+    abrirPopup('popup-conectar-banco');
+    if (input) {
+      setTimeout(function() { input.focus(); }, 150);
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+  window.abrirModalConectarBanco = abrirModalConectarBanco;
+
+  function toggleMostrarChaveConectarBanco() {
+    var keyInput = document.getElementById('conectar-banco-chave');
+    var ico = document.getElementById('ico-toggle-conectar-chave');
+    if (!keyInput) return;
+    if (keyInput.type === 'password') {
+      keyInput.type = 'text';
+      if (ico) ico.setAttribute('data-lucide', 'eye-off');
+    } else {
+      keyInput.type = 'password';
+      if (ico) ico.setAttribute('data-lucide', 'eye');
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+  window.toggleMostrarChaveConectarBanco = toggleMostrarChaveConectarBanco;
+
+  async function executarConexaoBanco() {
+    var input = document.getElementById('conectar-banco-chave');
+    var msg = document.getElementById('conectar-banco-msg');
+    var btn = document.getElementById('btn-executar-conectar-banco');
+    var chave = input ? input.value.trim() : '';
+
+    if (!chave) {
+      if (msg) {
+        msg.style.display = 'block';
+        msg.style.color = '#DC2626';
+        msg.textContent = 'Por favor, digite a Chave de Acesso da TV.';
+      }
+      if (input) input.focus();
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-right:6px;vertical-align:middle;"></span> Conectando...';
+    }
+    if (msg) {
+      msg.style.display = 'block';
+      msg.style.color = 'var(--muted)';
+      msg.textContent = 'Validando chave e autenticando no banco de dados...';
+    }
+
+    try {
+      var res = await conectarComChaveTV(chave);
+      if (!res.ok) {
+        if (msg) {
+          msg.style.display = 'block';
+          msg.style.color = '#DC2626';
+          msg.textContent = res.error || 'Chave de acesso incorreta. Verifique com a equipe técnica.';
+        }
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i data-lucide="cloud" style="width:14px;height:14px;stroke-width:2.2;"></i><span>Conectar ao Banco</span>';
+        }
+        if (input) {
+          input.focus();
+          input.select();
+        }
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+      }
+
+      fecharPopup('popup-conectar-banco');
+      if (typeof updateCloudStatus === 'function') {
+        updateCloudStatus(true, 'Nuvem Conectada');
+      }
+      atualizarUIStatusBancoConfig();
+
+      if (typeof sincronizarEquipeNuvem === 'function') {
+        sincronizarEquipeNuvem();
+      }
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('Banco de Dados Conectado', 'Esta estação agora está sincronizada com a nuvem em tempo real!', 'success');
+      }
+    } catch(err) {
+      if (msg) {
+        msg.style.display = 'block';
+        msg.style.color = '#DC2626';
+        msg.textContent = 'Erro ao conectar: ' + err.message;
+      }
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="cloud" style="width:14px;height:14px;stroke-width:2.2;"></i><span>Conectar ao Banco</span>';
+      }
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+  }
+  window.executarConexaoBanco = executarConexaoBanco;
+
+  function desconectarBancoModoLocal(confirmar) {
+    if (confirmar && !confirm('Deseja realmente desconectar do banco de dados e entrar em Modo Local?\n\nOs novos registros ficarão salvos apenas neste computador até você conectar novamente.')) {
+      return;
+    }
+    try {
+      localStorage.removeItem('tv_supabase_url');
+      localStorage.removeItem('tv_supabase_key');
+      if (typeof DBService !== 'undefined' && DBService) {
+        DBService.url = '';
+        DBService.key = '';
+        DBService.mode = 'local';
+      }
+      if (typeof updateCloudStatus === 'function') {
+        updateCloudStatus(false, 'Modo Local');
+      }
+      atualizarUIStatusBancoConfig();
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('Modo Local Ativado', 'Estação desconectada da nuvem. Operando em modo offline.', 'info');
+      }
+    } catch(e) {
+      console.warn('Erro ao desconectar banco:', e);
+    }
+  }
+  window.desconectarBancoModoLocal = desconectarBancoModoLocal;
+
+  function atualizarUIStatusBancoConfig() {
+    var dotEl = document.getElementById('cfg-db-status-dot');
+    var textEl = document.getElementById('cfg-db-status-text');
+    var subEl = document.getElementById('cfg-db-status-sub');
+    var actionsEl = document.getElementById('cfg-db-actions');
+    if (!dotEl || !textEl || !actionsEl) return;
+
+    var conectado = typeof isEstacaoConectadaTV === 'function' ? isEstacaoConectadaTV() : false;
+
+    if (conectado) {
+      dotEl.style.background = '#10B981';
+      dotEl.style.boxShadow = '0 0 8px rgba(16,185,129,0.5)';
+      textEl.textContent = 'Conectado ao Supabase';
+      textEl.style.color = 'var(--txt)';
+      if (subEl) subEl.textContent = 'Sincronização em nuvem ativa em tempo real';
+
+      actionsEl.innerHTML =
+        '<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalConectarBanco()" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;" title="Alterar Chave de Acesso">' +
+          '<i data-lucide="key" style="width:13px;height:13px;"></i>' +
+          '<span>Alterar Chave</span>' +
+        '</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" onclick="desconectarBancoModoLocal(true)" style="color:var(--red);border-color:var(--red-border);display:inline-flex;align-items:center;gap:5px;font-size:12px;" title="Desconectar e alternar para Modo Local">' +
+          '<i data-lucide="power" style="width:13px;height:13px;"></i>' +
+          '<span>Desconectar (Modo Local)</span>' +
+        '</button>';
+    } else {
+      dotEl.style.background = '#EF4444';
+      dotEl.style.boxShadow = '0 0 8px rgba(239,68,68,0.5)';
+      textEl.textContent = 'Desconectado (Modo Local)';
+      textEl.style.color = '#DC2626';
+      if (subEl) subEl.textContent = 'Operando localmente. Os novos registros ficam salvos apenas neste computador.';
+
+      actionsEl.innerHTML =
+        '<button type="button" class="btn btn-primary btn-sm" onclick="abrirModalConectarBanco()" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;" title="Conectar ao banco de dados Supabase">' +
+          '<i data-lucide="database" style="width:14px;height:14px;stroke-width:2.2;"></i>' +
+          '<span>Conectar ao Banco de Dados</span>' +
+        '</button>';
+    }
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+  window.atualizarUIStatusBancoConfig = atualizarUIStatusBancoConfig;
 
   /* ── Gerenciamento de Credenciais do Supabase na Aba Configurações ── */
   function carregarCredenciaisSupabaseConfig() {

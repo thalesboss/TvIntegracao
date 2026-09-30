@@ -6,6 +6,7 @@
   try { carregarFotoPerfilSalva(); } catch(e) {}
   try { loadNotificacoes(); } catch(e) {}
   try { carregarCredenciaisSupabaseConfig(); } catch(e) {}
+  try { if (typeof atualizarUIStatusBancoConfig === 'function') atualizarUIStatusBancoConfig(); } catch(e) {}
   try { carregarRascunhoRelatorioTV(); } catch(e) {}
   try { carregarRascunhoRecebimento(); } catch(e) {}
   try { carregarRascunhoCompra(); } catch(e) {}

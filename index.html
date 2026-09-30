@@ -219,8 +219,11 @@
         <div id="ident-chave-msg" style="font-size:11.5px;margin-top:4px;display:none;line-height:1.4;"></div>
       </div>
     </div>
-    <div class="modal-footer" style="justify-content:flex-end;">
-      <button class="btn btn-primary" id="btn-confirmar-identificacao" type="button" onclick="confirmarIdentificacaoOperador()" style="padding:8px 20px;font-size:13px;">Salvar e Continuar</button>
+    <div class="modal-footer" style="justify-content:space-between;align-items:center;">
+      <button class="btn btn-ghost btn-sm" type="button" onclick="confirmarIdentificacaoOperador(true)" style="color:var(--muted);font-size:12px;padding:6px 12px;" title="Entrar sem conectar ao banco (armazenamento local)">
+        Entrar em Modo Local
+      </button>
+      <button class="btn btn-primary" id="btn-confirmar-identificacao" type="button" onclick="confirmarIdentificacaoOperador(false)" style="padding:8px 20px;font-size:13px;">Salvar e Continuar</button>
     </div>
   </div>
 </div>
@@ -918,6 +921,50 @@
 </div>
 
 <!-- ═══════════════════════════════════════
+     POPUP: CONECTAR AO BANCO DE DADOS
+═══════════════════════════════════════ -->
+<div class="overlay" id="popup-conectar-banco" hidden role="dialog" aria-modal="true" aria-labelledby="conectar-banco-title">
+  <div class="modal" style="max-width: 440px;">
+    <div class="modal-header">
+      <div class="modal-icon" style="background:var(--blue);">
+        <i data-lucide="database" style="width:18px;height:18px;color:#fff;stroke-width:2;"></i>
+      </div>
+      <div>
+        <h2 id="conectar-banco-title" style="font-size:16px;font-weight:700;margin:0;">Conectar ao Banco de Dados</h2>
+        <p style="font-size:12px;color:var(--muted);margin:2px 0 0 0;">Sincronização em Nuvem (Supabase)</p>
+      </div>
+      <button class="modal-close-btn" onclick="fecharPopup('popup-conectar-banco')" title="Fechar"><i data-lucide="x" style="width:15px;height:15px;"></i></button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
+      <p style="font-size:12.5px;color:var(--txt2);line-height:1.5;">
+        Digite a <strong>Chave de Acesso da TV</strong> para autenticar esta estação de trabalho e ativar a sincronização em tempo real das ocorrências, relatórios e equipe.
+      </p>
+
+      <div class="frow">
+        <label for="conectar-banco-chave" style="font-weight:600;font-size:12.5px;color:var(--txt);display:flex;align-items:center;justify-content:space-between;">
+          <span>Chave de Acesso *</span>
+          <span style="font-size:11px;font-weight:400;color:var(--muted);">Senha da emissora</span>
+        </label>
+        <div style="position:relative;display:flex;align-items:center;">
+          <input type="password" id="conectar-banco-chave" placeholder="Digite a chave de acesso..." style="width:100%;font-size:13px;padding:9px 36px 9px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);" autocomplete="current-password" onkeydown="if(event.key==='Enter') executarConexaoBanco();" />
+          <button type="button" onclick="toggleMostrarChaveConectarBanco()" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;color:var(--muted);display:flex;align-items:center;" title="Mostrar / Ocultar Senha">
+            <i id="ico-toggle-conectar-chave" data-lucide="eye" style="width:16px;height:16px;"></i>
+          </button>
+        </div>
+        <div id="conectar-banco-msg" style="font-size:12px;margin-top:6px;display:none;line-height:1.4;"></div>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;">
+      <button class="btn btn-ghost" type="button" onclick="fecharPopup('popup-conectar-banco')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-executar-conectar-banco" type="button" onclick="executarConexaoBanco()" style="display:inline-flex;align-items:center;gap:6px;">
+        <i data-lucide="cloud" style="width:14px;height:14px;stroke-width:2.2;"></i>
+        <span>Conectar ao Banco</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
      POPUP: NOVO EQUIPAMENTO DASHBOARD
 ═══════════════════════════════════════ -->
 <div class="overlay" id="popup-novo-equipamento" hidden role="dialog" aria-modal="true" aria-labelledby="novo-eq-title">
@@ -1272,10 +1319,14 @@
     <div id="topbar-praca-badge" class="praca-badge" title="Praça de operação ativa">
       <span>📍</span> <span id="topbar-praca-nome">Juiz de Fora</span>
     </div>
-    <div id="cloud-status-indicator" class="cloud-status online" title="Conectado ao Supabase em tempo real">
+    <div id="cloud-status-indicator" class="cloud-status online" title="Status da Conexão (Clique para gerenciar o Banco de Dados)" onclick="abrirModalConectarBanco()">
       <span class="cloud-dot"></span>
       <span class="cloud-text">Nuvem Conectada</span>
     </div>
+    <button id="btn-conectar-nuvem-topbar" class="btn btn-xs btn-primary" onclick="abrirModalConectarBanco()" style="display:none;align-items:center;gap:5px;font-size:11px;padding:3.5px 9px;font-weight:600;" title="Conectar ao banco de dados Supabase">
+      <i data-lucide="database" style="width:12px;height:12px;"></i>
+      <span>Conectar Banco</span>
+    </button>
     <button class="notif-btn" onclick="abrirNotificacoes()" aria-label="Notificações">
       <i data-lucide="bell" style="width:15px;height:15px;stroke-width:2;"></i>
       <div class="notif-dot" aria-hidden="true"></div>
@@ -2969,6 +3020,25 @@
         </div>
       </div>
 
+      <!-- Banco de Dados & Conexão em Nuvem -->
+      <div class="form-card" id="cfg-card-banco">
+        <h3><div class="fcard-ico fci-b" style="display:flex;align-items:center;justify-content:center;"><i data-lucide="database" style="width:13px;height:13px;stroke-width:2;"></i></div> Conexão com o Banco de Dados</h3>
+        <div style="background:var(--surface);border:1px solid var(--border-lt);border-radius:12px;padding:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div id="cfg-db-status-dot" style="width:11px;height:11px;border-radius:50%;background:#10B981;box-shadow:0 0 8px rgba(16,185,129,0.5);"></div>
+              <div>
+                <div id="cfg-db-status-text" style="font-weight:700;font-size:13.5px;color:var(--txt);">Conectado ao Supabase</div>
+                <div id="cfg-db-status-sub" style="font-size:12px;color:var(--muted);margin-top:2px;">Sincronização em nuvem ativa em tempo real</div>
+              </div>
+            </div>
+            <div id="cfg-db-actions" style="display:flex;align-items:center;gap:8px;">
+              <!-- Botão Conectar ou Desconectar injetado via JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="form-card">
         <h3><div class="fcard-ico fci-y" style="display:flex;align-items:center;justify-content:center;"><i data-lucide="bell" style="width:13px;height:13px;stroke-width:2;"></i></div> Notificações</h3>
         <div class="cfg-toggle-row">
@@ -3077,7 +3147,7 @@
   };
 </script>
 <script src="config.js" onerror="window.ENV_CONFIG=window.ENV_CONFIG||{};"></script>
-<script src="script.js?v=8.8"></script>
+<script src="script.js?v=8.9"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof lucide !== 'undefined') lucide.createIcons();

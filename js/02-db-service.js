@@ -736,6 +736,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function updateCloudStatus(isOnline, customText) {
     var indicator = document.getElementById('cloud-status-indicator');
+    var btnTopbar = document.getElementById('btn-conectar-nuvem-topbar');
     if (isOnline) {
       _cloudConnected = true;
       _reconnectAttempt = 0;
@@ -745,19 +746,37 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       if (indicator) {
         indicator.className = 'cloud-status online';
-        indicator.title = 'Conectado ao Supabase em tempo real';
+        indicator.title = 'Conectado ao Supabase em tempo real (Clique para gerenciar)';
         indicator.innerHTML = '<span class="cloud-dot"></span><span class="cloud-text">' + (customText || 'Nuvem Conectada') + '</span>';
+      }
+      if (btnTopbar) {
+        btnTopbar.style.display = 'none';
       }
     } else {
       _cloudConnected = false;
+      var estaConfigurado = typeof isEstacaoConectadaTV === 'function' ? isEstacaoConectadaTV() : false;
+      var texto = customText || (estaConfigurado ? 'Reconectando...' : 'Modo Local');
       if (indicator) {
         indicator.className = 'cloud-status offline';
-        indicator.title = 'Desconectado do banco — reconectando automaticamente... (dados salvos localmente no cache)';
-        indicator.innerHTML = '<span class="cloud-dot"></span><span class="cloud-text">' + (customText || 'Reconectando...') + '</span>';
+        indicator.title = estaConfigurado
+          ? 'Desconectado do banco — reconectando automaticamente... (Clique para gerenciar)'
+          : 'Modo Local / Desconectado (Clique para conectar ao banco de dados)';
+        indicator.innerHTML = '<span class="cloud-dot"></span><span class="cloud-text">' + texto + '</span>';
       }
-      // Inicia a reconexão automática com backoff apenas quando desconectar
-      iniciarReconexaoAutomatica();
+      if (btnTopbar) {
+        btnTopbar.style.display = 'inline-flex';
+      }
+      if (estaConfigurado) {
+        iniciarReconexaoAutomatica();
+      }
     }
+
+    try {
+      if (typeof window.atualizarUIStatusBancoConfig === 'function') {
+        window.atualizarUIStatusBancoConfig();
+      }
+    } catch(eUI) {}
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.updateCloudStatus = updateCloudStatus;
   window._isCloudConnected = function() { return _cloudConnected; };
