@@ -705,9 +705,9 @@ document.addEventListener('DOMContentLoaded', function () {
             _cloudConnected = true;
             _reconnectAttempt = 0;
             _isReconnecting = false;
-            updateCloudStatus(true, 'Nuvem Conectada');
+            updateCloudStatus(true, 'Sincronizado');
             if (typeof mostrarToast === 'function') {
-              mostrarToast('Conexão Restabelecida', 'O banco de dados foi reconectado e os dados estão sincronizados.', 'success');
+              mostrarToast('Conexão Restabelecida', 'O sistema foi reconectado e seus dados estão sincronizados em tempo real.', 'success');
             }
             return;
           }
@@ -746,8 +746,8 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       if (indicator) {
         indicator.className = 'cloud-status online';
-        indicator.title = 'Conectado ao Supabase em tempo real (Clique para gerenciar)';
-        indicator.innerHTML = '<span class="cloud-dot"></span><span class="cloud-text">' + (customText || 'Nuvem Conectada') + '</span>';
+        indicator.title = 'Sincronização ativa em tempo real (Clique para gerenciar)';
+        indicator.innerHTML = '<span class="cloud-dot"></span><span class="cloud-text">' + (customText || 'Sincronizado') + '</span>';
       }
       if (btnTopbar) {
         btnTopbar.style.display = 'none';
@@ -755,12 +755,12 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
       _cloudConnected = false;
       var estaConfigurado = typeof isEstacaoConectadaTV === 'function' ? isEstacaoConectadaTV() : false;
-      var texto = customText || (estaConfigurado ? 'Reconectando...' : 'Modo Local');
+      var texto = customText || (estaConfigurado ? 'Reconectando...' : 'Modo Offline');
       if (indicator) {
         indicator.className = 'cloud-status offline';
         indicator.title = estaConfigurado
-          ? 'Desconectado do banco — reconectando automaticamente... (Clique para gerenciar)'
-          : 'Modo Local / Desconectado (Clique para conectar ao banco de dados)';
+          ? 'Desconectado da rede — reconectando automaticamente... (Clique para gerenciar)'
+          : 'Modo Offline (Clique para conectar à rede)';
         indicator.innerHTML = '<span class="cloud-dot"></span><span class="cloud-text">' + texto + '</span>';
       }
       if (btnTopbar) {
@@ -822,7 +822,9 @@ document.addEventListener('DOMContentLoaded', function () {
       dataCriacao: o.dataCriacao || formatDataHoraLocal(o.criado),
       resolucao: res,
       anexos: anx,
-      praca: normalizarPracaOcorrencia(o.praca, o.local, o.titulo, o.equipamento || (o.tags && o.tags[1]))
+      praca: normalizarPracaOcorrencia(o.praca, o.local, o.titulo, o.equipamento || (o.tags && o.tags[1])),
+      _synced: !!o._synced,
+      _pendingSync: !!o._pendingSync
     };
   }
 
@@ -834,20 +836,30 @@ document.addEventListener('DOMContentLoaded', function () {
     // 1. Indexa itens remotos saneados
     (remotas || []).forEach(function(rRaw) {
       var r = sanitizeOcorrencia(rRaw);
-      if (!r || !r.id || r.status === 'lixeira' || lixeiraArr.indexOf(r.id) !== -1) return;
+      if (!r || !r.id || r.status === 'lixeira' || lixeiraArr.indexOf(r.id) !== -1 || r.id === 'oc_1787932348110') return;
+      r._synced = true;
+      delete r._pendingSync;
       mapa[r.id] = r;
     });
 
     // 2. Mescla com itens locais para concorrência segura (multi-operador)
     (locais || []).forEach(function(l) {
-      if (!l || !l.id || l.status === 'lixeira' || lixeiraArr.indexOf(l.id) !== -1) return;
+      if (!l || !l.id || l.status === 'lixeira' || lixeiraArr.indexOf(l.id) !== -1 || l.id === 'oc_1787932348110') return;
       var r = mapa[l.id];
       if (!r) {
-        // Ocorrência criada localmente que ainda não constava no select remoto (ex: criada nos últimos 3 minutos)
+        // Se o item já havia sido sincronizado anteriormente com o Supabase e agora não veio no select remoto, foi excluído
+        if (l._synced) return;
+        // Se o item é legado/antigo (mais de 1 hora) e não está no banco remoto nem marcado como pendente, foi excluído
         var idadeLocal = now - (l.criado || 0);
-        if (idadeLocal < 180000) {
-          mapa[l.id] = l;
-        }
+        if (idadeLocal > 3600000 && !l._pendingSync) return;
+
+        // Ocorrência nova/recente ou pendente de sincronização: preserva e tenta enviar
+        mapa[l.id] = l;
+        try {
+          if (typeof DBService !== 'undefined' && DBService && typeof DBService.upsertOcorrenciaRemota === 'function') {
+            DBService.upsertOcorrenciaRemota(l, true);
+          }
+        } catch (eSync) {}
       } else {
         // Ambas existem: se status ou resolução mudou recentemente no local, preserva o local
         var localResolvida = (l.status === 'resolvida' && r.status !== 'resolvida');
@@ -878,18 +890,18 @@ document.addEventListener('DOMContentLoaded', function () {
         if (rawCache) {
           var parsed = JSON.parse(rawCache);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            ocorrencias = parsed.filter(function(o){ return o && !String(o.id).startsWith('oc_init_'); }).map(sanitizeOcorrencia).filter(Boolean);
+            ocorrencias = parsed.filter(function(o){ return o && !String(o.id).startsWith('oc_init_') && o.id !== 'oc_1787932348110'; }).map(sanitizeOcorrencia).filter(Boolean);
           }
         }
       } catch(e) {}
     } else {
-      ocorrencias = ocorrencias.map(sanitizeOcorrencia).filter(Boolean);
+      ocorrencias = ocorrencias.filter(function(o){ return o && o.id !== 'oc_1787932348110'; }).map(sanitizeOcorrencia).filter(Boolean);
     }
     return ocorrencias || [];
   }
 
   function save(list, itemModificado, isNovo) {
-    ocorrencias = list || [];
+    ocorrencias = (list || []).filter(function(o){ return o && o.id !== 'oc_1787932348110'; });
     window.ocorrencias = ocorrencias;
     try {
       localStorage.setItem(OCORRENCIAS_CACHE_KEY, JSON.stringify(ocorrencias));
@@ -912,7 +924,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (rawCache) {
         var parsed = JSON.parse(rawCache);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          var limpos = parsed.filter(function(o){ return o && !String(o.id).startsWith('oc_init_'); });
+          var limpos = parsed.filter(function(o){ return o && !String(o.id).startsWith('oc_init_') && o.id !== 'oc_1787932348110'; });
           var sanitizados = limpos.map(sanitizeOcorrencia).filter(Boolean);
           try {
             localStorage.setItem(OCORRENCIAS_CACHE_KEY, JSON.stringify(sanitizados));

@@ -325,7 +325,7 @@
         sincronizarEquipeNuvem();
       }
       if (typeof mostrarToast === 'function') {
-        mostrarToast('Banco de Dados Conectado', 'Esta estação agora está sincronizada com a nuvem em tempo real!', 'success');
+        mostrarToast('Sincronização Ativa', 'Esta estação agora está conectada e compartilhando informações em tempo real!', 'success');
       }
     } catch(err) {
       if (msg) {
@@ -335,7 +335,7 @@
       }
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '<i data-lucide="cloud" style="width:14px;height:14px;stroke-width:2.2;"></i><span>Conectar ao Banco</span>';
+        btn.innerHTML = '<i data-lucide="cloud" style="width:14px;height:14px;stroke-width:2.2;"></i><span>Ativar Sincronização</span>';
       }
       if (typeof lucide !== 'undefined') lucide.createIcons();
     }
@@ -343,7 +343,7 @@
   window.executarConexaoBanco = executarConexaoBanco;
 
   function desconectarBancoModoLocal(confirmar) {
-    if (confirmar && !confirm('Deseja realmente desconectar do banco de dados e entrar em Modo Local?\n\nOs novos registros ficarão salvos apenas neste computador até você conectar novamente.')) {
+    if (confirmar && !confirm('Deseja realmente desconectar e trabalhar offline?\n\nOs novos registros ficarão salvos com segurança neste computador até você reconectar.')) {
       return;
     }
     try {
@@ -355,11 +355,11 @@
         DBService.mode = 'local';
       }
       if (typeof updateCloudStatus === 'function') {
-        updateCloudStatus(false, 'Modo Local');
+        updateCloudStatus(false, 'Modo Offline');
       }
       atualizarUIStatusBancoConfig();
       if (typeof mostrarToast === 'function') {
-        mostrarToast('Modo Local Ativado', 'Estação desconectada da nuvem. Operando em modo offline.', 'info');
+        mostrarToast('Modo Offline Ativado', 'Estação desconectada da rede. Operando localmente neste computador.', 'info');
       }
     } catch(e) {
       console.warn('Erro ao desconectar banco:', e);
@@ -379,30 +379,30 @@
     if (conectado) {
       dotEl.style.background = '#10B981';
       dotEl.style.boxShadow = '0 0 8px rgba(16,185,129,0.5)';
-      textEl.textContent = 'Conectado ao Supabase';
+      textEl.textContent = 'Sistema Conectado';
       textEl.style.color = 'var(--txt)';
-      if (subEl) subEl.textContent = 'Sincronização em nuvem ativa em tempo real';
+      if (subEl) subEl.textContent = 'Sincronização ativa em tempo real com todos os computadores da TV.';
 
       actionsEl.innerHTML =
-        '<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalConectarBanco()" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;" title="Alterar Chave de Acesso">' +
+        '<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalConectarBanco()" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;" title="Coloque uma senha para se conectar">' +
           '<i data-lucide="key" style="width:13px;height:13px;"></i>' +
-          '<span>Alterar Chave</span>' +
+          '<span>Conectar</span>' +
         '</button>' +
-        '<button type="button" class="btn btn-ghost btn-sm" onclick="desconectarBancoModoLocal(true)" style="color:var(--red);border-color:var(--red-border);display:inline-flex;align-items:center;gap:5px;font-size:12px;" title="Desconectar e alternar para Modo Local">' +
-          '<i data-lucide="power" style="width:13px;height:13px;"></i>' +
-          '<span>Desconectar (Modo Local)</span>' +
+        '<button type="button" class="btn btn-ghost btn-sm" onclick="desconectarBancoModoLocal(true)" style="color:var(--red);border-color:var(--red-border);display:inline-flex;align-items:center;gap:5px;font-size:12px;" title="Trabalhar apenas neste computador">' +
+          '<i data-lucide="cloud-off" style="width:13px;height:13px;"></i>' +
+          '<span>Trabalhar Offline</span>' +
         '</button>';
     } else {
       dotEl.style.background = '#EF4444';
       dotEl.style.boxShadow = '0 0 8px rgba(239,68,68,0.5)';
-      textEl.textContent = 'Desconectado (Modo Local)';
+      textEl.textContent = 'Modo Offline (Apenas este computador)';
       textEl.style.color = '#DC2626';
-      if (subEl) subEl.textContent = 'Operando localmente. Os novos registros ficam salvos apenas neste computador.';
+      if (subEl) subEl.textContent = 'Operando localmente. Seus registros ficam salvos neste computador até reconectar.';
 
       actionsEl.innerHTML =
-        '<button type="button" class="btn btn-primary btn-sm" onclick="abrirModalConectarBanco()" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;" title="Conectar ao banco de dados Supabase">' +
-          '<i data-lucide="database" style="width:14px;height:14px;stroke-width:2.2;"></i>' +
-          '<span>Conectar ao Banco de Dados</span>' +
+        '<button type="button" class="btn btn-primary btn-sm" onclick="abrirModalConectarBanco()" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;" title="Ativar sincronização com a rede da emissora">' +
+          '<i data-lucide="cloud" style="width:14px;height:14px;stroke-width:2.2;"></i>' +
+          '<span>Ativar Sincronização</span>' +
         '</button>';
     }
 

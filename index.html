@@ -166,6 +166,160 @@
       color: var(--muted);
       min-width: 24px;
     }
+
+    /* ── Visão Geral das Respostas (Estilo Microsoft Forms — Uberlândia) ── */
+    .vg-forms-overlay .modal {
+      max-width: 920px;
+      width: 95vw;
+      height: 90vh;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      background: #F8FAFC;
+      border-radius: 16px;
+      overflow: hidden;
+      padding: 0;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    .vg-forms-header {
+      padding: 16px 24px;
+      background: #FFFFFF;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .vg-forms-body {
+      padding: 24px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .vg-top-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .vg-stat-box {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 16px 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .vg-stat-box .vg-stat-num {
+      font-size: 30px;
+      font-weight: 800;
+      color: #0F172A;
+      line-height: 1.1;
+      margin-top: 4px;
+    }
+    .vg-stat-box .vg-stat-lbl {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748B;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .vg-q-card {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 20px 22px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .vg-q-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #1E293B;
+      margin-bottom: 14px;
+      letter-spacing: -0.01em;
+    }
+    .vg-legend {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 11.5px;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+    .vg-legend-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 5px;
+    }
+    .vg-bar-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .vg-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .vg-bar-name {
+      width: 175px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      flex-shrink: 0;
+      text-transform: uppercase;
+    }
+    .vg-bar-track {
+      flex: 1;
+      height: 16px;
+      background: #F1F5F9;
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+    }
+    .vg-bar-fill-c {
+      background: #E06A3B;
+      height: 100%;
+      transition: width 0.3s;
+    }
+    .vg-bar-fill-nc {
+      background: #3B82F6;
+      height: 100%;
+      transition: width 0.3s;
+    }
+    .vg-bar-meta {
+      width: 85px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #64748B;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .vg-recent-list {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .vg-recent-item {
+      font-size: 12.5px;
+      color: #334155;
+      line-height: 1.4;
+      border-bottom: 1px dashed #E2E8F0;
+      padding-bottom: 6px;
+    }
+    .vg-recent-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
   </style>
 </head>
 <body>
@@ -220,8 +374,8 @@
       </div>
     </div>
     <div class="modal-footer" style="justify-content:space-between;align-items:center;">
-      <button class="btn btn-ghost btn-sm" type="button" onclick="confirmarIdentificacaoOperador(true)" style="color:var(--muted);font-size:12px;padding:6px 12px;" title="Entrar sem conectar ao banco (armazenamento local)">
-        Entrar em Modo Local
+      <button class="btn btn-ghost btn-sm" type="button" onclick="confirmarIdentificacaoOperador(true)" style="color:var(--muted);font-size:12px;padding:6px 12px;" title="Entrar sem sincronizar agora (trabalhar offline)">
+        Trabalhar Offline
       </button>
       <button class="btn btn-primary" id="btn-confirmar-identificacao" type="button" onclick="confirmarIdentificacaoOperador(false)" style="padding:8px 20px;font-size:13px;">Salvar e Continuar</button>
     </div>
@@ -371,8 +525,8 @@
       </div>
       <div class="frow">
         <label for="nova-desc">Descrição Detalhada </label>
-        <textarea id="nova-desc" placeholder="Descreva a ocorrência em detalhes: o que aconteceu, onde, qual o impacto e as ações necessárias... (mínimo 50 caracteres)" style="min-height:84px;"></textarea>
-        <div id="nova-counter" class="char-count">Mínimo 50 caracteres</div>
+        <textarea id="nova-desc" placeholder="Descreva a ocorrência em detalhes: o que aconteceu, onde, qual o impacto e as ações necessárias... (mínimo 10 caracteres)" style="min-height:84px;"></textarea>
+        <div id="nova-counter" class="char-count">Mínimo 10 caracteres</div>
       </div>
       <div class="frow">
         <label>Anexar fotos, vídeos ou arquivos <span class="opt-badge">Opcional</span></label>
@@ -927,11 +1081,11 @@
   <div class="modal" style="max-width: 440px;">
     <div class="modal-header">
       <div class="modal-icon" style="background:var(--blue);">
-        <i data-lucide="database" style="width:18px;height:18px;color:#fff;stroke-width:2;"></i>
+        <i data-lucide="cloud" style="width:18px;height:18px;color:#fff;stroke-width:2;"></i>
       </div>
       <div>
-        <h2 id="conectar-banco-title" style="font-size:16px;font-weight:700;margin:0;">Conectar ao Banco de Dados</h2>
-        <p style="font-size:12px;color:var(--muted);margin:2px 0 0 0;">Sincronização em Nuvem (Supabase)</p>
+        <h2 id="conectar-banco-title" style="font-size:16px;font-weight:700;margin:0;">Sincronização do Sistema</h2>
+        <p style="font-size:12px;color:var(--muted);margin:2px 0 0 0;">Compartilhamento em Tempo Real</p>
       </div>
       <button class="modal-close-btn" onclick="fecharPopup('popup-conectar-banco')" title="Fechar"><i data-lucide="x" style="width:15px;height:15px;"></i></button>
     </div>
@@ -958,7 +1112,7 @@
       <button class="btn btn-ghost" type="button" onclick="fecharPopup('popup-conectar-banco')">Cancelar</button>
       <button class="btn btn-primary" id="btn-executar-conectar-banco" type="button" onclick="executarConexaoBanco()" style="display:inline-flex;align-items:center;gap:6px;">
         <i data-lucide="cloud" style="width:14px;height:14px;stroke-width:2.2;"></i>
-        <span>Conectar ao Banco</span>
+        <span>Ativar Sincronização</span>
       </button>
     </div>
   </div>
@@ -1194,6 +1348,39 @@
     </div>
   </div>
 </div>
+<!-- ═══════════════════════════════════════
+     POPUP: VISÃO GERAL DAS RESPOSTAS (MÉTRICAS FORMS — UBERLÂNDIA)
+═══════════════════════════════════════ -->
+<div class="overlay vg-forms-overlay" id="popup-visao-geral-ronda" hidden role="dialog" aria-modal="true" aria-labelledby="vgr-title">
+  <div class="modal">
+    <div class="vg-forms-header">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:38px;height:38px;border-radius:10px;background:#EEF2FF;color:#4F46E5;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(79,70,229,0.15);">
+          <i data-lucide="bar-chart-2" style="width:20px;height:20px;stroke-width:2.2;"></i>
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <h2 id="vgr-title" style="font-size:16px;font-weight:700;margin:0;color:#0F172A;">Visão Geral das Respostas</h2>
+            <span style="background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;font-size:11px;font-weight:700;padding:2px 8px;border-radius:12px;">Ativo</span>
+          </div>
+          <p style="font-size:12px;color:var(--muted);margin:2px 0 0 0;">Relatório Diário — Tecnologia UDI</p>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="exportarFormularioTurnoIndividual()" style="font-size:12px;display:inline-flex;align-items:center;gap:5px;" title="Exportar o questionário preenchido do turno atual (4 páginas)">
+          <i data-lucide="file-text" style="width:13px;height:13px;stroke-width:2;"></i> Exportar Formulário do Turno
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="exportarVisaoGeralFormsPdf()" style="font-size:12px;display:inline-flex;align-items:center;gap:5px;" title="Exportar painel completo com gráficos e métricas (estilo Forms)">
+          <i data-lucide="printer" style="width:13px;height:13px;stroke-width:2.2;"></i> Exportar com Gráficos
+        </button>
+        <button class="modal-close-btn" onclick="fecharPopup('popup-visao-geral-ronda')" title="Fechar"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+      </div>
+    </div>
+    <div class="vg-forms-body" id="popup-visao-geral-ronda-content">
+      <!-- Conteúdo dinâmico com cards, gráficos SVG e barras de conformidade -->
+    </div>
+  </div>
+</div>
 
 <!-- ═══════════════════════════════════════
      SIDEBAR
@@ -1319,13 +1506,13 @@
     <div id="topbar-praca-badge" class="praca-badge" title="Praça de operação ativa">
       <span>📍</span> <span id="topbar-praca-nome">Juiz de Fora</span>
     </div>
-    <div id="cloud-status-indicator" class="cloud-status online" title="Status da Conexão (Clique para gerenciar o Banco de Dados)" onclick="abrirModalConectarBanco()">
+    <div id="cloud-status-indicator" class="cloud-status online" title="Status da Conexão (Clique para gerenciar a sincronização)" onclick="abrirModalConectarBanco()">
       <span class="cloud-dot"></span>
-      <span class="cloud-text">Nuvem Conectada</span>
+      <span class="cloud-text">Sincronizado</span>
     </div>
-    <button id="btn-conectar-nuvem-topbar" class="btn btn-xs btn-primary" onclick="abrirModalConectarBanco()" style="display:none;align-items:center;gap:5px;font-size:11px;padding:3.5px 9px;font-weight:600;" title="Conectar ao banco de dados Supabase">
-      <i data-lucide="database" style="width:12px;height:12px;"></i>
-      <span>Conectar Banco</span>
+    <button id="btn-conectar-nuvem-topbar" class="btn btn-xs btn-primary" onclick="abrirModalConectarBanco()" style="display:none;align-items:center;gap:5px;font-size:11px;padding:3.5px 9px;font-weight:600;" title="Conectar ao servidor da emissora">
+      <i data-lucide="cloud" style="width:12px;height:12px;"></i>
+      <span>Sincronizar</span>
     </button>
     <button class="notif-btn" onclick="abrirNotificacoes()" aria-label="Notificações">
       <i data-lucide="bell" style="width:15px;height:15px;stroke-width:2;"></i>
@@ -1954,7 +2141,10 @@
             <span class="dest-tag">Operador: <strong id="ronda-operador-badge" style="color:var(--txt);">Operador</strong></span>
             <span class="dest-ref">Tecnologia & Engenharia</span>
           </div>
-          <div style="display:flex;align-items:center;gap:8px;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn btn-sm" onclick="abrirVisaoGeralRondaUdi()" style="background:#2563EB;color:#fff;border-color:#2563EB;display:inline-flex;align-items:center;gap:6px;font-weight:600;" title="Ver visão geral analítica com gráficos e métricas (estilo Forms)">
+              <i data-lucide="bar-chart-2" style="width:14px;height:14px;stroke-width:2.2;"></i> Visão Geral & Gráficos
+            </button>
             <button type="button" class="btn btn-secondary btn-sm" onclick="marcarTudoConformeRonda()" title="Marcar todos os 26 itens como Conforme com 1 clique">
               <i data-lucide="check-check" style="width:13px;height:13px;stroke-width:2.2;"></i> Marcar Tudo Conforme
             </button>
@@ -3020,16 +3210,16 @@
         </div>
       </div>
 
-      <!-- Banco de Dados & Conexão em Nuvem -->
+      <!-- Sincronização em Nuvem & Conexão do Sistema -->
       <div class="form-card" id="cfg-card-banco">
-        <h3><div class="fcard-ico fci-b" style="display:flex;align-items:center;justify-content:center;"><i data-lucide="database" style="width:13px;height:13px;stroke-width:2;"></i></div> Conexão com o Banco de Dados</h3>
+        <h3><div class="fcard-ico fci-b" style="display:flex;align-items:center;justify-content:center;"><i data-lucide="cloud" style="width:13px;height:13px;stroke-width:2;"></i></div> Sincronização do Sistema</h3>
         <div style="background:var(--surface);border:1px solid var(--border-lt);border-radius:12px;padding:16px;">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
             <div style="display:flex;align-items:center;gap:10px;">
               <div id="cfg-db-status-dot" style="width:11px;height:11px;border-radius:50%;background:#10B981;box-shadow:0 0 8px rgba(16,185,129,0.5);"></div>
               <div>
-                <div id="cfg-db-status-text" style="font-weight:700;font-size:13.5px;color:var(--txt);">Conectado ao Supabase</div>
-                <div id="cfg-db-status-sub" style="font-size:12px;color:var(--muted);margin-top:2px;">Sincronização em nuvem ativa em tempo real</div>
+                <div id="cfg-db-status-text" style="font-weight:700;font-size:13.5px;color:var(--txt);">Sistema Conectado</div>
+                <div id="cfg-db-status-sub" style="font-size:12px;color:var(--muted);margin-top:2px;">Sincronização ativa em tempo real com todos os computadores da TV</div>
               </div>
             </div>
             <div id="cfg-db-actions" style="display:flex;align-items:center;gap:8px;">

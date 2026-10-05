@@ -10,30 +10,31 @@
   var novaPrevs   = document.getElementById('nova-previews');
 
   function validarNova() {
-    var ok = novaTitulo && novaDesc &&
-             novaTitulo.value.trim().length > 0 &&
-             novaDesc.value.length >= 50;
+    var tituloVal = novaTitulo ? novaTitulo.value.trim() : '';
+    var descVal   = novaDesc ? novaDesc.value.trim() : '';
+    var ok = (tituloVal.length > 0 && descVal.length >= 10);
     if (btnCriar) {
       btnCriar.style.opacity = ok ? '1' : '0.38';
       btnCriar.style.cursor  = ok ? 'pointer' : 'not-allowed';
       btnCriar._valido = ok;
     }
   }
+  window.validarNova = validarNova;
 
   if (btnCriar) { btnCriar.style.opacity = '0.38'; btnCriar.style.cursor = 'not-allowed'; btnCriar._valido = false; }
   if (novaTitulo) novaTitulo.addEventListener('input', validarNova);
 
   if (novaDesc && novaCounter) {
     novaDesc.addEventListener('input', function() {
-      var len = this.value.length;
-      if (len >= 50) {
-        novaCounter.textContent = '✓ ' + len + ' caracteres — mínimo atingido';
+      var len = this.value.trim().length;
+      if (len >= 10) {
+        novaCounter.textContent = '✓ ' + len + ' caracteres — pronto para criar';
         novaCounter.className = 'char-count ok';
-      } else if (len >= 25) {
-        novaCounter.textContent = 'Faltam ' + (50-len) + ' caracteres';
+      } else if (len > 0) {
+        novaCounter.textContent = 'Mínimo 10 caracteres (' + len + '/10)';
         novaCounter.className = 'char-count warn';
       } else {
-        novaCounter.textContent = 'Mínimo 50 caracteres (' + len + '/50)';
+        novaCounter.textContent = 'Mínimo 10 caracteres';
         novaCounter.className = 'char-count';
       }
       validarNova();
@@ -92,9 +93,9 @@
       return;
     }
 
-    if (descVal.length < 50) {
+    if (descVal.length < 10) {
       if (typeof mostrarToast === 'function') {
-        mostrarToast('Descrição Curta', 'A descrição deve ter pelo menos 50 caracteres (' + descVal.length + '/50).', 'warning');
+        mostrarToast('Descrição Curta', 'A descrição deve ter pelo menos 10 caracteres (' + descVal.length + '/10).', 'warning');
       }
       if (novaDesc) novaDesc.focus();
       return;
@@ -130,7 +131,8 @@
       dataCriacao: formatDataHoraLocal(),
       resolucao:   anexosFinais.length > 0 ? { statusRes: 'Aberta', anexos: anexosFinais } : null,
       anexos:      anexosFinais,
-      praca:       (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora')
+      praca:       (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora'),
+      _pendingSync: true
     };
 
     // Atualizar métricas dos Dashboards correspondentes em tempo real
@@ -163,7 +165,7 @@
     if (novaDesc)   novaDesc.value   = '';
     if (novaFile)   novaFile.value   = '';
     if (novaPrevs)  novaPrevs.innerHTML = '';
-    if (novaCounter) { novaCounter.textContent = 'Mínimo 50 caracteres'; novaCounter.className = 'char-count'; }
+    if (novaCounter) { novaCounter.textContent = 'Mínimo 10 caracteres'; novaCounter.className = 'char-count'; }
     if (document.getElementById('nova-prio')) document.getElementById('nova-prio').selectedIndex = 1;
     if (document.getElementById('nova-resp')) document.getElementById('nova-resp').selectedIndex = 0;
     if (document.getElementById('nova-cat'))  document.getElementById('nova-cat').selectedIndex  = 0;
