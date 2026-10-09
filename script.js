@@ -94,7 +94,7 @@ window.iniciarSessao          = iniciarSessao;
 
 /* Fechar popups clicando fora no overlay escuro */
 document.addEventListener('click', function(e) {
-  if (e.target && e.target.classList && e.target.classList.contains('overlay') && e.target.id !== 'popup-entrada') {
+  if (e.target && e.target.classList && e.target.classList.contains('overlay') && e.target.id !== 'popup-entrada' && e.target.id !== 'popup-identificacao-operador') {
     fecharPopup(e.target.id);
   }
 });
@@ -1821,17 +1821,44 @@ document.addEventListener('DOMContentLoaded', function () {
     fecharPopup('popup-logout');
     if (obs) obs.value = '';
     loginTime = Date.now();
-    if (typeof mostrarToast === 'function') {
-      mostrarToast('Turno Encerrado', 'Checklist de saída registrado e sessão encerrada com sucesso.', 'success');
+
+    // Remove apenas o usuário logado para solicitar nova identificação
+    // mantendo credenciais da estação (banco de dados / Supabase)
+    try {
+      localStorage.removeItem(USER_NAME_STORAGE_KEY);
+    } catch(e) {}
+
+    // Reseta visualmente a interface sem salvar 'Operador' no localStorage
+    if (typeof atualizarNomeOperadorUI === 'function') {
+      atualizarNomeOperadorUI('Operador', false);
     }
-    var popEntrada = document.getElementById('popup-entrada');
-    if (popEntrada) {
-      var chk = document.getElementById('chk-entrada');
-      if (chk) chk.checked = false;
-      if (typeof toggleBtnIniciarSessao === 'function') {
-        toggleBtnIniciarSessao(false);
-      }
-      abrirPopup('popup-entrada');
+
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Sessão Encerrada', 'Turno finalizado com sucesso. Identifique o próximo operador.', 'info');
+    }
+
+    // Fecha popup de entrada se estiver aberto
+    fecharPopup('popup-entrada');
+
+    // Prepara e abre o popup de identificação do operador
+    var identInput = document.getElementById('ident-operador-nome');
+    if (identInput) {
+      identInput.value = '';
+    }
+    var chaveInput = document.getElementById('ident-chave-acesso');
+    if (chaveInput) {
+      chaveInput.value = '';
+    }
+
+    if (typeof atualizarUIIdentificacaoOperador === 'function') {
+      atualizarUIIdentificacaoOperador();
+    }
+
+    abrirPopup('popup-identificacao-operador');
+    if (identInput) {
+      setTimeout(function() {
+        identInput.focus();
+      }, 150);
     }
   }
   window.confirmarLogout = confirmarLogout;
@@ -1948,6 +1975,12 @@ document.addEventListener('DOMContentLoaded', function () {
       try {
         if (typeof carregarRascunhoRonda === 'function') carregarRascunhoRonda();
         if (typeof verificarNaoConformidadesRonda === 'function') verificarNaoConformidadesRonda();
+      } catch(e) {}
+    }
+    if (name === 'orcamento') {
+      try {
+        if (typeof renderOrcamento === 'function') renderOrcamento();
+        if (typeof sincronizarOrcamentoNuvem === 'function') sincronizarOrcamentoNuvem();
       } catch(e) {}
     }
   }
@@ -4635,11 +4668,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (datalist) {
-          datalist.innerHTML = operadores.map(function(op) {
-            return '<option value="' + escapeHTML(op.nome) + '">';
-          }).join('');
+          datalist.innerHTML = '';
         }
-        console.log('[Operadores] ' + operadores.length + ' operadores carregados do banco de dados (Supabase).');
+        console.log('[Operadores] ' + operadores.length + ' operadores carregados internamente para sincronização.');
 
         // Sincroniza as rotinas com o banco agora que temos o UUID
         sincronizarChecklistNuvem();
@@ -7460,10 +7491,12 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.removerFotoPerfil = removerFotoPerfil;
 
-  function atualizarNomeOperadorUI(nome) {
+  function atualizarNomeOperadorUI(nome, salvarStorage) {
     var nomeExibido = (nome && nome.trim()) ? nome.trim() : 'Operador';
-    localStorage.setItem(USER_NAME_STORAGE_KEY, nomeExibido);
-    if (typeof obterOuCriarOperadorPorNome === 'function') {
+    if (salvarStorage !== false && nomeExibido !== 'Operador') {
+      localStorage.setItem(USER_NAME_STORAGE_KEY, nomeExibido);
+    }
+    if (typeof obterOuCriarOperadorPorNome === 'function' && nomeExibido !== 'Operador') {
       obterOuCriarOperadorPorNome(nomeExibido);
     }
 
@@ -10297,10 +10330,12 @@ document.addEventListener('DOMContentLoaded', function () {
     .then(function(res) { return res.ok ? res.json() : null; })
     .then(function(cloudItens) {
       if (Array.isArray(cloudItens)) {
-        orcamentoSeedData = cloudItens.map(function(c) {
+        var cloudIds = {};
+        var formatadosDaNuvem = cloudItens.map(function(c) {
           var d = limparDescricao(c.desc || c.descricao, c.id);
           var p = limparPrioridade(c.prio || c.prioridade, c.id);
           var j = limparJustificativa(c.justificativa, c.id);
+          cloudIds[c.id] = true;
           return {
             id: c.id,
             ano: c.ano || anoOrcamento,
@@ -10317,9 +10352,23 @@ document.addEventListener('DOMContentLoaded', function () {
           };
         });
 
+        // Preserva itens locais recém-adicionados que ainda não subiram para a nuvem
+        var locaisPendentes = (Array.isArray(orcamentoSeedData) ? orcamentoSeedData : []).filter(function(loc) {
+          return loc && loc.id && !cloudIds[loc.id];
+        });
+
+        // Envia os itens locais pendentes para a nuvem para garantir persistência mútua
+        if (locaisPendentes.length > 0) {
+          locaisPendentes.forEach(function(itemPend) {
+            salvarItemOrcamentoNuvem(itemPend);
+          });
+        }
+
+        orcamentoSeedData = formatadosDaNuvem.concat(locaisPendentes);
+
         salvarOrcamentoStore();
         renderOrcamento();
-        console.log('[Orçamento DB] ✅ ' + cloudItens.length + ' linhas orçamentárias sincronizadas do banco de dados (Supabase orcamentos).');
+        console.log('[Orçamento DB] ✅ ' + formatadosDaNuvem.length + ' linhas orçamentárias sincronizadas do banco de dados (Supabase orcamentos).');
       }
     })
     .catch(function(err) {
@@ -10483,7 +10532,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  if (!savedUserName || !savedUserName.trim()) {
+  if (!savedUserName || !savedUserName.trim() || savedUserName.trim() === 'Operador') {
     abrirPopup('popup-identificacao-operador');
     var identInput = document.getElementById('ident-operador-nome');
     if (identInput) setTimeout(function(){ identInput.focus(); }, 180);

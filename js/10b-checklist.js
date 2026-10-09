@@ -510,11 +510,9 @@
         }
 
         if (datalist) {
-          datalist.innerHTML = operadores.map(function(op) {
-            return '<option value="' + escapeHTML(op.nome) + '">';
-          }).join('');
+          datalist.innerHTML = '';
         }
-        console.log('[Operadores] ' + operadores.length + ' operadores carregados do banco de dados (Supabase).');
+        console.log('[Operadores] ' + operadores.length + ' operadores carregados internamente para sincronização.');
 
         // Sincroniza as rotinas com o banco agora que temos o UUID
         sincronizarChecklistNuvem();

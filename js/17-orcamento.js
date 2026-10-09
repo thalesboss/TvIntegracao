@@ -520,10 +520,12 @@
     .then(function(res) { return res.ok ? res.json() : null; })
     .then(function(cloudItens) {
       if (Array.isArray(cloudItens)) {
-        orcamentoSeedData = cloudItens.map(function(c) {
+        var cloudIds = {};
+        var formatadosDaNuvem = cloudItens.map(function(c) {
           var d = limparDescricao(c.desc || c.descricao, c.id);
           var p = limparPrioridade(c.prio || c.prioridade, c.id);
           var j = limparJustificativa(c.justificativa, c.id);
+          cloudIds[c.id] = true;
           return {
             id: c.id,
             ano: c.ano || anoOrcamento,
@@ -540,9 +542,23 @@
           };
         });
 
+        // Preserva itens locais recém-adicionados que ainda não subiram para a nuvem
+        var locaisPendentes = (Array.isArray(orcamentoSeedData) ? orcamentoSeedData : []).filter(function(loc) {
+          return loc && loc.id && !cloudIds[loc.id];
+        });
+
+        // Envia os itens locais pendentes para a nuvem para garantir persistência mútua
+        if (locaisPendentes.length > 0) {
+          locaisPendentes.forEach(function(itemPend) {
+            salvarItemOrcamentoNuvem(itemPend);
+          });
+        }
+
+        orcamentoSeedData = formatadosDaNuvem.concat(locaisPendentes);
+
         salvarOrcamentoStore();
         renderOrcamento();
-        console.log('[Orçamento DB] ✅ ' + cloudItens.length + ' linhas orçamentárias sincronizadas do banco de dados (Supabase orcamentos).');
+        console.log('[Orçamento DB] ✅ ' + formatadosDaNuvem.length + ' linhas orçamentárias sincronizadas do banco de dados (Supabase orcamentos).');
       }
     })
     .catch(function(err) {

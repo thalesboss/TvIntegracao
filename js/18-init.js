@@ -60,7 +60,7 @@
     });
   }
 
-  if (!savedUserName || !savedUserName.trim()) {
+  if (!savedUserName || !savedUserName.trim() || savedUserName.trim() === 'Operador') {
     abrirPopup('popup-identificacao-operador');
     var identInput = document.getElementById('ident-operador-nome');
     if (identInput) setTimeout(function(){ identInput.focus(); }, 180);

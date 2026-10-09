@@ -94,7 +94,7 @@ window.iniciarSessao          = iniciarSessao;
 
 /* Fechar popups clicando fora no overlay escuro */
 document.addEventListener('click', function(e) {
-  if (e.target && e.target.classList && e.target.classList.contains('overlay') && e.target.id !== 'popup-entrada') {
+  if (e.target && e.target.classList && e.target.classList.contains('overlay') && e.target.id !== 'popup-entrada' && e.target.id !== 'popup-identificacao-operador') {
     fecharPopup(e.target.id);
   }
 });

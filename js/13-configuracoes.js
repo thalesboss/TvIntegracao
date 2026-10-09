@@ -75,10 +75,12 @@
   }
   window.removerFotoPerfil = removerFotoPerfil;
 
-  function atualizarNomeOperadorUI(nome) {
+  function atualizarNomeOperadorUI(nome, salvarStorage) {
     var nomeExibido = (nome && nome.trim()) ? nome.trim() : 'Operador';
-    localStorage.setItem(USER_NAME_STORAGE_KEY, nomeExibido);
-    if (typeof obterOuCriarOperadorPorNome === 'function') {
+    if (salvarStorage !== false && nomeExibido !== 'Operador') {
+      localStorage.setItem(USER_NAME_STORAGE_KEY, nomeExibido);
+    }
+    if (typeof obterOuCriarOperadorPorNome === 'function' && nomeExibido !== 'Operador') {
       obterOuCriarOperadorPorNome(nomeExibido);
     }
 

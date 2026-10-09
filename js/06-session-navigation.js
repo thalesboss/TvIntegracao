@@ -15,17 +15,44 @@
     fecharPopup('popup-logout');
     if (obs) obs.value = '';
     loginTime = Date.now();
-    if (typeof mostrarToast === 'function') {
-      mostrarToast('Turno Encerrado', 'Checklist de saída registrado e sessão encerrada com sucesso.', 'success');
+
+    // Remove apenas o usuário logado para solicitar nova identificação
+    // mantendo credenciais da estação (banco de dados / Supabase)
+    try {
+      localStorage.removeItem(USER_NAME_STORAGE_KEY);
+    } catch(e) {}
+
+    // Reseta visualmente a interface sem salvar 'Operador' no localStorage
+    if (typeof atualizarNomeOperadorUI === 'function') {
+      atualizarNomeOperadorUI('Operador', false);
     }
-    var popEntrada = document.getElementById('popup-entrada');
-    if (popEntrada) {
-      var chk = document.getElementById('chk-entrada');
-      if (chk) chk.checked = false;
-      if (typeof toggleBtnIniciarSessao === 'function') {
-        toggleBtnIniciarSessao(false);
-      }
-      abrirPopup('popup-entrada');
+
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Sessão Encerrada', 'Turno finalizado com sucesso. Identifique o próximo operador.', 'info');
+    }
+
+    // Fecha popup de entrada se estiver aberto
+    fecharPopup('popup-entrada');
+
+    // Prepara e abre o popup de identificação do operador
+    var identInput = document.getElementById('ident-operador-nome');
+    if (identInput) {
+      identInput.value = '';
+    }
+    var chaveInput = document.getElementById('ident-chave-acesso');
+    if (chaveInput) {
+      chaveInput.value = '';
+    }
+
+    if (typeof atualizarUIIdentificacaoOperador === 'function') {
+      atualizarUIIdentificacaoOperador();
+    }
+
+    abrirPopup('popup-identificacao-operador');
+    if (identInput) {
+      setTimeout(function() {
+        identInput.focus();
+      }, 150);
     }
   }
   window.confirmarLogout = confirmarLogout;
@@ -142,6 +169,12 @@
       try {
         if (typeof carregarRascunhoRonda === 'function') carregarRascunhoRonda();
         if (typeof verificarNaoConformidadesRonda === 'function') verificarNaoConformidadesRonda();
+      } catch(e) {}
+    }
+    if (name === 'orcamento') {
+      try {
+        if (typeof renderOrcamento === 'function') renderOrcamento();
+        if (typeof sincronizarOrcamentoNuvem === 'function') sincronizarOrcamentoNuvem();
       } catch(e) {}
     }
   }

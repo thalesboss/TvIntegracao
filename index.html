@@ -347,10 +347,7 @@
           <span>Nome Completo do Operador *</span>
           <span style="font-size:11px;font-weight:400;color:var(--muted);">Nome e sobrenome</span>
         </label>
-        <input type="text" id="ident-operador-nome" list="lista-operadores-sugeridos" placeholder="Ex: Thales Motta" style="width:100%;font-size:13px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);" autocomplete="off" />
-        <datalist id="lista-operadores-sugeridos">
-          <!-- Preenchido via Supabase / DBService -->
-        </datalist>
+        <input type="text" id="ident-operador-nome" placeholder="Ex: Nome Sobrenome" style="width:100%;font-size:13px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);" autocomplete="off" />
       </div>
 
       <div class="frow">
@@ -1479,6 +1476,11 @@
       <div class="up-info-row">
         <span class="up-label">Tempo logado:</span>
         <span class="up-val" id="up-timer">00h 00m 00s</span>
+      </div>
+      <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);">
+        <button class="btn btn-ghost btn-xs" onclick="confirmarLogout()" style="width:100%;justify-content:center;color:#ef4444;gap:6px;font-size:11.5px;padding:5px 8px;">
+          <i data-lucide="log-out" style="width:12px;height:12px;"></i> Sair / Trocar Operador
+        </button>
       </div>
     </div>
 
@@ -3337,7 +3339,7 @@
   };
 </script>
 <script src="config.js" onerror="window.ENV_CONFIG=window.ENV_CONFIG||{};"></script>
-<script src="script.js?v=8.9"></script>
+<script src="script.js?v=9.0"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof lucide !== 'undefined') lucide.createIcons();
