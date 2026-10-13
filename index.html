@@ -2150,6 +2150,9 @@
             <button type="button" class="btn btn-secondary btn-sm" onclick="marcarTudoConformeRonda()" title="Marcar todos os 26 itens como Conforme com 1 clique">
               <i data-lucide="check-check" style="width:13px;height:13px;stroke-width:2.2;"></i> Marcar Tudo Conforme
             </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="exportarFormularioTurnoIndividual()" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;" title="Exportar este formulário do turno em PDF limpo e formatado">
+              <i data-lucide="printer" style="width:13px;height:13px;stroke-width:2.2;"></i> Exportar PDF
+            </button>
             <button type="button" class="btn btn-ghost btn-sm" onclick="limparFormularioRonda()" title="Limpar seleções">
               <i data-lucide="rotate-ccw" style="width:12px;height:12px;stroke-width:2;"></i> Limpar
             </button>
@@ -2181,17 +2184,27 @@
             </div>
             Identificação do Plantão
           </h3>
-          <div class="fg3">
+          <div class="fg4" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;">
             <div class="frow">
               <label for="ronda-data">Dia Trabalhado *</label>
               <input id="ronda-data" type="date" />
+            </div>
+            <div class="frow">
+              <label for="ronda-turno">Turno Trabalhado *</label>
+              <select id="ronda-turno">
+                <option value="06h-12h">06h00 - 12h00 (Manhã)</option>
+                <option value="12h-18h">12h00 - 18h00 (Tarde)</option>
+                <option value="18h-00h">18h00 - 00h00 (Noite)</option>
+                <option value="00h-06h">00h00 - 06h00 (Madrugada)</option>
+                <option value="Outro">Outro Turno</option>
+              </select>
             </div>
             <div class="frow">
               <label>Praça de Operação</label>
               <input type="text" value="Uberlândia (MG)" readonly style="background:#F8FAFC;font-weight:600;" />
             </div>
             <div class="frow">
-              <label>Tempo de Sessão do Turno</label>
+              <label>Tempo de Sessão</label>
               <input id="ronda-tempo-sessao" type="text" value="Registrado automaticamente" readonly style="background:#F8FAFC;color:var(--muted);" />
             </div>
           </div>
@@ -3339,7 +3352,8 @@
   };
 </script>
 <script src="config.js" onerror="window.ENV_CONFIG=window.ENV_CONFIG||{};"></script>
-<script src="script.js?v=9.0"></script>
+<script src="js/historico-udi-seed.js"></script>
+<script src="script.js?v=9.5"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof lucide !== 'undefined') lucide.createIcons();

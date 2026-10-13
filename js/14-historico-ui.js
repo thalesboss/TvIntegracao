@@ -2,6 +2,15 @@
      HISTÓRICO GERAL (Funções de Renderização e Filtros)
   ═══════════════════════════════════════════ */
 
+  var HISTORICO_PAGINA_LIMITE = 40;
+  window.historicoItensVisiveis = HISTORICO_PAGINA_LIMITE;
+
+  function carregarMaisHistorico() {
+    window.historicoItensVisiveis = (window.historicoItensVisiveis || HISTORICO_PAGINA_LIMITE) + 40;
+    renderHistorico();
+  }
+  window.carregarMaisHistorico = carregarMaisHistorico;
+
   function renderHistorico() {
     var container = document.getElementById('hist-list');
     if (!container) return;
@@ -46,6 +55,10 @@
       renderHistoricoRelacionados(null);
       return;
     }
+
+    // Paginação para desempenho instantâneo (evita montar 1.490 nós no DOM simultaneamente)
+    var limite = busca ? filtrados.length : (window.historicoItensVisiveis || HISTORICO_PAGINA_LIMITE);
+    var itensExibidos = filtrados.slice(0, limite);
 
     function renderCardHistoricoHTML(item) {
       var eMeu = isItemDoUsuario(item);
@@ -109,8 +122,20 @@
       );
     }
 
-    var secoes = agruparPorDias(filtrados, function(item){ return item.dataCriacao; });
-    container.innerHTML = renderSecoesComCards(secoes, renderCardHistoricoHTML);
+    var secoes = agruparPorDias(itensExibidos, function(item){ return item.dataCriacao; });
+    var htmlFinal = renderSecoesComCards(secoes, renderCardHistoricoHTML);
+
+    if (filtrados.length > limite) {
+      var restantes = filtrados.length - limite;
+      htmlFinal +=
+        '<div style="text-align:center;padding:16px 0;margin-top:10px;">' +
+          '<button type="button" class="btn btn-secondary btn-sm" onclick="carregarMaisHistorico()" style="font-weight:600;padding:8px 24px;border-radius:20px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">' +
+            'Carregar mais (' + restantes + ' registros restantes)' +
+          '</button>' +
+        '</div>';
+    }
+
+    container.innerHTML = htmlFinal;
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
 

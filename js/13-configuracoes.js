@@ -148,6 +148,9 @@
       if (typeof updateCloudStatus === 'function') {
         updateCloudStatus(false, 'Modo Local');
       }
+      if (typeof renderAll === 'function') {
+        renderAll(true);
+      }
     } else if (chave) {
       // Se digitou uma chave, valida e conecta
       if (btn) {
@@ -358,6 +361,9 @@
       }
       if (typeof updateCloudStatus === 'function') {
         updateCloudStatus(false, 'Modo Offline');
+      }
+      if (typeof renderAll === 'function') {
+        renderAll(true);
       }
       atualizarUIStatusBancoConfig();
       if (typeof mostrarToast === 'function') {

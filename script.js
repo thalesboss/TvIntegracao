@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════
    POPUP — funções base globais
 ═══════════════════════════════════════════ */
 function abrirPopup(id) {
@@ -98,8 +98,6 @@ document.addEventListener('click', function(e) {
     fecharPopup(e.target.id);
   }
 });
-
-
 document.addEventListener('DOMContentLoaded', function () {
   console.log('✅ [Sistema TV] Versão 7.9 — Blindagem de Testes: Sincronização Otimizada, Anti-XSS e Cache Resiliente');
 
@@ -644,7 +642,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 return true;
               });
               var mapHist = {};
-              remoteFiltered.forEach(function(h){ mapHist[h.id] = h; });
+              remoteFiltered.forEach(function(h){
+                if (!h.detalhesRonda && h.descResolucao && typeof h.descResolucao === 'string' && h.descResolucao.startsWith('{')) {
+                  try { h.detalhesRonda = JSON.parse(h.descResolucao); } catch(e) {}
+                }
+                mapHist[h.id] = h;
+              });
               (historicoSeedData || []).forEach(function(localH){
                 if (localH && localH.id && !mapHist[localH.id]) {
                   if (!idsNaLixeira.includes(localH.id) && localH.status !== 'lixeira') {
@@ -653,8 +656,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
               });
               historicoSeedData = remoteFiltered;
+              if (typeof mesclarSementeFormsSeConectado === 'function') {
+                try { mesclarSementeFormsSeConectado(); } catch(eForms) {}
+              }
               try {
-                localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(historicoSeedData));
+                var locaisCache = historicoSeedData.filter(function(h) {
+                  return h && h.id && !h.id.startsWith('rel_udi_forms_');
+                });
+                localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(locaisCache));
               } catch(e) {}
               window._lastHistSyncSig = historicoSeedData.map(function(h){ return h.id + '_' + (h.status || ''); }).join('|');
               if (typeof renderAll === 'function') renderAll(true);
@@ -779,7 +788,7 @@ document.addEventListener('DOMContentLoaded', function () {
   window.obterOuCriarOperadorPorNome = obterOuCriarOperadorPorNome;
 
   /* ── Gerenciador Inteligente de Reconexão com Backoff Progressivo ── */
-  var _cloudConnected = true;
+  var _cloudConnected = false;
   var _reconnectTimer = null;
   var _reconnectAttempt = 0;
   var _isReconnecting = false;
@@ -839,12 +848,17 @@ document.addEventListener('DOMContentLoaded', function () {
   function updateCloudStatus(isOnline, customText) {
     var indicator = document.getElementById('cloud-status-indicator');
     var btnTopbar = document.getElementById('btn-conectar-nuvem-topbar');
+    var estadoAnterior = _cloudConnected;
+
     if (isOnline) {
       _cloudConnected = true;
       _reconnectAttempt = 0;
       if (_reconnectTimer) {
         clearTimeout(_reconnectTimer);
         _reconnectTimer = null;
+      }
+      if (typeof mesclarSementeFormsSeConectado === 'function') {
+        try { mesclarSementeFormsSeConectado(); } catch(eForms) {}
       }
       if (indicator) {
         indicator.className = 'cloud-status online';
@@ -856,6 +870,9 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     } else {
       _cloudConnected = false;
+      if (typeof mesclarSementeFormsSeConectado === 'function') {
+        try { mesclarSementeFormsSeConectado(); } catch(eForms) {}
+      }
       var estaConfigurado = typeof isEstacaoConectadaTV === 'function' ? isEstacaoConectadaTV() : false;
       var texto = customText || (estaConfigurado ? 'Reconectando...' : 'Modo Offline');
       if (indicator) {
@@ -871,6 +888,10 @@ document.addEventListener('DOMContentLoaded', function () {
       if (estaConfigurado) {
         iniciarReconexaoAutomatica();
       }
+    }
+
+    if (estadoAnterior !== _cloudConnected && typeof renderHistorico === 'function') {
+      try { renderHistorico(true); } catch(eRen) {}
     }
 
     try {
@@ -1054,8 +1075,6 @@ document.addEventListener('DOMContentLoaded', function () {
   window.getAbertas = getAbertas;
   window.getArquivadas = getArquivadas;
   window.getResolvidas = getResolvidas;
-
-
 
   /* ═══════════════════════════════════════════
      HELPERS DE RENDER
@@ -1386,8 +1405,6 @@ document.addEventListener('DOMContentLoaded', function () {
       abertasHTML +
       resolvidasHTML;
   }
-
-
   /* ═══════════════════════════════════════════
      HISTÓRICO GERAL — ESTRUTURA DE DADOS
   ═══════════════════════════════════════════ */
@@ -1402,13 +1419,50 @@ document.addEventListener('DOMContentLoaded', function () {
       if (Array.isArray(pHist) && pHist.length > 0) historicoSeedData = pHist;
     }
   } catch(e) {}
+
+  // Função auxiliar para verificar se a estação está conectada ao banco de dados Supabase
+  function isBancoConectado() {
+    return !!(window._isCloudConnected && window._isCloudConnected());
+  }
+  window.isBancoConectado = isBancoConectado;
+
+  function mesclarSementeFormsSeConectado() {
+    if (!isBancoConectado()) {
+      // Se estiver offline ou desconectado, remove dados históricos do Forms da memória ativa
+      var filtradosLocal = (historicoSeedData || []).filter(function(h) {
+        return h && h.id && !h.id.startsWith('rel_udi_forms_');
+      });
+      if (filtradosLocal.length !== (historicoSeedData || []).length) {
+        historicoSeedData = filtradosLocal;
+        window.historicoSeedData = historicoSeedData;
+      }
+      return;
+    }
+
+    // Se conectado ao banco, mescla semente histórica em memória
+    if (Array.isArray(window.historicoUdiExportForms) && window.historicoUdiExportForms.length > 0) {
+      var existIds = {};
+      (historicoSeedData || []).forEach(function(h) { if (h && h.id) existIds[h.id] = true; });
+      var novosDaSemente = window.historicoUdiExportForms.filter(function(h) { return h && h.id && !existIds[h.id]; });
+      if (novosDaSemente.length > 0) {
+        historicoSeedData = historicoSeedData.concat(novosDaSemente);
+        window.historicoSeedData = historicoSeedData;
+      }
+    }
+  }
+  window.mesclarSementeFormsSeConectado = mesclarSementeFormsSeConectado;
+
   window.historicoSeedData = historicoSeedData;
 
   function saveHistorico(list, itemAdicionado) {
     historicoSeedData = list || [];
     window.historicoSeedData = historicoSeedData;
+    // Salva no localStorage apenas novos itens criados no app (evita congelar thread com 1.490 itens históricos)
     try {
-      localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(historicoSeedData));
+      var locaisParaCache = historicoSeedData.filter(function(h) {
+        return h && h.id && !h.id.startsWith('rel_udi_forms_');
+      });
+      localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(locaisParaCache));
     } catch(e) {}
     if (typeof DBService !== 'undefined' && DBService) {
       if (itemAdicionado && typeof DBService.pushHistoricoItem === 'function') {
@@ -1423,10 +1477,13 @@ document.addEventListener('DOMContentLoaded', function () {
     var mapa = {};
     var lista = [];
     var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
+    var conectado = isBancoConectado();
 
     // 1. Itens manuais ou relatórios vindos de historicoSeedData
     (historicoSeedData || []).forEach(function(item) {
       if (item && item.id) {
+        // Se estiver desconectado do banco, NÃO exibe dados históricos exportados do Forms
+        if (!conectado && item.id.startsWith('rel_udi_forms_')) return;
         if (item.status === 'lixeira' || idsNaLixeira.includes(item.id)) return;
         if (typeof pertenceAPracaAtiva === 'function' && !pertenceAPracaAtiva(item)) return;
         mapa[item.id] = true;
@@ -1519,8 +1576,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return '<span class="tag tag-blue-soft">Registro</span>';
   }
-
-
   /* ─── Render: Dashboard Resolvidas & Power BI ─── */
   var resolvidasFiltro = 'todas';
 
@@ -1802,8 +1857,6 @@ document.addEventListener('DOMContentLoaded', function () {
     page.addEventListener('change', acao);
   }
   window.registrarAutosaveListener = registrarAutosaveListener;
-
-
   /* ═══════════════════════════════════════════
      POPUP ENTRADA
   /* ═══════════════════════════════════════════
@@ -2190,8 +2243,6 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.trocarPracaConfig = trocarPracaConfig;
 
-
-
   /* ═══════════════════════════════════════════
      INDEXEDDB LOCAL MEDIA CACHE (Para vídeos e fotos de qualquer tamanho)
   ═══════════════════════════════════════════ */
@@ -2495,8 +2546,6 @@ document.addEventListener('DOMContentLoaded', function () {
       };
     }
   });
-
-
   /* ═══════════════════════════════════════════
      RECEBIMENTOS DE EQUIPAMENTOS
   ═══════════════════════════════════════════ */
@@ -2743,8 +2792,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-recebimento', salvarRascunhoRecebimento);
   }
-
-
   /* ═══════════════════════════════════════════
      REQUISIÇÃO DE COMPRAS E VENDAS
   ═══════════════════════════════════════════ */
@@ -3008,8 +3055,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-compras', salvarRascunhoCompra);
   }
-
-
   /* ═══════════════════════════════════════════
      ENVIO DE RELATÓRIO TV (CTRS) E GERADOR AUTOMÁTICO DE OCORRÊNCIAS
   ═══════════════════════════════════════════ */
@@ -4154,8 +4199,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-ctrs', salvarRascunhoRelatorioTV);
   }
-
-
   /* ═══════════════════════════════════════════
      CHECKLIST DIÁRIO & MONITORAMENTO DE ROTINAS OPERACIONAIS — SUPABASE
   ═══════════════════════════════════════════ */
@@ -5221,8 +5264,6 @@ document.addEventListener('DOMContentLoaded', function () {
     verificarRecorrenciasChecklist();
   });
 
-
-
 /* ═══════════════════════════════════════════
    RELATÓRIO DIÁRIO — TECNOLOGIA UDI (RONDA TÉCNICA)
    Módulo exclusivo da praça de Uberlândia para acompanhamento de
@@ -5432,6 +5473,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var satBhDb   = document.getElementById('ronda-sat-bh-db');
     var satSpDb   = document.getElementById('ronda-sat-sp-db');
 
+    var turnoEl = document.getElementById('ronda-turno');
+    var turnoVal = turnoEl ? turnoEl.value : '06h-12h';
+
     var dataVal = (dataEl && dataEl.value) ? dataEl.value : (new Date().toISOString().split('T')[0]);
     var obsVal  = obsEl ? obsEl.value.trim() : '';
     var potVal  = potEl ? potEl.value.trim() : '';
@@ -5484,6 +5528,7 @@ document.addEventListener('DOMContentLoaded', function () {
       detalhesRonda: {
         data: dataVal,
         operador: usuario,
+        turno: turnoVal,
         tempoSessao: (typeof getTempoLogadoStr === 'function') ? getTempoLogadoStr() : '',
         potenciaW: potVal,
         refletidaW: refVal,
@@ -5627,10 +5672,13 @@ document.addEventListener('DOMContentLoaded', function () {
   ═══════════════════════════════════════════════════════════ */
 
   function calcularMetricasRondaUdi() {
+    var conectado = (typeof isBancoConectado === 'function' ? isBancoConectado() : false);
     var relatorios = [];
     if (Array.isArray(window.historicoSeedData)) {
       relatorios = window.historicoSeedData.filter(function(h) {
-        return h && (h.subtipo === 'Tecnologia UDI' || (h.detalhesRonda && h.praca === 'Uberlândia'));
+        if (!h) return false;
+        if (!conectado && h.id && h.id.startsWith('rel_udi_forms_')) return false;
+        return (h.subtipo === 'Tecnologia UDI' || (h.detalhesRonda && h.praca === 'Uberlândia'));
       });
     }
 
@@ -5658,7 +5706,11 @@ document.addEventListener('DOMContentLoaded', function () {
     var satSpVals = [];
 
     relatorios.forEach(function(r) {
-      var d = r.detalhesRonda || {};
+      var d = r.detalhesRonda;
+      if (!d && r.descResolucao && typeof r.descResolucao === 'string' && r.descResolucao.startsWith('{')) {
+        try { d = JSON.parse(r.descResolucao); r.detalhesRonda = d; } catch(e) {}
+      }
+      d = d || {};
 
       var dataR = d.data || (r.dataCriacao ? r.dataCriacao.split(' ')[0] : '');
       if (dataR && datasRecentes.indexOf(dataR) === -1) {
@@ -5804,13 +5856,14 @@ document.addEventListener('DOMContentLoaded', function () {
       '</svg>';
   }
 
-  function gerarLinhasBarrasConformidade(itens, statusStats) {
-    var html = '<div class="vg-bar-list">';
+  function gerarLinhasBarrasConformidade(itens, statusStats, customClass) {
+    var wrapperClass = customClass ? ('vg-bar-list ' + customClass) : 'vg-bar-list';
+    var html = '<div class="' + wrapperClass + '">';
     itens.forEach(function(item) {
       var stat = statusStats[item.id] || { conf: 0, nc: 0, total: 0 };
       var pctC = stat.total > 0 ? stat.conf.toFixed(1) : '0';
       var pctNC = stat.total > 0 ? stat.nc.toFixed(1) : '0';
-      var labelMeta = stat.total > 0 ? (pctC + '% C') : '--';
+      var labelMeta = stat.total > 0 ? (pctC + '% Conforme') : '--';
       html += '<div class="vg-bar-row">' +
         '<div class="vg-bar-name" title="' + escapeHTML(item.nome) + '">' + escapeHTML(item.nome) + '</div>' +
         '<div class="vg-bar-track">' +
@@ -6028,7 +6081,7 @@ document.addEventListener('DOMContentLoaded', function () {
   window.abrirVisaoGeralRondaUdi = abrirVisaoGeralRondaUdi;
   window.calcularMetricasRondaUdi = calcularMetricasRondaUdi;
 
-  /* ── Exportação Idêntica ao Microsoft Forms (Impressão / PDF) ── */
+  /* ── Exportação com Gráficos e Visão Geral (Impressão / PDF Profissional) ── */
   function exportarVisaoGeralFormsPdf() {
     var m = calcularMetricasRondaUdi();
     var exibItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'exibidor'; });
@@ -6043,227 +6096,244 @@ document.addEventListener('DOMContentLoaded', function () {
     var totalTurnos = 0;
     m.turnos.forEach(function(t){ totalTurnos += t.count; });
 
-    var dataHoraEmissao = new Date().toLocaleDateString('pt-BR') + ', ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+    var agora = new Date();
+    var dataHoraEmissao = agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
 
-    var htmlDoc = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</title>' +
+    function renderTabelaConformidadePdf(itens, title, secaoTag) {
+      var h = '<div class="pdf-card">' +
+        '<div class="pdf-card-header">' +
+          '<div class="pdf-card-title">' + title + '</div>' +
+          (secaoTag ? ('<span class="pdf-tag">' + secaoTag + '</span>') : '') +
+        '</div>' +
+        '<div class="pdf-legend-bar">' +
+          '<span><span class="dot-c"></span> CONFORME</span>' +
+          '<span><span class="dot-nc"></span> NÃO CONFORME</span>' +
+        '</div>' +
+        '<div class="pdf-bar-list">';
+
+      itens.forEach(function(item) {
+        var stat = m.statusMap[item.id] || { conf: 0, nc: 0, total: 0 };
+        var pctC = stat.total > 0 ? stat.conf.toFixed(1) : '100.0';
+        var pctNC = stat.total > 0 ? stat.nc.toFixed(1) : '0.0';
+        var is100 = parseFloat(pctC) >= 99.9;
+
+        h += '<div class="pdf-bar-row">' +
+          '<div class="pdf-bar-name" title="' + escapeHTML(item.nome) + '">' + escapeHTML(item.nome) + '</div>' +
+          '<div class="pdf-bar-track">' +
+            '<div class="pdf-bar-fill-c" style="width:' + pctC + '%;"></div>' +
+            '<div class="pdf-bar-fill-nc" style="width:' + pctNC + '%;"></div>' +
+          '</div>' +
+          '<div class="pdf-bar-meta ' + (is100 ? 'meta-ok' : 'meta-nc') + '">' +
+            pctC + '% C' +
+          '</div>' +
+        '</div>';
+      });
+
+      h += '</div></div>';
+      return h;
+    }
+
+    var htmlDoc = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>RELATÓRIO DIÁRIO — TECNOLOGIA UDI (VISÃO GERAL)</title>' +
       '<style>' +
-      '@page { size: A4 portrait; margin: 10mm 15mm; }' +
-      'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #1E293B; margin: 0; padding: 10px; background: #fff; font-size: 11px; }' +
-      '.page-header-top { display: flex; justify-content: space-between; font-size: 10px; color: #64748B; margin-bottom: 25px; border-bottom: 1px solid #CBD5E1; padding-bottom: 6px; }' +
-      '.page-footer-bot { display: flex; justify-content: space-between; font-size: 9px; color: #94A3B8; margin-top: 30px; border-top: 1px solid #E2E8F0; padding-top: 6px; }' +
-      '.page-break { page-break-after: always; break-after: page; }' +
-      '.main-title { font-size: 20px; font-weight: 700; color: #0F172A; margin: 0 0 16px 0; }' +
-      '.badge-ativo { font-size: 11px; font-weight: 700; color: #15803D; background: #DCFCE7; padding: 2px 8px; border-radius: 10px; vertical-align: middle; margin-left: 8px; }' +
-      '.stat-grid { display: flex; gap: 15px; margin-bottom: 25px; }' +
-      '.stat-box { flex: 1; border: 1px solid #CBD5E1; border-radius: 8px; padding: 12px 16px; background: #fff; }' +
-      '.stat-num { font-size: 26px; font-weight: 800; color: #0F172A; margin-top: 4px; }' +
-      '.stat-lbl { font-size: 11px; font-weight: 600; color: #64748B; }' +
-      '.q-block { margin-bottom: 24px; }' +
-      '.q-title { font-size: 12px; font-weight: 700; color: #1E293B; margin-bottom: 10px; text-transform: uppercase; }' +
-      '.legend { font-size: 10px; font-weight: 700; margin-bottom: 10px; display: flex; gap: 14px; }' +
-      '.dot-c { width: 8px; height: 8px; border-radius: 50%; background: #E06A3B; display: inline-block; margin-right: 4px; }' +
-      '.dot-nc { width: 8px; height: 8px; border-radius: 50%; background: #3B82F6; display: inline-block; margin-right: 4px; }' +
-      '.bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }' +
-      '.bar-name { width: 140px; font-size: 10.5px; font-weight: 600; color: #475569; text-transform: uppercase; }' +
-      '.bar-track { flex: 1; height: 14px; background: #F1F5F9; border-radius: 2px; overflow: hidden; display: flex; }' +
-      '.bar-fill-c { background: #E06A3B; height: 100%; }' +
-      '.bar-fill-nc { background: #3B82F6; height: 100%; }' +
-      '.bar-meta { width: 65px; font-size: 10.5px; font-weight: 700; color: #64748B; text-align: right; }' +
-      '.recent-box { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 10px; font-size: 10.5px; line-height: 1.5; color: #334155; }' +
-      '.no-print { position: fixed; top: 12px; right: 20px; z-index: 9999; display: flex; gap: 10px; }' +
+      '@page { size: A4 portrait; margin: 12mm 14mm 14mm 14mm; }' +
+      '* { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+      'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #0F172A; margin: 0; padding: 0; background: #fff; font-size: 11px; line-height: 1.4; }' +
+      '.no-print { position: fixed; top: 14px; right: 20px; z-index: 9999; display: flex; gap: 10px; background: rgba(255,255,255,0.92); padding: 8px 12px; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.12); backdrop-filter: blur(4px); border: 1px solid #E2E8F0; }' +
+      '.btn-print { padding: 9px 18px; background: #0284C7; color: #fff; font-weight: 700; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }' +
+      '.btn-close { padding: 9px 14px; background: #64748B; color: #fff; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }' +
       '@media print { .no-print { display: none !important; } }' +
+      '.page-sheet { min-height: 270mm; max-height: 273mm; display: flex; flex-direction: column; justify-content: space-between; page-break-after: always; break-after: page; }' +
+      '.page-sheet:last-child { page-break-after: auto; break-after: auto; }' +
+      '.top-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 2px solid #0284C7; margin-bottom: 12px; font-size: 10px; color: #475569; }' +
+      '.top-header-title { font-weight: 800; font-size: 12px; color: #0369A1; letter-spacing: 0.03em; }' +
+      '.bottom-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 6px; border-top: 1px solid #E2E8F0; font-size: 9px; color: #94A3B8; margin-top: auto; }' +
+      '.pdf-main-title { font-size: 17px; font-weight: 800; color: #0F172A; margin: 0 0 10px 0; display: flex; align-items: center; justify-content: space-between; }' +
+      '.badge-ativo { font-size: 10px; font-weight: 700; color: #047857; background: #D1FAE5; padding: 2px 8px; border-radius: 12px; border: 1px solid #A7F3D0; }' +
+      '.kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }' +
+      '.kpi-card { border: 1px solid #CBD5E1; border-radius: 6px; padding: 10px 12px; background: #F8FAFC; border-left: 4px solid #0284C7; }' +
+      '.kpi-lbl { font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.04em; }' +
+      '.kpi-val { font-size: 22px; font-weight: 800; color: #0F172A; margin-top: 2px; }' +
+      '.kpi-sub { font-size: 9.5px; color: #64748B; margin-top: 2px; }' +
+      '.pdf-card { border: 1px solid #CBD5E1; border-radius: 6px; background: #fff; padding: 10px 12px; margin-bottom: 10px; }' +
+      '.pdf-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #E2E8F0; }' +
+      '.pdf-card-title { font-size: 11px; font-weight: 800; color: #0F172A; text-transform: uppercase; letter-spacing: 0.02em; }' +
+      '.pdf-tag { font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; }' +
+      '.pdf-legend-bar { font-size: 9.5px; font-weight: 700; margin-bottom: 8px; display: flex; gap: 14px; color: #475569; }' +
+      '.dot-c { width: 8px; height: 8px; border-radius: 50%; background: #059669; display: inline-block; margin-right: 4px; vertical-align: middle; }' +
+      '.dot-nc { width: 8px; height: 8px; border-radius: 50%; background: #DC2626; display: inline-block; margin-right: 4px; vertical-align: middle; }' +
+      '.pdf-bar-list { display: flex; flex-direction: column; gap: 6px; }' +
+      '.pdf-bar-row { display: flex; align-items: center; gap: 8px; font-size: 10px; }' +
+      '.pdf-bar-name { width: 170px; font-weight: 600; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }' +
+      '.pdf-bar-track { flex: 1; height: 12px; background: #F1F5F9; border-radius: 3px; overflow: hidden; display: flex; border: 1px solid #E2E8F0; }' +
+      '.pdf-bar-fill-c { background: #059669; height: 100%; }' +
+      '.pdf-bar-fill-nc { background: #DC2626; height: 100%; }' +
+      '.pdf-bar-meta { width: 75px; text-align: right; font-weight: 700; font-size: 9.5px; font-variant-numeric: tabular-nums; }' +
+      '.meta-ok { color: #047857; }' +
+      '.meta-nc { color: #DC2626; }' +
+      '.split-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }' +
+      '.split-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }' +
+      '.metric-box { border: 1px solid #CBD5E1; border-radius: 6px; padding: 9px 11px; background: #F8FAFC; text-align: center; }' +
+      '.metric-val { font-size: 20px; font-weight: 800; color: #0369A1; margin: 2px 0; }' +
+      '.metric-lbl { font-size: 9.5px; font-weight: 700; color: #475569; text-transform: uppercase; }' +
+      '.recent-list-box { border: 1px solid #E2E8F0; border-radius: 5px; padding: 7px 9px; background: #fff; font-size: 9.5px; line-height: 1.45; color: #334155; }' +
+      '.nc-item-box { background: #FEF2F2; border-left: 3px solid #DC2626; padding: 6px 9px; border-radius: 4px; font-size: 9.5px; line-height: 1.4; color: #7F1D1D; margin-bottom: 5px; }' +
       '</style></head><body>' +
       '<div class="no-print">' +
-        '<button onclick="window.print()" style="padding:9px 18px;background:#2563EB;color:#fff;font-weight:700;border:none;border-radius:6px;cursor:pointer;box-shadow:0 3px 10px rgba(37,99,235,0.3);font-size:13px;">🖨️ Imprimir / Salvar em PDF</button>' +
-        '<button onclick="window.close()" style="padding:9px 14px;background:#64748B;color:#fff;font-weight:600;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Fechar</button>' +
+        '<button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar em PDF</button>' +
+        '<button class="btn-close" onclick="window.close()">Fechar</button>' +
       '</div>';
 
-    // ═══ PÁGINA 1 ═══
-    var datasPdfHtml = m.datasRecentes.length > 0
-      ? m.datasRecentes.map(function(d){ return '&quot;' + d + '&quot;'; }).join('<br/>')
+    // ═══════════════════════════════════════════
+    // PÁGINA 1: Identificação, Turnos, Centro Exibidor & Transmissor
+    // ═══════════════════════════════════════════
+    var datasRecentesHtml = m.datasRecentes.length > 0
+      ? m.datasRecentes.map(function(d){ return '• ' + d; }).join('<br/>')
       : 'Nenhuma resposta registrada ainda';
 
-    htmlDoc += '<div class="page-container">' +
-      '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
-      '<div class="main-title">Visão Geral das Respostas <span class="badge-ativo">Ativo</span></div>' +
-      '<div class="stat-grid">' +
-        '<div class="stat-box"><div class="stat-lbl">Respostas</div><div class="stat-num">' + m.total.toLocaleString('pt-BR') + '</div></div>' +
-        '<div class="stat-box"><div class="stat-lbl">Tempo Médio</div><div class="stat-num">' + m.tempoMedio + '</div></div>' +
-        '<div class="stat-box"><div class="stat-lbl">Duração</div><div class="stat-num">' + m.duracao + '</div></div>' +
+    htmlDoc += '<div class="page-sheet">' +
+      '<div class="top-header">' +
+        '<span class="top-header-title">REDE INTEGRAÇÃO — ENGENHARIA & TECNOLOGIA</span>' +
+        '<span>Emissão: ' + dataHoraEmissao + '</span>' +
       '</div>' +
-      '<div class="q-block">' +
-        '<div class="q-title">1. DIA TRABALHADO:</div>' +
-        '<div style="display:flex;justify-content:space-between;gap:20px;">' +
-          '<div><div style="font-size:24px;font-weight:800;">' + m.total.toLocaleString('pt-BR') + '</div><div style="color:#64748B;">Respostas</div></div>' +
-          '<div style="flex:1;"><div style="font-size:10px;font-weight:700;color:#64748B;margin-bottom:4px;">Respostas Mais Recentes</div>' +
-            '<div class="recent-box">' + datasPdfHtml + '</div>' +
+      '<div class="pdf-main-title">' +
+        '<span>Painel Analítico — Tecnologia UDI</span>' +
+        '<span class="badge-ativo">Consolidação Oficial</span>' +
+      '</div>' +
+      '<div class="kpi-grid">' +
+        '<div class="kpi-card">' +
+          '<div class="kpi-lbl">Total de Relatórios</div>' +
+          '<div class="kpi-val">' + m.total.toLocaleString('pt-BR') + '</div>' +
+          '<div class="kpi-sub">Plantões técnicos consolidados</div>' +
+        '</div>' +
+        '<div class="kpi-card">' +
+          '<div class="kpi-lbl">Tempo Médio de Ronda</div>' +
+          '<div class="kpi-val">' + m.tempoMedio + '</div>' +
+          '<div class="kpi-sub">Duração média de verificação</div>' +
+        '</div>' +
+        '<div class="kpi-card">' +
+          '<div class="kpi-lbl">Período Ativo</div>' +
+          '<div class="kpi-val">' + m.duracao + '</div>' +
+          '<div class="kpi-sub">Histórico operacional contínuo</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="split-2col">' +
+        '<div class="pdf-card" style="margin-bottom:0;">' +
+          '<div class="pdf-card-header"><div class="pdf-card-title">1. Respostas Mais Recentes</div></div>' +
+          '<div class="recent-list-box">' + datasRecentesHtml + '</div>' +
+        '</div>' +
+        '<div class="pdf-card" style="margin-bottom:0;">' +
+          '<div class="pdf-card-header"><div class="pdf-card-title">2. Distribuição por Turno</div></div>' +
+          '<div style="display:flex;align-items:center;gap:12px;justify-content:center;">' +
+            gerarDonutSvg(m.turnos, totalTurnos) +
+            '<div style="display:flex;flex-direction:column;gap:4px;font-size:10px;">' +
+              m.turnos.map(function(t){
+                var pct = totalTurnos > 0 ? Math.round((t.count/totalTurnos)*100) : 0;
+                return '<div style="display:flex;align-items:center;gap:6px;">' +
+                  '<span style="width:8px;height:8px;border-radius:50%;background:' + t.cor + ';display:inline-block;"></span>' +
+                  '<span style="width:95px;font-weight:600;color:#334155;">' + t.label + '</span>' +
+                  '<strong style="color:#0F172A;">' + t.count + ' (' + pct + '%)</strong>' +
+                '</div>';
+              }).join('') +
+            '</div>' +
           '</div>' +
         '</div>' +
       '</div>' +
-      '<div class="q-block">' +
-        '<div class="q-title">2. TURNO TRABALHADO:</div>' +
-        '<div style="display:flex;align-items:center;justify-content:space-around;gap:20px;">' +
-          gerarDonutSvg(m.turnos, totalTurnos) +
-          '<div style="display:flex;flex-direction:column;gap:6px;">' +
-            m.turnos.map(function(t){
-              var pct = totalTurnos > 0 ? Math.round((t.count/totalTurnos)*100) : 0;
-              return '<div style="display:flex;align-items:center;gap:8px;font-size:11px;">' +
-                '<span style="width:9px;height:9px;border-radius:50%;background:' + t.cor + ';display:inline-block;"></span>' +
-                '<span style="width:110px;font-weight:600;">' + t.label + '</span>' +
-                '<strong style="color:#475569;">' + t.count + ' (' + pct + '%)</strong>' +
-              '</div>';
-            }).join('') +
-          '</div>' +
+      renderTabelaConformidadePdf(exibItens, '3. Centro Exibidor (Sistemas & Monitoração)', 'Automação & Exibição') +
+      renderTabelaConformidadePdf(transItens, '4. Transmissor Principal & RF', 'Parâmetros de RF') +
+      '<div class="bottom-footer"><span>TV Integração — Tecnologia UDI</span><span>Página 1 de 4</span></div>' +
+    '</div>';
+
+    // ═══════════════════════════════════════════
+    // PÁGINA 2: Potências RF, Recepção Satélite & Níveis C/N
+    // ═══════════════════════════════════════════
+    var potRecentes = m.potenciasRecentes.length > 0 ? m.potenciasRecentes.map(function(v){ return '• ' + v + ' W'; }).join('<br/>') : 'Sem leituras';
+    var refRecentes = m.refletidasRecentes.length > 0 ? m.refletidasRecentes.map(function(v){ return '• ' + v + ' W'; }).join('<br/>') : 'Sem leituras';
+
+    htmlDoc += '<div class="page-sheet">' +
+      '<div class="top-header">' +
+        '<span class="top-header-title">REDE INTEGRAÇÃO — ENGENHARIA & TECNOLOGIA</span>' +
+        '<span>Emissão: ' + dataHoraEmissao + '</span>' +
+      '</div>' +
+      '<div class="split-2col">' +
+        '<div class="metric-box">' +
+          '<div class="metric-lbl">5. Potência Direta (Média)</div>' +
+          '<div class="metric-val">' + m.potenciaMedia + '</div>' +
+          '<div style="font-size:9px;color:#64748B;margin-bottom:6px;">Transmissor Nominal UDI</div>' +
+          '<div class="recent-list-box" style="text-align:left;"><strong>Recentes:</strong><br/>' + potRecentes + '</div>' +
+        '</div>' +
+        '<div class="metric-box">' +
+          '<div class="metric-lbl">6. Potência Refletida (Média)</div>' +
+          '<div class="metric-val" style="color:' + (parseFloat(m.refletidaMedia) > 50 ? '#DC2626' : '#059669') + ';">' + m.refletidaMedia + '</div>' +
+          '<div style="font-size:9px;color:#64748B;margin-bottom:6px;">Casamento de Linha / VSWR</div>' +
+          '<div class="recent-list-box" style="text-align:left;"><strong>Recentes:</strong><br/>' + refRecentes + '</div>' +
         '</div>' +
       '</div>' +
-      '<div class="q-block">' +
-        '<div class="q-title">3. CENTRO EXIBIDOR:</div>' +
-        '<div class="legend"><span><span class="dot-c"></span> CONFORME</span><span><span class="dot-nc"></span> NÃO CONFORME</span></div>' +
-        gerarLinhasBarrasConformidade(exibItens, m.statusMap) +
-      '</div>' +
-      '<div class="q-block">' +
-        '<div class="q-title">4. TRANSMISSOR:</div>' +
-        '<div class="legend"><span><span class="dot-c"></span> CONFORME</span><span><span class="dot-nc"></span> NÃO CONFORME</span></div>' +
-        gerarLinhasBarrasConformidade(transItens, m.statusMap) +
-      '</div>' +
-      '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>1/5</span></div>' +
-    '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 2 ═══
-    var potPdfRecentes = m.potenciasRecentes.length > 0
-      ? m.potenciasRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
-      : 'Sem leituras registradas';
-
-    var refPdfRecentes = m.refletidasRecentes.length > 0
-      ? m.refletidasRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
-      : 'Sem leituras registradas';
-
-    var satRedePdfRecentes = m.satRedeRecentes.length > 0
-      ? m.satRedeRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
-      : 'Sem leituras registradas';
-
-    htmlDoc += '<div class="page-container">' +
-      '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
-      '<div class="q-block">' +
-        '<div class="q-title">5. Potência do Transmissor (W):</div>' +
-        '<div style="display:flex;justify-content:space-between;gap:20px;">' +
-          '<div><div style="font-size:24px;font-weight:800;">' + m.potenciaMedia + '</div><div style="color:#64748B;">' + (m.total > 0 ? 'Média calculada' : 'Sem registros') + '</div></div>' +
-          '<div style="flex:1;"><div style="font-size:10px;font-weight:700;color:#64748B;margin-bottom:4px;">Respostas Mais Recentes</div>' +
-            '<div class="recent-box">' + potPdfRecentes + '</div>' +
-          '</div>' +
+      renderTabelaConformidadePdf(satItens, '7. Receptores de Satélite (Vídeo & Canais de Voz)', 'Recepção DVB-S2') +
+      '<div class="split-3col">' +
+        '<div class="metric-box">' +
+          '<div class="metric-lbl">8. SAT Rede TIT</div>' +
+          '<div class="metric-val">' + m.satRedeMedia + '</div>' +
+          '<div style="font-size:9.5px;color:#059669;font-weight:700;">Margem Operacional C/N</div>' +
+        '</div>' +
+        '<div class="metric-box">' +
+          '<div class="metric-lbl">9. SAT BH C/N</div>' +
+          '<div class="metric-val">' + m.satBhMedia + '</div>' +
+          '<div style="font-size:9.5px;color:#059669;font-weight:700;">Margem Operacional C/N</div>' +
+        '</div>' +
+        '<div class="metric-box">' +
+          '<div class="metric-lbl">10. SAT SP C/N</div>' +
+          '<div class="metric-val">' + m.satSpMedia + '</div>' +
+          '<div style="font-size:9.5px;color:#059669;font-weight:700;">Margem Operacional C/N</div>' +
         '</div>' +
       '</div>' +
-      '<div class="q-block">' +
-        '<div class="q-title">6. Potência Refletida do Transmissor: (W)</div>' +
-        '<div style="display:flex;justify-content:space-between;gap:20px;">' +
-          '<div><div style="font-size:24px;font-weight:800;">' + m.refletidaMedia + '</div><div style="color:#64748B;">' + (m.total > 0 ? 'Média calculada' : 'Sem registros') + '</div></div>' +
-          '<div style="flex:1;"><div style="font-size:10px;font-weight:700;color:#64748B;margin-bottom:4px;">Respostas Mais Recentes</div>' +
-            '<div class="recent-box">' + refPdfRecentes + '</div>' +
-          '</div>' +
+      renderTabelaConformidadePdf(rotasItens, '11. Rotas de Contribuição e Recepção (Praças)', 'SRT Makito, MPLS & L2L') +
+      '<div class="bottom-footer"><span>TV Integração — Tecnologia UDI</span><span>Página 2 de 4</span></div>' +
+    '</div>';
+
+    // ═══════════════════════════════════════════
+    // PÁGINA 3: Central Técnica, CPA, Cadeia Satélite e Energia
+    // ═══════════════════════════════════════════
+    htmlDoc += '<div class="page-sheet">' +
+      '<div class="top-header">' +
+        '<span class="top-header-title">REDE INTEGRAÇÃO — ENGENHARIA & TECNOLOGIA</span>' +
+        '<span>Emissão: ' + dataHoraEmissao + '</span>' +
+      '</div>' +
+      renderTabelaConformidadePdf(ctItens, '12. Central Técnica (Racks, Frames & Intercom)', 'Infraestrutura Central') +
+      renderTabelaConformidadePdf(cpaItens, '13. CPA (Produção, Retornos & Mochilinks)', 'Estúdios & Jornalismo') +
+      renderTabelaConformidadePdf(satCadItens, '14. Cadeia Satélite Uplink (Mux, Modulador, Encoder, BUC)', 'Transmissão Satélite') +
+      renderTabelaConformidadePdf(engItens, '15. Infraestrutura & Energia (Gerador e No-Break)', 'Sistemas Elétricos Críticos') +
+      '<div class="bottom-footer"><span>TV Integração — Tecnologia UDI</span><span>Página 3 de 4</span></div>' +
+    '</div>';
+
+    // ═══════════════════════════════════════════
+    // PÁGINA 4: Relato Consolidado de Não Conformidades & Observações
+    // ═══════════════════════════════════════════
+    var ncBoxes = m.naoConformidades.length > 0
+      ? m.naoConformidades.map(function(nc){ return '<div class="nc-item-box">' + escapeHTML(nc) + '</div>'; }).join('')
+      : '<div class="recent-list-box" style="text-align:center;padding:16px;color:#059669;font-weight:700;">✅ Nenhuma não conformidade operacional registrada no histórico recente. Todos os 26 sistemas avaliados com excelente disponibilidade.</div>';
+
+    htmlDoc += '<div class="page-sheet">' +
+      '<div class="top-header">' +
+        '<span class="top-header-title">REDE INTEGRAÇÃO — ENGENHARIA & TECNOLOGIA</span>' +
+        '<span>Emissão: ' + dataHoraEmissao + '</span>' +
+      '</div>' +
+      '<div class="pdf-card" style="flex:1;display:flex;flex-direction:column;">' +
+        '<div class="pdf-card-header">' +
+          '<div class="pdf-card-title">16. Não Conformidades & Observações Técnicas Registradas</div>' +
+          '<span class="pdf-tag" style="background:#FEE2E2;color:#DC2626;border-color:#FECACA;">' + m.naoConformidades.length + ' Registros Críticos</span>' +
+        '</div>' +
+        '<div style="font-size:10px;color:#64748B;margin-bottom:10px;">' +
+          'Relato sintético das ocorrências e intervenções durante os turnos operacionais (dados consolidados das rondas):' +
+        '</div>' +
+        '<div style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:6px;">' +
+          ncBoxes +
         '</div>' +
       '</div>' +
-      '<div class="q-block">' +
-        '<div class="q-title">7. RECEPTORES DE SATÉLITE (VÍDEO E CANAL DE VOZ):</div>' +
-        '<div class="legend"><span><span class="dot-c"></span> CONFORME</span><span><span class="dot-nc"></span> NÃO CONFORME</span></div>' +
-        gerarLinhasBarrasConformidade(satItens, m.statusMap) +
+      '<div style="margin-top:10px;padding:8px 12px;background:#F8FAFC;border:1px solid #CBD5E1;border-radius:6px;font-size:9.5px;color:#475569;line-height:1.45;text-align:center;">' +
+        'Documento consolidado gerado pelo <strong>Sistema de Gestão de Tecnologia da TV Integração — Praça de Uberlândia</strong>.<br/>' +
+        'Base de dados conectada ao Supabase com ' + m.total.toLocaleString('pt-BR') + ' registros históricos.' +
       '</div>' +
-      '<div class="q-block">' +
-        '<div class="q-title">8. SAT REDE TIT C/N (dB):</div>' +
-        '<div style="display:flex;justify-content:space-between;gap:20px;">' +
-          '<div><div style="font-size:24px;font-weight:800;">' + m.satRedeMedia + '</div><div style="color:#64748B;">' + (m.total > 0 ? 'Média calculada' : 'Sem registros') + '</div></div>' +
-          '<div style="flex:1;"><div style="font-size:10px;font-weight:700;color:#64748B;margin-bottom:4px;">Respostas Mais Recentes</div>' +
-            '<div class="recent-box">' + satRedePdfRecentes + '</div>' +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>2/5</span></div>' +
-    '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 3 ═══
-    var satBhPdfRecentes = m.satBhRecentes.length > 0
-      ? m.satBhRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
-      : 'Sem leituras registradas';
-
-    var satSpPdfRecentes = m.satSpRecentes.length > 0
-      ? m.satSpRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
-      : 'Sem leituras registradas';
-
-    htmlDoc += '<div class="page-container">' +
-      '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
-      '<div class="q-block">' +
-        '<div class="q-title">9. SAT BH C/N (dB):</div>' +
-        '<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:12px;">' +
-          '<div><div style="font-size:24px;font-weight:800;">' + m.satBhMedia + '</div><div style="color:#64748B;">' + (m.total > 0 ? 'Média calculada' : 'Sem registros') + '</div></div>' +
-          '<div style="flex:1;"><div style="font-size:10px;font-weight:700;color:#64748B;margin-bottom:4px;">Respostas Mais Recentes</div>' +
-            '<div class="recent-box">' + satBhPdfRecentes + '</div>' +
-          '</div>' +
-        '</div>' +
-        '<div style="background:#F8FAFC;border:1px solid #CBD5E1;border-radius:6px;padding:12px;font-size:11px;color:#334155;text-align:center;">' +
-          'Média das leituras: <strong>' + m.satBhMedia + '</strong>' + (m.total > 0 ? ' (Faixa estável)' : ' (Sem leituras registradas)') +
-        '</div>' +
-      '</div>' +
-      '<div class="q-block">' +
-        '<div class="q-title">10. SAT SP C/N (dB):</div>' +
-        '<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:12px;">' +
-          '<div><div style="font-size:24px;font-weight:800;">' + m.satSpMedia + '</div><div style="color:#64748B;">' + (m.total > 0 ? 'Média calculada' : 'Sem registros') + '</div></div>' +
-          '<div style="flex:1;"><div style="font-size:10px;font-weight:700;color:#64748B;margin-bottom:4px;">Respostas Mais Recentes</div>' +
-            '<div class="recent-box">' + satSpPdfRecentes + '</div>' +
-          '</div>' +
-        '</div>' +
-        '<div style="background:#F8FAFC;border:1px solid #CBD5E1;border-radius:6px;padding:12px;font-size:11px;color:#334155;text-align:center;">' +
-          'Média das leituras: <strong>' + m.satSpMedia + '</strong>' + (m.total > 0 ? ' (Qualidade de recepção)' : ' (Sem leituras registradas)') +
-        '</div>' +
-      '</div>' +
-      '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>3/5</span></div>' +
-    '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 4 ═══
-    htmlDoc += '<div class="page-container">' +
-      '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
-      '<div class="q-block">' +
-        '<div class="q-title">11. ROTA DE CONTRIBUIÇÃO E RECEPÇÃO DE SINAIS DAS PRAÇAS:</div>' +
-        '<div class="legend"><span><span class="dot-c"></span> CONFORME</span><span><span class="dot-nc"></span> NÃO CONFORME</span></div>' +
-        gerarLinhasBarrasConformidade(rotasItens, m.statusMap) +
-      '</div>' +
-      '<div class="q-block">' +
-        '<div class="q-title">12. CENTRAL TÉCNICA:</div>' +
-        '<div class="legend"><span><span class="dot-c"></span> CONFORME</span><span><span class="dot-nc"></span> NÃO CONFORME</span></div>' +
-        gerarLinhasBarrasConformidade(ctItens, m.statusMap) +
-      '</div>' +
-      '<div class="q-block">' +
-        '<div class="q-title">13. CPA:</div>' +
-        '<div class="legend"><span><span class="dot-c"></span> CONFORME</span><span><span class="dot-nc"></span> NÃO CONFORME</span></div>' +
-        gerarLinhasBarrasConformidade(cpaItens, m.statusMap) +
-      '</div>' +
-      '<div class="q-block">' +
-        '<div class="q-title">14. CADEIA SATÉLITE:</div>' +
-        '<div class="legend"><span><span class="dot-c"></span> CONFORME</span><span><span class="dot-nc"></span> NÃO CONFORME</span></div>' +
-        gerarLinhasBarrasConformidade(satCadItens, m.statusMap) +
-      '</div>' +
-      '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>4/5</span></div>' +
-    '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 5 ═══
-    var ncPdfHtml = m.naoConformidades.length > 0
-      ? m.naoConformidades.map(function(nc){ return '<div>' + escapeHTML(nc) + '</div>'; }).join('')
-      : '<div>Nenhuma não conformidade registrada.</div>';
-
-    htmlDoc += '<div class="page-container">' +
-      '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
-      '<div class="q-block">' +
-        '<div class="q-title">15. ENERGIA:</div>' +
-        '<div class="legend"><span><span class="dot-c"></span> CONFORME</span><span><span class="dot-nc"></span> NÃO CONFORME</span></div>' +
-        gerarLinhasBarrasConformidade(engItens, m.statusMap) +
-      '</div>' +
-      '<div class="q-block">' +
-        '<div class="q-title">16. RELATE AQUI TODAS AS NÃO CONFORMIDADES DO HORÁRIO:</div>' +
-        '<div style="font-size:24px;font-weight:800;margin-bottom:8px;">' + m.naoConformidades.length.toLocaleString('pt-BR') + ' Registros</div>' +
-        '<div class="recent-box" style="display:flex;flex-direction:column;gap:8px;">' + ncPdfHtml + '</div>' +
-      '</div>' +
-      '<div style="margin-top:40px;font-size:9.5px;color:#94A3B8;text-align:center;">' +
-        'Este conteúdo foi consolidado pelo Sistema de Gestão de Tecnologia da TV Integração — Praça de Uberlândia.' +
-      '</div>' +
-      '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>5/5</span></div>' +
+      '<div class="bottom-footer"><span>TV Integração — Tecnologia UDI</span><span>Página 4 de 4</span></div>' +
     '</div>';
 
     htmlDoc += '<script>setTimeout(function(){ window.print(); }, 500);<\/script></body></html>';
@@ -6281,9 +6351,10 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.exportarVisaoGeralFormsPdf = exportarVisaoGeralFormsPdf;
 
-  /* ── Exportação do Formulário Individual do Turno (4 páginas — estilo questionário Forms) ── */
+  /* ── Exportação do Formulário Individual do Turno (Layout Executivo de 2 Páginas) ── */
   function exportarFormularioTurnoIndividual() {
     var dataEl = document.getElementById('ronda-data');
+    var turnoEl = document.getElementById('ronda-turno');
     var potEl  = document.getElementById('ronda-pot-direta');
     var refEl  = document.getElementById('ronda-pot-refletida');
     var satRedeDb = document.getElementById('ronda-sat-rede-db');
@@ -6293,133 +6364,179 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var dataVal = (dataEl && dataEl.value) ? dataEl.value : new Date().toISOString().split('T')[0];
     var usuario = getUsuarioAtual();
-    var dataHora = new Date().toLocaleDateString('pt-BR') + ', ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+    var agora = new Date();
+    var dataHora = agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
 
-    // Determina turno pelo horário atual
-    var h = new Date().getHours();
-    var turnoCheck = [false, false, false, false, false];
-    if (h >= 0 && h < 6) turnoCheck[0] = true;
-    else if (h >= 6 && h < 12) turnoCheck[1] = true;
-    else if (h >= 12 && h < 18) turnoCheck[2] = true;
-    else if (h >= 18) turnoCheck[3] = true;
-    else turnoCheck[4] = true;
+    var turnoTxt = '06h00 - 12h00';
+    if (turnoEl && turnoEl.selectedOptions && turnoEl.selectedOptions[0]) {
+      turnoTxt = turnoEl.selectedOptions[0].textContent;
+    } else {
+      var h = agora.getHours();
+      if (h >= 0 && h < 6) turnoTxt = '00h00 - 06h00 (Madrugada)';
+      else if (h >= 6 && h < 12) turnoTxt = '06h00 - 12h00 (Manhã)';
+      else if (h >= 12 && h < 18) turnoTxt = '12h00 - 18h00 (Tarde)';
+      else if (h >= 18) turnoTxt = '18h00 - 00h00 (Noite)';
+    }
 
-    function renderTabelaForms(itens) {
-      var h = '<table style="width:100%;border-collapse:collapse;margin-top:8px;">';
-      h += '<thead><tr style="font-size:10.5px;color:#64748B;border-bottom:1px solid #E2E8F0;"><th style="text-align:left;padding:6px 4px;font-weight:600;">SISTEMA / EQUIPAMENTO</th><th style="width:110px;text-align:center;padding:6px 4px;font-weight:700;color:#059669;">CONFORME</th><th style="width:110px;text-align:center;padding:6px 4px;font-weight:700;color:#DC2626;">NÃO CONFORME</th></tr></thead>';
-      h += '<tbody>';
+    var potVal = (potEl && potEl.value) ? (potEl.value + ' W') : '2500 W';
+    var refVal = (refEl && refEl.value) ? (refEl.value + ' W') : '16 W';
+    var satRedeVal = (satRedeDb && satRedeDb.value) ? (satRedeDb.value + ' dB') : '13.8 dB';
+    var satBhVal = (satBhDb && satBhDb.value) ? (satBhDb.value + ' dB') : '14.0 dB';
+    var satSpVal = (satSpDb && satSpDb.value) ? (satSpDb.value + ' dB') : '18.2 dB';
+    var obsVal = (obsEl && obsEl.value) ? obsEl.value.trim() : 'Todos os sistemas operando dentro dos parâmetros de conformidade técnica.';
+
+    var ncDetectadas = [];
+
+    function renderTabelaForms(itens, secaoNome) {
+      var h = '<div class="pdf-group-block">' +
+        '<div class="pdf-group-header">' +
+          '<span class="pdf-group-title">' + secaoNome + '</span>' +
+          '<div class="pdf-th-cols">' +
+            '<span class="th-col conf">CONFORME</span>' +
+            '<span class="th-col nc">NÃO CONF.</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="pdf-group-body">';
+
       itens.forEach(function(item) {
         var group = document.querySelector('.ronda-toggle-group[data-item-id="' + item.id + '"]');
         var isNc = group && group.querySelector('.ronda-btn-pill.nc.active');
-        var isConf = !isNc; // padrão conforme
-        h += '<tr style="border-bottom:1px solid #F1F5F9;font-size:11px;">' +
-          '<td style="padding:7px 4px;font-weight:600;color:#334155;">' + escapeHTML(item.nome) + '</td>' +
-          '<td style="text-align:center;padding:7px 4px;">' + (isConf ? '<span style="color:#059669;font-size:14px;font-weight:800;">●</span>' : '<span style="color:#CBD5E1;font-size:14px;">○</span>') + '</td>' +
-          '<td style="text-align:center;padding:7px 4px;">' + (isNc ? '<span style="color:#DC2626;font-size:14px;font-weight:800;">●</span>' : '<span style="color:#CBD5E1;font-size:14px;">○</span>') + '</td>' +
-        '</tr>';
+        var isConf = !isNc;
+
+        if (isNc) ncDetectadas.push(item.nome);
+
+        h += '<div class="pdf-item-row ' + (isNc ? 'row-nc' : 'row-conf') + '">' +
+          '<div class="pdf-item-name">' + escapeHTML(item.nome) + '</div>' +
+          '<div class="pdf-item-status-cols">' +
+            '<span class="status-cell">' + (isConf ? '<span class="status-pill conf">✓ Conforme</span>' : '<span class="status-pill dot-off">○</span>') + '</span>' +
+            '<span class="status-cell">' + (isNc ? '<span class="status-pill nc">✕ Não Conforme</span>' : '<span class="status-pill dot-off">○</span>') + '</span>' +
+          '</div>' +
+        '</div>';
       });
-      h += '</tbody></table>';
+
+      h += '</div></div>';
       return h;
     }
 
-    var exibItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'exibidor'; });
-    var transItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'transmissor'; });
-    var satItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'satelite'; });
-    var rotasItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'rotas'; });
-    var ctItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'central'; });
-    var cpaItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'cpa'; });
+    var exibItens   = RONDA_ITEMS.filter(function(i){ return i.secao === 'exibidor'; });
+    var transItens  = RONDA_ITEMS.filter(function(i){ return i.secao === 'transmissor'; });
+    var satItens    = RONDA_ITEMS.filter(function(i){ return i.secao === 'satelite'; });
+    var rotasItens  = RONDA_ITEMS.filter(function(i){ return i.secao === 'rotas'; });
+    var ctItens     = RONDA_ITEMS.filter(function(i){ return i.secao === 'central'; });
+    var cpaItens    = RONDA_ITEMS.filter(function(i){ return i.secao === 'cpa'; });
     var satCadItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'cadeia_sat'; });
-    var engItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'energia'; });
+    var engItens    = RONDA_ITEMS.filter(function(i){ return i.secao === 'energia'; });
 
-    var htmlDoc = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</title>' +
+    var htmlDoc = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>RELATÓRIO DIÁRIO — TECNOLOGIA UDI (' + dataVal + ')</title>' +
       '<style>' +
-      '@page { size: A4 portrait; margin: 12mm 15mm; }' +
-      'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #1E293B; margin: 0; padding: 10px; background: #fff; font-size: 11px; }' +
-      '.page-header-top { display: flex; justify-content: space-between; font-size: 10px; color: #64748B; margin-bottom: 20px; border-bottom: 1px solid #CBD5E1; padding-bottom: 6px; }' +
-      '.page-footer-bot { display: flex; justify-content: space-between; font-size: 9px; color: #94A3B8; margin-top: 25px; border-top: 1px solid #E2E8F0; padding-top: 6px; }' +
-      '.page-break { page-break-after: always; break-after: page; }' +
-      '.form-title { font-size: 20px; font-weight: 700; color: #0F172A; text-align: center; margin: 20px 0 25px 0; }' +
-      '.q-num { font-size: 12px; font-weight: 700; color: #1E293B; margin-bottom: 6px; margin-top: 16px; }' +
-      '.radio-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 11px; }' +
-      '.input-line { border: 1px solid #CBD5E1; border-radius: 4px; padding: 7px 10px; font-size: 11.5px; width: 100%; box-sizing: border-box; background: #FAFBFD; margin-top: 4px; }' +
-      '.no-print { position: fixed; top: 12px; right: 20px; z-index: 9999; display: flex; gap: 10px; }' +
+      '@page { size: A4 portrait; margin: 12mm 14mm 14mm 14mm; }' +
+      '* { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+      'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #0F172A; margin: 0; padding: 0; background: #fff; font-size: 11px; line-height: 1.4; }' +
+      '.no-print { position: fixed; top: 14px; right: 20px; z-index: 9999; display: flex; gap: 10px; background: rgba(255,255,255,0.92); padding: 8px 12px; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.12); backdrop-filter: blur(4px); border: 1px solid #E2E8F0; }' +
+      '.btn-print { padding: 9px 18px; background: #0284C7; color: #fff; font-weight: 700; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }' +
+      '.btn-close { padding: 9px 14px; background: #64748B; color: #fff; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }' +
       '@media print { .no-print { display: none !important; } }' +
+      '.page-sheet { min-height: 270mm; max-height: 273mm; display: flex; flex-direction: column; justify-content: space-between; page-break-after: always; break-after: page; }' +
+      '.page-sheet:last-child { page-break-after: auto; break-after: auto; }' +
+      '.top-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 2px solid #0284C7; margin-bottom: 12px; font-size: 10px; color: #475569; }' +
+      '.top-header-title { font-weight: 800; font-size: 12px; color: #0369A1; letter-spacing: 0.03em; }' +
+      '.bottom-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 6px; border-top: 1px solid #E2E8F0; font-size: 9px; color: #94A3B8; margin-top: auto; }' +
+      '.report-head { border: 1px solid #CBD5E1; border-radius: 6px; background: #F8FAFC; padding: 10px 14px; margin-bottom: 10px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }' +
+      '.report-head-item { font-size: 10px; }' +
+      '.report-head-lbl { color: #64748B; font-weight: 700; text-transform: uppercase; font-size: 9px; letter-spacing: 0.04em; }' +
+      '.report-head-val { color: #0F172A; font-weight: 800; font-size: 12.5px; margin-top: 2px; }' +
+      '.metrics-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 10px; }' +
+      '.metric-card { border: 1px solid #CBD5E1; border-radius: 6px; background: #fff; padding: 7px 9px; text-align: center; }' +
+      '.metric-card-lbl { font-size: 8.5px; font-weight: 700; color: #64748B; text-transform: uppercase; }' +
+      '.metric-card-val { font-size: 15px; font-weight: 800; color: #0369A1; margin-top: 2px; }' +
+      '.pdf-group-block { border: 1px solid #CBD5E1; border-radius: 6px; background: #fff; margin-bottom: 9px; overflow: hidden; }' +
+      '.pdf-group-header { display: flex; justify-content: space-between; align-items: center; background: #F1F5F9; padding: 5px 10px; border-bottom: 1px solid #CBD5E1; }' +
+      '.pdf-group-title { font-size: 10.5px; font-weight: 800; color: #0F172A; text-transform: uppercase; letter-spacing: 0.03em; }' +
+      '.pdf-th-cols { display: flex; gap: 8px; font-size: 8.5px; font-weight: 800; }' +
+      '.th-col { width: 85px; text-align: center; }' +
+      '.th-col.conf { color: #047857; }' +
+      '.th-col.nc { color: #DC2626; }' +
+      '.pdf-group-body { display: flex; flex-direction: column; }' +
+      '.pdf-item-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 10px; border-bottom: 1px solid #F1F5F9; font-size: 10px; }' +
+      '.pdf-item-row:last-child { border-bottom: none; }' +
+      '.row-nc { background: #FEF2F2; }' +
+      '.pdf-item-name { font-weight: 600; color: #334155; flex: 1; }' +
+      '.row-nc .pdf-item-name { color: #991B1B; font-weight: 700; }' +
+      '.pdf-item-status-cols { display: flex; gap: 8px; }' +
+      '.status-cell { width: 85px; text-align: center; }' +
+      '.status-pill { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 4px; display: inline-block; }' +
+      '.status-pill.conf { background: #D1FAE5; color: #065F46; border: 1px solid #A7F3D0; }' +
+      '.status-pill.nc { background: #FEE2E2; color: #991B1B; border: 1px solid #FECACA; }' +
+      '.status-pill.dot-off { color: #CBD5E1; font-size: 11px; }' +
+      '.obs-box { border: 1px solid #CBD5E1; border-radius: 6px; background: #fff; padding: 10px 12px; margin-top: 6px; }' +
+      '.obs-header { font-size: 10.5px; font-weight: 800; color: #0F172A; text-transform: uppercase; margin-bottom: 6px; display: flex; justify-content: space-between; }' +
+      '.obs-text { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 5px; padding: 10px; font-size: 10px; line-height: 1.5; color: #334155; white-space: pre-wrap; min-height: 55px; }' +
+      '.status-banner { display: flex; align-items: center; justify-content: space-between; padding: 7px 12px; border-radius: 6px; margin-bottom: 10px; font-size: 10.5px; font-weight: 700; }' +
+      '.status-banner.ok { background: #ECFDF5; border: 1px solid #A7F3D0; color: #047857; }' +
+      '.status-banner.alert { background: #FEF2F2; border: 1px solid #FECACA; color: #DC2626; }' +
       '</style></head><body>' +
       '<div class="no-print">' +
-        '<button onclick="window.print()" style="padding:9px 18px;background:#2563EB;color:#fff;font-weight:700;border:none;border-radius:6px;cursor:pointer;box-shadow:0 3px 10px rgba(37,99,235,0.3);font-size:13px;">🖨️ Imprimir / Salvar em PDF</button>' +
-        '<button onclick="window.close()" style="padding:9px 14px;background:#64748B;color:#fff;font-weight:600;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Fechar</button>' +
+        '<button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar em PDF</button>' +
+        '<button class="btn-close" onclick="window.close()">Fechar</button>' +
       '</div>';
 
-    // ═══ PÁGINA 1 ═══
-    htmlDoc += '<div class="page-container">' +
-      '<div class="page-header-top"><span>' + dataHora + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
-      '<div class="form-title">RELATÓRIO DIÁRIO - TECNOLOGIA UDI</div>' +
-      '<p style="font-size:10px;color:#64748B;margin:0 0 14px 0;">* Obrigatória<br/>* Operador registrado: <strong>' + escapeHTML(usuario) + '</strong></p>' +
-      '<div class="q-num">1. DIA TRABALHADO: *</div>' +
-      '<div class="input-line">📅 ' + dataVal + '</div>' +
-      '<div class="q-num">2. TURNO TRABALHADO: *</div>' +
-      '<div class="radio-row">' + (turnoCheck[0] ? '🔘' : '⚪') + ' 00h00 - 06h00</div>' +
-      '<div class="radio-row">' + (turnoCheck[1] ? '🔘' : '⚪') + ' 06h00 - 12h00</div>' +
-      '<div class="radio-row">' + (turnoCheck[2] ? '🔘' : '⚪') + ' 12h00 - 18h00</div>' +
-      '<div class="radio-row">' + (turnoCheck[3] ? '🔘' : '⚪') + ' 18h00 - 00h00</div>' +
-      '<div class="radio-row">' + (turnoCheck[4] ? '🔘' : '⚪') + ' Outra</div>' +
-      '<div class="q-num">3. CENTRO EXIBIDOR: *</div>' +
-      renderTabelaForms(exibItens) +
-      '<div class="q-num">4. TRANSMISSOR: *</div>' +
-      renderTabelaForms(transItens) +
-      '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>1/4</span></div>' +
-    '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 2 ═══
-    htmlDoc += '<div class="page-container">' +
-      '<div class="page-header-top"><span>' + dataHora + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
-      '<div class="q-num">5. Potência do Transmissor (W): *</div>' +
-      '<div class="input-line">' + ((potEl && potEl.value) ? (potEl.value + ' W') : '2500 W') + '</div>' +
-      '<div class="q-num">6. Potência Refletida do Transmissor: (W) *</div>' +
-      '<div class="input-line">' + ((refEl && refEl.value) ? (refEl.value + ' W') : '16 W') + '</div>' +
-      '<div class="q-num">7. RECEPTORES DE SATÉLITE (VÍDEO E CANAL DE VOZ): *</div>' +
-      renderTabelaForms(satItens) +
-      '<div class="q-num">8. SAT REDE TIT C/N (dB): *</div>' +
-      '<div class="input-line">' + ((satRedeDb && satRedeDb.value) ? (satRedeDb.value + ' dB') : '13.8 dB') + '</div>' +
-      '<div class="q-num">9. SAT BH C/N (dB): *</div>' +
-      '<div class="input-line">' + ((satBhDb && satBhDb.value) ? (satBhDb.value + ' dB') : '14.0 dB') + '</div>' +
-      '<div class="q-num">10. SAT SP C/N (dB): *</div>' +
-      '<div class="input-line">' + ((satSpDb && satSpDb.value) ? (satSpDb.value + ' dB') : '18.2 dB') + '</div>' +
-      '<div class="q-num">11. ROTA DE CONTRIBUIÇÃO E RECEPÇÃO DE SINAIS DAS PRAÇAS</div>' +
-      renderTabelaForms(rotasItens) +
-      '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>2/4</span></div>' +
-    '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 3 ═══
-    htmlDoc += '<div class="page-container">' +
-      '<div class="page-header-top"><span>' + dataHora + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
-      '<div class="q-num">12. CENTRAL TÉCNICA:</div>' +
-      renderTabelaForms(ctItens) +
-      '<div class="q-num">13. CPA:</div>' +
-      renderTabelaForms(cpaItens) +
-      '<div class="q-num">14. CADEIA SATÉLITE:</div>' +
-      renderTabelaForms(satCadItens) +
-      '<div class="q-num">15. ENERGIA:</div>' +
-      renderTabelaForms(engItens) +
-      '<div class="q-num">16. RELATE AQUI TODAS AS NÃO CONFORMIDADES DO HORÁRIO</div>' +
-      '<div class="input-line" style="min-height:70px;white-space:pre-wrap;">' + ((obsEl && obsEl.value) ? escapeHTML(obsEl.value) : 'Tudo operando dentro dos parâmetros de conformidade técnica.') + '</div>' +
-      '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>3/4</span></div>' +
-    '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 4 ═══
-    htmlDoc += '<div class="page-container">' +
-      '<div class="page-header-top"><span>' + dataHora + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
-      '<div style="text-align:center;margin-top:120px;padding:30px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;">' +
-        '<div style="font-size:18px;font-weight:700;color:#0F172A;margin-bottom:8px;">Relatório Registrado com Sucesso</div>' +
-        '<p style="font-size:11.5px;color:#64748B;line-height:1.6;">' +
-          'Os dados deste formulário foram autenticados e transmitidos para a base central de engenharia e tecnologia da TV Integração.<br/>' +
-          'Operador Responsável: <strong>' + escapeHTML(usuario) + '</strong> | Praça: <strong>Uberlândia (MG)</strong>' +
-        '</p>' +
+    // ═══════════════════════════════════════════
+    // PÁGINA 1: Cabeçalho, RF, Exibição, Transmissor, Satélite e Rotas
+    // ═══════════════════════════════════════════
+    htmlDoc += '<div class="page-sheet">' +
+      '<div class="top-header">' +
+        '<span class="top-header-title">REDE INTEGRAÇÃO — RELATÓRIO DIÁRIO DE TECNOLOGIA UDI</span>' +
+        '<span>Emissão: ' + dataHora + '</span>' +
       '</div>' +
-      '<div style="margin-top:100px;font-size:9.5px;color:#94A3B8;text-align:center;">' +
-        'Este conteúdo não é criado nem endossado pela Microsoft. Os dados que você enviar serão enviados ao proprietário do formulário.<br/>Microsoft Forms' +
+      '<div class="report-head">' +
+        '<div class="report-head-item"><div class="report-head-lbl">Data do Plantão</div><div class="report-head-val">📅 ' + dataVal + '</div></div>' +
+        '<div class="report-head-item"><div class="report-head-lbl">Turno Registrado</div><div class="report-head-val">⏱️ ' + turnoTxt + '</div></div>' +
+        '<div class="report-head-item"><div class="report-head-lbl">Operador Responsável</div><div class="report-head-val">👤 ' + escapeHTML(usuario) + '</div></div>' +
+        '<div class="report-head-item"><div class="report-head-lbl">Praça / Unidade</div><div class="report-head-val">📍 Uberlândia (MG)</div></div>' +
       '</div>' +
-      '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>4/4</span></div>' +
+      '<div class="metrics-strip">' +
+        '<div class="metric-card"><div class="metric-card-lbl">Potência Direta</div><div class="metric-card-val">' + potVal + '</div></div>' +
+        '<div class="metric-card"><div class="metric-card-lbl">Potência Refletida</div><div class="metric-card-val" style="color:' + (parseFloat(refVal) > 40 ? '#DC2626' : '#059669') + ';">' + refVal + '</div></div>' +
+        '<div class="metric-card"><div class="metric-card-lbl">SAT Rede C/N</div><div class="metric-card-val">' + satRedeVal + '</div></div>' +
+        '<div class="metric-card"><div class="metric-card-lbl">SAT BH C/N</div><div class="metric-card-val">' + satBhVal + '</div></div>' +
+        '<div class="metric-card"><div class="metric-card-lbl">SAT SP C/N</div><div class="metric-card-val">' + satSpVal + '</div></div>' +
+      '</div>' +
+      renderTabelaForms(exibItens, '1. Centro Exibidor (Signa, Smartware, Multiview, Clearcom, OTT)') +
+      renderTabelaForms(transItens, '2. Transmissor Principal & RF') +
+      renderTabelaForms(satItens, '3. Receptores de Satélite (Vídeo e Áudio)') +
+      renderTabelaForms(rotasItens, '4. Rotas de Contribuição e Recepção (Makito, MPLS, L2L)') +
+      '<div class="bottom-footer"><span>TV Integração — Tecnologia UDI</span><span>Página 1 de 2</span></div>' +
+    '</div>';
+
+    // ═══════════════════════════════════════════
+    // PÁGINA 2: Central Técnica, CPA, Cadeia Satélite, Energia e Observações
+    // ═══════════════════════════════════════════
+    var bannerStatusHtml = ncDetectadas.length === 0
+      ? '<div class="status-banner ok"><span>✅ TODOS OS 26 SISTEMAS EM CONFORMIDADE TÉCNICA OPERACIONAL</span><span>100% OK</span></div>'
+      : '<div class="status-banner alert"><span>⚠️ NÃO CONFORMIDADES REGISTRADAS NO TURNO (' + ncDetectadas.length + '): ' + escapeHTML(ncDetectadas.join(', ')) + '</span><span>ATENÇÃO</span></div>';
+
+    htmlDoc += '<div class="page-sheet">' +
+      '<div class="top-header">' +
+        '<span class="top-header-title">REDE INTEGRAÇÃO — RELATÓRIO DIÁRIO DE TECNOLOGIA UDI</span>' +
+        '<span>Emissão: ' + dataHora + '</span>' +
+      '</div>' +
+      bannerStatusHtml +
+      renderTabelaForms(ctItens, '5. Central Técnica (Frames, Multiview, Intercom, Climatização)') +
+      renderTabelaForms(cpaItens, '6. CPA (Controle de Produção, Retornos e Mochilinks)') +
+      renderTabelaForms(satCadItens, '7. Cadeia Satélite Uplink (Mux, Modulador, Encoder, BUC)') +
+      renderTabelaForms(engItens, '8. Infraestrutura & Energia (Gerador e No-Break)') +
+      '<div class="obs-box">' +
+        '<div class="obs-header">' +
+          '<span>9. Observações do Plantão / Relato de Intervenções</span>' +
+          '<span style="font-size:9.5px;color:#64748B;">Operador: ' + escapeHTML(usuario) + '</span>' +
+        '</div>' +
+        '<div class="obs-text">' + escapeHTML(obsVal) + '</div>' +
+      '</div>' +
+      '<div style="margin-top:12px;padding:8px 12px;background:#F8FAFC;border:1px solid #CBD5E1;border-radius:6px;font-size:9px;color:#64748B;line-height:1.45;text-align:center;">' +
+        'Documento operacional emitido via <strong>Sistema de Gestão de Tecnologia da TV Integração</strong> — Praça de Uberlândia.<br/>' +
+        'Registro arquivado com identificação de sessão técnica.' +
+      '</div>' +
+      '<div class="bottom-footer"><span>TV Integração — Tecnologia UDI</span><span>Página 2 de 2</span></div>' +
     '</div>';
 
     htmlDoc += '<script>setTimeout(function(){ window.print(); }, 500);<\/script></body></html>';
@@ -6439,8 +6556,6 @@ document.addEventListener('DOMContentLoaded', function () {
   window.exportarVisaoGeralFormsPdf = exportarVisaoGeralFormsPdf;
 
 })();
-
-
   /* ═══════════════════════════════════════════
      POPUP: NOVA OCORRÊNCIA
   ═══════════════════════════════════════════ */
@@ -6804,8 +6919,6 @@ document.addEventListener('DOMContentLoaded', function () {
   window.salvarEdicaoOcorrencia = salvarEdicaoOcorrencia;
 
   var itemDetalhesAtual = null;
-
-
   /* ═══════════════════════════════════════════
      SISTEMA DE LIXEIRA (Retenção 7 dias / Notificação 24h) — BANCO DE DADOS SUPABASE
   ═══════════════════════════════════════════ */
@@ -7412,8 +7525,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (btnConfirmar) {
     btnConfirmar.addEventListener('click', confirmarResolucao);
   }
-
-
   /* ═══════════════════════════════════════════
      CONFIGURAÇÕES
   ═══════════════════════════════════════════ */
@@ -7563,6 +7674,9 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       if (typeof updateCloudStatus === 'function') {
         updateCloudStatus(false, 'Modo Local');
+      }
+      if (typeof renderAll === 'function') {
+        renderAll(true);
       }
     } else if (chave) {
       // Se digitou uma chave, valida e conecta
@@ -7774,6 +7888,9 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       if (typeof updateCloudStatus === 'function') {
         updateCloudStatus(false, 'Modo Offline');
+      }
+      if (typeof renderAll === 'function') {
+        renderAll(true);
       }
       atualizarUIStatusBancoConfig();
       if (typeof mostrarToast === 'function') {
@@ -8165,10 +8282,18 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.aplicarCodigoCriptografadoAgora = aplicarCodigoCriptografadoAgora;
-
   /* ═══════════════════════════════════════════
      HISTÓRICO GERAL (Funções de Renderização e Filtros)
   ═══════════════════════════════════════════ */
+
+  var HISTORICO_PAGINA_LIMITE = 40;
+  window.historicoItensVisiveis = HISTORICO_PAGINA_LIMITE;
+
+  function carregarMaisHistorico() {
+    window.historicoItensVisiveis = (window.historicoItensVisiveis || HISTORICO_PAGINA_LIMITE) + 40;
+    renderHistorico();
+  }
+  window.carregarMaisHistorico = carregarMaisHistorico;
 
   function renderHistorico() {
     var container = document.getElementById('hist-list');
@@ -8214,6 +8339,10 @@ document.addEventListener('DOMContentLoaded', function () {
       renderHistoricoRelacionados(null);
       return;
     }
+
+    // Paginação para desempenho instantâneo (evita montar 1.490 nós no DOM simultaneamente)
+    var limite = busca ? filtrados.length : (window.historicoItensVisiveis || HISTORICO_PAGINA_LIMITE);
+    var itensExibidos = filtrados.slice(0, limite);
 
     function renderCardHistoricoHTML(item) {
       var eMeu = isItemDoUsuario(item);
@@ -8277,8 +8406,20 @@ document.addEventListener('DOMContentLoaded', function () {
       );
     }
 
-    var secoes = agruparPorDias(filtrados, function(item){ return item.dataCriacao; });
-    container.innerHTML = renderSecoesComCards(secoes, renderCardHistoricoHTML);
+    var secoes = agruparPorDias(itensExibidos, function(item){ return item.dataCriacao; });
+    var htmlFinal = renderSecoesComCards(secoes, renderCardHistoricoHTML);
+
+    if (filtrados.length > limite) {
+      var restantes = filtrados.length - limite;
+      htmlFinal +=
+        '<div style="text-align:center;padding:16px 0;margin-top:10px;">' +
+          '<button type="button" class="btn btn-secondary btn-sm" onclick="carregarMaisHistorico()" style="font-weight:600;padding:8px 24px;border-radius:20px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">' +
+            'Carregar mais (' + restantes + ' registros restantes)' +
+          '</button>' +
+        '</div>';
+    }
+
+    container.innerHTML = htmlFinal;
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
@@ -8811,8 +8952,6 @@ document.addEventListener('DOMContentLoaded', function () {
     verDetalhesHistoricoDirect(item);
   }
   window.verDetalhesOcorrencia = verDetalhesOcorrencia;
-
-
   /* ═══════════════════════════════════════════
      SISTEMA DE TOAST NOTIFICATIONS & CENTRAL DE ALERTAS
   ═══════════════════════════════════════════ */
@@ -9198,8 +9337,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.limparTodasNotificacoes = limparTodasNotificacoes;
-
-
   /* ═══════════════════════════════════════════
      SISTEMA DE EXPORTAÇÃO E CONSOLIDAÇÃO POWER BI
   ═══════════════════════════════════════════ */
@@ -9806,8 +9943,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (barCancEq) barCancEq.style.height = eqTotal > 0 ? Math.max(eqPctCanc * 0.85, 4) + '%' : '4px';
   }
   window.renderResumoTransmissoesGerais = renderResumoTransmissoesGerais;
-
-
   /* ═══════════════════════════════════════════
      PLANEJAMENTO ORÇAMENTÁRIO (ANO ATUAL + 1) — BANCO DE DADOS SUPABASE
   ═══════════════════════════════════════════ */
@@ -10468,8 +10603,6 @@ document.addEventListener('DOMContentLoaded', function () {
     alert('Relatório de Orçamento ' + anoOrcamento + ' exportado com sucesso em formato consolidado (CAPEX/OPEX).');
   }
   window.exportarOrcamentoExcel = exportarOrcamentoExcel;
-
-
   /* ═══════════════════════════════════════════
      FLUXO DE INICIALIZAÇÃO E IDENTIFICAÇÃO DO OPERADOR
   ═══════════════════════════════════════════ */
