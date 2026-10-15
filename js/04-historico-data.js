@@ -45,6 +45,24 @@
   }
   window.mesclarSementeFormsSeConectado = mesclarSementeFormsSeConectado;
 
+  function garantirSementeFormsCarregada(callback) {
+    if (window.historicoUdiExportForms && window.historicoUdiExportForms.length > 0) {
+      mesclarSementeFormsSeConectado();
+      if (typeof callback === 'function') callback();
+      return;
+    }
+    var tentativas = 0;
+    var timer = setInterval(function() {
+      tentativas++;
+      if ((window.historicoUdiExportForms && window.historicoUdiExportForms.length > 0) || tentativas > 30) {
+        clearInterval(timer);
+        mesclarSementeFormsSeConectado();
+        if (typeof callback === 'function') callback();
+      }
+    }, 100);
+  }
+  window.garantirSementeFormsCarregada = garantirSementeFormsCarregada;
+
   window.historicoSeedData = historicoSeedData;
 
   function saveHistorico(list, itemAdicionado) {

@@ -70,4 +70,29 @@
     abrirPopup('popup-entrada');
   }
 
+  // Atalho global de busca (Ctrl+K ou barra / fora de inputs)
+  window.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      focarBuscaGlobal();
+    } else if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target && e.target.tagName) || '')) {
+      e.preventDefault();
+      focarBuscaGlobal();
+    }
+  });
+
+  function focarBuscaGlobal() {
+    if (typeof nav === 'function') {
+      nav('historico');
+    }
+    setTimeout(function() {
+      var hSearch = document.getElementById('hist-search');
+      if (hSearch) {
+        hSearch.focus();
+        hSearch.select();
+      }
+    }, 80);
+  }
+  window.focarBuscaGlobal = focarBuscaGlobal;
+
 }); /* fim DOMContentLoaded */

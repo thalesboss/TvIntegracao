@@ -389,15 +389,35 @@
         });
       }
       verificarNaoConformidadesRonda();
+      verificarRefletidaRonda();
     } catch(e) {}
   }
   window.carregarRascunhoRonda = carregarRascunhoRonda;
+
+  function verificarRefletidaRonda() {
+    var inp = document.getElementById('ronda-pot-refletida');
+    var alerta = document.getElementById('ronda-refletida-alerta');
+    if (!inp || !alerta) return;
+    var val = parseFloat(inp.value);
+    if (!isNaN(val) && val > 40) {
+      alerta.style.display = 'flex';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    } else {
+      alerta.style.display = 'none';
+    }
+  }
+  window.verificarRefletidaRonda = verificarRefletidaRonda;
 
   // Registrar listeners de input para autosave nos campos numéricos
   document.addEventListener('DOMContentLoaded', function () {
     var container = document.getElementById('page-ronda');
     if (container) {
-      container.addEventListener('input', salvarRascunhoRondaDebounced);
+      container.addEventListener('input', function(e) {
+        salvarRascunhoRondaDebounced();
+        if (e.target && e.target.id === 'ronda-pot-refletida') {
+          verificarRefletidaRonda();
+        }
+      });
     }
   });
 
@@ -405,7 +425,8 @@
      VISÃO GERAL ANALÍTICA & MÉTRICAS COM GRÁFICOS (ESTILO FORMS)
   ═══════════════════════════════════════════════════════════ */
 
-  function calcularMetricasRondaUdi() {
+  function calcularMetricasRondaUdi(filtroPeriodo) {
+    var periodo = filtroPeriodo || window.rondaVisaoGeralFiltro || 'todos';
     var conectado = (typeof isBancoConectado === 'function' ? isBancoConectado() : false);
     var relatorios = [];
     if (Array.isArray(window.historicoSeedData)) {
@@ -413,6 +434,22 @@
         if (!h) return false;
         if (!conectado && h.id && h.id.startsWith('rel_udi_forms_')) return false;
         return (h.subtipo === 'Tecnologia UDI' || (h.detalhesRonda && h.praca === 'Uberlândia'));
+      });
+    }
+
+    // Filtro analítico de período
+    if (periodo && periodo !== 'todos') {
+      var mesAtualStr = '2026-10';
+      relatorios = relatorios.filter(function(r) {
+        var d = r.detalhesRonda;
+        var dataR = (d && d.data) || (r.dataCriacao ? r.dataCriacao.split(' ')[0] : '');
+        if (!dataR) return false;
+
+        if (periodo === 'mes_atual') return dataR.startsWith(mesAtualStr);
+        if (periodo === 'ano_2026')  return dataR.startsWith('2026');
+        if (periodo === 'ano_2025')  return dataR.startsWith('2025');
+        if (periodo === 'ano_2024')  return dataR.startsWith('2024');
+        return true;
       });
     }
 
@@ -530,6 +567,27 @@
     var satBhMedia = calcMedia(satBhVals);
     var satSpMedia = calcMedia(satSpVals);
 
+    function parseDateToTime(str) {
+      if (!str) return 0;
+      if (str.indexOf('-') !== -1) {
+        return new Date(str).getTime() || 0;
+      }
+      if (str.indexOf('/') !== -1) {
+        var parts = str.split('/');
+        if (parts.length === 3) {
+          return new Date(parts[2] + '-' + parts[1] + '-' + parts[0]).getTime() || 0;
+        }
+      }
+      return 0;
+    }
+
+    datasRecentes.sort(function(a, b) {
+      var tA = parseDateToTime(a);
+      var tB = parseDateToTime(b);
+      if (tA && tB) return tB - tA;
+      return (b > a ? 1 : (b < a ? -1 : 0));
+    });
+
     return {
       total: totalGeral,
       tempoMedio: totalGeral > 0 ? '12:00' : '--',
@@ -537,7 +595,7 @@
       turnos: turnos,
       statusMap: statusMap,
       datasRecentes: datasRecentes.slice(0, 5),
-      naoConformidades: naoConformidades.slice(0, 6),
+      naoConformidades: naoConformidades.slice(-6).reverse(),
       potenciaMedia: potMedia !== null ? (Math.round(potMedia) + ' W') : '-- W',
       potenciasRecentes: potencias.slice(-3).reverse().map(function(v){ return String(v); }),
       refletidaMedia: refMedia !== null ? (Math.round(refMedia) + ' W') : '-- W',
@@ -613,11 +671,14 @@
     return html;
   }
 
-  function abrirVisaoGeralRondaUdi() {
+  function abrirVisaoGeralRondaUdi(filtro) {
     var contEl = document.getElementById('popup-visao-geral-ronda-content');
     if (!contEl) return;
 
-    var m = calcularMetricasRondaUdi();
+    var filtroAtivo = filtro || window.rondaVisaoGeralFiltro || 'todos';
+    window.rondaVisaoGeralFiltro = filtroAtivo;
+
+    var m = calcularMetricasRondaUdi(filtroAtivo);
 
     // Filtra itens por seção
     var exibItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'exibidor'; });
@@ -633,6 +694,33 @@
     m.turnos.forEach(function(t){ totalTurnos += t.count; });
 
     var html = '';
+
+    // Barra de Filtro de Período
+    var periodos = [
+      { id: 'todos', label: 'Todo o Histórico' },
+      { id: 'ano_2026', label: 'Ano 2026' },
+      { id: 'mes_atual', label: 'Mês Atual (Out/26)' },
+      { id: 'ano_2025', label: 'Ano 2025' },
+      { id: 'ano_2024', label: 'Ano 2024' }
+    ];
+
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;padding:10px 14px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;">' +
+      '<div style="font-size:12.5px;font-weight:700;color:#334155;display:flex;align-items:center;gap:6px;">' +
+        '<i data-lucide="filter" style="width:15px;height:15px;color:#0F4C81;"></i> Filtrar Análise:' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+        periodos.map(function(p) {
+          var isActive = (p.id === filtroAtivo);
+          var bg = isActive ? '#0F4C81' : '#FFFFFF';
+          var color = isActive ? '#FFFFFF' : '#475569';
+          var border = isActive ? '#0F4C81' : '#CBD5E1';
+          return '<button type="button" onclick="abrirVisaoGeralRondaUdi(\'' + p.id + '\')" ' +
+            'style="padding:5px 12px;font-size:11.5px;font-weight:600;border-radius:6px;border:1px solid ' + border + ';background:' + bg + ';color:' + color + ';cursor:pointer;transition:all 0.15s ease;">' +
+            p.label +
+          '</button>';
+        }).join('') +
+      '</div>' +
+    '</div>';
 
     // 1. CARDS DO TOPO
     html += '<div class="vg-top-cards">' +
@@ -817,7 +905,14 @@
 
   /* ── Exportação com Gráficos e Visão Geral (Impressão / PDF Profissional) ── */
   function exportarVisaoGeralFormsPdf() {
-    var m = calcularMetricasRondaUdi();
+    var filtro = window.rondaVisaoGeralFiltro || 'todos';
+    var labelPeriodo = 'Todo o Histórico';
+    if (filtro === 'mes_atual') labelPeriodo = 'Mês Atual (Outubro/2026)';
+    else if (filtro === 'ano_2026') labelPeriodo = 'Ano 2026';
+    else if (filtro === 'ano_2025') labelPeriodo = 'Ano 2025';
+    else if (filtro === 'ano_2024') labelPeriodo = 'Ano 2024';
+
+    var m = calcularMetricasRondaUdi(filtro);
     var exibItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'exibidor'; });
     var transItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'transmissor'; });
     var satItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'satelite'; });
@@ -931,7 +1026,7 @@
       '</div>' +
       '<div class="pdf-main-title">' +
         '<span>Painel Analítico — Tecnologia UDI</span>' +
-        '<span class="badge-ativo">Consolidação Oficial</span>' +
+        '<span class="badge-ativo">' + escapeHTML(labelPeriodo) + '</span>' +
       '</div>' +
       '<div class="kpi-grid">' +
         '<div class="kpi-card">' +
@@ -1070,14 +1165,29 @@
       '<div class="bottom-footer"><span>TV Integração — Tecnologia UDI</span><span>Página 4 de 4</span></div>' +
     '</div>';
 
-    htmlDoc += '<script>setTimeout(function(){ window.print(); }, 500);<\/script></body></html>';
+    htmlDoc += '<script>' +
+      'var _printed = false;' +
+      'function dispararPrint() { if (_printed) return; _printed = true; window.print(); }' +
+      'window.addEventListener("load", function(){ setTimeout(dispararPrint, 350); });' +
+      'setTimeout(dispararPrint, 800);' +
+    '<\/script></body></html>';
 
-    var printWin = window.open('', '_blank');
-    if (printWin) {
-      printWin.document.open();
-      printWin.document.write(htmlDoc);
-      printWin.document.close();
-    } else {
+    try {
+      var printWin = window.open('', '_blank');
+      if (printWin && printWin.document) {
+        printWin.document.open();
+        printWin.document.write(htmlDoc);
+        printWin.document.close();
+      } else {
+        var blob = new Blob([htmlDoc], { type: 'text/html;charset=utf-8' });
+        var blobUrl = URL.createObjectURL(blob);
+        var winBlob = window.open(blobUrl, '_blank');
+        if (!winBlob && typeof mostrarToast === 'function') {
+          mostrarToast('Pop-up Bloqueado', 'Permita pop-ups no navegador para visualizar e salvar o PDF.', 'warning');
+        }
+      }
+    } catch(eOpen) {
+      console.warn('Erro ao abrir pop-up de impressão:', eOpen);
       if (typeof mostrarToast === 'function') {
         mostrarToast('Pop-up Bloqueado', 'Permita pop-ups no navegador para visualizar e salvar o PDF.', 'warning');
       }
@@ -1085,41 +1195,288 @@
   }
   window.exportarVisaoGeralFormsPdf = exportarVisaoGeralFormsPdf;
 
-  /* ── Exportação do Formulário Individual do Turno (Layout Executivo de 2 Páginas) ── */
-  function exportarFormularioTurnoIndividual() {
-    var dataEl = document.getElementById('ronda-data');
-    var turnoEl = document.getElementById('ronda-turno');
-    var potEl  = document.getElementById('ronda-pot-direta');
-    var refEl  = document.getElementById('ronda-pot-refletida');
-    var satRedeDb = document.getElementById('ronda-sat-rede-db');
-    var satBhDb   = document.getElementById('ronda-sat-bh-db');
-    var satSpDb   = document.getElementById('ronda-sat-sp-db');
-    var obsEl  = document.getElementById('ronda-obs');
+  /* ═══════════════════════════════════════════════════════════
+     EXTRAÇÃO INTELIGENTE & MINI RELATÓRIO EXECUTIVO (ESTILO PDF)
+  ═══════════════════════════════════════════════════════════ */
+  function extrairDetalhesRondaItem(item) {
+    if (!item) return null;
+    var d = item.detalhesRonda;
+    if (!d && item.descResolucao && typeof item.descResolucao === 'string' && item.descResolucao.trim().startsWith('{')) {
+      try { d = JSON.parse(item.descResolucao); item.detalhesRonda = d; } catch(e) {}
+    }
+    d = d || {};
 
-    var dataVal = (dataEl && dataEl.value) ? dataEl.value : new Date().toISOString().split('T')[0];
-    var usuario = getUsuarioAtual();
-    var agora = new Date();
-    var dataHora = agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
-
-    var turnoTxt = '06h00 - 12h00';
-    if (turnoEl && turnoEl.selectedOptions && turnoEl.selectedOptions[0]) {
-      turnoTxt = turnoEl.selectedOptions[0].textContent;
-    } else {
-      var h = agora.getHours();
-      if (h >= 0 && h < 6) turnoTxt = '00h00 - 06h00 (Madrugada)';
-      else if (h >= 6 && h < 12) turnoTxt = '06h00 - 12h00 (Manhã)';
-      else if (h >= 12 && h < 18) turnoTxt = '12h00 - 18h00 (Tarde)';
-      else if (h >= 18) turnoTxt = '18h00 - 00h00 (Noite)';
+    var dataVal = d.data || (item.dataCriacao ? item.dataCriacao.split(' ')[0] : '') || '';
+    var horaVal = (item.dataCriacao && item.dataCriacao.indexOf(' ') !== -1) ? item.dataCriacao.split(' ')[1] : '';
+    var operadorVal = d.operador || item.criadoPor || item.resp || 'Operador Técnico';
+    var turnoVal = d.turno || '';
+    if (!turnoVal && horaVal) {
+      var h = parseInt(horaVal.split(':')[0] || '12', 10);
+      if (h >= 0 && h < 6) turnoVal = '00h00 - 06h00 (Madrugada)';
+      else if (h >= 6 && h < 12) turnoVal = '06h00 - 12h00 (Manhã)';
+      else if (h >= 12 && h < 18) turnoVal = '12h00 - 18h00 (Tarde)';
+      else turnoVal = '18h00 - 00h00 (Noite)';
+    } else if (!turnoVal) {
+      turnoVal = '06h00 - 12h00';
     }
 
-    var potVal = (potEl && potEl.value) ? (potEl.value + ' W') : '2500 W';
-    var refVal = (refEl && refEl.value) ? (refEl.value + ' W') : '16 W';
-    var satRedeVal = (satRedeDb && satRedeDb.value) ? (satRedeDb.value + ' dB') : '13.8 dB';
-    var satBhVal = (satBhDb && satBhDb.value) ? (satBhDb.value + ' dB') : '14.0 dB';
-    var satSpVal = (satSpDb && satSpDb.value) ? (satSpDb.value + ' dB') : '18.2 dB';
-    var obsVal = (obsEl && obsEl.value) ? obsEl.value.trim() : 'Todos os sistemas operando dentro dos parâmetros de conformidade técnica.';
+    var desc = item.descCriacao || item.desc || '';
+    var potenciaW = d.potenciaW || '';
+    var refletidaW = d.refletidaW || '';
+    var satRedeDb = d.satRedeDb || '';
+    var satBhDb = d.satBhDb || '';
+    var satSpDb = d.satSpDb || '';
 
-    var ncDetectadas = [];
+    if (!potenciaW) {
+      var mPot = desc.match(/Pot[eê]ncia:\s*([0-9.,]+)\s*W/i);
+      if (mPot) potenciaW = mPot[1];
+    }
+    if (!refletidaW) {
+      var mRef = desc.match(/Refletida:\s*([0-9.,]+)\s*W/i);
+      if (mRef) refletidaW = mRef[1];
+    }
+    if (!satRedeDb) {
+      var mRede = desc.match(/SAT Rede C\/N:\s*([0-9.,]+)\s*dB/i);
+      if (mRede) satRedeDb = mRede[1];
+    }
+    if (!satBhDb) {
+      var mBh = desc.match(/SAT BH C\/N:\s*([0-9.,]+)\s*dB/i);
+      if (mBh) satBhDb = mBh[1];
+    }
+    if (!satSpDb) {
+      var mSp = desc.match(/SAT SP C\/N:\s*([0-9.,]+)\s*dB/i);
+      if (mSp) satSpDb = mSp[1];
+    }
+
+    var statusSistemas = d.statusSistemas ? Object.assign({}, d.statusSistemas) : {};
+    var naoConformidades = Array.isArray(d.naoConformidades) ? d.naoConformidades.slice() : [];
+
+    if (Object.keys(statusSistemas).length === 0) {
+      var mNc = desc.match(/N[aã]o conformidades:\s*([^\n\r]+)/i);
+      if (mNc && mNc[1] && mNc[1].trim().toLowerCase() !== 'nenhuma') {
+        var ncsTxt = mNc[1].split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+        naoConformidades = ncsTxt;
+      }
+      RONDA_ITEMS.forEach(function(it) {
+        var isItemNc = naoConformidades.some(function(nc) {
+          return it.nome.toLowerCase().includes(nc.toLowerCase()) || nc.toLowerCase().includes(it.nome.toLowerCase());
+        });
+        statusSistemas[it.id] = isItemNc ? 'nc' : 'conf';
+      });
+    } else if (naoConformidades.length === 0) {
+      RONDA_ITEMS.forEach(function(it) {
+        if (statusSistemas[it.id] === 'nc') {
+          naoConformidades.push(it.nome);
+        }
+      });
+    }
+
+    var obs = d.obs || '';
+    if (!obs) {
+      var mObs = desc.match(/Observa[çc][õo]es do plant[ãa]o[^:]*:\s*([\s\S]*)$/i);
+      if (mObs && mObs[1]) {
+        obs = mObs[1].trim();
+      }
+    }
+
+    return {
+      data: dataVal,
+      hora: horaVal,
+      operador: operadorVal,
+      turno: turnoVal,
+      potenciaW: potenciaW || '2500',
+      refletidaW: refletidaW || '17',
+      satRedeDb: satRedeDb || '13.8',
+      satBhDb: satBhDb || '14.0',
+      satSpDb: satSpDb || '18.2',
+      statusSistemas: statusSistemas,
+      naoConformidades: naoConformidades,
+      obs: obs
+    };
+  }
+  window.extrairDetalhesRondaItem = extrairDetalhesRondaItem;
+
+  function renderMiniRelatorioRondaUdiHTML(item) {
+    var d = extrairDetalhesRondaItem(item);
+    if (!d) return '<p style="color:var(--muted);padding:14px;">Dados do relatório indisponíveis.</p>';
+
+    var temNc = d.naoConformidades && d.naoConformidades.length > 0;
+
+    var exibItens   = RONDA_ITEMS.filter(function(i){ return i.secao === 'exibidor'; });
+    var transItens  = RONDA_ITEMS.filter(function(i){ return i.secao === 'transmissor'; });
+    var satItens    = RONDA_ITEMS.filter(function(i){ return i.secao === 'satelite'; });
+    var rotasItens  = RONDA_ITEMS.filter(function(i){ return i.secao === 'rotas'; });
+    var ctItens     = RONDA_ITEMS.filter(function(i){ return i.secao === 'central'; });
+    var cpaItens    = RONDA_ITEMS.filter(function(i){ return i.secao === 'cpa'; });
+    var satCadItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'cadeia_sat'; });
+    var engItens    = RONDA_ITEMS.filter(function(i){ return i.secao === 'energia'; });
+
+    function renderBlocoSecao(itens, titulo) {
+      var h = '<div class="mini-rel-secao">' +
+        '<div class="mini-rel-secao-hdr">' +
+          '<span>' + titulo + '</span>' +
+        '</div>' +
+        '<div class="mini-rel-secao-body">';
+
+      itens.forEach(function(it) {
+        var isNc = (d.statusSistemas && d.statusSistemas[it.id] === 'nc');
+        h += '<div class="mini-rel-row ' + (isNc ? 'is-nc' : 'is-conf') + '">' +
+          '<span class="mini-rel-item-name">' + escapeHTML(it.nome) + '</span>' +
+          '<span class="mini-rel-pill ' + (isNc ? 'pill-nc' : 'pill-conf') + '">' +
+            (isNc ? '✕ Não Conforme' : '✓ Conforme') +
+          '</span>' +
+        '</div>';
+      });
+
+      h += '</div></div>';
+      return h;
+    }
+
+    var bannerHtml = temNc
+      ? '<div class="mini-rel-banner alert">' +
+          '<div style="display:flex;align-items:center;gap:8px;">' +
+            '<i data-lucide="alert-octagon" style="width:18px;height:18px;color:#DC2626;flex-shrink:0;"></i>' +
+            '<span>NÃO CONFORMIDADES REGISTRADAS (' + d.naoConformidades.length + '): ' + escapeHTML(d.naoConformidades.join(', ')) + '</span>' +
+          '</div>' +
+          '<span style="background:#DC2626;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:12px;">ATENÇÃO</span>' +
+        '</div>'
+      : '<div class="mini-rel-banner ok">' +
+          '<div style="display:flex;align-items:center;gap:8px;">' +
+            '<i data-lucide="check-circle-2" style="width:18px;height:18px;color:#059669;flex-shrink:0;"></i>' +
+            '<span>TODOS OS 26 SISTEMAS EM CONFORMIDADE OPERACIONAL</span>' +
+          '</div>' +
+          '<span style="background:#059669;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:12px;">100% OK</span>' +
+        '</div>';
+
+    var refNum = parseFloat(d.refletidaW);
+    var refColor = (!isNaN(refNum) && refNum > 40) ? '#DC2626' : '#059669';
+
+    var obsCardHtml = '';
+    if (d.obs && d.obs.trim()) {
+      obsCardHtml =
+        '<div class="mini-rel-obs-card">' +
+          '<div class="mini-rel-obs-hdr">' +
+            '<span class="mini-rel-obs-title"><i data-lucide="file-text" style="width:15px;height:15px;color:#0284C7;"></i> Observações do Plantão & Intervenções</span>' +
+            '<span style="font-size:11px;color:#64748B;">Operador: <strong>' + escapeHTML(d.operador) + '</strong></span>' +
+          '</div>' +
+          '<div class="mini-rel-obs-text">' + escapeHTML(d.obs) + '</div>' +
+        '</div>';
+    }
+
+    var html =
+      '<div class="mini-rel-wrap">' +
+        // 1. Cabeçalho Executivo
+        '<div class="mini-rel-header-card">' +
+          '<div class="mini-rel-head-col"><span class="mini-rel-head-lbl">Data do Plantão</span><span class="mini-rel-head-val">📅 ' + escapeHTML(d.data || '--') + '</span></div>' +
+          '<div class="mini-rel-head-col"><span class="mini-rel-head-lbl">Turno Registrado</span><span class="mini-rel-head-val">⏱️ ' + escapeHTML(d.turno || '--') + '</span></div>' +
+          '<div class="mini-rel-head-col"><span class="mini-rel-head-lbl">Operador Técnico</span><span class="mini-rel-head-val">👤 ' + escapeHTML(d.operador || 'Operador') + '</span></div>' +
+          '<div class="mini-rel-head-col"><span class="mini-rel-head-lbl">Praça / Unidade</span><span class="mini-rel-head-val">📍 Uberlândia (MG)</span></div>' +
+        '</div>' +
+
+        // 2. Banner de Status
+        bannerHtml +
+
+        // 3. Faixa de RF & Satélites
+        '<div class="mini-rel-metrics-strip">' +
+          '<div class="mini-rel-metric-box">' +
+            '<div class="mini-rel-metric-lbl">Potência Direta</div>' +
+            '<div class="mini-rel-metric-val">' + escapeHTML(d.potenciaW) + ' W</div>' +
+            '<div class="mini-rel-metric-sub">Tx Principal UDI</div>' +
+          '</div>' +
+          '<div class="mini-rel-metric-box">' +
+            '<div class="mini-rel-metric-lbl">Potência Refletida</div>' +
+            '<div class="mini-rel-metric-val" style="color:' + refColor + ';">' + escapeHTML(d.refletidaW) + ' W</div>' +
+            '<div class="mini-rel-metric-sub">Retorno de Antena</div>' +
+          '</div>' +
+          '<div class="mini-rel-metric-box">' +
+            '<div class="mini-rel-metric-lbl">SAT Rede C/N</div>' +
+            '<div class="mini-rel-metric-val">' + escapeHTML(d.satRedeDb) + ' dB</div>' +
+            '<div class="mini-rel-metric-sub">Sinal Rede Globo</div>' +
+          '</div>' +
+          '<div class="mini-rel-metric-box">' +
+            '<div class="mini-rel-metric-lbl">SAT BH C/N</div>' +
+            '<div class="mini-rel-metric-val">' + escapeHTML(d.satBhDb) + ' dB</div>' +
+            '<div class="mini-rel-metric-sub">Belo Horizonte</div>' +
+          '</div>' +
+          '<div class="mini-rel-metric-box">' +
+            '<div class="mini-rel-metric-lbl">SAT SP C/N</div>' +
+            '<div class="mini-rel-metric-val">' + escapeHTML(d.satSpDb) + ' dB</div>' +
+            '<div class="mini-rel-metric-sub">São Paulo</div>' +
+          '</div>' +
+        '</div>' +
+
+        // 4. Observações (se houver)
+        obsCardHtml +
+
+        // 5. Quadro dos 26 Sistemas (2 Colunas)
+        '<div class="mini-rel-grid-sistemas">' +
+          '<div>' +
+            renderBlocoSecao(exibItens, '1. Centro Exibidor') +
+            renderBlocoSecao(transItens, '2. Transmissor Principal & RF') +
+            renderBlocoSecao(satItens, '3. Receptores de Satélite') +
+            renderBlocoSecao(rotasItens, '4. Rotas de Contribuição e Recepção') +
+          '</div>' +
+          '<div>' +
+            renderBlocoSecao(ctItens, '5. Central Técnica') +
+            renderBlocoSecao(cpaItens, '6. CPA — Controle de Produção e Áudio') +
+            renderBlocoSecao(satCadItens, '7. Cadeia Satélite (Uplink)') +
+            renderBlocoSecao(engItens, '8. Infraestrutura & Energia') +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    return html;
+  }
+  window.renderMiniRelatorioRondaUdiHTML = renderMiniRelatorioRondaUdiHTML;
+
+  /* ── Exportação do Formulário Individual do Turno (Layout Executivo de 2 Páginas) ── */
+  function exportarFormularioTurnoIndividual(itemOpcional) {
+    var modalDetalhes = document.getElementById('popup-detalhes-historico');
+    var isModalAberto = modalDetalhes && !modalDetalhes.hasAttribute('hidden') && modalDetalhes.style.display !== 'none';
+    var itemAlvo = itemOpcional || (isModalAberto ? window.itemDetalhesAtual : null);
+
+    var itemDet = null;
+    if (itemAlvo) {
+      itemDet = (typeof extrairDetalhesRondaItem === 'function') ? extrairDetalhesRondaItem(itemAlvo) : (itemAlvo.detalhesRonda || null);
+    }
+
+    function fmtVal(v, unit, def) {
+      if (!v && v !== 0) return def;
+      var s = String(v).trim();
+      if (!s) return def;
+      if (s.toLowerCase().endsWith(unit.toLowerCase())) return s;
+      return s + ' ' + unit;
+    }
+
+    var dataVal = itemDet ? itemDet.data : ((document.getElementById('ronda-data') && document.getElementById('ronda-data').value) || new Date().toISOString().split('T')[0]);
+    var usuario = itemDet ? itemDet.operador : getUsuarioAtual();
+    var agora = new Date();
+    var dataHora = itemDet ? (itemDet.data + (itemDet.hora ? (' às ' + itemDet.hora) : '')) : (agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }));
+
+    var turnoTxt = '06h00 - 12h00';
+    if (itemDet && itemDet.turno) {
+      turnoTxt = itemDet.turno;
+    } else {
+      var turnoEl = document.getElementById('ronda-turno');
+      if (turnoEl && turnoEl.selectedOptions && turnoEl.selectedOptions[0]) {
+        turnoTxt = turnoEl.selectedOptions[0].textContent;
+      } else {
+        var h = agora.getHours();
+        if (h >= 0 && h < 6) turnoTxt = '00h00 - 06h00 (Madrugada)';
+        else if (h >= 6 && h < 12) turnoTxt = '06h00 - 12h00 (Manhã)';
+        else if (h >= 12 && h < 18) turnoTxt = '12h00 - 18h00 (Tarde)';
+        else if (h >= 18) turnoTxt = '18h00 - 00h00 (Noite)';
+      }
+    }
+
+    var potVal = itemDet ? fmtVal(itemDet.potenciaW, 'W', '2500 W') : ((document.getElementById('ronda-pot-direta') && document.getElementById('ronda-pot-direta').value) ? fmtVal(document.getElementById('ronda-pot-direta').value, 'W', '2500 W') : '2500 W');
+    var refVal = itemDet ? fmtVal(itemDet.refletidaW, 'W', '17 W') : ((document.getElementById('ronda-pot-refletida') && document.getElementById('ronda-pot-refletida').value) ? fmtVal(document.getElementById('ronda-pot-refletida').value, 'W', '17 W') : '17 W');
+    var satRedeVal = itemDet ? fmtVal(itemDet.satRedeDb, 'dB', '13.8 dB') : ((document.getElementById('ronda-sat-rede-db') && document.getElementById('ronda-sat-rede-db').value) ? fmtVal(document.getElementById('ronda-sat-rede-db').value, 'dB', '13.8 dB') : '13.8 dB');
+    var satBhVal = itemDet ? fmtVal(itemDet.satBhDb, 'dB', '14.0 dB') : ((document.getElementById('ronda-sat-bh-db') && document.getElementById('ronda-sat-bh-db').value) ? fmtVal(document.getElementById('ronda-sat-bh-db').value, 'dB', '14.0 dB') : '14.0 dB');
+    var satSpVal = itemDet ? fmtVal(itemDet.satSpDb, 'dB', '18.2 dB') : ((document.getElementById('ronda-sat-sp-db') && document.getElementById('ronda-sat-sp-db').value) ? fmtVal(document.getElementById('ronda-sat-sp-db').value, 'dB', '18.2 dB') : '18.2 dB');
+    var obsVal = itemDet ? (itemDet.obs || 'Todos os sistemas operando dentro dos parâmetros de conformidade técnica.') : ((document.getElementById('ronda-obs') && document.getElementById('ronda-obs').value.trim()) || 'Todos os sistemas operando dentro dos parâmetros de conformidade técnica.');
+
+    var ncDetectadas = itemDet ? (itemDet.naoConformidades || []) : [];
 
     function renderTabelaForms(itens, secaoNome) {
       var h = '<div class="pdf-group-block">' +
@@ -1133,11 +1490,15 @@
         '<div class="pdf-group-body">';
 
       itens.forEach(function(item) {
-        var group = document.querySelector('.ronda-toggle-group[data-item-id="' + item.id + '"]');
-        var isNc = group && group.querySelector('.ronda-btn-pill.nc.active');
+        var isNc = false;
+        if (itemDet && itemDet.statusSistemas) {
+          isNc = (itemDet.statusSistemas[item.id] === 'nc');
+        } else {
+          var group = document.querySelector('.ronda-toggle-group[data-item-id="' + item.id + '"]');
+          isNc = group && group.querySelector('.ronda-btn-pill.nc.active');
+          if (isNc) ncDetectadas.push(item.nome);
+        }
         var isConf = !isNc;
-
-        if (isNc) ncDetectadas.push(item.nome);
 
         h += '<div class="pdf-item-row ' + (isNc ? 'row-nc' : 'row-conf') + '">' +
           '<div class="pdf-item-name">' + escapeHTML(item.nome) + '</div>' +
@@ -1273,14 +1634,29 @@
       '<div class="bottom-footer"><span>TV Integração — Tecnologia UDI</span><span>Página 2 de 2</span></div>' +
     '</div>';
 
-    htmlDoc += '<script>setTimeout(function(){ window.print(); }, 500);<\/script></body></html>';
+    htmlDoc += '<script>' +
+      'var _printed = false;' +
+      'function dispararPrint() { if (_printed) return; _printed = true; window.print(); }' +
+      'window.addEventListener("load", function(){ setTimeout(dispararPrint, 350); });' +
+      'setTimeout(dispararPrint, 800);' +
+    '<\/script></body></html>';
 
-    var printWin = window.open('', '_blank');
-    if (printWin) {
-      printWin.document.open();
-      printWin.document.write(htmlDoc);
-      printWin.document.close();
-    } else {
+    try {
+      var printWin = window.open('', '_blank');
+      if (printWin && printWin.document) {
+        printWin.document.open();
+        printWin.document.write(htmlDoc);
+        printWin.document.close();
+      } else {
+        var blob = new Blob([htmlDoc], { type: 'text/html;charset=utf-8' });
+        var blobUrl = URL.createObjectURL(blob);
+        var winBlob = window.open(blobUrl, '_blank');
+        if (!winBlob && typeof mostrarToast === 'function') {
+          mostrarToast('Pop-up Bloqueado', 'Permita pop-ups no navegador para visualizar e salvar o PDF.', 'warning');
+        }
+      }
+    } catch(eOpen) {
+      console.warn('Erro ao abrir pop-up de impressão:', eOpen);
       if (typeof mostrarToast === 'function') {
         mostrarToast('Pop-up Bloqueado', 'Permita pop-ups no navegador para visualizar e salvar o PDF.', 'warning');
       }

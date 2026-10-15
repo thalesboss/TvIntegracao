@@ -774,12 +774,28 @@ document.addEventListener('DOMContentLoaded', function () {
         try { mesclarSementeFormsSeConectado(); } catch(eForms) {}
       }
       var estaConfigurado = typeof isEstacaoConectadaTV === 'function' ? isEstacaoConectadaTV() : false;
+      var numPendentes = 0;
+      try {
+        if (typeof _pendingSync !== 'undefined' && Array.isArray(_pendingSync)) {
+          numPendentes = _pendingSync.length;
+        } else {
+          var rawPend = localStorage.getItem('tv_pending_sync_v1');
+          if (rawPend) {
+            var arrP = JSON.parse(rawPend);
+            if (Array.isArray(arrP)) numPendentes = arrP.length;
+          }
+        }
+      } catch(ePend) {}
+
       var texto = customText || (estaConfigurado ? 'Reconectando...' : 'Modo Offline');
+      if (numPendentes > 0) {
+        texto += ' (' + numPendentes + ' pendente' + (numPendentes > 1 ? 's' : '') + ')';
+      }
       if (indicator) {
         indicator.className = 'cloud-status offline';
         indicator.title = estaConfigurado
-          ? 'Desconectado da rede — reconectando automaticamente... (Clique para gerenciar)'
-          : 'Modo Offline (Clique para conectar à rede)';
+          ? ('Desconectado da rede — reconectando automaticamente...' + (numPendentes > 0 ? ' (' + numPendentes + ' itens salvos localmente aguardando envio)' : '') + ' (Clique para gerenciar)')
+          : ('Modo Offline' + (numPendentes > 0 ? ' (' + numPendentes + ' itens pendentes)' : '') + ' (Clique para conectar à rede)');
         indicator.innerHTML = '<span class="cloud-dot"></span><span class="cloud-text">' + texto + '</span>';
       }
       if (btnTopbar) {
