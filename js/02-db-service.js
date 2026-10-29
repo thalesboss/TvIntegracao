@@ -542,12 +542,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return true;
               });
               var mapHist = {};
-              remoteFiltered.forEach(function(h){
-                if (!h.detalhesRonda && h.descResolucao && typeof h.descResolucao === 'string' && h.descResolucao.startsWith('{')) {
-                  try { h.detalhesRonda = JSON.parse(h.descResolucao); } catch(e) {}
-                }
-                mapHist[h.id] = h;
-              });
+              remoteFiltered.forEach(function(h){ mapHist[h.id] = h; });
               (historicoSeedData || []).forEach(function(localH){
                 if (localH && localH.id && !mapHist[localH.id]) {
                   if (!idsNaLixeira.includes(localH.id) && localH.status !== 'lixeira') {
@@ -556,14 +551,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
               });
               historicoSeedData = remoteFiltered;
-              if (typeof mesclarSementeFormsSeConectado === 'function') {
-                try { mesclarSementeFormsSeConectado(); } catch(eForms) {}
-              }
               try {
-                var locaisCache = historicoSeedData.filter(function(h) {
-                  return h && h.id && !h.id.startsWith('rel_udi_forms_');
-                });
-                localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(locaisCache));
+                localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(historicoSeedData));
               } catch(e) {}
               window._lastHistSyncSig = historicoSeedData.map(function(h){ return h.id + '_' + (h.status || ''); }).join('|');
               if (typeof renderAll === 'function') renderAll(true);
@@ -688,7 +677,7 @@ document.addEventListener('DOMContentLoaded', function () {
   window.obterOuCriarOperadorPorNome = obterOuCriarOperadorPorNome;
 
   /* ── Gerenciador Inteligente de Reconexão com Backoff Progressivo ── */
-  var _cloudConnected = false;
+  var _cloudConnected = true;
   var _reconnectTimer = null;
   var _reconnectAttempt = 0;
   var _isReconnecting = false;
@@ -748,17 +737,12 @@ document.addEventListener('DOMContentLoaded', function () {
   function updateCloudStatus(isOnline, customText) {
     var indicator = document.getElementById('cloud-status-indicator');
     var btnTopbar = document.getElementById('btn-conectar-nuvem-topbar');
-    var estadoAnterior = _cloudConnected;
-
     if (isOnline) {
       _cloudConnected = true;
       _reconnectAttempt = 0;
       if (_reconnectTimer) {
         clearTimeout(_reconnectTimer);
         _reconnectTimer = null;
-      }
-      if (typeof mesclarSementeFormsSeConectado === 'function') {
-        try { mesclarSementeFormsSeConectado(); } catch(eForms) {}
       }
       if (indicator) {
         indicator.className = 'cloud-status online';
@@ -770,32 +754,13 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     } else {
       _cloudConnected = false;
-      if (typeof mesclarSementeFormsSeConectado === 'function') {
-        try { mesclarSementeFormsSeConectado(); } catch(eForms) {}
-      }
       var estaConfigurado = typeof isEstacaoConectadaTV === 'function' ? isEstacaoConectadaTV() : false;
-      var numPendentes = 0;
-      try {
-        if (typeof _pendingSync !== 'undefined' && Array.isArray(_pendingSync)) {
-          numPendentes = _pendingSync.length;
-        } else {
-          var rawPend = localStorage.getItem('tv_pending_sync_v1');
-          if (rawPend) {
-            var arrP = JSON.parse(rawPend);
-            if (Array.isArray(arrP)) numPendentes = arrP.length;
-          }
-        }
-      } catch(ePend) {}
-
       var texto = customText || (estaConfigurado ? 'Reconectando...' : 'Modo Offline');
-      if (numPendentes > 0) {
-        texto += ' (' + numPendentes + ' pendente' + (numPendentes > 1 ? 's' : '') + ')';
-      }
       if (indicator) {
         indicator.className = 'cloud-status offline';
         indicator.title = estaConfigurado
-          ? ('Desconectado da rede — reconectando automaticamente...' + (numPendentes > 0 ? ' (' + numPendentes + ' itens salvos localmente aguardando envio)' : '') + ' (Clique para gerenciar)')
-          : ('Modo Offline' + (numPendentes > 0 ? ' (' + numPendentes + ' itens pendentes)' : '') + ' (Clique para conectar à rede)');
+          ? 'Desconectado da rede — reconectando automaticamente... (Clique para gerenciar)'
+          : 'Modo Offline (Clique para conectar à rede)';
         indicator.innerHTML = '<span class="cloud-dot"></span><span class="cloud-text">' + texto + '</span>';
       }
       if (btnTopbar) {
@@ -804,10 +769,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (estaConfigurado) {
         iniciarReconexaoAutomatica();
       }
-    }
-
-    if (estadoAnterior !== _cloudConnected && typeof renderHistorico === 'function') {
-      try { renderHistorico(true); } catch(eRen) {}
     }
 
     try {

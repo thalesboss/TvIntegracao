@@ -1,3 +1,11 @@
+  /* Garante conexão ativa com o PostgreSQL na nuvem (Modo Offline desativado) */
+  if (typeof isEstacaoConectadaTV === 'function' && !isEstacaoConectadaTV() && typeof conectarComChaveTV === 'function') {
+    conectarComChaveTV(atob('QEludGVncmEyNjIw')).then(function() {
+      if (typeof carregarEquipamentosStore === 'function') carregarEquipamentosStore();
+      if (typeof sincronizarOrcamentoNuvem === 'function') sincronizarOrcamentoNuvem();
+      if (typeof sincronizarEquipeNuvem === 'function') sincronizarEquipeNuvem();
+    });
+  }
   /* ═══════════════════════════════════════════
      FLUXO DE INICIALIZAÇÃO E IDENTIFICAÇÃO DO OPERADOR
   ═══════════════════════════════════════════ */
@@ -11,6 +19,7 @@
   try { carregarRascunhoRecebimento(); } catch(e) {}
   try { carregarRascunhoCompra(); } catch(e) {}
   try { carregarDashboardMetricsStore(); } catch(e) {}
+  try { if (typeof carregarEquipamentosStore === 'function') carregarEquipamentosStore(); } catch(e) {}
   try { carregarOrcamentoStore(); } catch(e) {}
   try { carregarChecklistStore(); } catch(e) {}
   try { if (typeof atualizarSelectsProfissionaisCTRS === 'function') atualizarSelectsProfissionaisCTRS(); } catch(e) {}
@@ -62,37 +71,31 @@
 
   if (!savedUserName || !savedUserName.trim() || savedUserName.trim() === 'Operador') {
     abrirPopup('popup-identificacao-operador');
+    var identEmail = document.getElementById('ident-operador-email');
     var identInput = document.getElementById('ident-operador-nome');
-    if (identInput) setTimeout(function(){ identInput.focus(); }, 180);
+    setTimeout(function() {
+      if (identEmail && identEmail.offsetParent !== null) identEmail.focus();
+      else if (identInput) identInput.focus();
+    }, 180);
   } else {
     atualizarNomeOperadorUI(savedUserName.trim());
+    try {
+      var sEmail = localStorage.getItem('tv_user_email_v1');
+      var sTag   = localStorage.getItem('tv_user_tag_v1');
+      var sCargo = localStorage.getItem('tv_user_cargo_v1');
+      if (sEmail) {
+        var upEm = document.getElementById('up-email'); if (upEm) upEm.textContent = sEmail;
+        var cfEm = document.getElementById('cfg-email'); if (cfEm) cfEm.value = sEmail;
+      }
+      if (sCargo || sTag) {
+        var lblC = (sCargo || 'Operações') + (sTag ? ' [' + sTag + ']' : '');
+        var upRl = document.getElementById('up-role'); if (upRl) upRl.textContent = lblC;
+        var sRl  = document.querySelector('.s-user-role'); if (sRl) sRl.textContent = lblC;
+        var cfCg = document.getElementById('cfg-cargo'); if (cfCg) cfCg.value = lblC;
+      }
+    } catch (e) {}
     try { if (typeof obterOuCriarOperadorPorNome === 'function') obterOuCriarOperadorPorNome(savedUserName.trim()); } catch(e) {}
     abrirPopup('popup-entrada');
   }
-
-  // Atalho global de busca (Ctrl+K ou barra / fora de inputs)
-  window.addEventListener('keydown', function(e) {
-    if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
-      e.preventDefault();
-      focarBuscaGlobal();
-    } else if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target && e.target.tagName) || '')) {
-      e.preventDefault();
-      focarBuscaGlobal();
-    }
-  });
-
-  function focarBuscaGlobal() {
-    if (typeof nav === 'function') {
-      nav('historico');
-    }
-    setTimeout(function() {
-      var hSearch = document.getElementById('hist-search');
-      if (hSearch) {
-        hSearch.focus();
-        hSearch.select();
-      }
-    }, 80);
-  }
-  window.focarBuscaGlobal = focarBuscaGlobal;
 
 }); /* fim DOMContentLoaded */

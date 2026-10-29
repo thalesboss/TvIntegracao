@@ -248,6 +248,22 @@
   function salvarDashboardMetricsStore() {
     try {
       localStorage.setItem(getDashboardMetricsKey(), JSON.stringify(dashboardMetrics));
+      // Sincroniza contadores de transmissões dos equipamentos direto na tabela equipamentos do PostgreSQL
+      if (typeof catalogoEquipamentos !== 'undefined' && Array.isArray(catalogoEquipamentos) && dashboardMetrics && dashboardMetrics.equipamento) {
+        var pracaAt = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+        catalogoEquipamentos.forEach(function(eq) {
+          if (eq && eq.praca === pracaAt && dashboardMetrics.equipamento[eq.nome]) {
+            var m = dashboardMetrics.equipamento[eq.nome];
+            var mud = !eq.metricas || eq.metricas.conf !== m.conf || eq.metricas.nc !== m.nc || eq.metricas.canc !== m.canc;
+            if (mud) {
+              eq.metricas = { conf: m.conf || 0, nc: m.nc || 0, canc: m.canc || 0 };
+              if (typeof salvarEquipamentoPostgreSQL === 'function') {
+                salvarEquipamentoPostgreSQL(eq);
+              }
+            }
+          }
+        });
+      }
     } catch (e) {}
   }
 
@@ -462,15 +478,12 @@
         '</div>';
     });
 
-    // Card Adicionar Equipamento interativo com animação fluida
-    htmlCards +=
-      '<div class="dash-card dash-card-add" onclick="abrirModalNovoEquipamento()" title="Cadastrar novo equipamento nesta praça">' +
-        '<div class="dash-card-add-icon">' +
-          '<i data-lucide="plus" style="width:20px;height:20px;stroke-width:2.5;"></i>' +
-        '</div>' +
-        '<span class="dash-card-add-label">+ Adicionar Equipamento</span>' +
-        '<span class="dash-card-add-sub">Monitoramento ao vivo</span>' +
-      '</div>';
+    if (eqKeys.length === 0) {
+      htmlCards =
+        '<div style="grid-column:1/-1;text-align:center;padding:28px 16px;background:var(--surface);border:1px dashed var(--border);border-radius:var(--r-lg);color:var(--muted);font-size:12.5px;">' +
+          'Nenhum equipamento cadastrado nesta praça. Acesse a aba <strong>Equipamentos</strong> no menu lateral para cadastrar.' +
+        '</div>';
+    }
 
     grid.innerHTML = htmlCards;
     window._ultimoEqAdicionado = null;

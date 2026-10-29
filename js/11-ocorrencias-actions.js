@@ -58,14 +58,9 @@
       var html = '<option value="">Sem equipamento específico</option>';
 
       if (isUberlandia) {
-        // Em Uberlândia: estritamente os equipamentos cadastrados pela equipe local
-        if (equips.length === 0) {
-          html += '<option value="" disabled style="color:var(--muted);">Nenhum equipamento cadastrado ainda em Uberlândia</option>';
-        } else {
-          equips.forEach(function(eq) {
-            html += '<option value="' + escapeHTML(eq) + '">' + escapeHTML(eq) + '</option>';
-          });
-        }
+        equips.forEach(function(eq) {
+          html += '<option value="' + escapeHTML(eq) + '">' + escapeHTML(eq) + '</option>';
+        });
       } else {
         // Juiz de Fora: equipamentos do dashboard ou os 13 padrão de JF
         if (equips.length === 0) {
@@ -75,8 +70,20 @@
           html += '<option value="' + escapeHTML(eq) + '">' + escapeHTML(eq) + '</option>';
         });
       }
+      html += '<option value="__novo__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo Equipamento...</option>';
       sel.innerHTML = html;
-      if (curVal) sel.value = curVal;
+      if (curVal && curVal !== '__novo__') sel.value = curVal;
+
+      if (!sel._hasNovoEqListener) {
+        sel._hasNovoEqListener = true;
+        sel.addEventListener('change', function() {
+          if (this.value === '__novo__') {
+            this.value = '';
+            window._eqTriggeringSelect = this;
+            if (typeof abrirModalCadastroEquipamento === 'function') abrirModalCadastroEquipamento();
+          }
+        });
+      }
     });
   }
   window.atualizarSelectEquipamentosNovaOc = atualizarSelectEquipamentosNovaOc;

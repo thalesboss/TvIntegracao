@@ -1,4 +1,4 @@
-﻿/* ═══════════════════════════════════════════
+/* ═══════════════════════════════════════════
    POPUP — funções base globais
 ═══════════════════════════════════════════ */
 function abrirPopup(id) {
@@ -98,6 +98,8 @@ document.addEventListener('click', function(e) {
     fecharPopup(e.target.id);
   }
 });
+
+
 document.addEventListener('DOMContentLoaded', function () {
   console.log('✅ [Sistema TV] Versão 7.9 — Blindagem de Testes: Sincronização Otimizada, Anti-XSS e Cache Resiliente');
 
@@ -642,12 +644,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return true;
               });
               var mapHist = {};
-              remoteFiltered.forEach(function(h){
-                if (!h.detalhesRonda && h.descResolucao && typeof h.descResolucao === 'string' && h.descResolucao.startsWith('{')) {
-                  try { h.detalhesRonda = JSON.parse(h.descResolucao); } catch(e) {}
-                }
-                mapHist[h.id] = h;
-              });
+              remoteFiltered.forEach(function(h){ mapHist[h.id] = h; });
               (historicoSeedData || []).forEach(function(localH){
                 if (localH && localH.id && !mapHist[localH.id]) {
                   if (!idsNaLixeira.includes(localH.id) && localH.status !== 'lixeira') {
@@ -656,14 +653,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
               });
               historicoSeedData = remoteFiltered;
-              if (typeof mesclarSementeFormsSeConectado === 'function') {
-                try { mesclarSementeFormsSeConectado(); } catch(eForms) {}
-              }
               try {
-                var locaisCache = historicoSeedData.filter(function(h) {
-                  return h && h.id && !h.id.startsWith('rel_udi_forms_');
-                });
-                localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(locaisCache));
+                localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(historicoSeedData));
               } catch(e) {}
               window._lastHistSyncSig = historicoSeedData.map(function(h){ return h.id + '_' + (h.status || ''); }).join('|');
               if (typeof renderAll === 'function') renderAll(true);
@@ -788,7 +779,7 @@ document.addEventListener('DOMContentLoaded', function () {
   window.obterOuCriarOperadorPorNome = obterOuCriarOperadorPorNome;
 
   /* ── Gerenciador Inteligente de Reconexão com Backoff Progressivo ── */
-  var _cloudConnected = false;
+  var _cloudConnected = true;
   var _reconnectTimer = null;
   var _reconnectAttempt = 0;
   var _isReconnecting = false;
@@ -848,17 +839,12 @@ document.addEventListener('DOMContentLoaded', function () {
   function updateCloudStatus(isOnline, customText) {
     var indicator = document.getElementById('cloud-status-indicator');
     var btnTopbar = document.getElementById('btn-conectar-nuvem-topbar');
-    var estadoAnterior = _cloudConnected;
-
     if (isOnline) {
       _cloudConnected = true;
       _reconnectAttempt = 0;
       if (_reconnectTimer) {
         clearTimeout(_reconnectTimer);
         _reconnectTimer = null;
-      }
-      if (typeof mesclarSementeFormsSeConectado === 'function') {
-        try { mesclarSementeFormsSeConectado(); } catch(eForms) {}
       }
       if (indicator) {
         indicator.className = 'cloud-status online';
@@ -870,32 +856,13 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     } else {
       _cloudConnected = false;
-      if (typeof mesclarSementeFormsSeConectado === 'function') {
-        try { mesclarSementeFormsSeConectado(); } catch(eForms) {}
-      }
       var estaConfigurado = typeof isEstacaoConectadaTV === 'function' ? isEstacaoConectadaTV() : false;
-      var numPendentes = 0;
-      try {
-        if (typeof _pendingSync !== 'undefined' && Array.isArray(_pendingSync)) {
-          numPendentes = _pendingSync.length;
-        } else {
-          var rawPend = localStorage.getItem('tv_pending_sync_v1');
-          if (rawPend) {
-            var arrP = JSON.parse(rawPend);
-            if (Array.isArray(arrP)) numPendentes = arrP.length;
-          }
-        }
-      } catch(ePend) {}
-
       var texto = customText || (estaConfigurado ? 'Reconectando...' : 'Modo Offline');
-      if (numPendentes > 0) {
-        texto += ' (' + numPendentes + ' pendente' + (numPendentes > 1 ? 's' : '') + ')';
-      }
       if (indicator) {
         indicator.className = 'cloud-status offline';
         indicator.title = estaConfigurado
-          ? ('Desconectado da rede — reconectando automaticamente...' + (numPendentes > 0 ? ' (' + numPendentes + ' itens salvos localmente aguardando envio)' : '') + ' (Clique para gerenciar)')
-          : ('Modo Offline' + (numPendentes > 0 ? ' (' + numPendentes + ' itens pendentes)' : '') + ' (Clique para conectar à rede)');
+          ? 'Desconectado da rede — reconectando automaticamente... (Clique para gerenciar)'
+          : 'Modo Offline (Clique para conectar à rede)';
         indicator.innerHTML = '<span class="cloud-dot"></span><span class="cloud-text">' + texto + '</span>';
       }
       if (btnTopbar) {
@@ -904,10 +871,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (estaConfigurado) {
         iniciarReconexaoAutomatica();
       }
-    }
-
-    if (estadoAnterior !== _cloudConnected && typeof renderHistorico === 'function') {
-      try { renderHistorico(true); } catch(eRen) {}
     }
 
     try {
@@ -1091,6 +1054,8 @@ document.addEventListener('DOMContentLoaded', function () {
   window.getAbertas = getAbertas;
   window.getArquivadas = getArquivadas;
   window.getResolvidas = getResolvidas;
+
+
 
   /* ═══════════════════════════════════════════
      HELPERS DE RENDER
@@ -1421,6 +1386,8 @@ document.addEventListener('DOMContentLoaded', function () {
       abertasHTML +
       resolvidasHTML;
   }
+
+
   /* ═══════════════════════════════════════════
      HISTÓRICO GERAL — ESTRUTURA DE DADOS
   ═══════════════════════════════════════════ */
@@ -1435,68 +1402,13 @@ document.addEventListener('DOMContentLoaded', function () {
       if (Array.isArray(pHist) && pHist.length > 0) historicoSeedData = pHist;
     }
   } catch(e) {}
-
-  // Função auxiliar para verificar se a estação está conectada ao banco de dados Supabase
-  function isBancoConectado() {
-    return !!(window._isCloudConnected && window._isCloudConnected());
-  }
-  window.isBancoConectado = isBancoConectado;
-
-  function mesclarSementeFormsSeConectado() {
-    if (!isBancoConectado()) {
-      // Se estiver offline ou desconectado, remove dados históricos do Forms da memória ativa
-      var filtradosLocal = (historicoSeedData || []).filter(function(h) {
-        return h && h.id && !h.id.startsWith('rel_udi_forms_');
-      });
-      if (filtradosLocal.length !== (historicoSeedData || []).length) {
-        historicoSeedData = filtradosLocal;
-        window.historicoSeedData = historicoSeedData;
-      }
-      return;
-    }
-
-    // Se conectado ao banco, mescla semente histórica em memória
-    if (Array.isArray(window.historicoUdiExportForms) && window.historicoUdiExportForms.length > 0) {
-      var existIds = {};
-      (historicoSeedData || []).forEach(function(h) { if (h && h.id) existIds[h.id] = true; });
-      var novosDaSemente = window.historicoUdiExportForms.filter(function(h) { return h && h.id && !existIds[h.id]; });
-      if (novosDaSemente.length > 0) {
-        historicoSeedData = historicoSeedData.concat(novosDaSemente);
-        window.historicoSeedData = historicoSeedData;
-      }
-    }
-  }
-  window.mesclarSementeFormsSeConectado = mesclarSementeFormsSeConectado;
-
-  function garantirSementeFormsCarregada(callback) {
-    if (window.historicoUdiExportForms && window.historicoUdiExportForms.length > 0) {
-      mesclarSementeFormsSeConectado();
-      if (typeof callback === 'function') callback();
-      return;
-    }
-    var tentativas = 0;
-    var timer = setInterval(function() {
-      tentativas++;
-      if ((window.historicoUdiExportForms && window.historicoUdiExportForms.length > 0) || tentativas > 30) {
-        clearInterval(timer);
-        mesclarSementeFormsSeConectado();
-        if (typeof callback === 'function') callback();
-      }
-    }, 100);
-  }
-  window.garantirSementeFormsCarregada = garantirSementeFormsCarregada;
-
   window.historicoSeedData = historicoSeedData;
 
   function saveHistorico(list, itemAdicionado) {
     historicoSeedData = list || [];
     window.historicoSeedData = historicoSeedData;
-    // Salva no localStorage apenas novos itens criados no app (evita congelar thread com 1.490 itens históricos)
     try {
-      var locaisParaCache = historicoSeedData.filter(function(h) {
-        return h && h.id && !h.id.startsWith('rel_udi_forms_');
-      });
-      localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(locaisParaCache));
+      localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(historicoSeedData));
     } catch(e) {}
     if (typeof DBService !== 'undefined' && DBService) {
       if (itemAdicionado && typeof DBService.pushHistoricoItem === 'function') {
@@ -1511,13 +1423,10 @@ document.addEventListener('DOMContentLoaded', function () {
     var mapa = {};
     var lista = [];
     var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
-    var conectado = isBancoConectado();
 
     // 1. Itens manuais ou relatórios vindos de historicoSeedData
     (historicoSeedData || []).forEach(function(item) {
       if (item && item.id) {
-        // Se estiver desconectado do banco, NÃO exibe dados históricos exportados do Forms
-        if (!conectado && item.id.startsWith('rel_udi_forms_')) return;
         if (item.status === 'lixeira' || idsNaLixeira.includes(item.id)) return;
         if (typeof pertenceAPracaAtiva === 'function' && !pertenceAPracaAtiva(item)) return;
         mapa[item.id] = true;
@@ -1610,6 +1519,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return '<span class="tag tag-blue-soft">Registro</span>';
   }
+
+
   /* ─── Render: Dashboard Resolvidas & Power BI ─── */
   var resolvidasFiltro = 'todas';
 
@@ -1869,6 +1780,7 @@ document.addEventListener('DOMContentLoaded', function () {
     try { renderResolvidas(); } catch(e) { console.error('Erro em renderResolvidas:', e); }
     try { renderHistorico(); } catch(e) { console.error('Erro em renderHistorico:', e); }
     try { renderDashboards(); } catch(e) { console.error('Erro em renderDashboards:', e); }
+    try { if (typeof renderCatalogoEquipamentos === 'function') renderCatalogoEquipamentos(); } catch(e) { console.error('Erro em renderCatalogoEquipamentos:', e); }
     try { renderOrcamento(); } catch(e) { console.error('Erro em renderOrcamento:', e); }
     try { renderPopupEntrada(); } catch(e) { console.error('Erro em renderPopupEntrada:', e); }
     try { renderPopupLogout(); } catch(e) { console.error('Erro em renderPopupLogout:', e); }
@@ -1891,6 +1803,8 @@ document.addEventListener('DOMContentLoaded', function () {
     page.addEventListener('change', acao);
   }
   window.registrarAutosaveListener = registrarAutosaveListener;
+
+
   /* ═══════════════════════════════════════════
      POPUP ENTRADA
   /* ═══════════════════════════════════════════
@@ -1928,6 +1842,8 @@ document.addEventListener('DOMContentLoaded', function () {
     fecharPopup('popup-entrada');
 
     // Prepara e abre o popup de identificação do operador
+    var identEmail = document.getElementById('ident-operador-email');
+    if (identEmail) identEmail.value = '';
     var identInput = document.getElementById('ident-operador-nome');
     if (identInput) {
       identInput.value = '';
@@ -1937,16 +1853,18 @@ document.addEventListener('DOMContentLoaded', function () {
       chaveInput.value = '';
     }
 
+    if (typeof resetarFluxoEmailIdentificacao === 'function') {
+      resetarFluxoEmailIdentificacao();
+    }
     if (typeof atualizarUIIdentificacaoOperador === 'function') {
       atualizarUIIdentificacaoOperador();
     }
 
     abrirPopup('popup-identificacao-operador');
-    if (identInput) {
-      setTimeout(function() {
-        identInput.focus();
-      }, 150);
-    }
+    setTimeout(function() {
+      if (identEmail && identEmail.offsetParent !== null) identEmail.focus();
+      else if (identInput) identInput.focus();
+    }, 150);
   }
   window.confirmarLogout = confirmarLogout;
 
@@ -2032,6 +1950,7 @@ document.addEventListener('DOMContentLoaded', function () {
     dashboard_transmissoes: { page:'page-dashboard-ocorrencias',  title:'Dashboard Transmissões — Transmissões ao Vivo',  chip:'Transmissões em Tempo Real' },
     compras_vendas:{ page:'page-compras-vendas', title:'Solicitação de Compras',                chip:'Preencher solicitação de compra' },
     orcamento:     { page:'page-orcamento',      title: 'Orçamento Anual', chip: function() { return 'Ciclo ' + (new Date().getFullYear() + 1); } },
+    equipamentos:  { page:'page-equipamentos',   title:'Catálogo de Equipamentos & Ficha de Vida', chip:'Inventário técnico integrado ao PostgreSQL' },
     ronda:         { page:'page-ronda',          title:'Relatório Diário — Tecnologia UDI',        chip:'Ronda técnica de plantão e infraestrutura' },
     config:        { page:'page-config',         title:'Configurações',                            chip:'Perfil e preferências'      }
   };
@@ -2068,6 +1987,12 @@ document.addEventListener('DOMContentLoaded', function () {
       try {
         if (typeof renderOrcamento === 'function') renderOrcamento();
         if (typeof sincronizarOrcamentoNuvem === 'function') sincronizarOrcamentoNuvem();
+      } catch(e) {}
+    }
+    if (name === 'equipamentos') {
+      try {
+        if (typeof renderCatalogoEquipamentos === 'function') renderCatalogoEquipamentos();
+        if (typeof sincronizarEquipamentosPostgreSQL === 'function') sincronizarEquipamentosPostgreSQL();
       } catch(e) {}
     }
   }
@@ -2247,6 +2172,12 @@ document.addEventListener('DOMContentLoaded', function () {
       if (typeof window.carregarDashboardMetricsStore === 'function') {
         window.carregarDashboardMetricsStore();
       }
+      if (typeof window.sincronizarDashboardMetricsComCatalogo === 'function') {
+        window.sincronizarDashboardMetricsComCatalogo();
+      }
+      if (typeof window.renderCatalogoEquipamentos === 'function') {
+        window.renderCatalogoEquipamentos();
+      }
       if (typeof window.renderAll === 'function') {
         window.renderAll(true);
       } else {
@@ -2276,6 +2207,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.trocarPracaConfig = trocarPracaConfig;
+
+
 
   /* ═══════════════════════════════════════════
      INDEXEDDB LOCAL MEDIA CACHE (Para vídeos e fotos de qualquer tamanho)
@@ -2580,6 +2513,8 @@ document.addEventListener('DOMContentLoaded', function () {
       };
     }
   });
+
+
   /* ═══════════════════════════════════════════
      RECEBIMENTOS DE EQUIPAMENTOS
   ═══════════════════════════════════════════ */
@@ -2826,6 +2761,8 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-recebimento', salvarRascunhoRecebimento);
   }
+
+
   /* ═══════════════════════════════════════════
      REQUISIÇÃO DE COMPRAS E VENDAS
   ═══════════════════════════════════════════ */
@@ -3089,6 +3026,8 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-compras', salvarRascunhoCompra);
   }
+
+
   /* ═══════════════════════════════════════════
      ENVIO DE RELATÓRIO TV (CTRS) E GERADOR AUTOMÁTICO DE OCORRÊNCIAS
   ═══════════════════════════════════════════ */
@@ -3148,18 +3087,14 @@ document.addEventListener('DOMContentLoaded', function () {
     if (isUberlandia) {
       // Em Uberlândia: usa estritamente os equipamentos cadastrados pelos operadores de UDI
       var html = '<option value="">Selecione o equipamento...</option>';
-      if (equips.length === 0) {
-        html += '<option value="" disabled style="color:var(--muted);">Nenhum equipamento cadastrado ainda</option>';
-      } else {
-        equips.forEach(function(eq) {
-          var isSel = (eq === selectedVal) ? ' selected' : '';
-          html += '<option value="' + escapeHTML(eq) + '"' + isSel + '>' + escapeHTML(eq) + '</option>';
-        });
-      }
+      equips.forEach(function(eq) {
+        var isSel = (eq === selectedVal) ? ' selected' : '';
+        html += '<option value="' + escapeHTML(eq) + '"' + isSel + '>' + escapeHTML(eq) + '</option>';
+      });
       html += '<option value="__novo__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo Equipamento...</option>';
       return html;
     } else {
-      // Juiz de Fora: usa os equipamentos do dashboard ou fallback dos 13 de JF
+      // Juiz de Fora: usa os equipamentos do catálogo ou fallback dos 13 de JF
       if (equips.length === 0) {
         equips = ['LIVE U1', 'LIVE U2', 'LIVE U3', 'LIVE U4', 'LIVE U SMART', 'REDAÇÃO', 'KMJ', 'NET PRAÇA', 'NET PORTARIA', 'FORMATOS NET', 'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR'];
       }
@@ -3187,11 +3122,9 @@ document.addEventListener('DOMContentLoaded', function () {
         sel.addEventListener('change', function() {
           if (this.value === '__novo__') {
             this.value = '';
-            if (typeof abrirModalNovoEquipamento === 'function') {
-              abrirModalNovoEquipamento();
-            } else if (typeof abrirPopup === 'function') {
-              abrirPopup('popup-novo-equipamento');
-            }
+            window._eqTriggeringSelect = this;
+            if (typeof abrirModalCadastroEquipamento === 'function') abrirModalCadastroEquipamento();
+            else if (typeof abrirModalNovoEquipamento === 'function') abrirModalNovoEquipamento();
           }
         });
       }
@@ -3216,13 +3149,14 @@ document.addEventListener('DOMContentLoaded', function () {
       'Érica',
       'Gabriel',
       'Inácio',
+      'Kailaine',
+      'Landim',
       'Larissa',
       'Letícia Damasceno',
-      'Letícia Nary',
+      'Letícia Nery',
       'Marcus',
       'Maria',
       'Nayara',
-      'Landim',
       '- (Sem Repórter)'
     ],
     rcs: [
@@ -3236,6 +3170,48 @@ document.addEventListener('DOMContentLoaded', function () {
       '- (Sem Cinegrafista)'
     ]
   };
+
+  function normalizarNomeProfissional(nome) {
+    var n = (nome || '').trim();
+    if (n.toLowerCase() === 'letícia nary' || n.toLowerCase() === 'leticia nary') {
+      return 'Letícia Nery';
+    }
+    return n;
+  }
+
+  function ordenarListaProfissionais(lista, opSem) {
+    var semItem = null;
+    var normais = [];
+    var vistos = {};
+    (lista || []).forEach(function(it) {
+      var nome = normalizarNomeProfissional(typeof it === 'string' ? it : (it.nome || it.titulo || ''));
+      if (!nome) return;
+      if (nome.indexOf('- (Sem ') === 0) {
+        semItem = opSem || nome;
+        return;
+      }
+      var chave = nome.toLowerCase();
+      if (!vistos[chave]) {
+        vistos[chave] = true;
+        if (typeof it === 'object' && it !== null) {
+          it.nome = nome;
+          if (it.titulo) it.titulo = nome;
+          normais.push(it);
+        } else {
+          normais.push(nome);
+        }
+      }
+    });
+    normais.sort(function(a, b) {
+      var na = (typeof a === 'string' ? a : (a.nome || a.titulo || '')).toLowerCase();
+      var nb = (typeof b === 'string' ? b : (b.nome || b.titulo || '')).toLowerCase();
+      return na.localeCompare(nb, 'pt-BR');
+    });
+    if (semItem || opSem) {
+      normais.push(semItem || opSem);
+    }
+    return normais;
+  }
 
   function normalizarPracaEquipe(praca) {
     var p = (praca || '').toLowerCase();
@@ -3275,40 +3251,16 @@ document.addEventListener('DOMContentLoaded', function () {
             var jfRep = filtrarValidos(parsed['Juiz de Fora'].reporteres);
             var jfRC  = filtrarValidos(parsed['Juiz de Fora'].rcs);
 
-            var repMapNomes = {};
-            var repFinal = [];
-            EQUIPE_PADRAO_JF.reporteres.forEach(function(nom) {
-              repMapNomes[nom.toLowerCase()] = true;
-              repFinal.push(nom);
-            });
-            jfRep.forEach(function(it) {
-              var n = typeof it === 'string' ? it : (it.nome || it.titulo || '');
-              if (n && !repMapNomes[n.toLowerCase()]) {
-                repMapNomes[n.toLowerCase()] = true;
-                repFinal.push(typeof it === 'object' ? (it.nome || it.titulo) : it);
-              }
-            });
-            padrao['Juiz de Fora'].reporteres = repFinal;
+            var repCombined = EQUIPE_PADRAO_JF.reporteres.concat(jfRep);
+            padrao['Juiz de Fora'].reporteres = ordenarListaProfissionais(repCombined, '- (Sem Repórter)');
 
-            var rcMapNomes = {};
-            var rcFinal = [];
-            EQUIPE_PADRAO_JF.rcs.forEach(function(nom) {
-              rcMapNomes[nom.toLowerCase()] = true;
-              rcFinal.push(nom);
-            });
-            jfRC.forEach(function(it) {
-              var n = typeof it === 'string' ? it : (it.nome || it.titulo || '');
-              if (n && !rcMapNomes[n.toLowerCase()]) {
-                rcMapNomes[n.toLowerCase()] = true;
-                rcFinal.push(typeof it === 'object' ? (it.nome || it.titulo) : it);
-              }
-            });
-            padrao['Juiz de Fora'].rcs = rcFinal;
+            var rcCombined = EQUIPE_PADRAO_JF.rcs.concat(jfRC);
+            padrao['Juiz de Fora'].rcs = ordenarListaProfissionais(rcCombined, '- (Sem Cinegrafista)');
           }
 
           if (parsed['Uberlândia']) {
-            padrao['Uberlândia'].reporteres = filtrarValidos(parsed['Uberlândia'].reporteres);
-            padrao['Uberlândia'].rcs = filtrarValidos(parsed['Uberlândia'].rcs);
+            padrao['Uberlândia'].reporteres = ordenarListaProfissionais(filtrarValidos(parsed['Uberlândia'].reporteres), '- (Sem Repórter)');
+            padrao['Uberlândia'].rcs = ordenarListaProfissionais(filtrarValidos(parsed['Uberlândia'].rcs), '- (Sem Cinegrafista)');
           }
           return padrao;
         }
@@ -3721,19 +3673,29 @@ document.addEventListener('DOMContentLoaded', function () {
   window.adicionarTransmissaoCTRS = adicionarTransmissaoCTRS;
   window.removerTransmissaoCTRS   = removerTransmissaoCTRS;
 
+  function obterDataHojeISO() {
+    var d = new Date();
+    var ano = d.getFullYear();
+    var mes = String(d.getMonth() + 1).padStart(2, '0');
+    var dia = String(d.getDate()).padStart(2, '0');
+    return ano + '-' + mes + '-' + dia;
+  }
+
   function carregarRascunhoRelatorioTV() {
     try {
+      var dataEl  = document.getElementById('ctrs-data');
+      var pracaEl = document.getElementById('ctrs-praca');
+      var tipoEl  = document.getElementById('ctrs-tipo');
+      var obsEl   = document.getElementById('ctrs-obs');
+      var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+      if (pracaEl) pracaEl.value = pracaAtiva;
+      if (dataEl)  dataEl.value = obterDataHojeISO();
+
       var raw = localStorage.getItem('tv_ctrs_rascunho_v2');
       if (!raw) return;
       var dados = JSON.parse(raw);
       if (!dados) return;
 
-      var dataEl  = document.getElementById('ctrs-data');
-      var pracaEl = document.getElementById('ctrs-praca');
-      var tipoEl  = document.getElementById('ctrs-tipo');
-      var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
-      if (pracaEl) pracaEl.value = pracaAtiva;
-      if (dataEl && dados.data)   dataEl.value = dados.data;
       if (tipoEl && dados.tipo)   tipoEl.value = dados.tipo;
       if (obsEl && dados.obs)     obsEl.value = dados.obs;
 
@@ -3774,7 +3736,48 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  function gerarHTMLTemplateCTRS() {
+  var LOGO_TV_INTEGRACAO_B64 = 'data:image/png;base64,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';
+  var EMAIL_RELAY_CIPHER_HEX = '90d7f09b56eea3cd099a98646d1576fb4cc53ef067f078b353286e09af3bc966dbaba361ffb80be843ca1dc3aede807b762f4d959b78643bbf3277e160f3f0016d1368183e4d9056e91c30939ba1a76c5655a044a74d51df70e27cc51cf2915f95f2d92b557ac03aec0b589163afebeb5ae7';
+
+  function obterEndpointRelayEmailCTRS() {
+    var k = atob('QEludGVncmEyNjIw') + '_CTRS_Relay_Key_2026';
+    var hex = EMAIL_RELAY_CIPHER_HEX;
+    var out = '';
+    for (var idx = 0; idx < hex.length / 2; idx++) {
+      var h = (2166136261 ^ idx) >>> 0;
+      for (var j = 0; j < k.length; j++) {
+        h = (h ^ k.charCodeAt(j)) >>> 0;
+        h = Math.imul(h, 16777619) >>> 0;
+      }
+      h = (h ^ (h >>> 13)) >>> 0;
+      h = Math.imul(h, 0x5bd1e995) >>> 0;
+      var mask = ((h ^ (h >>> 15)) >>> 0) & 0xFF;
+      var byteVal = parseInt(hex.substr(idx * 2, 2), 16);
+      out += String.fromCharCode(byteVal ^ mask);
+    }
+    return out;
+  }
+
+  function getEstiloCelulaQualidadeEmail(codigo) {
+    if (codigo === 'NC') {
+      return {
+        bg: '#FEF2F2',
+        texto: '<strong style="color:#B91C1C;">&#9888; NC</strong> <span style="color:#991B1B; font-size:11px;">(N&atilde;o Conforme)</span>'
+      };
+    }
+    if (codigo === 'NA') {
+      return {
+        bg: '#F8FAFC',
+        texto: '<strong style="color:#475569;">NA</strong> <span style="color:#64748B; font-size:11px;">(N&atilde;o se Aplica)</span>'
+      };
+    }
+    return {
+      bg: '#F0FDF4',
+      texto: '<strong style="color:#15803D;">&#10003; C</strong> <span style="color:#166534; font-size:11px;">(Conforme)</span>'
+    };
+  }
+
+  function gerarHTMLTemplateCTRS(destinatarioInformado) {
     var dataEl  = document.getElementById('ctrs-data');
     var pracaEl = document.getElementById('ctrs-praca');
     var tipoEl  = document.getElementById('ctrs-tipo');
@@ -3807,11 +3810,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     var obs = obsEl ? obsEl.value.trim() : '';
+    var operadorAtual = (typeof getUsuarioAtual === 'function' && getUsuarioAtual()) ? getUsuarioAtual() : 'Equipe Operacional';
 
     var formatTimeVal = function(val) {
-      if (!val) return '';
+      if (!val) return '&mdash;';
       var parts = val.trim().split(':');
-      if (parts.length === 2) return parts[0] + 'h' + parts[1] + '\'';
+      if (parts.length === 2) return parts[0] + 'h' + parts[1] + "\'";
       return val.trim();
     };
 
@@ -3832,8 +3836,10 @@ document.addEventListener('DOMContentLoaded', function () {
       var inputs = acc.querySelectorAll('input, select, textarea');
       var cidade    = (inputs[0] && inputs[0].value.trim()) || '';
       var infra     = (inputs[1] && inputs[1].value.trim()) || '';
-      var horaAbert = formatTimeVal(inputs[2] ? inputs[2].value : '');
-      var horaFim   = formatTimeVal(inputs[3] ? inputs[3].value : '');
+      var rawHoraAb = inputs[2] ? inputs[2].value.trim() : '';
+      var rawHoraFm = inputs[3] ? inputs[3].value.trim() : '';
+      var horaAbert = formatTimeVal(rawHoraAb);
+      var horaFim   = formatTimeVal(rawHoraFm);
       var rawAudio  = inputs[4] ? inputs[4].value.trim() : '';
       var rawVideo  = inputs[5] ? inputs[5].value.trim() : '';
       var reporter  = (inputs[6] && inputs[6].value.trim()) || '';
@@ -3842,9 +3848,7 @@ document.addEventListener('DOMContentLoaded', function () {
       var rawStatus = inputs[9] ? inputs[9].value.trim() : '';
       var falhas    = (inputs[10] && inputs[10].value.trim()) || '';
 
-      // Transmissão 1 é sempre incluída (pois pelo menos 1 transmissão sempre existirá).
-      // Transmissões 2 em diante só são incluídas no relatório se tiverem sido preenchidas/utilizadas.
-      var foiUtilizada = !!(cidade || infra || horaAbert || horaFim || reporter || entradas || rc || falhas || rawAudio || rawVideo || rawStatus);
+      var foiUtilizada = !!(cidade || infra || rawHoraAb || rawHoraFm || reporter || entradas || rc || falhas || rawAudio || rawVideo || rawStatus);
       if (idx > 0 && !foiUtilizada) {
         return;
       }
@@ -3852,68 +3856,83 @@ document.addEventListener('DOMContentLoaded', function () {
       totalTransmissoesIncluidas++;
       var num = totalTransmissoesIncluidas;
 
-      // Se a transmissão foi utilizada, padroniza como 'C' (Conforme) caso o usuário não tenha alterado
       var audioQ   = formatQualidade(rawAudio, 'C');
       var videoQ   = formatQualidade(rawVideo, 'C');
       var statusTx = formatQualidade(rawStatus, 'C');
 
-      var reporterCompleto = reporter;
+      var estAudio  = getEstiloCelulaQualidadeEmail(audioQ);
+      var estVideo  = getEstiloCelulaQualidadeEmail(videoQ);
+      var estStatus = getEstiloCelulaQualidadeEmail(statusTx);
+
+      var temNaoConformidade = (audioQ === 'NC' || videoQ === 'NC' || statusTx === 'NC');
+
+      var reporterCompleto = reporter || '&mdash;';
       if (entradas) {
-        reporterCompleto += (reporterCompleto ? ' (' + entradas + ')' : entradas);
+        reporterCompleto = (reporter ? reporter + ' <strong style="color:#15803D;">(' + entradas + ')</strong>' : '<strong style="color:#15803D;">(' + entradas + ')</strong>');
       }
 
       var cidadeCompleta = cidade;
       if (cidadeCompleta && !cidadeCompleta.toLowerCase().includes(praca.toLowerCase())) {
-        cidadeCompleta = praca + ' - ' + cidadeCompleta;
+        cidadeCompleta = praca + ' &ndash; ' + cidadeCompleta;
       } else if (!cidadeCompleta) {
         cidadeCompleta = praca;
       }
 
+      var headerBg    = temNaoConformidade ? '#FEE2E2' : '#DBEAFE';
+      var headerColor = temNaoConformidade ? '#991B1B' : '#1E3A8A';
+      var borderTable = temNaoConformidade ? '#FCA5A5' : '#94A3B8';
+
+      var obsCellBg = (falhas && !falhas.toLowerCase().includes('sem ocorrência') && !falhas.toLowerCase().includes('sem ocorrencia'))
+        ? (temNaoConformidade ? '#FEF2F2' : '#FFFBEB')
+        : '#FFFFFF';
+
       transmissoesHTML +=
-        '<table cellpadding="4" cellspacing="0" style="width:100%; max-width:820px; border-collapse:collapse; font-family:Arial, Helvetica, sans-serif; font-size:11.5px; color:#000000; border:1.5px solid #000000; margin-bottom:12px;">' +
-          '<tr style="background-color:#F2F2F2;">' +
-            '<td colspan="3" style="text-align:center; font-weight:bold; font-size:12px; border:1px solid #000000; padding:4px;">' +
-              'Informações da Transmissão ao Vivo ' + num +
+        '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, Helvetica, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid ' + borderTable + '; margin-bottom:12px;">' +
+          '<tr bgcolor="' + headerBg + '" style="background-color:' + headerBg + ';">' +
+            '<td colspan="3" bgcolor="' + headerBg + '" style="background-color:' + headerBg + '; text-align:center; font-weight:bold; font-size:12.5px; color:' + headerColor + '; border:1px solid ' + borderTable + '; padding:6px 10px;">' +
+              'Informa&ccedil;&otilde;es da Transmiss&atilde;o ao Vivo ' + num +
+              (temNaoConformidade ? ' &mdash; ATEN&Ccedil;&Atilde;O: N&Atilde;O CONFORMIDADE' : '') +
+            '</td>' +
+          '</tr>' +
+          '<tr bgcolor="#F8FAFC" style="background-color:#F8FAFC;">' +
+            '<td colspan="3" bgcolor="#F8FAFC" style="background-color:#F8FAFC; border:1px solid #94A3B8; padding:6px 10px;">' +
+              '<strong>Cidade:</strong> <strong style="color:#0F2C59;">' + cidadeCompleta + '</strong>' +
             '</td>' +
           '</tr>' +
           '<tr>' +
-            '<td colspan="3" style="border:1px solid #000000; padding:4px 8px;">' +
-              '<strong>Cidade:</strong> ' + cidadeCompleta +
+            '<td bgcolor="#FFFFFF" style="width:44%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+              '<strong>Infraestrutura de Transmiss&atilde;o Utilizada:</strong> <strong style="color:#1E3A8A;">' + (infra || '&mdash;') + '</strong>' +
+            '</td>' +
+            '<td bgcolor="#FFFFFF" style="width:28%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+              '<strong>Hora Abertura Sinal:</strong> <strong>' + horaAbert + '</strong>' +
+            '</td>' +
+            '<td bgcolor="' + estAudio.bg + '" style="width:28%; background-color:' + estAudio.bg + '; border:1px solid #94A3B8; padding:6px 10px;">' +
+              '<strong>Qualidade &Aacute;udio:</strong> ' + estAudio.texto +
             '</td>' +
           '</tr>' +
           '<tr>' +
-            '<td style="width:45%; border:1px solid #000000; padding:4px 8px;">' +
-              '<strong>Infraestrutura de Transmissão Utilizada:</strong> ' + infra +
+            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+              '<strong>Rep&oacute;rter:</strong> ' + reporterCompleto +
             '</td>' +
-            '<td style="width:33%; border:1px solid #000000; padding:4px 8px;">' +
-              '<strong>Hora Abertura Sinal:</strong> ' + horaAbert +
+            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+              '<strong>Hora final (Teste OK):</strong> <strong>' + horaFim + '</strong>' +
             '</td>' +
-            '<td style="width:22%; border:1px solid #000000; padding:4px 8px;">' +
-              '<strong>Qualidade Áudio:</strong> ' + audioQ +
-            '</td>' +
-          '</tr>' +
-          '<tr>' +
-            '<td style="border:1px solid #000000; padding:4px 8px;">' +
-              '<strong>Repórter:</strong> ' + reporterCompleto +
-            '</td>' +
-            '<td style="border:1px solid #000000; padding:4px 8px;">' +
-              '<strong>Hora final (Teste OK):</strong> ' + horaFim +
-            '</td>' +
-            '<td style="border:1px solid #000000; padding:4px 8px;">' +
-              '<strong>Qualidade Vídeo:</strong> ' + videoQ +
+            '<td bgcolor="' + estVideo.bg + '" style="background-color:' + estVideo.bg + '; border:1px solid #94A3B8; padding:6px 10px;">' +
+              '<strong>Qualidade V&iacute;deo:</strong> ' + estVideo.texto +
             '</td>' +
           '</tr>' +
           '<tr>' +
-            '<td style="border:1px solid #000000; padding:4px 8px;">' +
-              '<strong>Repórter Cinematográfico:</strong> ' + rc +
+            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+              '<strong>Rep&oacute;rter Cinematogr&aacute;fico:</strong> ' + (rc || '&mdash;') +
             '</td>' +
-            '<td colspan="2" style="border:1px solid #000000; padding:4px 8px;">' +
-              '<strong>Status da Transmissão:</strong> ' + statusTx +
+            '<td colspan="2" bgcolor="' + estStatus.bg + '" style="background-color:' + estStatus.bg + '; border:1px solid #94A3B8; padding:6px 10px;">' +
+              '<strong>Status da Transmiss&atilde;o:</strong> ' + estStatus.texto +
             '</td>' +
           '</tr>' +
           '<tr>' +
-            '<td colspan="3" style="border:1px solid #000000; padding:4px 8px; min-height:30px;">' +
-              '<strong>Observações:</strong> ' + (falhas || '') +
+            '<td colspan="3" bgcolor="' + obsCellBg + '" style="background-color:' + obsCellBg + '; border:1px solid #94A3B8; padding:6px 10px;">' +
+              '<strong>Falhas ocorridas:</strong> ' +
+              (falhas ? '<span style="color:#0F172A;">' + falhas + '</span>' : '<span style="color:#64748B;">Sem ocorr&ecirc;ncias.</span>') +
             '</td>' +
           '</tr>' +
         '</table>';
@@ -3921,66 +3940,56 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var isUberlandia = praca.indexOf('Uber') !== -1;
 
+    var renderCelulaJornal = function(sigla, marcado) {
+      if (marcado) {
+        return '<td bgcolor="#DBEAFE" style="width:25%; border:1px solid #94A3B8; background-color:#DBEAFE; color:#1E3A8A; padding:6px 10px; text-align:center; font-weight:bold;">' +
+          '&#10004; <strong>' + sigla + ': X</strong>' +
+        '</td>';
+      }
+      return '<td bgcolor="#FFFFFF" style="width:25%; border:1px solid #94A3B8; background-color:#FFFFFF; color:#64748B; padding:6px 10px; text-align:center;">' +
+        '<strong>' + sigla + ':</strong> &ndash;' +
+      '</td>';
+    };
+
+    var destLimpo = (destinatarioInformado || '').trim();
+
     var htmlCompleto =
-      '<div style="font-family:Arial, Helvetica, sans-serif; color:#000000; max-width:820px; margin:0 auto; padding:10px;">' +
-        '<!-- CABEÇALHO OFICIAL ENGENHARIA -->' +
-        '<table cellpadding="4" cellspacing="0" style="width:100%; max-width:820px; border-collapse:collapse; font-family:Arial, sans-serif; font-size:11.5px; color:#000000; border:1.5px solid #000000; margin-bottom:12px;">' +
+      '<div style="font-family:Segoe UI, Arial, Helvetica, sans-serif; color:#0F172A; max-width:800px; margin:0 auto; padding:10px; background-color:#FFFFFF;">' +
+        '<!-- CABEÇALHO OFICIAL ENGENHARIA (COM LOGO E SEM DATAS DE REVISÃO) -->' +
+        '<table cellpadding="6" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid #475569; margin-bottom:12px;">' +
           '<tr>' +
-            '<td rowspan="2" style="width:160px; text-align:center; vertical-align:middle; border:1px solid #000000; padding:8px;">' +
-              '<div style="font-weight:900; font-size:15px; letter-spacing:1px; color:#000000;">TV INTEGRAÇÃO</div>' +
+            '<td bgcolor="#FFFFFF" style="width:150px; background-color:#FFFFFF; text-align:center; vertical-align:middle; border:1px solid #94A3B8; padding:8px;">' +
+              '<img src="' + LOGO_TV_INTEGRACAO_B64 + '" width="105" height="73" alt="TV Integração" style="display:block; margin:0 auto; width:105px; height:73px; border:0;" />' +
             '</td>' +
-            '<td style="text-align:center; vertical-align:middle; border:1px solid #000000; padding:6px; font-weight:bold; font-size:12px; line-height:1.4;">' +
-              'Processo Engenharia 1.1.1 – P02 – F02<br/>' +
-              (isUberlandia ? 'Relatório de Transmissão ao Vivo' : 'Checklist de Transmissão ao Vivo CTRS') +
-            '</td>' +
-            '<td style="width:140px; text-align:center; vertical-align:middle; border:1px solid #000000; padding:6px; font-size:11px;">' +
-              'Formulário<br/>' +
-              '<strong>Página: 1/1</strong>' +
-            '</td>' +
-          '</tr>' +
-          '<tr>' +
-            '<td style="border:1px solid #000000; padding:4px 8px; font-size:10.5px;">' +
-              '<table style="width:100%; border-collapse:collapse;">' +
-                '<tr>' +
-                  '<td style="text-align:left; border:none; padding:0;">Data Emissão Inicial: 11/08/2011</td>' +
-                  '<td style="text-align:right; border:none; padding:0;">Data Revisão: 01/04/2016</td>' +
-                '</tr>' +
-              '</table>' +
-            '</td>' +
-            '<td style="text-align:center; border:1px solid #000000; padding:4px 8px; font-size:10.5px;">' +
-              'Número Revisão: 02' +
+            '<td bgcolor="#F8FAFC" style="background-color:#F8FAFC; text-align:center; vertical-align:middle; border:1px solid #94A3B8; padding:10px 14px; line-height:1.45;">' +
+              '<div style="font-size:11px; color:#475569; font-weight:bold; text-transform:uppercase; letter-spacing:0.4px;">Processo Engenharia 1.1.1 &ndash; P02 &ndash; F02</div>' +
+              '<div style="font-size:15px; font-weight:bold; color:#0F2C59; margin-top:4px;">' +
+                (isUberlandia ? 'Relat&oacute;rio de Transmiss&atilde;o ao Vivo' : 'Checklist de Transmiss&atilde;o ao Vivo CTRS') +
+              '</div>' +
             '</td>' +
           '</tr>' +
         '</table>' +
 
         '<!-- INFORMAÇÕES PRINCIPAIS -->' +
-        '<table cellpadding="4" cellspacing="0" style="width:100%; max-width:820px; border-collapse:collapse; font-family:Arial, sans-serif; font-size:11.5px; color:#000000; border:1.5px solid #000000; margin-bottom:12px;">' +
-          '<tr style="background-color:#F2F2F2;">' +
-            '<td colspan="4" style="text-align:center; font-weight:bold; border:1px solid #000000; padding:4px;">' +
-              'Informações Principais' +
+        '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid #94A3B8; margin-bottom:12px;">' +
+          '<tr bgcolor="#DBEAFE" style="background-color:#DBEAFE;">' +
+            '<td colspan="4" bgcolor="#DBEAFE" style="background-color:#DBEAFE; text-align:center; font-weight:bold; color:#1E3A8A; border:1px solid #94A3B8; padding:6px 10px; font-size:12.5px;">' +
+              'Informa&ccedil;&otilde;es Principais' +
             '</td>' +
           '</tr>' +
           '<tr>' +
-            '<td colspan="2" style="width:50%; border:1px solid #000000; padding:5px 8px;">' +
-              '<strong>Data:</strong> ' + dataFmt +
+            '<td colspan="2" bgcolor="#FFFFFF" style="width:50%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+              '<strong>Data:</strong> <strong style="color:#0F2C59;">' + dataFmt + '</strong>' +
             '</td>' +
-            '<td colspan="2" style="width:50%; border:1px solid #000000; padding:5px 8px;">' +
-              '<strong>Praça:</strong> ' + praca +
+            '<td colspan="2" bgcolor="#FFFFFF" style="width:50%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+              '<strong>Pra&ccedil;a:</strong> <strong style="color:#0F2C59;">' + praca + '</strong>' +
             '</td>' +
           '</tr>' +
-          '<tr style="text-align:center;">' +
-            '<td style="width:25%; border:1px solid #000000; padding:5px 8px;">' +
-              '<strong>IN:</strong> ' + (inCheck || '&nbsp;') +
-            '</td>' +
-            '<td style="width:25%; border:1px solid #000000; padding:5px 8px;">' +
-              '<strong>MG1:</strong> ' + (mg1Check || '&nbsp;') +
-            '</td>' +
-            '<td style="width:25%; border:1px solid #000000; padding:5px 8px;">' +
-              '<strong>MG2:</strong> ' + (mg2Check || '&nbsp;') +
-            '</td>' +
-            '<td style="width:25%; border:1px solid #000000; padding:5px 8px;">' +
-              '<strong>OUTROS:</strong> ' + (outrosCheck || '&nbsp;') +
-            '</td>' +
+          '<tr>' +
+            renderCelulaJornal('IN', !!inCheck) +
+            renderCelulaJornal('MG1', !!mg1Check) +
+            renderCelulaJornal('MG2', !!mg2Check) +
+            renderCelulaJornal('OUTROS', !!outrosCheck) +
           '</tr>' +
         '</table>' +
 
@@ -3988,32 +3997,36 @@ document.addEventListener('DOMContentLoaded', function () {
         transmissoesHTML +
 
         '<!-- LEGENDA -->' +
-        '<table cellpadding="4" cellspacing="0" style="width:100%; max-width:820px; border-collapse:collapse; font-family:Arial, sans-serif; font-size:11px; color:#000000; border:1.5px solid #000000; margin-bottom:12px;">' +
-          '<tr style="background-color:#F2F2F2;">' +
-            '<td colspan="3" style="text-align:center; font-weight:bold; border:1px solid #000000; padding:4px;">' +
+        '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:11.5px; color:#0F172A; border:1.5px solid #94A3B8; margin-bottom:12px;">' +
+          '<tr bgcolor="#F1F5F9" style="background-color:#F1F5F9;">' +
+            '<td colspan="3" bgcolor="#F1F5F9" style="background-color:#F1F5F9; text-align:center; font-weight:bold; color:#1E293B; border:1px solid #94A3B8; padding:5px;">' +
               'Legenda' +
             '</td>' +
           '</tr>' +
           '<tr style="text-align:center;">' +
-            '<td style="width:33.3%; border:1px solid #000000; padding:5px 8px;">C – Conforme</td>' +
-            '<td style="width:33.3%; border:1px solid #000000; padding:5px 8px;">NC – Não Conforme</td>' +
-            '<td style="width:33.3%; border:1px solid #000000; padding:5px 8px;">NA – Não se Aplica</td>' +
+            '<td bgcolor="#F0FDF4" style="width:33.3%; background-color:#F0FDF4; border:1px solid #94A3B8; padding:6px 8px; color:#15803D; font-weight:bold;">&#10003; C &ndash; Conforme</td>' +
+            '<td bgcolor="#FEF2F2" style="width:33.3%; background-color:#FEF2F2; border:1px solid #94A3B8; padding:6px 8px; color:#B91C1C; font-weight:bold;">&#9888; NC &ndash; N&atilde;o Conforme</td>' +
+            '<td bgcolor="#F8FAFC" style="width:33.3%; background-color:#F8FAFC; border:1px solid #94A3B8; padding:6px 8px; color:#475569; font-weight:bold;">NA &ndash; N&atilde;o se Aplica</td>' +
           '</tr>' +
         '</table>' +
 
         '<!-- OBSERVAÇÕES -->' +
-        '<table cellpadding="4" cellspacing="0" style="width:100%; max-width:820px; border-collapse:collapse; font-family:Arial, sans-serif; font-size:11.5px; color:#000000; border:1.5px solid #000000; margin-bottom:12px;">' +
-          '<tr style="background-color:#F2F2F2;">' +
-            '<td style="text-align:center; font-weight:bold; border:1px solid #000000; padding:4px;">' +
-              'Observações' +
+        '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid #94A3B8; margin-bottom:8px;">' +
+          '<tr bgcolor="#F1F5F9" style="background-color:#F1F5F9;">' +
+            '<td bgcolor="#F1F5F9" style="background-color:#F1F5F9; text-align:center; font-weight:bold; color:#1E293B; border:1px solid #94A3B8; padding:5px;">' +
+              'Observa&ccedil;&otilde;es' +
             '</td>' +
           '</tr>' +
           '<tr>' +
-            '<td style="border:1px solid #000000; padding:8px; min-height:40px; white-space:pre-wrap;">' +
-              (obs || 'Sem observações.') +
+            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 10px; min-height:36px; white-space:pre-wrap;">' +
+              (obs ? obs : '<span style="color:#64748B;">Sem observa&ccedil;&otilde;es.</span>') +
             '</td>' +
           '</tr>' +
         '</table>' +
+
+        '<div style="font-size:10.5px; color:#64748B; text-align:right; padding-top:2px;">' +
+          'Emitido por: <strong>' + operadorAtual + '</strong>' + (destLimpo ? (' &bull; Destinat&aacute;rio: <strong>' + destLimpo + '</strong>') : '') +
+        '</div>' +
       '</div>';
 
     return {
@@ -4031,7 +4044,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       var dataEl = document.getElementById('ctrs-data');
       var obsEl  = document.getElementById('ctrs-obs');
-      if (dataEl) dataEl.value = new Date().toISOString().split('T')[0];
+      if (dataEl) dataEl.value = obterDataHojeISO();
       if (obsEl)  obsEl.value = '';
 
       var accBlocks = document.querySelectorAll('#page-ctrs .acc-block');
@@ -4043,7 +4056,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
       });
 
-      // Se houver mais de 4 blocos dinâmicos, remove os excedentes
       var container = document.getElementById('ctrs-acc-container');
       if (container) {
         var blocks = container.querySelectorAll('.acc-block');
@@ -4066,9 +4078,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var html = resultado.html;
     var assunto = resultado.assunto;
 
-    var assuntoEl = document.getElementById('ctrs-outlook-assunto');
-    if (assuntoEl) {
-      assuntoEl.textContent = assunto;
+    var previewEl = document.getElementById('ctrs-outlook-preview');
+    if (previewEl) {
+      previewEl.innerHTML = html;
     }
 
     var pracaAtual = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
@@ -4076,8 +4088,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var descEl = document.getElementById('popup-ctrs-outlook-desc');
     if (descEl) {
       descEl.innerHTML = isUdi
-        ? 'O relatório oficial de transmissão foi formatado e copiado para a área de transferência. Basta abrir o Outlook e pressionar <strong>CTRL + V</strong> para colar a tabela pronta.'
-        : 'O checklist oficial do CTRS foi formatado e copiado para a área de transferência. Basta abrir o Outlook e pressionar <strong>CTRL + V</strong> para colar a tabela pronta.';
+        ? 'O relatório oficial de transmissão foi formatado e copiado. Confira o visual abaixo ou cole no Outlook com <strong>CTRL + V</strong>.'
+        : 'O checklist oficial do CTRS foi formatado e copiado. Confira o visual abaixo ou cole no Outlook com <strong>CTRL + V</strong>.';
     }
 
     var copiado = false;
@@ -4091,10 +4103,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         navigator.clipboard.write([item]).then(function() {
           abrirPopup('popup-ctrs-outlook');
-          limparFormularioCTRS(false);
         }).catch(function(err) {
           fallbackCopiarAreaTransferencia(html);
-          limparFormularioCTRS(false);
         });
         copiado = true;
       } catch (e) {
@@ -4104,7 +4114,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (!copiado) {
       fallbackCopiarAreaTransferencia(html);
-      limparFormularioCTRS(false);
     }
   }
   window.copiarRelatorioOutlook = copiarRelatorioOutlook;
@@ -4133,7 +4142,63 @@ document.addEventListener('DOMContentLoaded', function () {
     document.body.removeChild(container);
   }
 
+  /* Abre o Pop-up de Envio do Relatório CTRS (com campo de destinatário vazio + prévia do relatório embaixo) */
   function enviarRelatorioTV() {
+    var resultado = gerarHTMLTemplateCTRS('');
+    var destInput = document.getElementById('enviar-ctrs-destinatario');
+    var assuntoInput = document.getElementById('enviar-ctrs-assunto');
+    var previewEl = document.getElementById('enviar-ctrs-preview');
+
+    if (destInput) {
+      destInput.value = '';
+      destInput.oninput = function() {
+        if (previewEl) {
+          previewEl.innerHTML = gerarHTMLTemplateCTRS(destInput.value).html;
+        }
+      };
+    }
+    if (assuntoInput) {
+      assuntoInput.value = resultado.assunto;
+    }
+    if (previewEl) {
+      previewEl.innerHTML = resultado.html;
+    }
+
+    abrirPopup('popup-enviar-relatorio-ctrs');
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+      try { lucide.createIcons(); } catch (e) {}
+    }
+    setTimeout(function() {
+      if (destInput) destInput.focus();
+    }, 80);
+  }
+  window.enviarRelatorioTV = enviarRelatorioTV;
+
+  /* Confirma o envio do relatório para o destinatário digitado, dispara via HTTP sem abrir pop-up do Windows, salva no banco e limpa o formulário */
+  async function confirmarEnvioRelatorioCTRS() {
+    var destInput = document.getElementById('enviar-ctrs-destinatario');
+    var assuntoInput = document.getElementById('enviar-ctrs-assunto');
+    var destinatario = destInput ? destInput.value.trim() : '';
+
+    if (!destinatario || destinatario.indexOf('@') === -1) {
+      alert('Por favor, informe um e-mail de destinatário válido antes de enviar o relatório.');
+      if (destInput) destInput.focus();
+      return;
+    }
+
+    var resultado = gerarHTMLTemplateCTRS(destinatario);
+    var assuntoFinal = (assuntoInput && assuntoInput.value.trim()) ? assuntoInput.value.trim() : resultado.assunto;
+    var htmlFinal = resultado.html;
+
+    /* Copia silenciosamente o relatório formatado para a área de transferência sem abrir nenhum pop-up */
+    if (navigator.clipboard && window.ClipboardItem) {
+      try {
+        var blobHtml = new Blob([htmlFinal], { type: 'text/html' });
+        var blobText = new Blob([assuntoFinal + '\n\n' + htmlFinal.replace(/<[^>]+>/g, ' ')], { type: 'text/plain' });
+        navigator.clipboard.write([new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })]).catch(function() {});
+      } catch (e) {}
+    }
+
     var nowStr = formatDataHoraLocal();
     var pracaEl = document.getElementById('ctrs-praca');
     var tipoEl  = document.getElementById('ctrs-tipo');
@@ -4142,6 +4207,25 @@ document.addEventListener('DOMContentLoaded', function () {
     var praca = pracaEl ? pracaEl.value : 'Juiz de Fora';
     var tipo  = tipoEl ? tipoEl.value : 'INTEGRAÇÃO NOTÍCIA';
     var obs   = obsEl ? obsEl.value.trim() : '';
+
+    /* Dispara o e-mail HTML completo em segundo plano via Relay Criptografado (Google Apps Script) */
+    var relayUrl = obterEndpointRelayEmailCTRS();
+    try {
+      fetch(relayUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify({
+          to: destinatario,
+          subject: assuntoFinal,
+          html: htmlFinal,
+          senderName: getUsuarioAtual()
+        })
+      }).catch(function(err) {
+        console.warn('Aviso no disparo de e-mail CTRS:', err);
+      });
+    } catch (e) {}
 
     /* Coleta falhas registradas nas seções sanfonadas */
     var falhasEncontradas = [];
@@ -4198,41 +4282,38 @@ document.addEventListener('DOMContentLoaded', function () {
       local:         praca,
       dataCriacao:   nowStr,
       criadoPor:     getUsuarioAtual(),
-      descCriacao:   'Relatório TV registrado. ' + (falhasEncontradas.length > 0 ? (falhasEncontradas.length + ' falha(s) identificada(s) e convertida(s) em ocorrência(s).') : 'Sem falhas registradas.'),
+      descCriacao:   'Relatório enviado para ' + destinatario + '. ' + (falhasEncontradas.length > 0 ? (falhasEncontradas.length + ' falha(s) identificada(s) e convertida(s) em ocorrência(s).') : 'Sem falhas registradas.'),
       status:        'Concluído',
       dataResolucao: nowStr,
       resolvidoPor:  getUsuarioAtual(),
-      descResolucao: 'Relatório processado e sincronizado com a base de dados da emissora.',
+      descResolucao: 'Relatório processado, enviado para ' + destinatario + ' e sincronizado com a base de dados.',
       praca:         praca
     };
 
     historicoSeedData = [novoHist].concat(historicoSeedData);
     saveHistorico(historicoSeedData, novoHist);
 
-    // Limpa o rascunho e o formulário do CTRS para a próxima transmissão
+    fecharPopup('popup-enviar-relatorio-ctrs');
     limparFormularioCTRS(false);
-
     renderAll();
-
-    var avisoEnvio = '\n\n💡 Nota: O envio automático direto por e-mail ainda não está disponível atualmente e será liberado em breve!\nPara enviar o relatório agora aos destinatários, utilize o botão "Copiar para o Outlook" e cole direto na sua mensagem de e-mail.';
 
     if (novasOcorrenciasCriadas > 0) {
       if (typeof adicionarNotificacao === 'function') {
-        adicionarNotificacao('Ocorrência Criada do Relatório', novasOcorrenciasCriadas + ' falha(s) do relatório convertida(s) em Ocorrência Ativa no Dashboard!', 'warning');
+        adicionarNotificacao('Relatório Enviado (Ocorrência Criada)', 'Relatório enviado para ' + destinatario + ' e ' + novasOcorrenciasCriadas + ' ocorrência(s) gerada(s) no Dashboard.', 'warning');
       }
-      alert('Relatório TV registrado no sistema!\n\n⚠️ Foi identificada falha e ' + novasOcorrenciasCriadas + ' nova Ocorrência foi gerada AUTOMATICAMENTE no Dashboard!' + avisoEnvio);
     } else {
       if (typeof adicionarNotificacao === 'function') {
-        adicionarNotificacao('Relatório TV Salvo', 'Relatório processado e registrado com sucesso.', 'success');
+        adicionarNotificacao('Relatório TV Enviado', 'Relatório enviado para ' + destinatario + ' e registrado no Histórico.', 'success');
       }
-      alert('Relatório registrado com sucesso no Histórico!' + avisoEnvio);
     }
   }
-  window.enviarRelatorioTV = enviarRelatorioTV;
+  window.confirmarEnvioRelatorioCTRS = confirmarEnvioRelatorioCTRS;
 
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-ctrs', salvarRascunhoRelatorioTV);
   }
+
+
   /* ═══════════════════════════════════════════
      CHECKLIST DIÁRIO & MONITORAMENTO DE ROTINAS OPERACIONAIS — SUPABASE
   ═══════════════════════════════════════════ */
@@ -5298,6 +5379,8 @@ document.addEventListener('DOMContentLoaded', function () {
     verificarRecorrenciasChecklist();
   });
 
+
+
 /* ═══════════════════════════════════════════
    RELATÓRIO DIÁRIO — TECNOLOGIA UDI (RONDA TÉCNICA)
    Módulo exclusivo da praça de Uberlândia para acompanhamento de
@@ -5507,9 +5590,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var satBhDb   = document.getElementById('ronda-sat-bh-db');
     var satSpDb   = document.getElementById('ronda-sat-sp-db');
 
-    var turnoEl = document.getElementById('ronda-turno');
-    var turnoVal = turnoEl ? turnoEl.value : '06h-12h';
-
     var dataVal = (dataEl && dataEl.value) ? dataEl.value : (new Date().toISOString().split('T')[0]);
     var obsVal  = obsEl ? obsEl.value.trim() : '';
     var potVal  = potEl ? potEl.value.trim() : '';
@@ -5562,7 +5642,6 @@ document.addEventListener('DOMContentLoaded', function () {
       detalhesRonda: {
         data: dataVal,
         operador: usuario,
-        turno: turnoVal,
         tempoSessao: (typeof getTempoLogadoStr === 'function') ? getTempoLogadoStr() : '',
         potenciaW: potVal,
         refletidaW: refVal,
@@ -5689,35 +5768,15 @@ document.addEventListener('DOMContentLoaded', function () {
         });
       }
       verificarNaoConformidadesRonda();
-      verificarRefletidaRonda();
     } catch(e) {}
   }
   window.carregarRascunhoRonda = carregarRascunhoRonda;
-
-  function verificarRefletidaRonda() {
-    var inp = document.getElementById('ronda-pot-refletida');
-    var alerta = document.getElementById('ronda-refletida-alerta');
-    if (!inp || !alerta) return;
-    var val = parseFloat(inp.value);
-    if (!isNaN(val) && val > 40) {
-      alerta.style.display = 'flex';
-      if (typeof lucide !== 'undefined') lucide.createIcons();
-    } else {
-      alerta.style.display = 'none';
-    }
-  }
-  window.verificarRefletidaRonda = verificarRefletidaRonda;
 
   // Registrar listeners de input para autosave nos campos numéricos
   document.addEventListener('DOMContentLoaded', function () {
     var container = document.getElementById('page-ronda');
     if (container) {
-      container.addEventListener('input', function(e) {
-        salvarRascunhoRondaDebounced();
-        if (e.target && e.target.id === 'ronda-pot-refletida') {
-          verificarRefletidaRonda();
-        }
-      });
+      container.addEventListener('input', salvarRascunhoRondaDebounced);
     }
   });
 
@@ -5725,31 +5784,11 @@ document.addEventListener('DOMContentLoaded', function () {
      VISÃO GERAL ANALÍTICA & MÉTRICAS COM GRÁFICOS (ESTILO FORMS)
   ═══════════════════════════════════════════════════════════ */
 
-  function calcularMetricasRondaUdi(filtroPeriodo) {
-    var periodo = filtroPeriodo || window.rondaVisaoGeralFiltro || 'todos';
-    var conectado = (typeof isBancoConectado === 'function' ? isBancoConectado() : false);
+  function calcularMetricasRondaUdi() {
     var relatorios = [];
     if (Array.isArray(window.historicoSeedData)) {
       relatorios = window.historicoSeedData.filter(function(h) {
-        if (!h) return false;
-        if (!conectado && h.id && h.id.startsWith('rel_udi_forms_')) return false;
-        return (h.subtipo === 'Tecnologia UDI' || (h.detalhesRonda && h.praca === 'Uberlândia'));
-      });
-    }
-
-    // Filtro analítico de período
-    if (periodo && periodo !== 'todos') {
-      var mesAtualStr = '2026-10';
-      relatorios = relatorios.filter(function(r) {
-        var d = r.detalhesRonda;
-        var dataR = (d && d.data) || (r.dataCriacao ? r.dataCriacao.split(' ')[0] : '');
-        if (!dataR) return false;
-
-        if (periodo === 'mes_atual') return dataR.startsWith(mesAtualStr);
-        if (periodo === 'ano_2026')  return dataR.startsWith('2026');
-        if (periodo === 'ano_2025')  return dataR.startsWith('2025');
-        if (periodo === 'ano_2024')  return dataR.startsWith('2024');
-        return true;
+        return h && (h.subtipo === 'Tecnologia UDI' || (h.detalhesRonda && h.praca === 'Uberlândia'));
       });
     }
 
@@ -5777,11 +5816,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var satSpVals = [];
 
     relatorios.forEach(function(r) {
-      var d = r.detalhesRonda;
-      if (!d && r.descResolucao && typeof r.descResolucao === 'string' && r.descResolucao.startsWith('{')) {
-        try { d = JSON.parse(r.descResolucao); r.detalhesRonda = d; } catch(e) {}
-      }
-      d = d || {};
+      var d = r.detalhesRonda || {};
 
       var dataR = d.data || (r.dataCriacao ? r.dataCriacao.split(' ')[0] : '');
       if (dataR && datasRecentes.indexOf(dataR) === -1) {
@@ -5867,27 +5902,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var satBhMedia = calcMedia(satBhVals);
     var satSpMedia = calcMedia(satSpVals);
 
-    function parseDateToTime(str) {
-      if (!str) return 0;
-      if (str.indexOf('-') !== -1) {
-        return new Date(str).getTime() || 0;
-      }
-      if (str.indexOf('/') !== -1) {
-        var parts = str.split('/');
-        if (parts.length === 3) {
-          return new Date(parts[2] + '-' + parts[1] + '-' + parts[0]).getTime() || 0;
-        }
-      }
-      return 0;
-    }
-
-    datasRecentes.sort(function(a, b) {
-      var tA = parseDateToTime(a);
-      var tB = parseDateToTime(b);
-      if (tA && tB) return tB - tA;
-      return (b > a ? 1 : (b < a ? -1 : 0));
-    });
-
     return {
       total: totalGeral,
       tempoMedio: totalGeral > 0 ? '12:00' : '--',
@@ -5895,7 +5909,7 @@ document.addEventListener('DOMContentLoaded', function () {
       turnos: turnos,
       statusMap: statusMap,
       datasRecentes: datasRecentes.slice(0, 5),
-      naoConformidades: naoConformidades.slice(-6).reverse(),
+      naoConformidades: naoConformidades.slice(0, 6),
       potenciaMedia: potMedia !== null ? (Math.round(potMedia) + ' W') : '-- W',
       potenciasRecentes: potencias.slice(-3).reverse().map(function(v){ return String(v); }),
       refletidaMedia: refMedia !== null ? (Math.round(refMedia) + ' W') : '-- W',
@@ -5948,14 +5962,13 @@ document.addEventListener('DOMContentLoaded', function () {
       '</svg>';
   }
 
-  function gerarLinhasBarrasConformidade(itens, statusStats, customClass) {
-    var wrapperClass = customClass ? ('vg-bar-list ' + customClass) : 'vg-bar-list';
-    var html = '<div class="' + wrapperClass + '">';
+  function gerarLinhasBarrasConformidade(itens, statusStats) {
+    var html = '<div class="vg-bar-list">';
     itens.forEach(function(item) {
       var stat = statusStats[item.id] || { conf: 0, nc: 0, total: 0 };
       var pctC = stat.total > 0 ? stat.conf.toFixed(1) : '0';
       var pctNC = stat.total > 0 ? stat.nc.toFixed(1) : '0';
-      var labelMeta = stat.total > 0 ? (pctC + '% Conforme') : '--';
+      var labelMeta = stat.total > 0 ? (pctC + '% C') : '--';
       html += '<div class="vg-bar-row">' +
         '<div class="vg-bar-name" title="' + escapeHTML(item.nome) + '">' + escapeHTML(item.nome) + '</div>' +
         '<div class="vg-bar-track">' +
@@ -5971,14 +5984,11 @@ document.addEventListener('DOMContentLoaded', function () {
     return html;
   }
 
-  function abrirVisaoGeralRondaUdi(filtro) {
+  function abrirVisaoGeralRondaUdi() {
     var contEl = document.getElementById('popup-visao-geral-ronda-content');
     if (!contEl) return;
 
-    var filtroAtivo = filtro || window.rondaVisaoGeralFiltro || 'todos';
-    window.rondaVisaoGeralFiltro = filtroAtivo;
-
-    var m = calcularMetricasRondaUdi(filtroAtivo);
+    var m = calcularMetricasRondaUdi();
 
     // Filtra itens por seção
     var exibItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'exibidor'; });
@@ -5994,33 +6004,6 @@ document.addEventListener('DOMContentLoaded', function () {
     m.turnos.forEach(function(t){ totalTurnos += t.count; });
 
     var html = '';
-
-    // Barra de Filtro de Período
-    var periodos = [
-      { id: 'todos', label: 'Todo o Histórico' },
-      { id: 'ano_2026', label: 'Ano 2026' },
-      { id: 'mes_atual', label: 'Mês Atual (Out/26)' },
-      { id: 'ano_2025', label: 'Ano 2025' },
-      { id: 'ano_2024', label: 'Ano 2024' }
-    ];
-
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;padding:10px 14px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;">' +
-      '<div style="font-size:12.5px;font-weight:700;color:#334155;display:flex;align-items:center;gap:6px;">' +
-        '<i data-lucide="filter" style="width:15px;height:15px;color:#0F4C81;"></i> Filtrar Análise:' +
-      '</div>' +
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
-        periodos.map(function(p) {
-          var isActive = (p.id === filtroAtivo);
-          var bg = isActive ? '#0F4C81' : '#FFFFFF';
-          var color = isActive ? '#FFFFFF' : '#475569';
-          var border = isActive ? '#0F4C81' : '#CBD5E1';
-          return '<button type="button" onclick="abrirVisaoGeralRondaUdi(\'' + p.id + '\')" ' +
-            'style="padding:5px 12px;font-size:11.5px;font-weight:600;border-radius:6px;border:1px solid ' + border + ';background:' + bg + ';color:' + color + ';cursor:pointer;transition:all 0.15s ease;">' +
-            p.label +
-          '</button>';
-        }).join('') +
-      '</div>' +
-    '</div>';
 
     // 1. CARDS DO TOPO
     html += '<div class="vg-top-cards">' +
@@ -6203,16 +6186,9 @@ document.addEventListener('DOMContentLoaded', function () {
   window.abrirVisaoGeralRondaUdi = abrirVisaoGeralRondaUdi;
   window.calcularMetricasRondaUdi = calcularMetricasRondaUdi;
 
-  /* ── Exportação com Gráficos e Visão Geral (Impressão / PDF Profissional) ── */
+  /* ── Exportação Idêntica ao Microsoft Forms (Impressão / PDF) ── */
   function exportarVisaoGeralFormsPdf() {
-    var filtro = window.rondaVisaoGeralFiltro || 'todos';
-    var labelPeriodo = 'Todo o Histórico';
-    if (filtro === 'mes_atual') labelPeriodo = 'Mês Atual (Outubro/2026)';
-    else if (filtro === 'ano_2026') labelPeriodo = 'Ano 2026';
-    else if (filtro === 'ano_2025') labelPeriodo = 'Ano 2025';
-    else if (filtro === 'ano_2024') labelPeriodo = 'Ano 2024';
-
-    var m = calcularMetricasRondaUdi(filtro);
+    var m = calcularMetricasRondaUdi();
     var exibItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'exibidor'; });
     var transItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'transmissor'; });
     var satItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'satelite'; });
@@ -6225,269 +6201,237 @@ document.addEventListener('DOMContentLoaded', function () {
     var totalTurnos = 0;
     m.turnos.forEach(function(t){ totalTurnos += t.count; });
 
-    var agora = new Date();
-    var dataHoraEmissao = agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+    var dataHoraEmissao = new Date().toLocaleDateString('pt-BR') + ', ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
 
-    function renderTabelaConformidadePdf(itens, title, secaoTag) {
-      var h = '<div class="pdf-card">' +
-        '<div class="pdf-card-header">' +
-          '<div class="pdf-card-title">' + title + '</div>' +
-          (secaoTag ? ('<span class="pdf-tag">' + secaoTag + '</span>') : '') +
-        '</div>' +
-        '<div class="pdf-legend-bar">' +
-          '<span><span class="dot-c"></span> CONFORME</span>' +
-          '<span><span class="dot-nc"></span> NÃO CONFORME</span>' +
-        '</div>' +
-        '<div class="pdf-bar-list">';
-
-      itens.forEach(function(item) {
-        var stat = m.statusMap[item.id] || { conf: 0, nc: 0, total: 0 };
-        var pctC = stat.total > 0 ? stat.conf.toFixed(1) : '100.0';
-        var pctNC = stat.total > 0 ? stat.nc.toFixed(1) : '0.0';
-        var is100 = parseFloat(pctC) >= 99.9;
-
-        h += '<div class="pdf-bar-row">' +
-          '<div class="pdf-bar-name" title="' + escapeHTML(item.nome) + '">' + escapeHTML(item.nome) + '</div>' +
-          '<div class="pdf-bar-track">' +
-            '<div class="pdf-bar-fill-c" style="width:' + pctC + '%;"></div>' +
-            '<div class="pdf-bar-fill-nc" style="width:' + pctNC + '%;"></div>' +
-          '</div>' +
-          '<div class="pdf-bar-meta ' + (is100 ? 'meta-ok' : 'meta-nc') + '">' +
-            pctC + '% C' +
-          '</div>' +
-        '</div>';
-      });
-
-      h += '</div></div>';
-      return h;
-    }
-
-    var htmlDoc = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>RELATÓRIO DIÁRIO — TECNOLOGIA UDI (VISÃO GERAL)</title>' +
+    var htmlDoc = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</title>' +
       '<style>' +
-      '@page { size: A4 portrait; margin: 12mm 14mm 14mm 14mm; }' +
-      '* { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
-      'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #0F172A; margin: 0; padding: 0; background: #fff; font-size: 11px; line-height: 1.4; }' +
-      '.no-print { position: fixed; top: 14px; right: 20px; z-index: 9999; display: flex; gap: 10px; background: rgba(255,255,255,0.92); padding: 8px 12px; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.12); backdrop-filter: blur(4px); border: 1px solid #E2E8F0; }' +
-      '.btn-print { padding: 9px 18px; background: #0284C7; color: #fff; font-weight: 700; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }' +
-      '.btn-close { padding: 9px 14px; background: #64748B; color: #fff; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }' +
+      '@page { size: A4 portrait; margin: 10mm 15mm; }' +
+      'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #1E293B; margin: 0; padding: 10px; background: #fff; font-size: 11px; }' +
+      '.page-header-top { display: flex; justify-content: space-between; font-size: 10px; color: #64748B; margin-bottom: 25px; border-bottom: 1px solid #CBD5E1; padding-bottom: 6px; }' +
+      '.page-footer-bot { display: flex; justify-content: space-between; font-size: 9px; color: #94A3B8; margin-top: 30px; border-top: 1px solid #E2E8F0; padding-top: 6px; }' +
+      '.page-break { page-break-after: always; break-after: page; }' +
+      '.main-title { font-size: 20px; font-weight: 700; color: #0F172A; margin: 0 0 16px 0; }' +
+      '.badge-ativo { font-size: 11px; font-weight: 700; color: #15803D; background: #DCFCE7; padding: 2px 8px; border-radius: 10px; vertical-align: middle; margin-left: 8px; }' +
+      '.stat-grid { display: flex; gap: 15px; margin-bottom: 25px; }' +
+      '.stat-box { flex: 1; border: 1px solid #CBD5E1; border-radius: 8px; padding: 12px 16px; background: #fff; }' +
+      '.stat-num { font-size: 26px; font-weight: 800; color: #0F172A; margin-top: 4px; }' +
+      '.stat-lbl { font-size: 11px; font-weight: 600; color: #64748B; }' +
+      '.q-block { margin-bottom: 24px; }' +
+      '.q-title { font-size: 12px; font-weight: 700; color: #1E293B; margin-bottom: 10px; text-transform: uppercase; }' +
+      '.legend { font-size: 10px; font-weight: 700; margin-bottom: 10px; display: flex; gap: 14px; }' +
+      '.dot-c { width: 8px; height: 8px; border-radius: 50%; background: #E06A3B; display: inline-block; margin-right: 4px; }' +
+      '.dot-nc { width: 8px; height: 8px; border-radius: 50%; background: #3B82F6; display: inline-block; margin-right: 4px; }' +
+      '.bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }' +
+      '.bar-name { width: 140px; font-size: 10.5px; font-weight: 600; color: #475569; text-transform: uppercase; }' +
+      '.bar-track { flex: 1; height: 14px; background: #F1F5F9; border-radius: 2px; overflow: hidden; display: flex; }' +
+      '.bar-fill-c { background: #E06A3B; height: 100%; }' +
+      '.bar-fill-nc { background: #3B82F6; height: 100%; }' +
+      '.bar-meta { width: 65px; font-size: 10.5px; font-weight: 700; color: #64748B; text-align: right; }' +
+      '.recent-box { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 10px; font-size: 10.5px; line-height: 1.5; color: #334155; }' +
+      '.no-print { position: fixed; top: 12px; right: 20px; z-index: 9999; display: flex; gap: 10px; }' +
       '@media print { .no-print { display: none !important; } }' +
-      '.page-sheet { min-height: 270mm; max-height: 273mm; display: flex; flex-direction: column; justify-content: space-between; page-break-after: always; break-after: page; }' +
-      '.page-sheet:last-child { page-break-after: auto; break-after: auto; }' +
-      '.top-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 2px solid #0284C7; margin-bottom: 12px; font-size: 10px; color: #475569; }' +
-      '.top-header-title { font-weight: 800; font-size: 12px; color: #0369A1; letter-spacing: 0.03em; }' +
-      '.bottom-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 6px; border-top: 1px solid #E2E8F0; font-size: 9px; color: #94A3B8; margin-top: auto; }' +
-      '.pdf-main-title { font-size: 17px; font-weight: 800; color: #0F172A; margin: 0 0 10px 0; display: flex; align-items: center; justify-content: space-between; }' +
-      '.badge-ativo { font-size: 10px; font-weight: 700; color: #047857; background: #D1FAE5; padding: 2px 8px; border-radius: 12px; border: 1px solid #A7F3D0; }' +
-      '.kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }' +
-      '.kpi-card { border: 1px solid #CBD5E1; border-radius: 6px; padding: 10px 12px; background: #F8FAFC; border-left: 4px solid #0284C7; }' +
-      '.kpi-lbl { font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.04em; }' +
-      '.kpi-val { font-size: 22px; font-weight: 800; color: #0F172A; margin-top: 2px; }' +
-      '.kpi-sub { font-size: 9.5px; color: #64748B; margin-top: 2px; }' +
-      '.pdf-card { border: 1px solid #CBD5E1; border-radius: 6px; background: #fff; padding: 10px 12px; margin-bottom: 10px; }' +
-      '.pdf-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #E2E8F0; }' +
-      '.pdf-card-title { font-size: 11px; font-weight: 800; color: #0F172A; text-transform: uppercase; letter-spacing: 0.02em; }' +
-      '.pdf-tag { font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; }' +
-      '.pdf-legend-bar { font-size: 9.5px; font-weight: 700; margin-bottom: 8px; display: flex; gap: 14px; color: #475569; }' +
-      '.dot-c { width: 8px; height: 8px; border-radius: 50%; background: #059669; display: inline-block; margin-right: 4px; vertical-align: middle; }' +
-      '.dot-nc { width: 8px; height: 8px; border-radius: 50%; background: #DC2626; display: inline-block; margin-right: 4px; vertical-align: middle; }' +
-      '.pdf-bar-list { display: flex; flex-direction: column; gap: 6px; }' +
-      '.pdf-bar-row { display: flex; align-items: center; gap: 8px; font-size: 10px; }' +
-      '.pdf-bar-name { width: 170px; font-weight: 600; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }' +
-      '.pdf-bar-track { flex: 1; height: 12px; background: #F1F5F9; border-radius: 3px; overflow: hidden; display: flex; border: 1px solid #E2E8F0; }' +
-      '.pdf-bar-fill-c { background: #059669; height: 100%; }' +
-      '.pdf-bar-fill-nc { background: #DC2626; height: 100%; }' +
-      '.pdf-bar-meta { width: 75px; text-align: right; font-weight: 700; font-size: 9.5px; font-variant-numeric: tabular-nums; }' +
-      '.meta-ok { color: #047857; }' +
-      '.meta-nc { color: #DC2626; }' +
-      '.split-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }' +
-      '.split-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }' +
-      '.metric-box { border: 1px solid #CBD5E1; border-radius: 6px; padding: 9px 11px; background: #F8FAFC; text-align: center; }' +
-      '.metric-val { font-size: 20px; font-weight: 800; color: #0369A1; margin: 2px 0; }' +
-      '.metric-lbl { font-size: 9.5px; font-weight: 700; color: #475569; text-transform: uppercase; }' +
-      '.recent-list-box { border: 1px solid #E2E8F0; border-radius: 5px; padding: 7px 9px; background: #fff; font-size: 9.5px; line-height: 1.45; color: #334155; }' +
-      '.nc-item-box { background: #FEF2F2; border-left: 3px solid #DC2626; padding: 6px 9px; border-radius: 4px; font-size: 9.5px; line-height: 1.4; color: #7F1D1D; margin-bottom: 5px; }' +
       '</style></head><body>' +
       '<div class="no-print">' +
-        '<button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar em PDF</button>' +
-        '<button class="btn-close" onclick="window.close()">Fechar</button>' +
+        '<button onclick="window.print()" style="padding:9px 18px;background:#2563EB;color:#fff;font-weight:700;border:none;border-radius:6px;cursor:pointer;box-shadow:0 3px 10px rgba(37,99,235,0.3);font-size:13px;">🖨️ Imprimir / Salvar em PDF</button>' +
+        '<button onclick="window.close()" style="padding:9px 14px;background:#64748B;color:#fff;font-weight:600;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Fechar</button>' +
       '</div>';
 
-    // ═══════════════════════════════════════════
-    // PÁGINA 1: Identificação, Turnos, Centro Exibidor & Transmissor
-    // ═══════════════════════════════════════════
-    var datasRecentesHtml = m.datasRecentes.length > 0
-      ? m.datasRecentes.map(function(d){ return '• ' + d; }).join('<br/>')
+    // ═══ PÁGINA 1 ═══
+    var datasPdfHtml = m.datasRecentes.length > 0
+      ? m.datasRecentes.map(function(d){ return '&quot;' + d + '&quot;'; }).join('<br/>')
       : 'Nenhuma resposta registrada ainda';
 
-    htmlDoc += '<div class="page-sheet">' +
-      '<div class="top-header">' +
-        '<span class="top-header-title">REDE INTEGRAÇÃO — ENGENHARIA & TECNOLOGIA</span>' +
-        '<span>Emissão: ' + dataHoraEmissao + '</span>' +
+    htmlDoc += '<div class="page-container">' +
+      '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
+      '<div class="main-title">Visão Geral das Respostas <span class="badge-ativo">Ativo</span></div>' +
+      '<div class="stat-grid">' +
+        '<div class="stat-box"><div class="stat-lbl">Respostas</div><div class="stat-num">' + m.total.toLocaleString('pt-BR') + '</div></div>' +
+        '<div class="stat-box"><div class="stat-lbl">Tempo Médio</div><div class="stat-num">' + m.tempoMedio + '</div></div>' +
+        '<div class="stat-box"><div class="stat-lbl">Duração</div><div class="stat-num">' + m.duracao + '</div></div>' +
       '</div>' +
-      '<div class="pdf-main-title">' +
-        '<span>Painel Analítico — Tecnologia UDI</span>' +
-        '<span class="badge-ativo">' + escapeHTML(labelPeriodo) + '</span>' +
-      '</div>' +
-      '<div class="kpi-grid">' +
-        '<div class="kpi-card">' +
-          '<div class="kpi-lbl">Total de Relatórios</div>' +
-          '<div class="kpi-val">' + m.total.toLocaleString('pt-BR') + '</div>' +
-          '<div class="kpi-sub">Plantões técnicos consolidados</div>' +
-        '</div>' +
-        '<div class="kpi-card">' +
-          '<div class="kpi-lbl">Tempo Médio de Ronda</div>' +
-          '<div class="kpi-val">' + m.tempoMedio + '</div>' +
-          '<div class="kpi-sub">Duração média de verificação</div>' +
-        '</div>' +
-        '<div class="kpi-card">' +
-          '<div class="kpi-lbl">Período Ativo</div>' +
-          '<div class="kpi-val">' + m.duracao + '</div>' +
-          '<div class="kpi-sub">Histórico operacional contínuo</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="split-2col">' +
-        '<div class="pdf-card" style="margin-bottom:0;">' +
-          '<div class="pdf-card-header"><div class="pdf-card-title">1. Respostas Mais Recentes</div></div>' +
-          '<div class="recent-list-box">' + datasRecentesHtml + '</div>' +
-        '</div>' +
-        '<div class="pdf-card" style="margin-bottom:0;">' +
-          '<div class="pdf-card-header"><div class="pdf-card-title">2. Distribuição por Turno</div></div>' +
-          '<div style="display:flex;align-items:center;gap:12px;justify-content:center;">' +
-            gerarDonutSvg(m.turnos, totalTurnos) +
-            '<div style="display:flex;flex-direction:column;gap:4px;font-size:10px;">' +
-              m.turnos.map(function(t){
-                var pct = totalTurnos > 0 ? Math.round((t.count/totalTurnos)*100) : 0;
-                return '<div style="display:flex;align-items:center;gap:6px;">' +
-                  '<span style="width:8px;height:8px;border-radius:50%;background:' + t.cor + ';display:inline-block;"></span>' +
-                  '<span style="width:95px;font-weight:600;color:#334155;">' + t.label + '</span>' +
-                  '<strong style="color:#0F172A;">' + t.count + ' (' + pct + '%)</strong>' +
-                '</div>';
-              }).join('') +
-            '</div>' +
+      '<div class="q-block">' +
+        '<div class="q-title">1. DIA TRABALHADO:</div>' +
+        '<div style="display:flex;justify-content:space-between;gap:20px;">' +
+          '<div><div style="font-size:24px;font-weight:800;">' + m.total.toLocaleString('pt-BR') + '</div><div style="color:#64748B;">Respostas</div></div>' +
+          '<div style="flex:1;"><div style="font-size:10px;font-weight:700;color:#64748B;margin-bottom:4px;">Respostas Mais Recentes</div>' +
+            '<div class="recent-box">' + datasPdfHtml + '</div>' +
           '</div>' +
         '</div>' +
       '</div>' +
-      renderTabelaConformidadePdf(exibItens, '3. Centro Exibidor (Sistemas & Monitoração)', 'Automação & Exibição') +
-      renderTabelaConformidadePdf(transItens, '4. Transmissor Principal & RF', 'Parâmetros de RF') +
-      '<div class="bottom-footer"><span>TV Integração — Tecnologia UDI</span><span>Página 1 de 4</span></div>' +
+      '<div class="q-block">' +
+        '<div class="q-title">2. TURNO TRABALHADO:</div>' +
+        '<div style="display:flex;align-items:center;justify-content:space-around;gap:20px;">' +
+          gerarDonutSvg(m.turnos, totalTurnos) +
+          '<div style="display:flex;flex-direction:column;gap:6px;">' +
+            m.turnos.map(function(t){
+              var pct = totalTurnos > 0 ? Math.round((t.count/totalTurnos)*100) : 0;
+              return '<div style="display:flex;align-items:center;gap:8px;font-size:11px;">' +
+                '<span style="width:9px;height:9px;border-radius:50%;background:' + t.cor + ';display:inline-block;"></span>' +
+                '<span style="width:110px;font-weight:600;">' + t.label + '</span>' +
+                '<strong style="color:#475569;">' + t.count + ' (' + pct + '%)</strong>' +
+              '</div>';
+            }).join('') +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="q-block">' +
+        '<div class="q-title">3. CENTRO EXIBIDOR:</div>' +
+        '<div class="legend"><span><span class="dot-c"></span> CONFORME</span><span><span class="dot-nc"></span> NÃO CONFORME</span></div>' +
+        gerarLinhasBarrasConformidade(exibItens, m.statusMap) +
+      '</div>' +
+      '<div class="q-block">' +
+        '<div class="q-title">4. TRANSMISSOR:</div>' +
+        '<div class="legend"><span><span class="dot-c"></span> CONFORME</span><span><span class="dot-nc"></span> NÃO CONFORME</span></div>' +
+        gerarLinhasBarrasConformidade(transItens, m.statusMap) +
+      '</div>' +
+      '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>1/5</span></div>' +
+    '</div><div class="page-break"></div>';
+
+    // ═══ PÁGINA 2 ═══
+    var potPdfRecentes = m.potenciasRecentes.length > 0
+      ? m.potenciasRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
+      : 'Sem leituras registradas';
+
+    var refPdfRecentes = m.refletidasRecentes.length > 0
+      ? m.refletidasRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
+      : 'Sem leituras registradas';
+
+    var satRedePdfRecentes = m.satRedeRecentes.length > 0
+      ? m.satRedeRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
+      : 'Sem leituras registradas';
+
+    htmlDoc += '<div class="page-container">' +
+      '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
+      '<div class="q-block">' +
+        '<div class="q-title">5. Potência do Transmissor (W):</div>' +
+        '<div style="display:flex;justify-content:space-between;gap:20px;">' +
+          '<div><div style="font-size:24px;font-weight:800;">' + m.potenciaMedia + '</div><div style="color:#64748B;">' + (m.total > 0 ? 'Média calculada' : 'Sem registros') + '</div></div>' +
+          '<div style="flex:1;"><div style="font-size:10px;font-weight:700;color:#64748B;margin-bottom:4px;">Respostas Mais Recentes</div>' +
+            '<div class="recent-box">' + potPdfRecentes + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="q-block">' +
+        '<div class="q-title">6. Potência Refletida do Transmissor: (W)</div>' +
+        '<div style="display:flex;justify-content:space-between;gap:20px;">' +
+          '<div><div style="font-size:24px;font-weight:800;">' + m.refletidaMedia + '</div><div style="color:#64748B;">' + (m.total > 0 ? 'Média calculada' : 'Sem registros') + '</div></div>' +
+          '<div style="flex:1;"><div style="font-size:10px;font-weight:700;color:#64748B;margin-bottom:4px;">Respostas Mais Recentes</div>' +
+            '<div class="recent-box">' + refPdfRecentes + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="q-block">' +
+        '<div class="q-title">7. RECEPTORES DE SATÉLITE (VÍDEO E CANAL DE VOZ):</div>' +
+        '<div class="legend"><span><span class="dot-c"></span> CONFORME</span><span><span class="dot-nc"></span> NÃO CONFORME</span></div>' +
+        gerarLinhasBarrasConformidade(satItens, m.statusMap) +
+      '</div>' +
+      '<div class="q-block">' +
+        '<div class="q-title">8. SAT REDE TIT C/N (dB):</div>' +
+        '<div style="display:flex;justify-content:space-between;gap:20px;">' +
+          '<div><div style="font-size:24px;font-weight:800;">' + m.satRedeMedia + '</div><div style="color:#64748B;">' + (m.total > 0 ? 'Média calculada' : 'Sem registros') + '</div></div>' +
+          '<div style="flex:1;"><div style="font-size:10px;font-weight:700;color:#64748B;margin-bottom:4px;">Respostas Mais Recentes</div>' +
+            '<div class="recent-box">' + satRedePdfRecentes + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>2/5</span></div>' +
+    '</div><div class="page-break"></div>';
+
+    // ═══ PÁGINA 3 ═══
+    var satBhPdfRecentes = m.satBhRecentes.length > 0
+      ? m.satBhRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
+      : 'Sem leituras registradas';
+
+    var satSpPdfRecentes = m.satSpRecentes.length > 0
+      ? m.satSpRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
+      : 'Sem leituras registradas';
+
+    htmlDoc += '<div class="page-container">' +
+      '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
+      '<div class="q-block">' +
+        '<div class="q-title">9. SAT BH C/N (dB):</div>' +
+        '<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:12px;">' +
+          '<div><div style="font-size:24px;font-weight:800;">' + m.satBhMedia + '</div><div style="color:#64748B;">' + (m.total > 0 ? 'Média calculada' : 'Sem registros') + '</div></div>' +
+          '<div style="flex:1;"><div style="font-size:10px;font-weight:700;color:#64748B;margin-bottom:4px;">Respostas Mais Recentes</div>' +
+            '<div class="recent-box">' + satBhPdfRecentes + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="background:#F8FAFC;border:1px solid #CBD5E1;border-radius:6px;padding:12px;font-size:11px;color:#334155;text-align:center;">' +
+          'Média das leituras: <strong>' + m.satBhMedia + '</strong>' + (m.total > 0 ? ' (Faixa estável)' : ' (Sem leituras registradas)') +
+        '</div>' +
+      '</div>' +
+      '<div class="q-block">' +
+        '<div class="q-title">10. SAT SP C/N (dB):</div>' +
+        '<div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:12px;">' +
+          '<div><div style="font-size:24px;font-weight:800;">' + m.satSpMedia + '</div><div style="color:#64748B;">' + (m.total > 0 ? 'Média calculada' : 'Sem registros') + '</div></div>' +
+          '<div style="flex:1;"><div style="font-size:10px;font-weight:700;color:#64748B;margin-bottom:4px;">Respostas Mais Recentes</div>' +
+            '<div class="recent-box">' + satSpPdfRecentes + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="background:#F8FAFC;border:1px solid #CBD5E1;border-radius:6px;padding:12px;font-size:11px;color:#334155;text-align:center;">' +
+          'Média das leituras: <strong>' + m.satSpMedia + '</strong>' + (m.total > 0 ? ' (Qualidade de recepção)' : ' (Sem leituras registradas)') +
+        '</div>' +
+      '</div>' +
+      '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>3/5</span></div>' +
+    '</div><div class="page-break"></div>';
+
+    // ═══ PÁGINA 4 ═══
+    htmlDoc += '<div class="page-container">' +
+      '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
+      '<div class="q-block">' +
+        '<div class="q-title">11. ROTA DE CONTRIBUIÇÃO E RECEPÇÃO DE SINAIS DAS PRAÇAS:</div>' +
+        '<div class="legend"><span><span class="dot-c"></span> CONFORME</span><span><span class="dot-nc"></span> NÃO CONFORME</span></div>' +
+        gerarLinhasBarrasConformidade(rotasItens, m.statusMap) +
+      '</div>' +
+      '<div class="q-block">' +
+        '<div class="q-title">12. CENTRAL TÉCNICA:</div>' +
+        '<div class="legend"><span><span class="dot-c"></span> CONFORME</span><span><span class="dot-nc"></span> NÃO CONFORME</span></div>' +
+        gerarLinhasBarrasConformidade(ctItens, m.statusMap) +
+      '</div>' +
+      '<div class="q-block">' +
+        '<div class="q-title">13. CPA:</div>' +
+        '<div class="legend"><span><span class="dot-c"></span> CONFORME</span><span><span class="dot-nc"></span> NÃO CONFORME</span></div>' +
+        gerarLinhasBarrasConformidade(cpaItens, m.statusMap) +
+      '</div>' +
+      '<div class="q-block">' +
+        '<div class="q-title">14. CADEIA SATÉLITE:</div>' +
+        '<div class="legend"><span><span class="dot-c"></span> CONFORME</span><span><span class="dot-nc"></span> NÃO CONFORME</span></div>' +
+        gerarLinhasBarrasConformidade(satCadItens, m.statusMap) +
+      '</div>' +
+      '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>4/5</span></div>' +
+    '</div><div class="page-break"></div>';
+
+    // ═══ PÁGINA 5 ═══
+    var ncPdfHtml = m.naoConformidades.length > 0
+      ? m.naoConformidades.map(function(nc){ return '<div>' + escapeHTML(nc) + '</div>'; }).join('')
+      : '<div>Nenhuma não conformidade registrada.</div>';
+
+    htmlDoc += '<div class="page-container">' +
+      '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
+      '<div class="q-block">' +
+        '<div class="q-title">15. ENERGIA:</div>' +
+        '<div class="legend"><span><span class="dot-c"></span> CONFORME</span><span><span class="dot-nc"></span> NÃO CONFORME</span></div>' +
+        gerarLinhasBarrasConformidade(engItens, m.statusMap) +
+      '</div>' +
+      '<div class="q-block">' +
+        '<div class="q-title">16. RELATE AQUI TODAS AS NÃO CONFORMIDADES DO HORÁRIO:</div>' +
+        '<div style="font-size:24px;font-weight:800;margin-bottom:8px;">' + m.naoConformidades.length.toLocaleString('pt-BR') + ' Registros</div>' +
+        '<div class="recent-box" style="display:flex;flex-direction:column;gap:8px;">' + ncPdfHtml + '</div>' +
+      '</div>' +
+      '<div style="margin-top:40px;font-size:9.5px;color:#94A3B8;text-align:center;">' +
+        'Este conteúdo foi consolidado pelo Sistema de Gestão de Tecnologia da TV Integração — Praça de Uberlândia.' +
+      '</div>' +
+      '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>5/5</span></div>' +
     '</div>';
 
-    // ═══════════════════════════════════════════
-    // PÁGINA 2: Potências RF, Recepção Satélite & Níveis C/N
-    // ═══════════════════════════════════════════
-    var potRecentes = m.potenciasRecentes.length > 0 ? m.potenciasRecentes.map(function(v){ return '• ' + v + ' W'; }).join('<br/>') : 'Sem leituras';
-    var refRecentes = m.refletidasRecentes.length > 0 ? m.refletidasRecentes.map(function(v){ return '• ' + v + ' W'; }).join('<br/>') : 'Sem leituras';
+    htmlDoc += '<script>setTimeout(function(){ window.print(); }, 500);<\/script></body></html>';
 
-    htmlDoc += '<div class="page-sheet">' +
-      '<div class="top-header">' +
-        '<span class="top-header-title">REDE INTEGRAÇÃO — ENGENHARIA & TECNOLOGIA</span>' +
-        '<span>Emissão: ' + dataHoraEmissao + '</span>' +
-      '</div>' +
-      '<div class="split-2col">' +
-        '<div class="metric-box">' +
-          '<div class="metric-lbl">5. Potência Direta (Média)</div>' +
-          '<div class="metric-val">' + m.potenciaMedia + '</div>' +
-          '<div style="font-size:9px;color:#64748B;margin-bottom:6px;">Transmissor Nominal UDI</div>' +
-          '<div class="recent-list-box" style="text-align:left;"><strong>Recentes:</strong><br/>' + potRecentes + '</div>' +
-        '</div>' +
-        '<div class="metric-box">' +
-          '<div class="metric-lbl">6. Potência Refletida (Média)</div>' +
-          '<div class="metric-val" style="color:' + (parseFloat(m.refletidaMedia) > 50 ? '#DC2626' : '#059669') + ';">' + m.refletidaMedia + '</div>' +
-          '<div style="font-size:9px;color:#64748B;margin-bottom:6px;">Casamento de Linha / VSWR</div>' +
-          '<div class="recent-list-box" style="text-align:left;"><strong>Recentes:</strong><br/>' + refRecentes + '</div>' +
-        '</div>' +
-      '</div>' +
-      renderTabelaConformidadePdf(satItens, '7. Receptores de Satélite (Vídeo & Canais de Voz)', 'Recepção DVB-S2') +
-      '<div class="split-3col">' +
-        '<div class="metric-box">' +
-          '<div class="metric-lbl">8. SAT Rede TIT</div>' +
-          '<div class="metric-val">' + m.satRedeMedia + '</div>' +
-          '<div style="font-size:9.5px;color:#059669;font-weight:700;">Margem Operacional C/N</div>' +
-        '</div>' +
-        '<div class="metric-box">' +
-          '<div class="metric-lbl">9. SAT BH C/N</div>' +
-          '<div class="metric-val">' + m.satBhMedia + '</div>' +
-          '<div style="font-size:9.5px;color:#059669;font-weight:700;">Margem Operacional C/N</div>' +
-        '</div>' +
-        '<div class="metric-box">' +
-          '<div class="metric-lbl">10. SAT SP C/N</div>' +
-          '<div class="metric-val">' + m.satSpMedia + '</div>' +
-          '<div style="font-size:9.5px;color:#059669;font-weight:700;">Margem Operacional C/N</div>' +
-        '</div>' +
-      '</div>' +
-      renderTabelaConformidadePdf(rotasItens, '11. Rotas de Contribuição e Recepção (Praças)', 'SRT Makito, MPLS & L2L') +
-      '<div class="bottom-footer"><span>TV Integração — Tecnologia UDI</span><span>Página 2 de 4</span></div>' +
-    '</div>';
-
-    // ═══════════════════════════════════════════
-    // PÁGINA 3: Central Técnica, CPA, Cadeia Satélite e Energia
-    // ═══════════════════════════════════════════
-    htmlDoc += '<div class="page-sheet">' +
-      '<div class="top-header">' +
-        '<span class="top-header-title">REDE INTEGRAÇÃO — ENGENHARIA & TECNOLOGIA</span>' +
-        '<span>Emissão: ' + dataHoraEmissao + '</span>' +
-      '</div>' +
-      renderTabelaConformidadePdf(ctItens, '12. Central Técnica (Racks, Frames & Intercom)', 'Infraestrutura Central') +
-      renderTabelaConformidadePdf(cpaItens, '13. CPA (Produção, Retornos & Mochilinks)', 'Estúdios & Jornalismo') +
-      renderTabelaConformidadePdf(satCadItens, '14. Cadeia Satélite Uplink (Mux, Modulador, Encoder, BUC)', 'Transmissão Satélite') +
-      renderTabelaConformidadePdf(engItens, '15. Infraestrutura & Energia (Gerador e No-Break)', 'Sistemas Elétricos Críticos') +
-      '<div class="bottom-footer"><span>TV Integração — Tecnologia UDI</span><span>Página 3 de 4</span></div>' +
-    '</div>';
-
-    // ═══════════════════════════════════════════
-    // PÁGINA 4: Relato Consolidado de Não Conformidades & Observações
-    // ═══════════════════════════════════════════
-    var ncBoxes = m.naoConformidades.length > 0
-      ? m.naoConformidades.map(function(nc){ return '<div class="nc-item-box">' + escapeHTML(nc) + '</div>'; }).join('')
-      : '<div class="recent-list-box" style="text-align:center;padding:16px;color:#059669;font-weight:700;">✅ Nenhuma não conformidade operacional registrada no histórico recente. Todos os 26 sistemas avaliados com excelente disponibilidade.</div>';
-
-    htmlDoc += '<div class="page-sheet">' +
-      '<div class="top-header">' +
-        '<span class="top-header-title">REDE INTEGRAÇÃO — ENGENHARIA & TECNOLOGIA</span>' +
-        '<span>Emissão: ' + dataHoraEmissao + '</span>' +
-      '</div>' +
-      '<div class="pdf-card" style="flex:1;display:flex;flex-direction:column;">' +
-        '<div class="pdf-card-header">' +
-          '<div class="pdf-card-title">16. Não Conformidades & Observações Técnicas Registradas</div>' +
-          '<span class="pdf-tag" style="background:#FEE2E2;color:#DC2626;border-color:#FECACA;">' + m.naoConformidades.length + ' Registros Críticos</span>' +
-        '</div>' +
-        '<div style="font-size:10px;color:#64748B;margin-bottom:10px;">' +
-          'Relato sintético das ocorrências e intervenções durante os turnos operacionais (dados consolidados das rondas):' +
-        '</div>' +
-        '<div style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:6px;">' +
-          ncBoxes +
-        '</div>' +
-      '</div>' +
-      '<div style="margin-top:10px;padding:8px 12px;background:#F8FAFC;border:1px solid #CBD5E1;border-radius:6px;font-size:9.5px;color:#475569;line-height:1.45;text-align:center;">' +
-        'Documento consolidado gerado pelo <strong>Sistema de Gestão de Tecnologia da TV Integração — Praça de Uberlândia</strong>.<br/>' +
-        'Base de dados conectada ao Supabase com ' + m.total.toLocaleString('pt-BR') + ' registros históricos.' +
-      '</div>' +
-      '<div class="bottom-footer"><span>TV Integração — Tecnologia UDI</span><span>Página 4 de 4</span></div>' +
-    '</div>';
-
-    htmlDoc += '<script>' +
-      'var _printed = false;' +
-      'function dispararPrint() { if (_printed) return; _printed = true; window.print(); }' +
-      'window.addEventListener("load", function(){ setTimeout(dispararPrint, 350); });' +
-      'setTimeout(dispararPrint, 800);' +
-    '<\/script></body></html>';
-
-    try {
-      var printWin = window.open('', '_blank');
-      if (printWin && printWin.document) {
-        printWin.document.open();
-        printWin.document.write(htmlDoc);
-        printWin.document.close();
-      } else {
-        var blob = new Blob([htmlDoc], { type: 'text/html;charset=utf-8' });
-        var blobUrl = URL.createObjectURL(blob);
-        var winBlob = window.open(blobUrl, '_blank');
-        if (!winBlob && typeof mostrarToast === 'function') {
-          mostrarToast('Pop-up Bloqueado', 'Permita pop-ups no navegador para visualizar e salvar o PDF.', 'warning');
-        }
-      }
-    } catch(eOpen) {
-      console.warn('Erro ao abrir pop-up de impressão:', eOpen);
+    var printWin = window.open('', '_blank');
+    if (printWin) {
+      printWin.document.open();
+      printWin.document.write(htmlDoc);
+      printWin.document.close();
+    } else {
       if (typeof mostrarToast === 'function') {
         mostrarToast('Pop-up Bloqueado', 'Permita pop-ups no navegador para visualizar e salvar o PDF.', 'warning');
       }
@@ -6495,468 +6439,155 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.exportarVisaoGeralFormsPdf = exportarVisaoGeralFormsPdf;
 
-  /* ═══════════════════════════════════════════════════════════
-     EXTRAÇÃO INTELIGENTE & MINI RELATÓRIO EXECUTIVO (ESTILO PDF)
-  ═══════════════════════════════════════════════════════════ */
-  function extrairDetalhesRondaItem(item) {
-    if (!item) return null;
-    var d = item.detalhesRonda;
-    if (!d && item.descResolucao && typeof item.descResolucao === 'string' && item.descResolucao.trim().startsWith('{')) {
-      try { d = JSON.parse(item.descResolucao); item.detalhesRonda = d; } catch(e) {}
-    }
-    d = d || {};
+  /* ── Exportação do Formulário Individual do Turno (4 páginas — estilo questionário Forms) ── */
+  function exportarFormularioTurnoIndividual() {
+    var dataEl = document.getElementById('ronda-data');
+    var potEl  = document.getElementById('ronda-pot-direta');
+    var refEl  = document.getElementById('ronda-pot-refletida');
+    var satRedeDb = document.getElementById('ronda-sat-rede-db');
+    var satBhDb   = document.getElementById('ronda-sat-bh-db');
+    var satSpDb   = document.getElementById('ronda-sat-sp-db');
+    var obsEl  = document.getElementById('ronda-obs');
 
-    var dataVal = d.data || (item.dataCriacao ? item.dataCriacao.split(' ')[0] : '') || '';
-    var horaVal = (item.dataCriacao && item.dataCriacao.indexOf(' ') !== -1) ? item.dataCriacao.split(' ')[1] : '';
-    var operadorVal = d.operador || item.criadoPor || item.resp || 'Operador Técnico';
-    var turnoVal = d.turno || '';
-    if (!turnoVal && horaVal) {
-      var h = parseInt(horaVal.split(':')[0] || '12', 10);
-      if (h >= 0 && h < 6) turnoVal = '00h00 - 06h00 (Madrugada)';
-      else if (h >= 6 && h < 12) turnoVal = '06h00 - 12h00 (Manhã)';
-      else if (h >= 12 && h < 18) turnoVal = '12h00 - 18h00 (Tarde)';
-      else turnoVal = '18h00 - 00h00 (Noite)';
-    } else if (!turnoVal) {
-      turnoVal = '06h00 - 12h00';
-    }
+    var dataVal = (dataEl && dataEl.value) ? dataEl.value : new Date().toISOString().split('T')[0];
+    var usuario = getUsuarioAtual();
+    var dataHora = new Date().toLocaleDateString('pt-BR') + ', ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
 
-    var desc = item.descCriacao || item.desc || '';
-    var potenciaW = d.potenciaW || '';
-    var refletidaW = d.refletidaW || '';
-    var satRedeDb = d.satRedeDb || '';
-    var satBhDb = d.satBhDb || '';
-    var satSpDb = d.satSpDb || '';
+    // Determina turno pelo horário atual
+    var h = new Date().getHours();
+    var turnoCheck = [false, false, false, false, false];
+    if (h >= 0 && h < 6) turnoCheck[0] = true;
+    else if (h >= 6 && h < 12) turnoCheck[1] = true;
+    else if (h >= 12 && h < 18) turnoCheck[2] = true;
+    else if (h >= 18) turnoCheck[3] = true;
+    else turnoCheck[4] = true;
 
-    if (!potenciaW) {
-      var mPot = desc.match(/Pot[eê]ncia:\s*([0-9.,]+)\s*W/i);
-      if (mPot) potenciaW = mPot[1];
-    }
-    if (!refletidaW) {
-      var mRef = desc.match(/Refletida:\s*([0-9.,]+)\s*W/i);
-      if (mRef) refletidaW = mRef[1];
-    }
-    if (!satRedeDb) {
-      var mRede = desc.match(/SAT Rede C\/N:\s*([0-9.,]+)\s*dB/i);
-      if (mRede) satRedeDb = mRede[1];
-    }
-    if (!satBhDb) {
-      var mBh = desc.match(/SAT BH C\/N:\s*([0-9.,]+)\s*dB/i);
-      if (mBh) satBhDb = mBh[1];
-    }
-    if (!satSpDb) {
-      var mSp = desc.match(/SAT SP C\/N:\s*([0-9.,]+)\s*dB/i);
-      if (mSp) satSpDb = mSp[1];
-    }
-
-    var statusSistemas = d.statusSistemas ? Object.assign({}, d.statusSistemas) : {};
-    var naoConformidades = Array.isArray(d.naoConformidades) ? d.naoConformidades.slice() : [];
-
-    if (Object.keys(statusSistemas).length === 0) {
-      var mNc = desc.match(/N[aã]o conformidades:\s*([^\n\r]+)/i);
-      if (mNc && mNc[1] && mNc[1].trim().toLowerCase() !== 'nenhuma') {
-        var ncsTxt = mNc[1].split(',').map(function(s){ return s.trim(); }).filter(Boolean);
-        naoConformidades = ncsTxt;
-      }
-      RONDA_ITEMS.forEach(function(it) {
-        var isItemNc = naoConformidades.some(function(nc) {
-          return it.nome.toLowerCase().includes(nc.toLowerCase()) || nc.toLowerCase().includes(it.nome.toLowerCase());
-        });
-        statusSistemas[it.id] = isItemNc ? 'nc' : 'conf';
-      });
-    } else if (naoConformidades.length === 0) {
-      RONDA_ITEMS.forEach(function(it) {
-        if (statusSistemas[it.id] === 'nc') {
-          naoConformidades.push(it.nome);
-        }
-      });
-    }
-
-    var obs = d.obs || '';
-    if (!obs) {
-      var mObs = desc.match(/Observa[çc][õo]es do plant[ãa]o[^:]*:\s*([\s\S]*)$/i);
-      if (mObs && mObs[1]) {
-        obs = mObs[1].trim();
-      }
-    }
-
-    return {
-      data: dataVal,
-      hora: horaVal,
-      operador: operadorVal,
-      turno: turnoVal,
-      potenciaW: potenciaW || '2500',
-      refletidaW: refletidaW || '17',
-      satRedeDb: satRedeDb || '13.8',
-      satBhDb: satBhDb || '14.0',
-      satSpDb: satSpDb || '18.2',
-      statusSistemas: statusSistemas,
-      naoConformidades: naoConformidades,
-      obs: obs
-    };
-  }
-  window.extrairDetalhesRondaItem = extrairDetalhesRondaItem;
-
-  function renderMiniRelatorioRondaUdiHTML(item) {
-    var d = extrairDetalhesRondaItem(item);
-    if (!d) return '<p style="color:var(--muted);padding:14px;">Dados do relatório indisponíveis.</p>';
-
-    var temNc = d.naoConformidades && d.naoConformidades.length > 0;
-
-    var exibItens   = RONDA_ITEMS.filter(function(i){ return i.secao === 'exibidor'; });
-    var transItens  = RONDA_ITEMS.filter(function(i){ return i.secao === 'transmissor'; });
-    var satItens    = RONDA_ITEMS.filter(function(i){ return i.secao === 'satelite'; });
-    var rotasItens  = RONDA_ITEMS.filter(function(i){ return i.secao === 'rotas'; });
-    var ctItens     = RONDA_ITEMS.filter(function(i){ return i.secao === 'central'; });
-    var cpaItens    = RONDA_ITEMS.filter(function(i){ return i.secao === 'cpa'; });
-    var satCadItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'cadeia_sat'; });
-    var engItens    = RONDA_ITEMS.filter(function(i){ return i.secao === 'energia'; });
-
-    function renderBlocoSecao(itens, titulo) {
-      var h = '<div class="mini-rel-secao">' +
-        '<div class="mini-rel-secao-hdr">' +
-          '<span>' + titulo + '</span>' +
-        '</div>' +
-        '<div class="mini-rel-secao-body">';
-
-      itens.forEach(function(it) {
-        var isNc = (d.statusSistemas && d.statusSistemas[it.id] === 'nc');
-        h += '<div class="mini-rel-row ' + (isNc ? 'is-nc' : 'is-conf') + '">' +
-          '<span class="mini-rel-item-name">' + escapeHTML(it.nome) + '</span>' +
-          '<span class="mini-rel-pill ' + (isNc ? 'pill-nc' : 'pill-conf') + '">' +
-            (isNc ? '✕ Não Conforme' : '✓ Conforme') +
-          '</span>' +
-        '</div>';
-      });
-
-      h += '</div></div>';
-      return h;
-    }
-
-    var bannerHtml = temNc
-      ? '<div class="mini-rel-banner alert">' +
-          '<div style="display:flex;align-items:center;gap:8px;">' +
-            '<i data-lucide="alert-octagon" style="width:18px;height:18px;color:#DC2626;flex-shrink:0;"></i>' +
-            '<span>NÃO CONFORMIDADES REGISTRADAS (' + d.naoConformidades.length + '): ' + escapeHTML(d.naoConformidades.join(', ')) + '</span>' +
-          '</div>' +
-          '<span style="background:#DC2626;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:12px;">ATENÇÃO</span>' +
-        '</div>'
-      : '<div class="mini-rel-banner ok">' +
-          '<div style="display:flex;align-items:center;gap:8px;">' +
-            '<i data-lucide="check-circle-2" style="width:18px;height:18px;color:#059669;flex-shrink:0;"></i>' +
-            '<span>TODOS OS 26 SISTEMAS EM CONFORMIDADE OPERACIONAL</span>' +
-          '</div>' +
-          '<span style="background:#059669;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:12px;">100% OK</span>' +
-        '</div>';
-
-    var refNum = parseFloat(d.refletidaW);
-    var refColor = (!isNaN(refNum) && refNum > 40) ? '#DC2626' : '#059669';
-
-    var obsCardHtml = '';
-    if (d.obs && d.obs.trim()) {
-      obsCardHtml =
-        '<div class="mini-rel-obs-card">' +
-          '<div class="mini-rel-obs-hdr">' +
-            '<span class="mini-rel-obs-title"><i data-lucide="file-text" style="width:15px;height:15px;color:#0284C7;"></i> Observações do Plantão & Intervenções</span>' +
-            '<span style="font-size:11px;color:#64748B;">Operador: <strong>' + escapeHTML(d.operador) + '</strong></span>' +
-          '</div>' +
-          '<div class="mini-rel-obs-text">' + escapeHTML(d.obs) + '</div>' +
-        '</div>';
-    }
-
-    var html =
-      '<div class="mini-rel-wrap">' +
-        // 1. Cabeçalho Executivo
-        '<div class="mini-rel-header-card">' +
-          '<div class="mini-rel-head-col"><span class="mini-rel-head-lbl">Data do Plantão</span><span class="mini-rel-head-val">📅 ' + escapeHTML(d.data || '--') + '</span></div>' +
-          '<div class="mini-rel-head-col"><span class="mini-rel-head-lbl">Turno Registrado</span><span class="mini-rel-head-val">⏱️ ' + escapeHTML(d.turno || '--') + '</span></div>' +
-          '<div class="mini-rel-head-col"><span class="mini-rel-head-lbl">Operador Técnico</span><span class="mini-rel-head-val">👤 ' + escapeHTML(d.operador || 'Operador') + '</span></div>' +
-          '<div class="mini-rel-head-col"><span class="mini-rel-head-lbl">Praça / Unidade</span><span class="mini-rel-head-val">📍 Uberlândia (MG)</span></div>' +
-        '</div>' +
-
-        // 2. Banner de Status
-        bannerHtml +
-
-        // 3. Faixa de RF & Satélites
-        '<div class="mini-rel-metrics-strip">' +
-          '<div class="mini-rel-metric-box">' +
-            '<div class="mini-rel-metric-lbl">Potência Direta</div>' +
-            '<div class="mini-rel-metric-val">' + escapeHTML(d.potenciaW) + ' W</div>' +
-            '<div class="mini-rel-metric-sub">Tx Principal UDI</div>' +
-          '</div>' +
-          '<div class="mini-rel-metric-box">' +
-            '<div class="mini-rel-metric-lbl">Potência Refletida</div>' +
-            '<div class="mini-rel-metric-val" style="color:' + refColor + ';">' + escapeHTML(d.refletidaW) + ' W</div>' +
-            '<div class="mini-rel-metric-sub">Retorno de Antena</div>' +
-          '</div>' +
-          '<div class="mini-rel-metric-box">' +
-            '<div class="mini-rel-metric-lbl">SAT Rede C/N</div>' +
-            '<div class="mini-rel-metric-val">' + escapeHTML(d.satRedeDb) + ' dB</div>' +
-            '<div class="mini-rel-metric-sub">Sinal Rede Globo</div>' +
-          '</div>' +
-          '<div class="mini-rel-metric-box">' +
-            '<div class="mini-rel-metric-lbl">SAT BH C/N</div>' +
-            '<div class="mini-rel-metric-val">' + escapeHTML(d.satBhDb) + ' dB</div>' +
-            '<div class="mini-rel-metric-sub">Belo Horizonte</div>' +
-          '</div>' +
-          '<div class="mini-rel-metric-box">' +
-            '<div class="mini-rel-metric-lbl">SAT SP C/N</div>' +
-            '<div class="mini-rel-metric-val">' + escapeHTML(d.satSpDb) + ' dB</div>' +
-            '<div class="mini-rel-metric-sub">São Paulo</div>' +
-          '</div>' +
-        '</div>' +
-
-        // 4. Observações (se houver)
-        obsCardHtml +
-
-        // 5. Quadro dos 26 Sistemas (2 Colunas)
-        '<div class="mini-rel-grid-sistemas">' +
-          '<div>' +
-            renderBlocoSecao(exibItens, '1. Centro Exibidor') +
-            renderBlocoSecao(transItens, '2. Transmissor Principal & RF') +
-            renderBlocoSecao(satItens, '3. Receptores de Satélite') +
-            renderBlocoSecao(rotasItens, '4. Rotas de Contribuição e Recepção') +
-          '</div>' +
-          '<div>' +
-            renderBlocoSecao(ctItens, '5. Central Técnica') +
-            renderBlocoSecao(cpaItens, '6. CPA — Controle de Produção e Áudio') +
-            renderBlocoSecao(satCadItens, '7. Cadeia Satélite (Uplink)') +
-            renderBlocoSecao(engItens, '8. Infraestrutura & Energia') +
-          '</div>' +
-        '</div>' +
-      '</div>';
-
-    return html;
-  }
-  window.renderMiniRelatorioRondaUdiHTML = renderMiniRelatorioRondaUdiHTML;
-
-  /* ── Exportação do Formulário Individual do Turno (Layout Executivo de 2 Páginas) ── */
-  function exportarFormularioTurnoIndividual(itemOpcional) {
-    var modalDetalhes = document.getElementById('popup-detalhes-historico');
-    var isModalAberto = modalDetalhes && !modalDetalhes.hasAttribute('hidden') && modalDetalhes.style.display !== 'none';
-    var itemAlvo = itemOpcional || (isModalAberto ? window.itemDetalhesAtual : null);
-
-    var itemDet = null;
-    if (itemAlvo) {
-      itemDet = (typeof extrairDetalhesRondaItem === 'function') ? extrairDetalhesRondaItem(itemAlvo) : (itemAlvo.detalhesRonda || null);
-    }
-
-    function fmtVal(v, unit, def) {
-      if (!v && v !== 0) return def;
-      var s = String(v).trim();
-      if (!s) return def;
-      if (s.toLowerCase().endsWith(unit.toLowerCase())) return s;
-      return s + ' ' + unit;
-    }
-
-    var dataVal = itemDet ? itemDet.data : ((document.getElementById('ronda-data') && document.getElementById('ronda-data').value) || new Date().toISOString().split('T')[0]);
-    var usuario = itemDet ? itemDet.operador : getUsuarioAtual();
-    var agora = new Date();
-    var dataHora = itemDet ? (itemDet.data + (itemDet.hora ? (' às ' + itemDet.hora) : '')) : (agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }));
-
-    var turnoTxt = '06h00 - 12h00';
-    if (itemDet && itemDet.turno) {
-      turnoTxt = itemDet.turno;
-    } else {
-      var turnoEl = document.getElementById('ronda-turno');
-      if (turnoEl && turnoEl.selectedOptions && turnoEl.selectedOptions[0]) {
-        turnoTxt = turnoEl.selectedOptions[0].textContent;
-      } else {
-        var h = agora.getHours();
-        if (h >= 0 && h < 6) turnoTxt = '00h00 - 06h00 (Madrugada)';
-        else if (h >= 6 && h < 12) turnoTxt = '06h00 - 12h00 (Manhã)';
-        else if (h >= 12 && h < 18) turnoTxt = '12h00 - 18h00 (Tarde)';
-        else if (h >= 18) turnoTxt = '18h00 - 00h00 (Noite)';
-      }
-    }
-
-    var potVal = itemDet ? fmtVal(itemDet.potenciaW, 'W', '2500 W') : ((document.getElementById('ronda-pot-direta') && document.getElementById('ronda-pot-direta').value) ? fmtVal(document.getElementById('ronda-pot-direta').value, 'W', '2500 W') : '2500 W');
-    var refVal = itemDet ? fmtVal(itemDet.refletidaW, 'W', '17 W') : ((document.getElementById('ronda-pot-refletida') && document.getElementById('ronda-pot-refletida').value) ? fmtVal(document.getElementById('ronda-pot-refletida').value, 'W', '17 W') : '17 W');
-    var satRedeVal = itemDet ? fmtVal(itemDet.satRedeDb, 'dB', '13.8 dB') : ((document.getElementById('ronda-sat-rede-db') && document.getElementById('ronda-sat-rede-db').value) ? fmtVal(document.getElementById('ronda-sat-rede-db').value, 'dB', '13.8 dB') : '13.8 dB');
-    var satBhVal = itemDet ? fmtVal(itemDet.satBhDb, 'dB', '14.0 dB') : ((document.getElementById('ronda-sat-bh-db') && document.getElementById('ronda-sat-bh-db').value) ? fmtVal(document.getElementById('ronda-sat-bh-db').value, 'dB', '14.0 dB') : '14.0 dB');
-    var satSpVal = itemDet ? fmtVal(itemDet.satSpDb, 'dB', '18.2 dB') : ((document.getElementById('ronda-sat-sp-db') && document.getElementById('ronda-sat-sp-db').value) ? fmtVal(document.getElementById('ronda-sat-sp-db').value, 'dB', '18.2 dB') : '18.2 dB');
-    var obsVal = itemDet ? (itemDet.obs || 'Todos os sistemas operando dentro dos parâmetros de conformidade técnica.') : ((document.getElementById('ronda-obs') && document.getElementById('ronda-obs').value.trim()) || 'Todos os sistemas operando dentro dos parâmetros de conformidade técnica.');
-
-    var ncDetectadas = itemDet ? (itemDet.naoConformidades || []) : [];
-
-    function renderTabelaForms(itens, secaoNome) {
-      var h = '<div class="pdf-group-block">' +
-        '<div class="pdf-group-header">' +
-          '<span class="pdf-group-title">' + secaoNome + '</span>' +
-          '<div class="pdf-th-cols">' +
-            '<span class="th-col conf">CONFORME</span>' +
-            '<span class="th-col nc">NÃO CONF.</span>' +
-          '</div>' +
-        '</div>' +
-        '<div class="pdf-group-body">';
-
+    function renderTabelaForms(itens) {
+      var h = '<table style="width:100%;border-collapse:collapse;margin-top:8px;">';
+      h += '<thead><tr style="font-size:10.5px;color:#64748B;border-bottom:1px solid #E2E8F0;"><th style="text-align:left;padding:6px 4px;font-weight:600;">SISTEMA / EQUIPAMENTO</th><th style="width:110px;text-align:center;padding:6px 4px;font-weight:700;color:#059669;">CONFORME</th><th style="width:110px;text-align:center;padding:6px 4px;font-weight:700;color:#DC2626;">NÃO CONFORME</th></tr></thead>';
+      h += '<tbody>';
       itens.forEach(function(item) {
-        var isNc = false;
-        if (itemDet && itemDet.statusSistemas) {
-          isNc = (itemDet.statusSistemas[item.id] === 'nc');
-        } else {
-          var group = document.querySelector('.ronda-toggle-group[data-item-id="' + item.id + '"]');
-          isNc = group && group.querySelector('.ronda-btn-pill.nc.active');
-          if (isNc) ncDetectadas.push(item.nome);
-        }
-        var isConf = !isNc;
-
-        h += '<div class="pdf-item-row ' + (isNc ? 'row-nc' : 'row-conf') + '">' +
-          '<div class="pdf-item-name">' + escapeHTML(item.nome) + '</div>' +
-          '<div class="pdf-item-status-cols">' +
-            '<span class="status-cell">' + (isConf ? '<span class="status-pill conf">✓ Conforme</span>' : '<span class="status-pill dot-off">○</span>') + '</span>' +
-            '<span class="status-cell">' + (isNc ? '<span class="status-pill nc">✕ Não Conforme</span>' : '<span class="status-pill dot-off">○</span>') + '</span>' +
-          '</div>' +
-        '</div>';
+        var group = document.querySelector('.ronda-toggle-group[data-item-id="' + item.id + '"]');
+        var isNc = group && group.querySelector('.ronda-btn-pill.nc.active');
+        var isConf = !isNc; // padrão conforme
+        h += '<tr style="border-bottom:1px solid #F1F5F9;font-size:11px;">' +
+          '<td style="padding:7px 4px;font-weight:600;color:#334155;">' + escapeHTML(item.nome) + '</td>' +
+          '<td style="text-align:center;padding:7px 4px;">' + (isConf ? '<span style="color:#059669;font-size:14px;font-weight:800;">●</span>' : '<span style="color:#CBD5E1;font-size:14px;">○</span>') + '</td>' +
+          '<td style="text-align:center;padding:7px 4px;">' + (isNc ? '<span style="color:#DC2626;font-size:14px;font-weight:800;">●</span>' : '<span style="color:#CBD5E1;font-size:14px;">○</span>') + '</td>' +
+        '</tr>';
       });
-
-      h += '</div></div>';
+      h += '</tbody></table>';
       return h;
     }
 
-    var exibItens   = RONDA_ITEMS.filter(function(i){ return i.secao === 'exibidor'; });
-    var transItens  = RONDA_ITEMS.filter(function(i){ return i.secao === 'transmissor'; });
-    var satItens    = RONDA_ITEMS.filter(function(i){ return i.secao === 'satelite'; });
-    var rotasItens  = RONDA_ITEMS.filter(function(i){ return i.secao === 'rotas'; });
-    var ctItens     = RONDA_ITEMS.filter(function(i){ return i.secao === 'central'; });
-    var cpaItens    = RONDA_ITEMS.filter(function(i){ return i.secao === 'cpa'; });
+    var exibItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'exibidor'; });
+    var transItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'transmissor'; });
+    var satItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'satelite'; });
+    var rotasItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'rotas'; });
+    var ctItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'central'; });
+    var cpaItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'cpa'; });
     var satCadItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'cadeia_sat'; });
-    var engItens    = RONDA_ITEMS.filter(function(i){ return i.secao === 'energia'; });
+    var engItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'energia'; });
 
-    var htmlDoc = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>RELATÓRIO DIÁRIO — TECNOLOGIA UDI (' + dataVal + ')</title>' +
+    var htmlDoc = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</title>' +
       '<style>' +
-      '@page { size: A4 portrait; margin: 12mm 14mm 14mm 14mm; }' +
-      '* { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
-      'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #0F172A; margin: 0; padding: 0; background: #fff; font-size: 11px; line-height: 1.4; }' +
-      '.no-print { position: fixed; top: 14px; right: 20px; z-index: 9999; display: flex; gap: 10px; background: rgba(255,255,255,0.92); padding: 8px 12px; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.12); backdrop-filter: blur(4px); border: 1px solid #E2E8F0; }' +
-      '.btn-print { padding: 9px 18px; background: #0284C7; color: #fff; font-weight: 700; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }' +
-      '.btn-close { padding: 9px 14px; background: #64748B; color: #fff; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }' +
+      '@page { size: A4 portrait; margin: 12mm 15mm; }' +
+      'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #1E293B; margin: 0; padding: 10px; background: #fff; font-size: 11px; }' +
+      '.page-header-top { display: flex; justify-content: space-between; font-size: 10px; color: #64748B; margin-bottom: 20px; border-bottom: 1px solid #CBD5E1; padding-bottom: 6px; }' +
+      '.page-footer-bot { display: flex; justify-content: space-between; font-size: 9px; color: #94A3B8; margin-top: 25px; border-top: 1px solid #E2E8F0; padding-top: 6px; }' +
+      '.page-break { page-break-after: always; break-after: page; }' +
+      '.form-title { font-size: 20px; font-weight: 700; color: #0F172A; text-align: center; margin: 20px 0 25px 0; }' +
+      '.q-num { font-size: 12px; font-weight: 700; color: #1E293B; margin-bottom: 6px; margin-top: 16px; }' +
+      '.radio-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 11px; }' +
+      '.input-line { border: 1px solid #CBD5E1; border-radius: 4px; padding: 7px 10px; font-size: 11.5px; width: 100%; box-sizing: border-box; background: #FAFBFD; margin-top: 4px; }' +
+      '.no-print { position: fixed; top: 12px; right: 20px; z-index: 9999; display: flex; gap: 10px; }' +
       '@media print { .no-print { display: none !important; } }' +
-      '.page-sheet { min-height: 270mm; max-height: 273mm; display: flex; flex-direction: column; justify-content: space-between; page-break-after: always; break-after: page; }' +
-      '.page-sheet:last-child { page-break-after: auto; break-after: auto; }' +
-      '.top-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 2px solid #0284C7; margin-bottom: 12px; font-size: 10px; color: #475569; }' +
-      '.top-header-title { font-weight: 800; font-size: 12px; color: #0369A1; letter-spacing: 0.03em; }' +
-      '.bottom-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 6px; border-top: 1px solid #E2E8F0; font-size: 9px; color: #94A3B8; margin-top: auto; }' +
-      '.report-head { border: 1px solid #CBD5E1; border-radius: 6px; background: #F8FAFC; padding: 10px 14px; margin-bottom: 10px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }' +
-      '.report-head-item { font-size: 10px; }' +
-      '.report-head-lbl { color: #64748B; font-weight: 700; text-transform: uppercase; font-size: 9px; letter-spacing: 0.04em; }' +
-      '.report-head-val { color: #0F172A; font-weight: 800; font-size: 12.5px; margin-top: 2px; }' +
-      '.metrics-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 10px; }' +
-      '.metric-card { border: 1px solid #CBD5E1; border-radius: 6px; background: #fff; padding: 7px 9px; text-align: center; }' +
-      '.metric-card-lbl { font-size: 8.5px; font-weight: 700; color: #64748B; text-transform: uppercase; }' +
-      '.metric-card-val { font-size: 15px; font-weight: 800; color: #0369A1; margin-top: 2px; }' +
-      '.pdf-group-block { border: 1px solid #CBD5E1; border-radius: 6px; background: #fff; margin-bottom: 9px; overflow: hidden; }' +
-      '.pdf-group-header { display: flex; justify-content: space-between; align-items: center; background: #F1F5F9; padding: 5px 10px; border-bottom: 1px solid #CBD5E1; }' +
-      '.pdf-group-title { font-size: 10.5px; font-weight: 800; color: #0F172A; text-transform: uppercase; letter-spacing: 0.03em; }' +
-      '.pdf-th-cols { display: flex; gap: 8px; font-size: 8.5px; font-weight: 800; }' +
-      '.th-col { width: 85px; text-align: center; }' +
-      '.th-col.conf { color: #047857; }' +
-      '.th-col.nc { color: #DC2626; }' +
-      '.pdf-group-body { display: flex; flex-direction: column; }' +
-      '.pdf-item-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 10px; border-bottom: 1px solid #F1F5F9; font-size: 10px; }' +
-      '.pdf-item-row:last-child { border-bottom: none; }' +
-      '.row-nc { background: #FEF2F2; }' +
-      '.pdf-item-name { font-weight: 600; color: #334155; flex: 1; }' +
-      '.row-nc .pdf-item-name { color: #991B1B; font-weight: 700; }' +
-      '.pdf-item-status-cols { display: flex; gap: 8px; }' +
-      '.status-cell { width: 85px; text-align: center; }' +
-      '.status-pill { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 4px; display: inline-block; }' +
-      '.status-pill.conf { background: #D1FAE5; color: #065F46; border: 1px solid #A7F3D0; }' +
-      '.status-pill.nc { background: #FEE2E2; color: #991B1B; border: 1px solid #FECACA; }' +
-      '.status-pill.dot-off { color: #CBD5E1; font-size: 11px; }' +
-      '.obs-box { border: 1px solid #CBD5E1; border-radius: 6px; background: #fff; padding: 10px 12px; margin-top: 6px; }' +
-      '.obs-header { font-size: 10.5px; font-weight: 800; color: #0F172A; text-transform: uppercase; margin-bottom: 6px; display: flex; justify-content: space-between; }' +
-      '.obs-text { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 5px; padding: 10px; font-size: 10px; line-height: 1.5; color: #334155; white-space: pre-wrap; min-height: 55px; }' +
-      '.status-banner { display: flex; align-items: center; justify-content: space-between; padding: 7px 12px; border-radius: 6px; margin-bottom: 10px; font-size: 10.5px; font-weight: 700; }' +
-      '.status-banner.ok { background: #ECFDF5; border: 1px solid #A7F3D0; color: #047857; }' +
-      '.status-banner.alert { background: #FEF2F2; border: 1px solid #FECACA; color: #DC2626; }' +
       '</style></head><body>' +
       '<div class="no-print">' +
-        '<button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar em PDF</button>' +
-        '<button class="btn-close" onclick="window.close()">Fechar</button>' +
+        '<button onclick="window.print()" style="padding:9px 18px;background:#2563EB;color:#fff;font-weight:700;border:none;border-radius:6px;cursor:pointer;box-shadow:0 3px 10px rgba(37,99,235,0.3);font-size:13px;">🖨️ Imprimir / Salvar em PDF</button>' +
+        '<button onclick="window.close()" style="padding:9px 14px;background:#64748B;color:#fff;font-weight:600;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Fechar</button>' +
       '</div>';
 
-    // ═══════════════════════════════════════════
-    // PÁGINA 1: Cabeçalho, RF, Exibição, Transmissor, Satélite e Rotas
-    // ═══════════════════════════════════════════
-    htmlDoc += '<div class="page-sheet">' +
-      '<div class="top-header">' +
-        '<span class="top-header-title">REDE INTEGRAÇÃO — RELATÓRIO DIÁRIO DE TECNOLOGIA UDI</span>' +
-        '<span>Emissão: ' + dataHora + '</span>' +
+    // ═══ PÁGINA 1 ═══
+    htmlDoc += '<div class="page-container">' +
+      '<div class="page-header-top"><span>' + dataHora + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
+      '<div class="form-title">RELATÓRIO DIÁRIO - TECNOLOGIA UDI</div>' +
+      '<p style="font-size:10px;color:#64748B;margin:0 0 14px 0;">* Obrigatória<br/>* Operador registrado: <strong>' + escapeHTML(usuario) + '</strong></p>' +
+      '<div class="q-num">1. DIA TRABALHADO: *</div>' +
+      '<div class="input-line">📅 ' + dataVal + '</div>' +
+      '<div class="q-num">2. TURNO TRABALHADO: *</div>' +
+      '<div class="radio-row">' + (turnoCheck[0] ? '🔘' : '⚪') + ' 00h00 - 06h00</div>' +
+      '<div class="radio-row">' + (turnoCheck[1] ? '🔘' : '⚪') + ' 06h00 - 12h00</div>' +
+      '<div class="radio-row">' + (turnoCheck[2] ? '🔘' : '⚪') + ' 12h00 - 18h00</div>' +
+      '<div class="radio-row">' + (turnoCheck[3] ? '🔘' : '⚪') + ' 18h00 - 00h00</div>' +
+      '<div class="radio-row">' + (turnoCheck[4] ? '🔘' : '⚪') + ' Outra</div>' +
+      '<div class="q-num">3. CENTRO EXIBIDOR: *</div>' +
+      renderTabelaForms(exibItens) +
+      '<div class="q-num">4. TRANSMISSOR: *</div>' +
+      renderTabelaForms(transItens) +
+      '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>1/4</span></div>' +
+    '</div><div class="page-break"></div>';
+
+    // ═══ PÁGINA 2 ═══
+    htmlDoc += '<div class="page-container">' +
+      '<div class="page-header-top"><span>' + dataHora + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
+      '<div class="q-num">5. Potência do Transmissor (W): *</div>' +
+      '<div class="input-line">' + ((potEl && potEl.value) ? (potEl.value + ' W') : '2500 W') + '</div>' +
+      '<div class="q-num">6. Potência Refletida do Transmissor: (W) *</div>' +
+      '<div class="input-line">' + ((refEl && refEl.value) ? (refEl.value + ' W') : '16 W') + '</div>' +
+      '<div class="q-num">7. RECEPTORES DE SATÉLITE (VÍDEO E CANAL DE VOZ): *</div>' +
+      renderTabelaForms(satItens) +
+      '<div class="q-num">8. SAT REDE TIT C/N (dB): *</div>' +
+      '<div class="input-line">' + ((satRedeDb && satRedeDb.value) ? (satRedeDb.value + ' dB') : '13.8 dB') + '</div>' +
+      '<div class="q-num">9. SAT BH C/N (dB): *</div>' +
+      '<div class="input-line">' + ((satBhDb && satBhDb.value) ? (satBhDb.value + ' dB') : '14.0 dB') + '</div>' +
+      '<div class="q-num">10. SAT SP C/N (dB): *</div>' +
+      '<div class="input-line">' + ((satSpDb && satSpDb.value) ? (satSpDb.value + ' dB') : '18.2 dB') + '</div>' +
+      '<div class="q-num">11. ROTA DE CONTRIBUIÇÃO E RECEPÇÃO DE SINAIS DAS PRAÇAS</div>' +
+      renderTabelaForms(rotasItens) +
+      '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>2/4</span></div>' +
+    '</div><div class="page-break"></div>';
+
+    // ═══ PÁGINA 3 ═══
+    htmlDoc += '<div class="page-container">' +
+      '<div class="page-header-top"><span>' + dataHora + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
+      '<div class="q-num">12. CENTRAL TÉCNICA:</div>' +
+      renderTabelaForms(ctItens) +
+      '<div class="q-num">13. CPA:</div>' +
+      renderTabelaForms(cpaItens) +
+      '<div class="q-num">14. CADEIA SATÉLITE:</div>' +
+      renderTabelaForms(satCadItens) +
+      '<div class="q-num">15. ENERGIA:</div>' +
+      renderTabelaForms(engItens) +
+      '<div class="q-num">16. RELATE AQUI TODAS AS NÃO CONFORMIDADES DO HORÁRIO</div>' +
+      '<div class="input-line" style="min-height:70px;white-space:pre-wrap;">' + ((obsEl && obsEl.value) ? escapeHTML(obsEl.value) : 'Tudo operando dentro dos parâmetros de conformidade técnica.') + '</div>' +
+      '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>3/4</span></div>' +
+    '</div><div class="page-break"></div>';
+
+    // ═══ PÁGINA 4 ═══
+    htmlDoc += '<div class="page-container">' +
+      '<div class="page-header-top"><span>' + dataHora + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
+      '<div style="text-align:center;margin-top:120px;padding:30px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;">' +
+        '<div style="font-size:18px;font-weight:700;color:#0F172A;margin-bottom:8px;">Relatório Registrado com Sucesso</div>' +
+        '<p style="font-size:11.5px;color:#64748B;line-height:1.6;">' +
+          'Os dados deste formulário foram autenticados e transmitidos para a base central de engenharia e tecnologia da TV Integração.<br/>' +
+          'Operador Responsável: <strong>' + escapeHTML(usuario) + '</strong> | Praça: <strong>Uberlândia (MG)</strong>' +
+        '</p>' +
       '</div>' +
-      '<div class="report-head">' +
-        '<div class="report-head-item"><div class="report-head-lbl">Data do Plantão</div><div class="report-head-val">📅 ' + dataVal + '</div></div>' +
-        '<div class="report-head-item"><div class="report-head-lbl">Turno Registrado</div><div class="report-head-val">⏱️ ' + turnoTxt + '</div></div>' +
-        '<div class="report-head-item"><div class="report-head-lbl">Operador Responsável</div><div class="report-head-val">👤 ' + escapeHTML(usuario) + '</div></div>' +
-        '<div class="report-head-item"><div class="report-head-lbl">Praça / Unidade</div><div class="report-head-val">📍 Uberlândia (MG)</div></div>' +
+      '<div style="margin-top:100px;font-size:9.5px;color:#94A3B8;text-align:center;">' +
+        'Este conteúdo não é criado nem endossado pela Microsoft. Os dados que você enviar serão enviados ao proprietário do formulário.<br/>Microsoft Forms' +
       '</div>' +
-      '<div class="metrics-strip">' +
-        '<div class="metric-card"><div class="metric-card-lbl">Potência Direta</div><div class="metric-card-val">' + potVal + '</div></div>' +
-        '<div class="metric-card"><div class="metric-card-lbl">Potência Refletida</div><div class="metric-card-val" style="color:' + (parseFloat(refVal) > 40 ? '#DC2626' : '#059669') + ';">' + refVal + '</div></div>' +
-        '<div class="metric-card"><div class="metric-card-lbl">SAT Rede C/N</div><div class="metric-card-val">' + satRedeVal + '</div></div>' +
-        '<div class="metric-card"><div class="metric-card-lbl">SAT BH C/N</div><div class="metric-card-val">' + satBhVal + '</div></div>' +
-        '<div class="metric-card"><div class="metric-card-lbl">SAT SP C/N</div><div class="metric-card-val">' + satSpVal + '</div></div>' +
-      '</div>' +
-      renderTabelaForms(exibItens, '1. Centro Exibidor (Signa, Smartware, Multiview, Clearcom, OTT)') +
-      renderTabelaForms(transItens, '2. Transmissor Principal & RF') +
-      renderTabelaForms(satItens, '3. Receptores de Satélite (Vídeo e Áudio)') +
-      renderTabelaForms(rotasItens, '4. Rotas de Contribuição e Recepção (Makito, MPLS, L2L)') +
-      '<div class="bottom-footer"><span>TV Integração — Tecnologia UDI</span><span>Página 1 de 2</span></div>' +
+      '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>4/4</span></div>' +
     '</div>';
 
-    // ═══════════════════════════════════════════
-    // PÁGINA 2: Central Técnica, CPA, Cadeia Satélite, Energia e Observações
-    // ═══════════════════════════════════════════
-    var bannerStatusHtml = ncDetectadas.length === 0
-      ? '<div class="status-banner ok"><span>✅ TODOS OS 26 SISTEMAS EM CONFORMIDADE TÉCNICA OPERACIONAL</span><span>100% OK</span></div>'
-      : '<div class="status-banner alert"><span>⚠️ NÃO CONFORMIDADES REGISTRADAS NO TURNO (' + ncDetectadas.length + '): ' + escapeHTML(ncDetectadas.join(', ')) + '</span><span>ATENÇÃO</span></div>';
+    htmlDoc += '<script>setTimeout(function(){ window.print(); }, 500);<\/script></body></html>';
 
-    htmlDoc += '<div class="page-sheet">' +
-      '<div class="top-header">' +
-        '<span class="top-header-title">REDE INTEGRAÇÃO — RELATÓRIO DIÁRIO DE TECNOLOGIA UDI</span>' +
-        '<span>Emissão: ' + dataHora + '</span>' +
-      '</div>' +
-      bannerStatusHtml +
-      renderTabelaForms(ctItens, '5. Central Técnica (Frames, Multiview, Intercom, Climatização)') +
-      renderTabelaForms(cpaItens, '6. CPA (Controle de Produção, Retornos e Mochilinks)') +
-      renderTabelaForms(satCadItens, '7. Cadeia Satélite Uplink (Mux, Modulador, Encoder, BUC)') +
-      renderTabelaForms(engItens, '8. Infraestrutura & Energia (Gerador e No-Break)') +
-      '<div class="obs-box">' +
-        '<div class="obs-header">' +
-          '<span>9. Observações do Plantão / Relato de Intervenções</span>' +
-          '<span style="font-size:9.5px;color:#64748B;">Operador: ' + escapeHTML(usuario) + '</span>' +
-        '</div>' +
-        '<div class="obs-text">' + escapeHTML(obsVal) + '</div>' +
-      '</div>' +
-      '<div style="margin-top:12px;padding:8px 12px;background:#F8FAFC;border:1px solid #CBD5E1;border-radius:6px;font-size:9px;color:#64748B;line-height:1.45;text-align:center;">' +
-        'Documento operacional emitido via <strong>Sistema de Gestão de Tecnologia da TV Integração</strong> — Praça de Uberlândia.<br/>' +
-        'Registro arquivado com identificação de sessão técnica.' +
-      '</div>' +
-      '<div class="bottom-footer"><span>TV Integração — Tecnologia UDI</span><span>Página 2 de 2</span></div>' +
-    '</div>';
-
-    htmlDoc += '<script>' +
-      'var _printed = false;' +
-      'function dispararPrint() { if (_printed) return; _printed = true; window.print(); }' +
-      'window.addEventListener("load", function(){ setTimeout(dispararPrint, 350); });' +
-      'setTimeout(dispararPrint, 800);' +
-    '<\/script></body></html>';
-
-    try {
-      var printWin = window.open('', '_blank');
-      if (printWin && printWin.document) {
-        printWin.document.open();
-        printWin.document.write(htmlDoc);
-        printWin.document.close();
-      } else {
-        var blob = new Blob([htmlDoc], { type: 'text/html;charset=utf-8' });
-        var blobUrl = URL.createObjectURL(blob);
-        var winBlob = window.open(blobUrl, '_blank');
-        if (!winBlob && typeof mostrarToast === 'function') {
-          mostrarToast('Pop-up Bloqueado', 'Permita pop-ups no navegador para visualizar e salvar o PDF.', 'warning');
-        }
-      }
-    } catch(eOpen) {
-      console.warn('Erro ao abrir pop-up de impressão:', eOpen);
+    var printWin = window.open('', '_blank');
+    if (printWin) {
+      printWin.document.open();
+      printWin.document.write(htmlDoc);
+      printWin.document.close();
+    } else {
       if (typeof mostrarToast === 'function') {
         mostrarToast('Pop-up Bloqueado', 'Permita pop-ups no navegador para visualizar e salvar o PDF.', 'warning');
       }
@@ -6966,6 +6597,8 @@ document.addEventListener('DOMContentLoaded', function () {
   window.exportarVisaoGeralFormsPdf = exportarVisaoGeralFormsPdf;
 
 })();
+
+
   /* ═══════════════════════════════════════════
      POPUP: NOVA OCORRÊNCIA
   ═══════════════════════════════════════════ */
@@ -7026,14 +6659,9 @@ document.addEventListener('DOMContentLoaded', function () {
       var html = '<option value="">Sem equipamento específico</option>';
 
       if (isUberlandia) {
-        // Em Uberlândia: estritamente os equipamentos cadastrados pela equipe local
-        if (equips.length === 0) {
-          html += '<option value="" disabled style="color:var(--muted);">Nenhum equipamento cadastrado ainda em Uberlândia</option>';
-        } else {
-          equips.forEach(function(eq) {
-            html += '<option value="' + escapeHTML(eq) + '">' + escapeHTML(eq) + '</option>';
-          });
-        }
+        equips.forEach(function(eq) {
+          html += '<option value="' + escapeHTML(eq) + '">' + escapeHTML(eq) + '</option>';
+        });
       } else {
         // Juiz de Fora: equipamentos do dashboard ou os 13 padrão de JF
         if (equips.length === 0) {
@@ -7043,8 +6671,20 @@ document.addEventListener('DOMContentLoaded', function () {
           html += '<option value="' + escapeHTML(eq) + '">' + escapeHTML(eq) + '</option>';
         });
       }
+      html += '<option value="__novo__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo Equipamento...</option>';
       sel.innerHTML = html;
-      if (curVal) sel.value = curVal;
+      if (curVal && curVal !== '__novo__') sel.value = curVal;
+
+      if (!sel._hasNovoEqListener) {
+        sel._hasNovoEqListener = true;
+        sel.addEventListener('change', function() {
+          if (this.value === '__novo__') {
+            this.value = '';
+            window._eqTriggeringSelect = this;
+            if (typeof abrirModalCadastroEquipamento === 'function') abrirModalCadastroEquipamento();
+          }
+        });
+      }
     });
   }
   window.atualizarSelectEquipamentosNovaOc = atualizarSelectEquipamentosNovaOc;
@@ -7329,6 +6969,8 @@ document.addEventListener('DOMContentLoaded', function () {
   window.salvarEdicaoOcorrencia = salvarEdicaoOcorrencia;
 
   var itemDetalhesAtual = null;
+
+
   /* ═══════════════════════════════════════════
      SISTEMA DE LIXEIRA (Retenção 7 dias / Notificação 24h) — BANCO DE DADOS SUPABASE
   ═══════════════════════════════════════════ */
@@ -7563,13 +7205,33 @@ document.addEventListener('DOMContentLoaded', function () {
     var item = lixeiraData.find(function(i){ return i.id === id; });
     if (!item) return;
 
-    if (item.ocOriginal) {
-      ocorrencias = [item.ocOriginal].concat(ocorrencias.filter(function(o){ return o && o.id !== id; }));
-      save(ocorrencias);
-    }
-    if (item.histOriginal) {
-      historicoSeedData = [item.histOriginal].concat(historicoSeedData.filter(function(h){ return h && h.id !== id; }));
-      saveHistorico(historicoSeedData);
+    if (item.histOriginal && item.histOriginal.tipo === 'equipamento') {
+      if (Array.isArray(window.catalogoEquipamentos)) {
+        var jaNoCat = false;
+        window.catalogoEquipamentos.forEach(function(e) {
+          if (e.id === id) {
+            e.status_operacional = 'operacional';
+            jaNoCat = true;
+            if (typeof salvarEquipamentoPostgreSQL === 'function') salvarEquipamentoPostgreSQL(e);
+          }
+        });
+        if (!jaNoCat && item.histOriginal.eqOriginal) {
+          var restEq = Object.assign({}, item.histOriginal.eqOriginal, { status_operacional: 'operacional' });
+          window.catalogoEquipamentos.push(restEq);
+          if (typeof salvarEquipamentoPostgreSQL === 'function') salvarEquipamentoPostgreSQL(restEq);
+        }
+        if (typeof sincronizarDashboardMetricsComCatalogo === 'function') sincronizarDashboardMetricsComCatalogo();
+        if (typeof renderCatalogoEquipamentos === 'function') renderCatalogoEquipamentos();
+      }
+    } else {
+      if (item.ocOriginal) {
+        ocorrencias = [item.ocOriginal].concat(ocorrencias.filter(function(o){ return o && o.id !== id; }));
+        save(ocorrencias);
+      }
+      if (item.histOriginal) {
+        historicoSeedData = [item.histOriginal].concat(historicoSeedData.filter(function(h){ return h && h.id !== id; }));
+        saveHistorico(historicoSeedData);
+      }
     }
 
     lixeiraData = lixeiraData.filter(function(i){ return i.id !== id; });
@@ -7578,7 +7240,7 @@ document.addEventListener('DOMContentLoaded', function () {
     renderAll();
 
     if (typeof mostrarToast === 'function') {
-      mostrarToast('Ocorrência Restaurada', '"' + (item.titulo || 'Item') + '" foi restaurada com sucesso.', 'success');
+      mostrarToast('Item Restaurado', '"' + (item.titulo || 'Item') + '" foi restaurado com sucesso.', 'success');
     }
   }
   window.restaurarOcorrenciaLixeira = restaurarOcorrenciaLixeira;
@@ -7935,6 +7597,8 @@ document.addEventListener('DOMContentLoaded', function () {
   if (btnConfirmar) {
     btnConfirmar.addEventListener('click', confirmarResolucao);
   }
+
+
   /* ═══════════════════════════════════════════
      CONFIGURAÇÕES
   ═══════════════════════════════════════════ */
@@ -8051,12 +7715,362 @@ document.addEventListener('DOMContentLoaded', function () {
   window.atualizarNomeUsuario = atualizarNomeOperadorUI;
   window.atualizarNomeOperadorUI = atualizarNomeOperadorUI;
 
+  async function hashSenhaSHA256(texto) {
+    if (!window.crypto || !window.crypto.subtle) {
+      return btoa(unescape(encodeURIComponent(texto)));
+    }
+    var enc = new TextEncoder();
+    var buf = await crypto.subtle.digest('SHA-256', enc.encode(texto));
+    return Array.prototype.map.call(new Uint8Array(buf), function(x) {
+      return ('00' + x.toString(16)).slice(-2);
+    }).join('');
+  }
+  window.hashSenhaSHA256 = hashSenhaSHA256;
+
+  function aplicarPerfilOperadorAutenticado(op) {
+    if (!op) return;
+    var nome  = (op.nome || 'Operador').trim();
+    var email = (op.email || '').trim();
+    var cargo = (op.cargo || 'Técnico de Operações').trim();
+    var tag   = (op.tag_perfil || 'Tecnico').trim();
+    var praca = (op.praca && op.praca.indexOf('Uber') !== -1) ? 'Uberlândia' : 'Juiz de Fora';
+
+    try {
+      localStorage.setItem(USER_NAME_STORAGE_KEY, nome);
+      localStorage.setItem('tv_user_email_v1', email);
+      localStorage.setItem('tv_user_tag_v1', tag);
+      localStorage.setItem('tv_user_cargo_v1', cargo);
+    } catch (e) {}
+
+    if (typeof setPracaAtual === 'function') {
+      setPracaAtual(praca);
+    }
+    atualizarNomeOperadorUI(nome, true);
+
+    var labelCargo = cargo + ' [' + tag + ']';
+    var upEmail = document.getElementById('up-email');
+    if (upEmail && email) upEmail.textContent = email;
+    var cfgEmail = document.getElementById('cfg-email');
+    if (cfgEmail && email) cfgEmail.value = email;
+
+    var upRole = document.getElementById('up-role');
+    if (upRole) upRole.textContent = labelCargo;
+    var sRole = document.querySelector('.s-user-role');
+    if (sRole) sRole.textContent = labelCargo;
+    var cfgCargo = document.getElementById('cfg-cargo');
+    if (cfgCargo) cfgCargo.value = labelCargo;
+  }
+  window.aplicarPerfilOperadorAutenticado = aplicarPerfilOperadorAutenticado;
+
+  function resetarFluxoEmailIdentificacao() {
+    window._operadorLoginPendente = null;
+    var emailInput = document.getElementById('ident-operador-email');
+    var cardEl     = document.getElementById('ident-operador-card');
+    var boxCriar   = document.getElementById('ident-box-criar-senha');
+    var boxDigitar = document.getElementById('ident-box-digitar-senha');
+    var msgEl      = document.getElementById('ident-chave-msg');
+    var btn        = document.getElementById('btn-confirmar-identificacao');
+
+    if (emailInput) {
+      emailInput.disabled = false;
+      emailInput.style.background = 'var(--surface)';
+      emailInput.focus();
+    }
+    if (cardEl)     cardEl.style.display     = 'none';
+    if (boxCriar)   boxCriar.style.display   = 'none';
+    if (boxDigitar) boxDigitar.style.display = 'none';
+    if (msgEl)      msgEl.style.display      = 'none';
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Continuar';
+    }
+  }
+  window.resetarFluxoEmailIdentificacao = resetarFluxoEmailIdentificacao;
+
+  function alternarModoLoginManual() {
+    var wrapEmail  = document.getElementById('ident-step-email-wrap');
+    var wrapManual = document.getElementById('ident-step-manual-wrap');
+    var linkEl     = document.getElementById('link-alternar-modo-login');
+    var msgEl      = document.getElementById('ident-chave-msg');
+    var btn        = document.getElementById('btn-confirmar-identificacao');
+    if (!wrapEmail || !wrapManual) return;
+
+    var indoParaManual = (wrapManual.style.display === 'none');
+    wrapEmail.style.display  = indoParaManual ? 'none' : 'flex';
+    wrapManual.style.display = indoParaManual ? 'flex' : 'none';
+    if (msgEl) msgEl.style.display = 'none';
+
+    if (indoParaManual) {
+      if (linkEl) linkEl.textContent = 'Voltar para Login por E-mail Corporativo';
+      if (btn) btn.textContent = 'Salvar e Continuar';
+      var nomeIn = document.getElementById('ident-operador-nome');
+      if (nomeIn) setTimeout(function() { nomeIn.focus(); }, 100);
+    } else {
+      if (linkEl) linkEl.textContent = 'Entrar com Chave da Estação (Sem e-mail)';
+      resetarFluxoEmailIdentificacao();
+    }
+  }
+  window.alternarModoLoginManual = alternarModoLoginManual;
+
+  function exibirMsgLogin(msgEl, texto, tipo) {
+    if (!msgEl) return;
+    msgEl.style.display = 'block';
+    if (tipo === 'erro') {
+      msgEl.style.background = '#FEF2F2';
+      msgEl.style.border     = '1px solid #FECACA';
+      msgEl.style.color      = '#DC2626';
+    } else if (tipo === 'ok') {
+      msgEl.style.background = '#F0FDF4';
+      msgEl.style.border     = '1px solid #BBF7D0';
+      msgEl.style.color      = '#15803D';
+    } else {
+      msgEl.style.background = '#F8FAFC';
+      msgEl.style.border     = '1px solid var(--border)';
+      msgEl.style.color      = 'var(--muted)';
+    }
+    msgEl.innerHTML = texto;
+  }
+
+  async function garantirConexaoBancoParaLogin() {
+    var jaConectado = (typeof isEstacaoConectadaTV === 'function') && isEstacaoConectadaTV();
+    if (jaConectado) {
+      var u = (typeof DBService !== 'undefined' && DBService.url) ? DBService.url : localStorage.getItem('tv_supabase_url');
+      var k = (typeof DBService !== 'undefined' && DBService.key) ? DBService.key : localStorage.getItem('tv_supabase_key');
+      return { ok: true, url: u.replace(/\/+$/, ''), key: k };
+    }
+    var pack = window.ENCRYPTED_TV_CREDENTIALS || (window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS);
+    if (pack && pack.data && typeof TVCrypto !== 'undefined') {
+      try {
+        var creds = await TVCrypto.decrypt(atob('QEludGVncmEyNjIw'), pack);
+        if (creds && creds.url && creds.key) {
+          return { ok: true, url: creds.url.replace(/\/+$/, ''), key: creds.key, credsObj: creds };
+        }
+      } catch (e) {}
+    }
+    return { ok: false };
+  }
+
   async function confirmarIdentificacaoOperador(entrarModoLocal) {
+    var wrapManual = document.getElementById('ident-step-manual-wrap');
+    var modoManualAtivo = wrapManual && wrapManual.style.display !== 'none';
+    var msgEl = document.getElementById('ident-chave-msg');
+    var btn   = document.getElementById('btn-confirmar-identificacao');
+
+    // Se escolheu trabalhar Offline
+    if (entrarModoLocal) {
+      var nomeOff = (document.getElementById('ident-operador-nome') && document.getElementById('ident-operador-nome').value.trim())
+        || (document.getElementById('ident-operador-email') && document.getElementById('ident-operador-email').value.split('@')[0])
+        || 'Operador';
+      localStorage.removeItem('tv_supabase_url');
+      localStorage.removeItem('tv_supabase_key');
+      if (typeof DBService !== 'undefined' && DBService) {
+        DBService.url = '';
+        DBService.key = '';
+        DBService.mode = 'local';
+      }
+      if (typeof updateCloudStatus === 'function') updateCloudStatus(false, 'Modo Local');
+      localStorage.setItem(USER_NAME_STORAGE_KEY, nomeOff);
+      atualizarNomeOperadorUI(nomeOff);
+      fecharPopup('popup-identificacao-operador');
+      abrirPopup('popup-entrada');
+      return;
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // FLUXO 1: LOGIN POR E-MAIL CORPORATIVO + SENHA (POSTGRESQL / SUPABASE)
+    // ══════════════════════════════════════════════════════════════════
+    if (!modoManualAtivo) {
+      var emailInput = document.getElementById('ident-operador-email');
+      var email = (emailInput ? emailInput.value : '').trim().toLowerCase();
+
+      if (!email || email.indexOf('@') === -1) {
+        exibirMsgLogin(msgEl, 'Por favor, digite seu <strong>e-mail corporativo</strong> válido.', 'erro');
+        if (emailInput) emailInput.focus();
+        return;
+      }
+
+      var con = await garantirConexaoBancoParaLogin();
+      if (!con.ok) {
+        exibirMsgLogin(msgEl, 'Não foi possível conectar ao banco. Use a opção de Chave da Estação abaixo.', 'erro');
+        return;
+      }
+
+      // ETAPA 1: Ainda não buscou o operador no banco para este e-mail
+      if (!window._operadorLoginPendente || (window._operadorLoginPendente.email || '').toLowerCase() !== email) {
+        if (btn) { btn.disabled = true; btn.textContent = 'Verificando e-mail...'; }
+        exibirMsgLogin(msgEl, 'Consultando seu cadastro no banco PostgreSQL...', 'info');
+
+        try {
+          var resOp = await fetch(con.url + '/rest/v1/operadores?email=ilike.' + encodeURIComponent(email) + '&select=*&limit=1', {
+            headers: {
+              'apikey': con.key,
+              'Authorization': 'Bearer ' + con.key,
+              'Cache-Control': 'no-cache'
+            }
+          });
+
+          if (!resOp.ok) {
+            exibirMsgLogin(msgEl, 'Erro ao consultar tabela <code>operadores</code>. Verifique se o SQL foi executado no Supabase.', 'erro');
+            if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
+            return;
+          }
+
+          var listaOp = await resOp.json();
+          if (!Array.isArray(listaOp) || listaOp.length === 0) {
+            exibirMsgLogin(
+              msgEl,
+              '❌ O e-mail <strong>' + escapeHTML(email) + '</strong> ainda não está cadastrado na tabela <code>operadores</code> do banco.<br><span style="font-size:11px;">Solicite o cadastro à TI/Administração ou use "Entrar com Chave da Estação" abaixo.</span>',
+              'erro'
+            );
+            if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
+            return;
+          }
+
+          var op = listaOp[0];
+          if (op.ativo === false) {
+            exibirMsgLogin(msgEl, '❌ Este perfil de operador encontra-se desativado no sistema.', 'erro');
+            if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
+            return;
+          }
+
+          window._operadorLoginPendente = op;
+          if (emailInput) {
+            emailInput.disabled = true;
+            emailInput.style.background = '#F1F5F9';
+          }
+
+          var cardEl    = document.getElementById('ident-operador-card');
+          var cardNome  = document.getElementById('ident-card-nome');
+          var cardTag   = document.getElementById('ident-card-tag');
+          var cardPraca = document.getElementById('ident-card-praca');
+          if (cardNome)  cardNome.textContent  = '👤 ' + (op.nome || 'Operador');
+          if (cardTag)   cardTag.textContent   = op.tag_perfil || 'Tecnico';
+          if (cardPraca) cardPraca.textContent = 'Praça: ' + (op.praca || 'Juiz de Fora') + ' · ' + (op.cargo || 'Operações');
+          if (cardEl)    cardEl.style.display  = 'block';
+
+          if (msgEl) msgEl.style.display = 'none';
+
+          // Verifica se é PRIMEIRO ACESSO (senha_hash nulo ou vazio)
+          if (!op.senha_hash || String(op.senha_hash).trim() === '') {
+            var boxCriar = document.getElementById('ident-box-criar-senha');
+            var boxDig   = document.getElementById('ident-box-digitar-senha');
+            if (boxCriar) boxCriar.style.display = 'flex';
+            if (boxDig)   boxDig.style.display   = 'none';
+            var inNova = document.getElementById('ident-senha-nova');
+            var inConf = document.getElementById('ident-senha-confirma');
+            if (inNova) { inNova.value = ''; setTimeout(function() { inNova.focus(); }, 100); }
+            if (inConf) inConf.value = '';
+            if (btn) { btn.disabled = false; btn.textContent = 'Salvar Senha e Entrar'; }
+          } else {
+            var boxCriar2 = document.getElementById('ident-box-criar-senha');
+            var boxDig2   = document.getElementById('ident-box-digitar-senha');
+            if (boxCriar2) boxCriar2.style.display = 'none';
+            if (boxDig2)   boxDig2.style.display   = 'flex';
+            var inAt = document.getElementById('ident-senha-atual');
+            if (inAt) { inAt.value = ''; setTimeout(function() { inAt.focus(); }, 100); }
+            if (btn) { btn.disabled = false; btn.textContent = 'Entrar no Sistema'; }
+          }
+          return;
+        } catch (errFetch) {
+          exibirMsgLogin(msgEl, 'Falha de conexão com o banco: ' + errFetch.message, 'erro');
+          if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
+          return;
+        }
+      }
+
+      // ETAPA 2: Operador já foi identificado; agora cria a senha (1º acesso) ou valida a senha existente
+      var opAtivo = window._operadorLoginPendente;
+      var primeiroAcesso = !opAtivo.senha_hash || String(opAtivo.senha_hash).trim() === '';
+
+      if (primeiroAcesso) {
+        var sNova = (document.getElementById('ident-senha-nova') ? document.getElementById('ident-senha-nova').value : '').trim();
+        var sConf = (document.getElementById('ident-senha-confirma') ? document.getElementById('ident-senha-confirma').value : '').trim();
+
+        if (sNova.length < 4) {
+          exibirMsgLogin(msgEl, 'A senha deve ter pelo menos <strong>4 caracteres</strong>.', 'erro');
+          return;
+        }
+        if (sNova !== sConf) {
+          exibirMsgLogin(msgEl, 'As duas senhas digitadas <strong>não conferem</strong>. Digite novamente.', 'erro');
+          return;
+        }
+
+        if (btn) { btn.disabled = true; btn.textContent = 'Salvando senha...'; }
+        var novoHash = await hashSenhaSHA256(sNova);
+
+        try {
+          var resPatch = await fetch(con.url + '/rest/v1/operadores?id=eq.' + encodeURIComponent(opAtivo.id), {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': con.key,
+              'Authorization': 'Bearer ' + con.key
+            },
+            body: JSON.stringify({
+              senha_hash: novoHash,
+              atualizado_em: new Date().toISOString()
+            })
+          });
+
+          if (!resPatch.ok) {
+            exibirMsgLogin(msgEl, 'Não foi possível salvar a senha no banco. Verifique se a coluna <code>senha_hash</code> foi criada.', 'erro');
+            if (btn) { btn.disabled = false; btn.textContent = 'Salvar Senha e Entrar'; }
+            return;
+          }
+          opAtivo.senha_hash = novoHash;
+        } catch (errP) {
+          exibirMsgLogin(msgEl, 'Erro de rede ao salvar senha: ' + errP.message, 'erro');
+          if (btn) { btn.disabled = false; btn.textContent = 'Salvar Senha e Entrar'; }
+          return;
+        }
+      } else {
+        var sDigitada = (document.getElementById('ident-senha-atual') ? document.getElementById('ident-senha-atual').value : '').trim();
+        if (!sDigitada) {
+          exibirMsgLogin(msgEl, 'Por favor, digite sua <strong>senha pessoal</strong>.', 'erro');
+          return;
+        }
+        var hashDigitado = await hashSenhaSHA256(sDigitada);
+        if (hashDigitado !== opAtivo.senha_hash && sDigitada !== opAtivo.senha_hash) {
+          exibirMsgLogin(msgEl, '❌ <strong>Senha incorreta.</strong> Tente novamente.', 'erro');
+          var inAtErr = document.getElementById('ident-senha-atual');
+          if (inAtErr) { inAtErr.focus(); inAtErr.select(); }
+          return;
+        }
+      }
+
+      // Login aprovado! Ativa a conexão da estação e aplica perfil completo do banco
+      localStorage.setItem('tv_supabase_url', con.url);
+      localStorage.setItem('tv_supabase_key', con.key);
+      if (typeof DBService !== 'undefined' && DBService) {
+        DBService.url  = con.url;
+        DBService.key  = con.key;
+        DBService.mode = 'supabase';
+      }
+      if (typeof updateCloudStatus === 'function') updateCloudStatus(true);
+
+      aplicarPerfilOperadorAutenticado(opAtivo);
+      window._operadorLoginPendente = null;
+
+      if (typeof DBService !== 'undefined' && typeof DBService.syncRemote === 'function') {
+        await DBService.syncRemote(true);
+      }
+      if (typeof renderAll === 'function') renderAll(true);
+
+      fecharPopup('popup-identificacao-operador');
+      abrirPopup('popup-entrada');
+
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('Acesso Autorizado', 'Bem-vindo(a), ' + opAtivo.nome + ' (' + (opAtivo.tag_perfil || 'Tecnico') + ')!', 'success');
+      }
+      if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
+      return;
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // FLUXO 2: MODO MANUAL POR NOME + CHAVE DA ESTAÇÃO (FALLBACK)
+    // ══════════════════════════════════════════════════════════════════
     var input = document.getElementById('ident-operador-nome');
     var chaveInput = document.getElementById('ident-chave-acesso');
-    var msgEl = document.getElementById('ident-chave-msg');
-    var btn = document.getElementById('btn-confirmar-identificacao') || (event && event.currentTarget);
-
     var nome = input ? input.value.trim() : '';
     if (!nome) {
       alert('Por favor, informe seu nome completo para continuar.');
@@ -8073,93 +8087,29 @@ document.addEventListener('DOMContentLoaded', function () {
     var pack = window.ENCRYPTED_TV_CREDENTIALS || (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS);
     var estacaoJaConectada = typeof isEstacaoConectadaTV === 'function' ? isEstacaoConectadaTV() : false;
 
-    // Se optou conscientemente por entrar em Modo Local
-    if (entrarModoLocal) {
-      localStorage.removeItem('tv_supabase_url');
-      localStorage.removeItem('tv_supabase_key');
-      if (typeof DBService !== 'undefined' && DBService) {
-        DBService.url = '';
-        DBService.key = '';
-        DBService.mode = 'local';
-      }
-      if (typeof updateCloudStatus === 'function') {
-        updateCloudStatus(false, 'Modo Local');
-      }
-      if (typeof renderAll === 'function') {
-        renderAll(true);
-      }
-    } else if (chave) {
-      // Se digitou uma chave, valida e conecta
-      if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-right:6px;vertical-align:middle;"></span> Validando...';
-      }
-      if (msgEl) {
-        msgEl.style.display = 'block';
-        msgEl.style.color = 'var(--muted)';
-        msgEl.textContent = 'Verificando chave com o banco...';
-      }
-
+    if (chave) {
+      if (btn) { btn.disabled = true; btn.textContent = 'Validando...'; }
       var res = await conectarComChaveTV(chave);
       if (!res.ok) {
-        if (msgEl) {
-          msgEl.style.display = 'block';
-          msgEl.style.color = '#DC2626';
-          msgEl.textContent = res.error || 'Chave de acesso incorreta.';
-        }
-        if (chaveInput) {
-          chaveInput.focus();
-          chaveInput.select();
-        }
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = 'Salvar e Continuar';
-        }
+        exibirMsgLogin(msgEl, res.error || 'Chave de acesso incorreta.', 'erro');
+        if (btn) { btn.disabled = false; btn.textContent = 'Salvar e Continuar'; }
         return;
       }
     } else if (!estacaoJaConectada && pack && pack.data) {
-      if (msgEl) {
-        msgEl.style.display = 'block';
-        msgEl.style.color = '#DC2626';
-        msgEl.innerHTML = 'Por favor, digite a Chave de Acesso para conectar à nuvem ou clique em <strong>"Entrar em Modo Local"</strong>.';
-      }
-      if (chaveInput) chaveInput.focus();
+      exibirMsgLogin(msgEl, 'Digite a Chave de Acesso da Estação ou clique em "Trabalhar Offline".', 'erro');
       return;
     }
 
     localStorage.setItem(USER_NAME_STORAGE_KEY, nome);
     atualizarNomeOperadorUI(nome);
-    try {
-      if (typeof obterOuCriarOperadorPorNome === 'function') {
-        await new Promise(function(resolve) {
-          obterOuCriarOperadorPorNome(nome, function(id) {
-            resolve(id);
-          });
-          setTimeout(resolve, 2500);
-        });
-      }
-    } catch(e) {}
-    try { if (typeof carregarOperadoresSugeridos === 'function') carregarOperadoresSugeridos(); } catch(e) {}
-
     if (typeof DBService !== 'undefined' && typeof DBService.syncRemote === 'function') {
       await DBService.syncRemote(true);
     }
-    if (typeof renderAll === 'function') {
-      renderAll(true);
-    }
+    if (typeof renderAll === 'function') renderAll(true);
 
     fecharPopup('popup-identificacao-operador');
     abrirPopup('popup-entrada');
-
-    if (typeof mostrarToast === 'function') {
-      mostrarToast('Operador Identificado', 'Bem-vindo, ' + nome + '!', 'success');
-    }
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = 'Salvar e Continuar';
-    }
+    if (btn) { btn.disabled = false; btn.textContent = 'Salvar e Continuar'; }
   }
   window.confirmarIdentificacaoOperador = confirmarIdentificacaoOperador;
 
@@ -8299,9 +8249,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (typeof updateCloudStatus === 'function') {
         updateCloudStatus(false, 'Modo Offline');
       }
-      if (typeof renderAll === 'function') {
-        renderAll(true);
-      }
       atualizarUIStatusBancoConfig();
       if (typeof mostrarToast === 'function') {
         mostrarToast('Modo Offline Ativado', 'Estação desconectada da rede. Operando localmente neste computador.', 'info');
@@ -8329,13 +8276,9 @@ document.addEventListener('DOMContentLoaded', function () {
       if (subEl) subEl.textContent = 'Sincronização ativa em tempo real com todos os computadores da TV.';
 
       actionsEl.innerHTML =
-        '<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalConectarBanco()" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;" title="Coloque uma senha para se conectar">' +
-          '<i data-lucide="key" style="width:13px;height:13px;"></i>' +
-          '<span>Conectar</span>' +
-        '</button>' +
-        '<button type="button" class="btn btn-ghost btn-sm" onclick="desconectarBancoModoLocal(true)" style="color:var(--red);border-color:var(--red-border);display:inline-flex;align-items:center;gap:5px;font-size:12px;" title="Trabalhar apenas neste computador">' +
-          '<i data-lucide="cloud-off" style="width:13px;height:13px;"></i>' +
-          '<span>Trabalhar Offline</span>' +
+        '<button type="button" class="btn btn-primary btn-sm" onclick="if(window.DBService&&DBService.syncRemote)DBService.syncRemote(true);" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;" title="Sincronizar todos os dados com o banco PostgreSQL agora">' +
+          '<i data-lucide="refresh-cw" style="width:13px;height:13px;"></i>' +
+          '<span>Sincronizar Banco Agora</span>' +
         '</button>';
     } else {
       dotEl.style.background = '#EF4444';
@@ -8692,27 +8635,16 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.aplicarCodigoCriptografadoAgora = aplicarCodigoCriptografadoAgora;
+
   /* ═══════════════════════════════════════════
      HISTÓRICO GERAL (Funções de Renderização e Filtros)
   ═══════════════════════════════════════════ */
-
-  var HISTORICO_PAGINA_LIMITE = 40;
-  window.historicoItensVisiveis = HISTORICO_PAGINA_LIMITE;
-
-  function carregarMaisHistorico() {
-    window.historicoItensVisiveis = (window.historicoItensVisiveis || HISTORICO_PAGINA_LIMITE) + 40;
-    renderHistorico();
-  }
-  window.carregarMaisHistorico = carregarMaisHistorico;
 
   function renderHistorico() {
     var container = document.getElementById('hist-list');
     if (!container) return;
 
     var busca = (document.getElementById('hist-search') ? document.getElementById('hist-search').value : '').toLowerCase().trim();
-    if (typeof mesclarSementeFormsSeConectado === 'function') {
-      try { mesclarSementeFormsSeConectado(); } catch(eS) {}
-    }
     var todosItens = getHistoricoCompleto();
 
     // Atualiza os contadores com todos os itens do histórico integrado
@@ -8728,48 +8660,11 @@ document.addEventListener('DOMContentLoaded', function () {
     if (document.getElementById('cnt-hist-rec'))   document.getElementById('cnt-hist-rec').textContent   = cntRec;
     if (document.getElementById('cnt-hist-meus'))  document.getElementById('cnt-hist-meus').textContent  = cntMeus;
 
-    var filtroPraca = (document.getElementById('hist-filtro-praca') ? document.getElementById('hist-filtro-praca').value : '').toLowerCase().trim();
-    var filtroData = (document.getElementById('hist-filtro-data') ? document.getElementById('hist-filtro-data').value : '').toLowerCase().trim();
-    var agora = new Date();
-
     var filtrados = todosItens.filter(function(item) {
       if (historicoFiltroCategoria === 'ocorrencia' && item.tipo !== 'ocorrencia') return false;
       if (historicoFiltroCategoria === 'relatorio' && item.tipo !== 'relatorio') return false;
       if (historicoFiltroCategoria === 'recebimento' && item.tipo !== 'recebimento') return false;
       if (historicoFiltroCategoria === 'meus' && !isItemDoUsuario(item)) return false;
-
-      // Filtro por Praça
-      if (filtroPraca) {
-        var pItem = ((item.praca || '') + ' ' + (item.local || '')).toLowerCase();
-        if (!pItem.includes(filtroPraca)) return false;
-      }
-
-      // Filtro por Data
-      if (filtroData) {
-        var dStr = String(item.dataCriacao || '');
-        if (filtroData === 'hoje') {
-          var yyyy = agora.getFullYear();
-          var mm = String(agora.getMonth() + 1);
-          if (mm.length < 2) mm = '0' + mm;
-          var dd = String(agora.getDate());
-          if (dd.length < 2) dd = '0' + dd;
-          var hojeIso = yyyy + '-' + mm + '-' + dd;
-          var hojeBr = dd + '/' + mm + '/' + yyyy;
-          if (!dStr.includes(hojeIso) && !dStr.includes(hojeBr)) return false;
-        } else if (filtroData === '7d' || filtroData === '30d') {
-          var maxDias = (filtroData === '7d' ? 7 : 30);
-          var ts = 0;
-          if (dStr.indexOf('/') !== -1) {
-            var partsD = dStr.split(' ')[0].split('/');
-            if (partsD.length === 3) ts = new Date(partsD[2] + '-' + partsD[1] + '-' + partsD[0]).getTime();
-          } else if (dStr.indexOf('-') !== -1) {
-            ts = new Date(dStr.split(' ')[0]).getTime();
-          }
-          if (!ts || (agora.getTime() - ts) > (maxDias * 86400000)) return false;
-        } else if (filtroData === '2026' || filtroData === '2025' || filtroData === '2024') {
-          if (!dStr.includes(filtroData)) return false;
-        }
-      }
 
       if (busca) {
         var str = (item.titulo + ' ' + item.equipamento + ' ' + item.criadoPor + ' ' + item.resolvidoPor + ' ' + item.categoria + ' ' + item.local + ' ' + item.descCriacao + ' ' + (item.descResolucao || '')).toLowerCase();
@@ -8789,10 +8684,6 @@ document.addEventListener('DOMContentLoaded', function () {
       renderHistoricoRelacionados(null);
       return;
     }
-
-    // Paginação para desempenho instantâneo (evita montar 1.490 nós no DOM simultaneamente)
-    var limite = busca ? filtrados.length : (window.historicoItensVisiveis || HISTORICO_PAGINA_LIMITE);
-    var itensExibidos = filtrados.slice(0, limite);
 
     function renderCardHistoricoHTML(item) {
       var eMeu = isItemDoUsuario(item);
@@ -8856,20 +8747,8 @@ document.addEventListener('DOMContentLoaded', function () {
       );
     }
 
-    var secoes = agruparPorDias(itensExibidos, function(item){ return item.dataCriacao; });
-    var htmlFinal = renderSecoesComCards(secoes, renderCardHistoricoHTML);
-
-    if (filtrados.length > limite) {
-      var restantes = filtrados.length - limite;
-      htmlFinal +=
-        '<div style="text-align:center;padding:16px 0;margin-top:10px;">' +
-          '<button type="button" class="btn btn-secondary btn-sm" onclick="carregarMaisHistorico()" style="font-weight:600;padding:8px 24px;border-radius:20px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">' +
-            'Carregar mais (' + restantes + ' registros restantes)' +
-          '</button>' +
-        '</div>';
-    }
-
-    container.innerHTML = htmlFinal;
+    var secoes = agruparPorDias(filtrados, function(item){ return item.dataCriacao; });
+    container.innerHTML = renderSecoesComCards(secoes, renderCardHistoricoHTML);
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
@@ -9162,69 +9041,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     if (!item) return;
     itemDetalhesAtual = item;
-    window.itemDetalhesAtual = item;
-
-    var isRondaUdi = item && (
-      item.subtipo === 'Tecnologia UDI' ||
-      (item.detalhesRonda && (item.praca === 'Uberlândia' || item.local === 'Uberlandia' || item.local === 'Uberlândia')) ||
-      (item.id && String(item.id).startsWith('rel_udi_')) ||
-      (item.categoria === 'Ronda Técnica' && (item.local === 'Uberlandia' || item.local === 'Uberlândia' || item.praca === 'Uberlândia'))
-    );
-
-    var modalContainer = document.querySelector('#popup-detalhes-historico .modal');
-    var modalTitle = document.getElementById('hist-det-title');
-    var modalTags  = document.getElementById('hist-det-tags');
-    var modalBody  = document.getElementById('hist-det-body');
-    var modalFooter = document.getElementById('hist-det-footer');
-
-    if (isRondaUdi) {
-      if (modalContainer) {
-        modalContainer.classList.add('modal-xl');
-        modalContainer.classList.remove('modal-lg');
-      }
-
-      var detalhes = (typeof extrairDetalhesRondaItem === 'function') ? extrairDetalhesRondaItem(item) : (item.detalhesRonda || {});
-      var temNc = detalhes.naoConformidades && detalhes.naoConformidades.length > 0;
-
-      if (modalTitle) modalTitle.textContent = 'Relatório Diário — Tecnologia UDI (' + (detalhes.data || item.titulo || '') + ')';
-      if (modalTags) {
-        modalTags.innerHTML =
-          '<span class="tag tag-ind">Tecnologia UDI</span> ' +
-          (temNc
-            ? '<span class="tag tag-r" style="font-weight:700;"><i data-lucide="alert-triangle" style="width:11px;height:11px;"></i> Com Não Conformidade (' + detalhes.naoConformidades.length + ')</span> '
-            : '<span class="tag tag-g" style="font-weight:700;"><i data-lucide="check-circle" style="width:11px;height:11px;"></i> 100% Conforme</span> ') +
-          '<span class="tag tag-gray-soft">' + escapeHTML(detalhes.turno || 'Plantão') + '</span>';
-      }
-
-      if (modalBody) {
-        modalBody.innerHTML = (typeof renderMiniRelatorioRondaUdiHTML === 'function')
-          ? renderMiniRelatorioRondaUdiHTML(item)
-          : '<p style="color:var(--muted);padding:14px;">Visualização indisponível.</p>';
-      }
-
-      if (modalFooter) {
-        modalFooter.innerHTML =
-          '<button type="button" class="btn btn-danger btn-sm" id="btn-hist-det-excluir" onclick="excluirOcorrenciaDoModalDetalhes()" style="display:inline-flex;align-items:center;gap:6px;">' +
-            '<i data-lucide="trash-2" style="width:13px;height:13px;stroke-width:2;"></i> Excluir Relatório' +
-          '</button>' +
-          '<div style="display:flex;gap:8px;margin-left:auto;">' +
-            '<button type="button" class="btn btn-secondary btn-sm" onclick="fecharPopup(\'popup-detalhes-historico\')">Fechar</button>' +
-            '<button type="button" class="btn btn-primary btn-sm" id="btn-export-pdf-turno" onclick="exportarFormularioTurnoIndividual(window.itemDetalhesAtual)" style="display:inline-flex;align-items:center;gap:6px;background:#0284C7;border-color:#0284C7;color:#fff;cursor:pointer;">' +
-              '<i data-lucide="printer" style="width:13px;height:13px;stroke-width:2;"></i> Imprimir / Exportar PDF do Turno' +
-            '</button>' +
-          '</div>';
-      }
-
-      abrirPopup('popup-detalhes-historico');
-      if (typeof lucide !== 'undefined') lucide.createIcons();
-      return;
-    }
-
-    // Caso seja Ocorrência comum, garante layout padrão modal-lg e botões originais
-    if (modalContainer) {
-      modalContainer.classList.remove('modal-xl');
-      modalContainer.classList.add('modal-lg');
-    }
 
     // Busca ocorrência vinculada para dados complementares
     var targetOcId = (item.id || '').replace(/^h_oc_/, '');
@@ -9379,18 +9195,6 @@ document.addEventListener('DOMContentLoaded', function () {
         '</div>';
     }
 
-    if (modalFooter) {
-      modalFooter.innerHTML =
-        '<button type="button" class="btn btn-danger btn-sm" id="btn-hist-det-excluir" onclick="excluirOcorrenciaDoModalDetalhes()" style="display:inline-flex;align-items:center;gap:5px;">' +
-          '<i data-lucide="trash-2" style="width:13px;height:13px;stroke-width:2;"></i> Excluir Ocorrência' +
-        '</button>' +
-        '<div style="display:flex;gap:8px;margin-left:auto;">' +
-          '<button type="button" class="btn btn-primary btn-sm" id="btn-hist-det-editar" onclick="editarOcorrenciaDoModalDetalhes()" style="display:inline-flex;align-items:center;gap:5px;">' +
-            '<i data-lucide="pencil" style="width:13px;height:13px;stroke-width:2;"></i> Editar Ocorrência' +
-          '</button>' +
-        '</div>';
-    }
-
     abrirPopup('popup-detalhes-historico');
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
@@ -9477,6 +9281,8 @@ document.addEventListener('DOMContentLoaded', function () {
     verDetalhesHistoricoDirect(item);
   }
   window.verDetalhesOcorrencia = verDetalhesOcorrencia;
+
+
   /* ═══════════════════════════════════════════
      SISTEMA DE TOAST NOTIFICATIONS & CENTRAL DE ALERTAS
   ═══════════════════════════════════════════ */
@@ -9862,6 +9668,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.limparTodasNotificacoes = limparTodasNotificacoes;
+
+
   /* ═══════════════════════════════════════════
      SISTEMA DE EXPORTAÇÃO E CONSOLIDAÇÃO POWER BI
   ═══════════════════════════════════════════ */
@@ -10112,6 +9920,22 @@ document.addEventListener('DOMContentLoaded', function () {
   function salvarDashboardMetricsStore() {
     try {
       localStorage.setItem(getDashboardMetricsKey(), JSON.stringify(dashboardMetrics));
+      // Sincroniza contadores de transmissões dos equipamentos direto na tabela equipamentos do PostgreSQL
+      if (typeof catalogoEquipamentos !== 'undefined' && Array.isArray(catalogoEquipamentos) && dashboardMetrics && dashboardMetrics.equipamento) {
+        var pracaAt = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+        catalogoEquipamentos.forEach(function(eq) {
+          if (eq && eq.praca === pracaAt && dashboardMetrics.equipamento[eq.nome]) {
+            var m = dashboardMetrics.equipamento[eq.nome];
+            var mud = !eq.metricas || eq.metricas.conf !== m.conf || eq.metricas.nc !== m.nc || eq.metricas.canc !== m.canc;
+            if (mud) {
+              eq.metricas = { conf: m.conf || 0, nc: m.nc || 0, canc: m.canc || 0 };
+              if (typeof salvarEquipamentoPostgreSQL === 'function') {
+                salvarEquipamentoPostgreSQL(eq);
+              }
+            }
+          }
+        });
+      }
     } catch (e) {}
   }
 
@@ -10326,15 +10150,12 @@ document.addEventListener('DOMContentLoaded', function () {
         '</div>';
     });
 
-    // Card Adicionar Equipamento interativo com animação fluida
-    htmlCards +=
-      '<div class="dash-card dash-card-add" onclick="abrirModalNovoEquipamento()" title="Cadastrar novo equipamento nesta praça">' +
-        '<div class="dash-card-add-icon">' +
-          '<i data-lucide="plus" style="width:20px;height:20px;stroke-width:2.5;"></i>' +
-        '</div>' +
-        '<span class="dash-card-add-label">+ Adicionar Equipamento</span>' +
-        '<span class="dash-card-add-sub">Monitoramento ao vivo</span>' +
-      '</div>';
+    if (eqKeys.length === 0) {
+      htmlCards =
+        '<div style="grid-column:1/-1;text-align:center;padding:28px 16px;background:var(--surface);border:1px dashed var(--border);border-radius:var(--r-lg);color:var(--muted);font-size:12.5px;">' +
+          'Nenhum equipamento cadastrado nesta praça. Acesse a aba <strong>Equipamentos</strong> no menu lateral para cadastrar.' +
+        '</div>';
+    }
 
     grid.innerHTML = htmlCards;
     window._ultimoEqAdicionado = null;
@@ -10468,6 +10289,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (barCancEq) barCancEq.style.height = eqTotal > 0 ? Math.max(eqPctCanc * 0.85, 4) + '%' : '4px';
   }
   window.renderResumoTransmissoesGerais = renderResumoTransmissoesGerais;
+
+
   /* ═══════════════════════════════════════════
      PLANEJAMENTO ORÇAMENTÁRIO (ANO ATUAL + 1) — BANCO DE DADOS SUPABASE
   ═══════════════════════════════════════════ */
@@ -11128,6 +10951,818 @@ document.addEventListener('DOMContentLoaded', function () {
     alert('Relatório de Orçamento ' + anoOrcamento + ' exportado com sucesso em formato consolidado (CAPEX/OPEX).');
   }
   window.exportarOrcamentoExcel = exportarOrcamentoExcel;
+
+
+  /* ═══════════════════════════════════════════
+     CATÁLOGO DE EQUIPAMENTOS & FICHEIRO DE VIDA — POSTGRESQL / SUPABASE
+  ═══════════════════════════════════════════ */
+
+  var EQUIPAMENTOS_STORAGE_KEY = 'tv_equipamentos_catalogo_v1';
+  var TAGS_PADRAO_EQUIPAMENTOS = ['LiveU', 'Transmissão', 'Estúdio', 'Áudio', 'Vídeo', 'RF', 'Rede/Fibra', 'Satélite', 'Energia'];
+
+  var EQUIPAMENTOS_SEED_JF = [
+    { id: 'eq_jf_liveu1',  codigo_patrimonio: 'PAT-JF-001', numero_serie: 'SN-LU600-01', nome: 'LIVE U1',      categoria: 'Mochilink / LiveU', fabricante_modelo: 'LiveU LU600 HEVC',       praca: 'Juiz de Fora', setor_local: 'Jornalismo Externo', tags: ['LiveU', 'Transmissão'], status_operacional: 'operacional', obs_tecnicas: 'Unidade móvel principal para entradas ao vivo externas.' },
+    { id: 'eq_jf_liveu2',  codigo_patrimonio: 'PAT-JF-002', numero_serie: 'SN-LU600-02', nome: 'LIVE U2',      categoria: 'Mochilink / LiveU', fabricante_modelo: 'LiveU LU600 HEVC',       praca: 'Juiz de Fora', setor_local: 'Jornalismo Externo', tags: ['LiveU', 'Transmissão'], status_operacional: 'operacional', obs_tecnicas: 'Unidade móvel de reportagem externa.' },
+    { id: 'eq_jf_liveu3',  codigo_patrimonio: 'PAT-JF-003', numero_serie: 'SN-LU600-03', nome: 'LIVE U3',      categoria: 'Mochilink / LiveU', fabricante_modelo: 'LiveU LU600 HEVC',       praca: 'Juiz de Fora', setor_local: 'Jornalismo Externo', tags: ['LiveU', 'Transmissão'], status_operacional: 'operacional', obs_tecnicas: 'Unidade móvel de reportagem externa.' },
+    { id: 'eq_jf_liveu4',  codigo_patrimonio: 'PAT-JF-004', numero_serie: 'SN-LU300-04', nome: 'LIVE U4',      categoria: 'Mochilink / LiveU', fabricante_modelo: 'LiveU LU300 Compact',    praca: 'Juiz de Fora', setor_local: 'Jornalismo Externo', tags: ['LiveU', 'Transmissão'], status_operacional: 'operacional', obs_tecnicas: 'Mochilink compacto para transmissões ágeis.' },
+    { id: 'eq_jf_lusmart', codigo_patrimonio: 'PAT-JF-005', numero_serie: 'SN-SMART-01', nome: 'LIVE U SMART', categoria: 'Mochilink / LiveU', fabricante_modelo: 'LiveU Smart Mobile',     praca: 'Juiz de Fora', setor_local: 'Jornalismo Externo', tags: ['LiveU', 'Transmissão'], status_operacional: 'operacional', obs_tecnicas: 'Licença de transmissão via smartphone para plantão.' },
+    { id: 'eq_jf_redacao', codigo_patrimonio: 'PAT-JF-006', numero_serie: 'SN-STUDIO-01',nome: 'REDAÇÃO',      categoria: 'Câmera / Estúdio',  fabricante_modelo: 'Ponto Fixo SDI Redação', praca: 'Juiz de Fora', setor_local: 'Redação Jornalismo', tags: ['Estúdio', 'Vídeo'],     status_operacional: 'operacional', obs_tecnicas: 'Ponto de câmera fixa e áudio no estúdio da redação.' },
+    { id: 'eq_jf_kmj',     codigo_patrimonio: 'PAT-JF-007', numero_serie: 'SN-KMJ-001',  nome: 'KMJ',          categoria: 'Infraestrutura',    fabricante_modelo: 'Enlace Dedicado KMJ',    praca: 'Juiz de Fora', setor_local: 'Central Técnica / MCR', tags: ['Rede/Fibra', 'Transmissão'], status_operacional: 'operacional', obs_tecnicas: 'Rota de contribuição e enlace dedicado.' },
+    { id: 'eq_jf_netpraca',codigo_patrimonio: 'PAT-JF-008', numero_serie: 'SN-NET-001',  nome: 'NET PRAÇA',    categoria: 'Link de Internet',  fabricante_modelo: 'Fibra Dedicada Praça',   praca: 'Juiz de Fora', setor_local: 'Externo / Praça',   tags: ['Rede/Fibra'],            status_operacional: 'operacional', obs_tecnicas: 'Ponto de rede externa para transmissões na praça.' },
+    { id: 'eq_jf_netport', codigo_patrimonio: 'PAT-JF-009', numero_serie: 'SN-NET-002',  nome: 'NET PORTARIA', categoria: 'Link de Internet',  fabricante_modelo: 'Ponto Rede Portaria',    praca: 'Juiz de Fora', setor_local: 'Portaria Principal', tags: ['Rede/Fibra'],            status_operacional: 'operacional', obs_tecnicas: 'Ponto de conectividade próximo à portaria.' },
+    { id: 'eq_jf_fmtnet',  codigo_patrimonio: 'PAT-JF-010', numero_serie: 'SN-NET-003',  nome: 'FORMATOS NET', categoria: 'Link de Internet',  fabricante_modelo: 'Codec / Link IP Formatos',praca: 'Juiz de Fora', setor_local: 'Central Técnica',   tags: ['Rede/Fibra', 'Vídeo'],  status_operacional: 'operacional', obs_tecnicas: 'Recepção e envio de formatos via rede IP.' },
+    { id: 'eq_jf_net2',    codigo_patrimonio: 'PAT-JF-011', numero_serie: 'SN-SW-2AND',  nome: 'NET 2º ANDAR', categoria: 'Link de Internet',  fabricante_modelo: 'Switch / Ponto 2º Andar',praca: 'Juiz de Fora', setor_local: '2º Andar',          tags: ['Rede/Fibra'],            status_operacional: 'operacional', obs_tecnicas: 'Infraestrutura de rede do 2º andar.' },
+    { id: 'eq_jf_net3',    codigo_patrimonio: 'PAT-JF-012', numero_serie: 'SN-SW-3AND',  nome: 'NET 3º ANDAR', categoria: 'Link de Internet',  fabricante_modelo: 'Switch / Ponto 3º Andar',praca: 'Juiz de Fora', setor_local: '3º Andar',          tags: ['Rede/Fibra'],            status_operacional: 'operacional', obs_tecnicas: 'Infraestrutura de rede do 3º andar.' },
+    { id: 'eq_jf_net4',    codigo_patrimonio: 'PAT-JF-013', numero_serie: 'SN-SW-4AND',  nome: 'NET 4º ANDAR', categoria: 'Link de Internet',  fabricante_modelo: 'Switch / Ponto 4º Andar',praca: 'Juiz de Fora', setor_local: '4º Andar',          tags: ['Rede/Fibra'],            status_operacional: 'operacional', obs_tecnicas: 'Infraestrutura de rede do 4º andar.' }
+  ];
+
+  var catalogoEquipamentos = [];
+  var filtroEquipamentoTag = 'todos';
+  var tagsSelecionadasModalEq = [];
+
+  function getEquipamentosDBCredentials() {
+    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
+    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
+    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
+      url = window.ENV_CONFIG.SUPABASE_URL;
+    }
+    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
+      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
+    }
+    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
+  }
+
+  function normalizarTagsEquipamento(tagsRaw) {
+    if (!Array.isArray(tagsRaw)) return [];
+    var vistos = {};
+    var limpas = [];
+    tagsRaw.forEach(function(t) {
+      var limpa = String(t || '').replace(/^#+/, '').trim();
+      if (!limpa) return;
+      var chave = limpa.toLowerCase();
+      if (!vistos[chave]) {
+        vistos[chave] = true;
+        limpas.push(limpa);
+      }
+    });
+    return limpas;
+  }
+
+  function sanitizarEquipamento(eq) {
+    if (!eq || !eq.nome) return null;
+    var nomeUp = String(eq.nome).trim().toUpperCase();
+    var p = (eq.praca && String(eq.praca).indexOf('Uber') !== -1) ? 'Uberlândia' : 'Juiz de Fora';
+    var tagsArr = normalizarTagsEquipamento(eq.tags);
+    return {
+      id: eq.id || ('eq_' + Date.now() + '_' + Math.floor(Math.random() * 1000)),
+      codigo_patrimonio: (eq.codigo_patrimonio || eq.plaqueta || '').trim(),
+      numero_serie: (eq.numero_serie || eq.serie || '').trim(),
+      nome: nomeUp,
+      categoria: eq.categoria || eq.tipo || 'Mochilink / LiveU',
+      fabricante_modelo: (eq.fabricante_modelo || eq.modelo || '').trim(),
+      praca: p,
+      setor_local: (eq.setor_local || eq.local || 'Central Técnica').trim(),
+      tags: tagsArr,
+      status_operacional: eq.status_operacional || 'operacional',
+      obs_tecnicas: (eq.obs_tecnicas || eq.obs || '').trim(),
+      metricas: (eq.metricas && typeof eq.metricas === 'object') ? eq.metricas : { conf: 0, nc: 0, canc: 0 },
+      criado_por: eq.criado_por || 'Sistema',
+      criado_em: eq.criado_em || Date.now()
+    };
+  }
+
+  function salvarCatalogoEquipamentosLocal() {
+    window.catalogoEquipamentos = catalogoEquipamentos;
+    try {
+      localStorage.setItem(EQUIPAMENTOS_STORAGE_KEY, JSON.stringify(catalogoEquipamentos));
+    } catch (e) {}
+    sincronizarDashboardMetricsComCatalogo();
+  }
+
+  function sincronizarDashboardMetricsComCatalogo() {
+    if (typeof dashboardMetrics === 'undefined' || !dashboardMetrics) return;
+    if (!dashboardMetrics.equipamento) dashboardMetrics.equipamento = {};
+
+    var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+    var isUdi = pracaAtiva.indexOf('Uber') !== -1;
+
+    var ativosDaPraca = (catalogoEquipamentos || []).filter(function(eq) {
+      if (!eq || eq.status_operacional === 'lixeira') return false;
+      return isUdi ? (eq.praca === 'Uberlândia') : (eq.praca === 'Juiz de Fora');
+    });
+
+    var novoMapaEq = {};
+    ativosDaPraca.forEach(function(eq) {
+      var existente = dashboardMetrics.equipamento[eq.nome];
+      var metBanco = (eq.metricas && typeof eq.metricas === 'object') ? eq.metricas : {};
+      novoMapaEq[eq.nome] = {
+        conf: Math.max(existente ? (existente.conf || 0) : 0, metBanco.conf || 0),
+        nc:   Math.max(existente ? (existente.nc   || 0) : 0, metBanco.nc   || 0),
+        canc: Math.max(existente ? (existente.canc || 0) : 0, metBanco.canc || 0),
+        id: eq.id,
+        codigo_patrimonio: eq.codigo_patrimonio,
+        numero_serie: eq.numero_serie,
+        tipo: eq.categoria,
+        obs: eq.obs_tecnicas
+      };
+    });
+
+    dashboardMetrics.equipamento = novoMapaEq;
+    if (typeof salvarDashboardMetricsStore === 'function') {
+      salvarDashboardMetricsStore();
+    }
+    try {
+      if (typeof atualizarSelectsEquipamentosCTRS === 'function') atualizarSelectsEquipamentosCTRS();
+      if (typeof atualizarSelectEquipamentosNovaOc === 'function') atualizarSelectEquipamentosNovaOc();
+    } catch (e) {}
+  }
+  window.sincronizarDashboardMetricsComCatalogo = sincronizarDashboardMetricsComCatalogo;
+
+  function carregarEquipamentosStore() {
+    try {
+      var raw = localStorage.getItem(EQUIPAMENTOS_STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          catalogoEquipamentos = parsed.map(sanitizarEquipamento).filter(Boolean);
+        }
+      }
+    } catch (e) {}
+
+    // Se ainda não houver equipamentos de Juiz de Fora no catálogo, inicializa com os 13 padrão
+    var temJF = catalogoEquipamentos.some(function(e) { return e.praca === 'Juiz de Fora'; });
+    if (!temJF) {
+      catalogoEquipamentos = EQUIPAMENTOS_SEED_JF.map(sanitizarEquipamento).concat(catalogoEquipamentos);
+    }
+
+    // Migra qualquer equipamento que tenha sido cadastrado anteriormente no dashboardMetrics
+    try {
+      ['tv_dashboard_metrics_v2_jf', 'tv_dashboard_metrics_v2_udi'].forEach(function(k) {
+        var mRaw = localStorage.getItem(k);
+        if (!mRaw) return;
+        var mObj = JSON.parse(mRaw);
+        if (mObj && mObj.equipamento) {
+          var pr = k.indexOf('_udi') !== -1 ? 'Uberlândia' : 'Juiz de Fora';
+          Object.keys(mObj.equipamento).forEach(function(nomeEq) {
+            var jaExiste = catalogoEquipamentos.some(function(e) { return e.nome === nomeEq && e.praca === pr; });
+            if (!jaExiste) {
+              var info = mObj.equipamento[nomeEq] || {};
+              catalogoEquipamentos.push(sanitizarEquipamento({
+                id: 'eq_' + pr.toLowerCase().replace(/\s+/g, '') + '_' + nomeEq.toLowerCase().replace(/[^a-z0-9]/g, ''),
+                codigo_patrimonio: info.codigo_patrimonio || '',
+                numero_serie: info.numero_serie || '',
+                nome: nomeEq,
+                categoria: info.tipo || 'Mochilink / LiveU',
+                praca: pr,
+                tags: ['Transmissão'],
+                obs_tecnicas: info.obs || ''
+              }));
+            }
+          });
+        }
+      });
+    } catch (eMig) {}
+
+    salvarCatalogoEquipamentosLocal();
+    renderCatalogoEquipamentos();
+    sincronizarEquipamentosPostgreSQL();
+  }
+  window.carregarEquipamentosStore = carregarEquipamentosStore;
+
+  function sincronizarEquipamentosPostgreSQL() {
+    var db = getEquipamentosDBCredentials();
+    if (!db.url || !db.key) return;
+
+    fetch(db.url + '/rest/v1/equipamentos?select=*&order=criado_em.asc', {
+      headers: {
+        'apikey': db.key,
+        'Authorization': 'Bearer ' + db.key,
+        'Cache-Control': 'no-cache'
+      }
+    })
+    .then(function(res) { return res.ok ? res.json() : null; })
+    .then(function(remotos) {
+      if (!Array.isArray(remotos)) return;
+      var mapaRemoto = {};
+      var listaRemota = [];
+      remotos.forEach(function(rawRem) {
+        var tinhaHash = Array.isArray(rawRem.tags) && rawRem.tags.some(function(t) { return String(t).indexOf('#') !== -1; });
+        var san = sanitizarEquipamento(rawRem);
+        if (san) {
+          listaRemota.push(san);
+          mapaRemoto[san.id] = san;
+          if (tinhaHash) {
+            salvarEquipamentoPostgreSQL(san);
+          }
+        }
+      });
+
+      // Preserva itens locais que ainda não subiram para o banco PostgreSQL
+      var pendentesLocais = (catalogoEquipamentos || []).filter(function(loc) {
+        return loc && loc.id && !mapaRemoto[loc.id];
+      });
+
+      if (pendentesLocais.length > 0) {
+        pendentesLocais.forEach(function(p) { salvarEquipamentoPostgreSQL(p); });
+      }
+
+      if (listaRemota.length > 0 || pendentesLocais.length > 0) {
+        catalogoEquipamentos = listaRemota.concat(pendentesLocais);
+        salvarCatalogoEquipamentosLocal();
+        renderCatalogoEquipamentos();
+        if (typeof renderDashboards === 'function') renderDashboards();
+      }
+    })
+    .catch(function(err) {
+      console.warn('[PostgreSQL Equipamentos] Tabela equipamentos ainda não criada ou modo local ativo:', err);
+    });
+  }
+  window.sincronizarEquipamentosPostgreSQL = sincronizarEquipamentosPostgreSQL;
+
+  function salvarEquipamentoPostgreSQL(eq) {
+    var db = getEquipamentosDBCredentials();
+    if (!db.url || !db.key || !eq) return;
+
+    var payload = {
+      id: eq.id,
+      codigo_patrimonio: eq.codigo_patrimonio || '',
+      numero_serie: eq.numero_serie || '',
+      nome: eq.nome,
+      categoria: eq.categoria || 'Transmissão',
+      fabricante_modelo: eq.fabricante_modelo || '',
+      praca: eq.praca || 'Juiz de Fora',
+      setor_local: eq.setor_local || 'Central Técnica',
+      tags: Array.isArray(eq.tags) ? eq.tags : [],
+      status_operacional: eq.status_operacional || 'operacional',
+      obs_tecnicas: eq.obs_tecnicas || '',
+      metricas: (eq.metricas && typeof eq.metricas === 'object') ? eq.metricas : { conf: 0, nc: 0, canc: 0 },
+      criado_por: eq.criado_por || 'Operador',
+      criado_em: eq.criado_em || Date.now()
+    };
+
+    fetch(db.url + '/rest/v1/equipamentos', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': db.key,
+        'Authorization': 'Bearer ' + db.key,
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(function(res) {
+      if (res.ok) {
+        console.log('[PostgreSQL Equipamentos] ✅ Equipamento sincronizado no banco:', eq.nome);
+      }
+    })
+    .catch(function(err) {
+      console.warn('[PostgreSQL Equipamentos] Erro ao gravar equipamento:', err);
+    });
+  }
+  window.salvarEquipamentoPostgreSQL = salvarEquipamentoPostgreSQL;
+
+  function obterOcorrenciasDoEquipamento(eq) {
+    if (!eq) return [];
+    var nomeBusca = (eq.nome || '').toUpperCase();
+    var idBusca = eq.id || '';
+    var todasOcs = (typeof ocorrencias !== 'undefined' && Array.isArray(ocorrencias)) ? ocorrencias : [];
+
+    return todasOcs.filter(function(oc) {
+      if (!oc || oc.status === 'lixeira') return false;
+      if (idBusca && oc.equipamento_id === idBusca) return true;
+      if (oc.equipamento && String(oc.equipamento).toUpperCase() === nomeBusca) return true;
+      if (Array.isArray(oc.tags) && oc.tags.some(function(t){ return String(t).toUpperCase() === nomeBusca; })) return true;
+      if (oc.titulo && String(oc.titulo).toUpperCase().indexOf(nomeBusca) !== -1) return true;
+      return false;
+    });
+  }
+  window.obterOcorrenciasDoEquipamento = obterOcorrenciasDoEquipamento;
+
+  function calcularStatusEquipamentoDinamico(eq) {
+    if (!eq) return 'operacional';
+    if (eq.status_operacional === 'manutencao') return 'manutencao';
+    var ocs = obterOcorrenciasDoEquipamento(eq);
+    var temAberta = ocs.some(function(o) { return o.status === 'aberta'; });
+    return temAberta ? 'atencao' : 'operacional';
+  }
+
+  function filtrarEquipamentosPorTag(tag, btn) {
+    filtroEquipamentoTag = tag ? String(tag).replace(/^#+/, '').trim() : 'todos';
+    if (btn && btn.closest('.pills')) {
+      btn.closest('.pills').querySelectorAll('.pill').forEach(function(p) { p.classList.remove('on'); });
+      btn.classList.add('on');
+    }
+    renderCatalogoEquipamentos();
+  }
+  window.filtrarEquipamentosPorTag = filtrarEquipamentosPorTag;
+
+  function renderCatalogoEquipamentos() {
+    var grid = document.getElementById('equipamentos-catalogo-grid');
+    if (!grid) return;
+
+    var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+    var isUdi = pracaAtiva.indexOf('Uber') !== -1;
+    var pracaBadge = document.getElementById('eq-catalogo-praca-badge');
+    if (pracaBadge) pracaBadge.textContent = isUdi ? 'Uberlândia' : 'Juiz de Fora';
+
+    var buscaInput = document.getElementById('eq-catalogo-search');
+    var termo = buscaInput ? buscaInput.value.trim().toLowerCase() : '';
+
+    var doCatalogoPraca = (catalogoEquipamentos || []).filter(function(eq) {
+      if (!eq || eq.status_operacional === 'lixeira') return false;
+      return isUdi ? (eq.praca === 'Uberlândia') : (eq.praca === 'Juiz de Fora');
+    });
+
+    // KPIs de topo
+    var totEq = doCatalogoPraca.length;
+    var totOp = 0, totAtencao = 0, totManut = 0;
+    doCatalogoPraca.forEach(function(eq) {
+      var st = calcularStatusEquipamentoDinamico(eq);
+      if (st === 'manutencao') totManut++;
+      else if (st === 'atencao') totAtencao++;
+      else totOp++;
+    });
+
+    var kpiTot = document.getElementById('eq-kpi-total');
+    var kpiOp  = document.getElementById('eq-kpi-operacional');
+    var kpiAt  = document.getElementById('eq-kpi-atencao');
+    if (kpiTot) kpiTot.textContent = totEq;
+    if (kpiOp)  kpiOp.textContent  = totOp;
+    if (kpiAt)  kpiAt.textContent  = (totAtencao + totManut);
+
+    var filtrados = doCatalogoPraca.filter(function(eq) {
+      if (filtroEquipamentoTag !== 'todos') {
+        var tagsEq = Array.isArray(eq.tags) ? eq.tags : [];
+        if (tagsEq.indexOf(filtroEquipamentoTag) === -1 && eq.categoria !== filtroEquipamentoTag) return false;
+      }
+      if (termo) {
+        var texto = [
+          eq.nome,
+          eq.codigo_patrimonio,
+          eq.numero_serie,
+          eq.fabricante_modelo,
+          eq.categoria,
+          eq.setor_local,
+          (eq.tags || []).join(' ')
+        ].join(' ').toLowerCase();
+        return texto.indexOf(termo) !== -1;
+      }
+      return true;
+    });
+
+    if (filtrados.length === 0) {
+      grid.innerHTML =
+        '<div style="grid-column:1/-1;text-align:center;padding:42px 20px;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);">' +
+          '<i data-lucide="cpu" style="width:36px;height:36px;color:var(--muted);stroke-width:1.5;margin-bottom:10px;"></i>' +
+          '<p style="color:var(--txt);font-size:14px;font-weight:700;margin:0;">Nenhum equipamento encontrado nesta visualização</p>' +
+          '<p style="color:var(--muted);font-size:12px;margin:4px 0 14px 0;">Clique em "+ Cadastrar Equipamento" para adicionar com ID, Nº de Série e Tags.</p>' +
+          '<button type="button" class="btn btn-primary btn-sm" onclick="abrirModalCadastroEquipamento()">+ Cadastrar Primeiro Equipamento</button>' +
+        '</div>';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      return;
+    }
+
+    grid.innerHTML = filtrados.map(function(eq) {
+      var st = calcularStatusEquipamentoDinamico(eq);
+      var ocs = obterOcorrenciasDoEquipamento(eq);
+      var abertasCount = ocs.filter(function(o){ return o.status === 'aberta'; }).length;
+
+      var badgeStatus = st === 'manutencao'
+        ? '<span class="tag tag-r">🔴 Em Manutenção</span>'
+        : st === 'atencao'
+        ? '<span class="tag tag-y">🟡 ' + abertasCount + ' Ocorrência(s)</span>'
+        : '<span class="tag tag-g">🟢 Operacional</span>';
+
+      var borderStyle = st === 'atencao'
+        ? 'border-color:#FDE68A;background:#FFFBEB;'
+        : st === 'manutencao'
+        ? 'border-color:#FECACA;background:#FEF2F2;'
+        : '';
+
+      var tagsHTML = (Array.isArray(eq.tags) && eq.tags.length > 0)
+        ? eq.tags.map(function(t) {
+            return '<span style="font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:12px;background:#EFF6FF;color:#0071E3;border:1px solid #BFDBFE;">' + escapeHTML(t) + '</span>';
+          }).join('')
+        : '<span style="font-size:10.5px;color:var(--muted);">Sem tags</span>';
+
+      return (
+        '<div class="dash-card" style="padding:16px;display:flex;flex-direction:column;justify-content:space-between;gap:12px;cursor:pointer;transition:all .15s ease;' + borderStyle + '" onclick="abrirFichaVidaEquipamento(\'' + escapeHTML(eq.id) + '\')" title="Clique para abrir o Ficheiro de Vida completo deste equipamento">' +
+          '<div>' +
+            '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">' +
+              '<div>' +
+                '<div style="font-size:14px;font-weight:800;color:var(--txt);letter-spacing:-0.01em;">' + escapeHTML(eq.nome) + '</div>' +
+                '<div style="font-size:11.5px;color:var(--muted);margin-top:1px;">' + escapeHTML(eq.fabricante_modelo || eq.categoria) + '</div>' +
+              '</div>' +
+              badgeStatus +
+            '</div>' +
+
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;background:rgba(255,255,255,0.75);border:1px solid var(--border-lt);border-radius:8px;padding:8px 10px;font-size:11px;margin-bottom:10px;">' +
+              '<div><span style="color:var(--muted);display:block;font-size:10px;">ID / PATRIMÔNIO</span><strong style="color:var(--txt);font-family:monospace;">' + escapeHTML(eq.codigo_patrimonio || 'Não inf.') + '</strong></div>' +
+              '<div><span style="color:var(--muted);display:block;font-size:10px;">Nº DE SÉRIE</span><strong style="color:var(--txt);font-family:monospace;">' + escapeHTML(eq.numero_serie || 'Não inf.') + '</strong></div>' +
+            '</div>' +
+
+            '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px;">' +
+              tagsHTML +
+            '</div>' +
+          '</div>' +
+
+          '<div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border-lt);font-size:11.5px;" onclick="event.stopPropagation();">' +
+            '<button type="button" class="btn btn-ghost btn-xs" onclick="abrirFichaVidaEquipamento(\'' + escapeHTML(eq.id) + '\')" style="color:var(--blue);font-weight:600;padding:4px 8px;display:inline-flex;align-items:center;gap:4px;">' +
+              '<i data-lucide="file-text" style="width:12px;height:12px;"></i> Ficheiro de Vida (' + ocs.length + ')' +
+            '</button>' +
+            '<div style="display:flex;gap:4px;">' +
+              '<button type="button" class="btn btn-ghost btn-xs" onclick="abrirOcorrenciaDiretaEquipamento(\'' + escapeHTML(eq.id) + '\')" title="Abrir Ocorrência para este equipamento" style="color:#D97706;padding:4px 7px;">' +
+                '<i data-lucide="alert-triangle" style="width:13px;height:13px;"></i>' +
+              '</button>' +
+              '<button type="button" class="btn btn-ghost btn-xs" onclick="abrirModalCadastroEquipamento(\'' + escapeHTML(eq.id) + '\')" title="Modificar equipamento" style="color:var(--txt2);padding:4px 7px;">' +
+                '<i data-lucide="edit-3" style="width:13px;height:13px;"></i>' +
+              '</button>' +
+              '<button type="button" class="btn btn-ghost btn-xs" onclick="excluirEquipamentoParaLixeira(\'' + escapeHTML(eq.id) + '\')" title="Mover equipamento para a Lixeira" style="color:var(--red);padding:4px 7px;">' +
+                '<i data-lucide="trash-2" style="width:13px;height:13px;"></i>' +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join('') + (
+      '<div class="dash-card dash-card-add" onclick="abrirModalCadastroEquipamento()" style="min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;border:2px dashed #93C5FD;background:#F8FAFC;transition:all .18s ease;" title="Clique para cadastrar um novo equipamento na praça">' +
+        '<div style="width:44px;height:44px;border-radius:50%;background:#EFF6FF;color:#0071E3;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,113,227,0.15);">' +
+          '<i data-lucide="plus" style="width:22px;height:22px;stroke-width:2.5;"></i>' +
+        '</div>' +
+        '<div style="text-align:center;">' +
+          '<div style="font-size:13.5px;font-weight:800;color:#0071E3;">+ Adicionar Novo Equipamento</div>' +
+          '<div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Cadastrar com ID, Nº de Série e Tags</div>' +
+        '</div>' +
+      '</div>'
+    );
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+  window.renderCatalogoEquipamentos = renderCatalogoEquipamentos;
+
+  function renderSeletorTagsModalEq() {
+    var container = document.getElementById('eq-modal-tags- selector') || document.getElementById('eq-modal-tags-selector');
+    if (!container) return;
+    container.innerHTML = TAGS_PADRAO_EQUIPAMENTOS.map(function(tag) {
+      var ativa = tagsSelecionadasModalEq.indexOf(tag) !== -1;
+      var st = ativa
+        ? 'background:#0071E3;color:#FFFFFF;border-color:#0071E3;font-weight:700;'
+        : 'background:#F8FAFC;color:var(--txt2);border-color:var(--border);font-weight:500;';
+      return (
+        '<button type="button" onclick="toggleTagModalEquipamento(\'' + tag + '\')" style="border:1px solid;border-radius:16px;padding:4px 11px;font-size:11.5px;cursor:pointer;transition:all .12s;' + st + '">' +
+          (ativa ? '✓ ' : '+ ') + escapeHTML(tag) +
+        '</button>'
+      );
+    }).join('');
+  }
+
+  function toggleTagModalEquipamento(tag) {
+    var idx = tagsSelecionadasModalEq.indexOf(tag);
+    if (idx === -1) tagsSelecionadasModalEq.push(tag);
+    else tagsSelecionadasModalEq.splice(idx, 1);
+    renderSeletorTagsModalEq();
+  }
+  window.toggleTagModalEquipamento = toggleTagModalEquipamento;
+
+  function abrirModalCadastroEquipamento(idEdicao) {
+    var idEl     = document.getElementById('novo-eq-id');
+    var nomeEl   = document.getElementById('novo-eq-nome');
+    var patEl    = document.getElementById('novo-eq-patrimonio');
+    var serieEl  = document.getElementById('novo-eq-serie');
+    var modEl    = document.getElementById('novo-eq-modelo');
+    var tipoEl   = document.getElementById('novo-eq-tipo');
+    var setorEl  = document.getElementById('novo-eq-setor');
+    var statusEl = document.getElementById('novo-eq-status');
+    var obsEl    = document.getElementById('novo-eq-obs');
+    var titleEl  = document.getElementById('novo-eq-title');
+
+    var eqExistente = idEdicao
+      ? (catalogoEquipamentos || []).find(function(e) { return e.id === idEdicao || e.nome === idEdicao; })
+      : null;
+
+    if (eqExistente) {
+      if (titleEl)  titleEl.textContent = 'Modificar Equipamento · ' + eqExistente.nome;
+      if (idEl)     idEl.value     = eqExistente.id;
+      if (nomeEl)   nomeEl.value   = eqExistente.nome;
+      if (patEl)    patEl.value    = eqExistente.codigo_patrimonio || '';
+      if (serieEl)  serieEl.value  = eqExistente.numero_serie || '';
+      if (modEl)    modEl.value    = eqExistente.fabricante_modelo || '';
+      if (tipoEl)   tipoEl.value   = eqExistente.categoria || 'Mochilink / LiveU';
+      if (setorEl)  setorEl.value  = eqExistente.setor_local || '';
+      if (statusEl) statusEl.value = eqExistente.status_operacional || 'operacional';
+      if (obsEl)    obsEl.value    = eqExistente.obs_tecnicas || '';
+      tagsSelecionadasModalEq = Array.isArray(eqExistente.tags) ? eqExistente.tags.slice() : ['Transmissão'];
+    } else {
+      if (titleEl)  titleEl.textContent = 'Cadastrar Novo Equipamento';
+      if (idEl)     idEl.value     = '';
+      if (nomeEl)   nomeEl.value   = '';
+      if (patEl)    patEl.value    = '';
+      if (serieEl)  serieEl.value  = '';
+      if (modEl)    modEl.value    = '';
+      if (tipoEl)   tipoEl.selectedIndex = 0;
+      if (setorEl)  setorEl.value  = 'Estúdio / Central Técnica';
+      if (statusEl) statusEl.value = 'operacional';
+      if (obsEl)    obsEl.value    = '';
+      tagsSelecionadasModalEq = ['Transmissão'];
+    }
+
+    renderSeletorTagsModalEq();
+    abrirPopup('popup-novo-equipamento');
+    if (nomeEl) setTimeout(function() { nomeEl.focus(); }, 150);
+  }
+  window.abrirModalCadastroEquipamento = abrirModalCadastroEquipamento;
+  window.abrirModalNovoEquipamento = abrirModalCadastroEquipamento;
+
+  function salvarNovoEquipamentoDashboard() {
+    var idEl     = document.getElementById('novo-eq-id');
+    var nomeEl   = document.getElementById('novo-eq-nome');
+    var patEl    = document.getElementById('novo-eq-patrimonio');
+    var serieEl  = document.getElementById('novo-eq-serie');
+    var modEl    = document.getElementById('novo-eq-modelo');
+    var tipoEl   = document.getElementById('novo-eq-tipo');
+    var setorEl  = document.getElementById('novo-eq-setor');
+    var statusEl = document.getElementById('novo-eq-status');
+    var obsEl    = document.getElementById('novo-eq-obs');
+
+    var idEdicao = idEl ? idEl.value.trim() : '';
+    var nome = (nomeEl ? nomeEl.value : '').trim().toUpperCase();
+    if (!nome) {
+      alert('Por favor, informe o Nome de Identificação do equipamento.');
+      if (nomeEl) nomeEl.focus();
+      return;
+    }
+
+    var praca = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+    var duplicado = (catalogoEquipamentos || []).find(function(e) {
+      return e.status_operacional !== 'lixeira' && e.praca === praca && e.nome === nome && e.id !== idEdicao;
+    });
+    if (duplicado) {
+      alert('Já existe um equipamento ativo com o nome "' + nome + '" na praça de ' + praca + '.');
+      return;
+    }
+
+    var itemSalvo = null;
+    if (idEdicao) {
+      catalogoEquipamentos = catalogoEquipamentos.map(function(e) {
+        if (e.id === idEdicao) {
+          e.nome               = nome;
+          e.codigo_patrimonio  = patEl ? patEl.value.trim() : '';
+          e.numero_serie       = serieEl ? serieEl.value.trim() : '';
+          e.fabricante_modelo  = modEl ? modEl.value.trim() : '';
+          e.categoria          = tipoEl ? tipoEl.value : 'Mochilink / LiveU';
+          e.setor_local        = setorEl ? setorEl.value.trim() : '';
+          e.status_operacional = statusEl ? statusEl.value : 'operacional';
+          e.obs_tecnicas       = obsEl ? obsEl.value.trim() : '';
+          e.tags               = tagsSelecionadasModalEq.slice();
+          itemSalvo = e;
+        }
+        return e;
+      });
+    } else {
+      itemSalvo = sanitizarEquipamento({
+        id: 'eq_' + Date.now(),
+        nome: nome,
+        codigo_patrimonio: patEl ? patEl.value.trim() : '',
+        numero_serie: serieEl ? serieEl.value.trim() : '',
+        fabricante_modelo: modEl ? modEl.value.trim() : '',
+        categoria: tipoEl ? tipoEl.value : 'Mochilink / LiveU',
+        praca: praca,
+        setor_local: setorEl ? setorEl.value.trim() : 'Central Técnica',
+        status_operacional: statusEl ? statusEl.value : 'operacional',
+        obs_tecnicas: obsEl ? obsEl.value.trim() : '',
+        tags: tagsSelecionadasModalEq.slice(),
+        criado_por: (typeof getUsuarioAtual === 'function') ? getUsuarioAtual() : 'Operador',
+        criado_em: Date.now()
+      });
+      catalogoEquipamentos.push(itemSalvo);
+    }
+
+    window._ultimoEqAdicionado = nome;
+    salvarCatalogoEquipamentosLocal();
+    if (itemSalvo) salvarEquipamentoPostgreSQL(itemSalvo);
+
+    if (window._eqTriggeringSelect) {
+      try {
+        window._eqTriggeringSelect.value = nome;
+      } catch (eSel) {}
+      window._eqTriggeringSelect = null;
+    }
+
+    fecharPopup('popup-novo-equipamento');
+    renderCatalogoEquipamentos();
+    if (typeof renderDashboards === 'function') renderDashboards();
+
+    if (typeof mostrarToast === 'function') {
+      mostrarToast(
+        idEdicao ? 'Equipamento Atualizado' : 'Equipamento Cadastrado',
+        nome + ' salvo no banco de dados e integrado aos relatórios.',
+        'success'
+      );
+    }
+  }
+  window.salvarNovoEquipamentoDashboard = salvarNovoEquipamentoDashboard;
+
+  function excluirEquipamentoParaLixeira(idEq) {
+    var eq = (catalogoEquipamentos || []).find(function(e) { return e.id === idEq || e.nome === idEq; });
+    if (!eq) return;
+
+    if (!confirm('Deseja mover o equipamento "' + eq.nome + '" para a Lixeira?\n\nEle deixará de aparecer nos novos relatórios, mas seu histórico será preservado na Lixeira por 7 dias.')) {
+      return;
+    }
+
+    eq.status_operacional = 'lixeira';
+    salvarCatalogoEquipamentosLocal();
+    salvarEquipamentoPostgreSQL(eq);
+
+    // Adiciona registro também na Lixeira Geral do Sistema para permitir restauração
+    if (typeof lixeiraData !== 'undefined' && Array.isArray(lixeiraData)) {
+      var itemLixeira = {
+        id: eq.id,
+        dataExclusao: Date.now(),
+        expiraEm: Date.now() + 7 * 24 * 60 * 60 * 1000,
+        titulo: '[EQUIPAMENTO] ' + eq.nome + (eq.codigo_patrimonio ? ' (' + eq.codigo_patrimonio + ')' : ''),
+        ocOriginal: null,
+        histOriginal: {
+          id: eq.id,
+          tipo: 'equipamento',
+          titulo: '[EQUIPAMENTO] ' + eq.nome,
+          descCriacao: 'ID/Patrimônio: ' + (eq.codigo_patrimonio || 'N/A') + ' · Nº Série: ' + (eq.numero_serie || 'N/A') + ' · Modelo: ' + (eq.fabricante_modelo || eq.categoria),
+          local: eq.setor_local || eq.praca,
+          praca: eq.praca,
+          eqOriginal: Object.assign({}, eq)
+        },
+        excluidoPor: (typeof getUsuarioAtual === 'function') ? getUsuarioAtual() : 'Operador',
+        notificado24h: false,
+        praca: eq.praca
+      };
+      lixeiraData = [itemLixeira].concat(lixeiraData.filter(function(i) { return i.id !== eq.id; }));
+      if (typeof saveLixeira === 'function') saveLixeira(lixeiraData);
+      if (typeof salvarItemLixeiraNuvem === 'function') salvarItemLixeiraNuvem(itemLixeira);
+    }
+
+    fecharPopup('popup-ficha-vida-equipamento');
+    renderCatalogoEquipamentos();
+    if (typeof renderDashboards === 'function') renderDashboards();
+    if (typeof renderLixeira === 'function') renderLixeira();
+
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Equipamento na Lixeira', eq.nome + ' foi movido para a Lixeira.', 'info');
+    }
+  }
+  window.excluirEquipamentoParaLixeira = excluirEquipamentoParaLixeira;
+
+  function abrirOcorrenciaDiretaEquipamento(idOuNome) {
+    var eq = (catalogoEquipamentos || []).find(function(e) { return e.id === idOuNome || e.nome === idOuNome; });
+    fecharPopup('popup-ficha-vida-equipamento');
+    abrirPopup('popup-nova-oc');
+
+    if (eq) {
+      var selEq = document.getElementById('nova-equipamento');
+      if (selEq) selEq.value = eq.nome;
+      var catEl = document.getElementById('nova-cat');
+      if (catEl) catEl.value = 'Equipamento';
+      var locEl = document.getElementById('nova-local');
+      if (locEl && !locEl.value) locEl.value = (eq.setor_local ? eq.setor_local + ' — ' : '') + eq.praca;
+      var titEl = document.getElementById('nova-titulo');
+      if (titEl && !titEl.value) {
+        titEl.value = 'Manutenção / Falha em ' + eq.nome;
+        if (typeof validarNova === 'function') validarNova();
+      }
+    }
+  }
+  window.abrirOcorrenciaDiretaEquipamento = abrirOcorrenciaDiretaEquipamento;
+
+  /* ═══════════════════════════════════════════
+     FICHEIRO DE VIDA DO EQUIPAMENTO (MODAL COMPLETO)
+  ═══════════════════════════════════════════ */
+  function abrirFichaVidaEquipamento(idOuNome) {
+    var eq = (catalogoEquipamentos || []).find(function(e) {
+      return e.status_operacional !== 'lixeira' && (e.id === idOuNome || e.nome === idOuNome);
+    });
+    if (!eq) return;
+
+    var ocs = obterOcorrenciasDoEquipamento(eq);
+    var abertas = ocs.filter(function(o) { return o.status === 'aberta'; });
+    var resolvidas = ocs.filter(function(o) { return o.status !== 'aberta'; });
+
+    var metricObj = (typeof dashboardMetrics !== 'undefined' && dashboardMetrics.equipamento)
+      ? dashboardMetrics.equipamento[eq.nome]
+      : null;
+    var txConf = metricObj ? (metricObj.conf || 0) : 0;
+    var txNc   = metricObj ? (metricObj.nc   || 0) : 0;
+    var txCanc = metricObj ? (metricObj.canc || 0) : 0;
+    var txTot  = txConf + txNc + txCanc;
+    var saudePct = txTot > 0 ? ((txConf / txTot) * 100).toFixed(1) + '%' : (abertas.length === 0 ? '100%' : 'Atenção');
+
+    var elNome   = document.getElementById('ficha-eq-nome');
+    var elSub    = document.getElementById('ficha-eq-sub');
+    var elBadge  = document.getElementById('ficha-eq-status-badge');
+    var elPat    = document.getElementById('ficha-eq-patrimonio');
+    var elSerie  = document.getElementById('ficha-eq-serie');
+    var elModelo = document.getElementById('ficha-eq-modelo');
+    var elLocal  = document.getElementById('ficha-eq-local');
+    var elObs    = document.getElementById('ficha-eq-obs');
+    var elTags   = document.getElementById('ficha-eq-tags');
+
+    var elKpiOcs   = document.getElementById('ficha-kpi-ocs');
+    var elKpiRes   = document.getElementById('ficha-kpi-resolvidas');
+    var elKpiTx    = document.getElementById('ficha-kpi-tx');
+    var elKpiSaude = document.getElementById('ficha-kpi-saude');
+    var elTimeline = document.getElementById('ficha-eq-timeline');
+
+    if (elNome)   elNome.textContent   = eq.nome;
+    if (elSub)    elSub.textContent    = (eq.categoria || 'Equipamento') + ' · ' + eq.praca;
+    if (elPat)    elPat.textContent    = eq.codigo_patrimonio || 'Não cadastrado';
+    if (elSerie)  elSerie.textContent  = eq.numero_serie || 'Não cadastrado';
+    if (elModelo) elModelo.textContent = eq.fabricante_modelo || eq.categoria || 'Padrão';
+    if (elLocal)  elLocal.textContent  = (eq.setor_local || 'Central Técnica') + ' (' + eq.praca + ')';
+    if (elObs)    elObs.textContent    = eq.obs_tecnicas || 'Nenhuma observação técnica registrada para este equipamento.';
+
+    var st = calcularStatusEquipamentoDinamico(eq);
+    if (elBadge) {
+      if (st === 'manutencao') {
+        elBadge.className = 'tag tag-r';
+        elBadge.textContent = '🔴 Em Manutenção';
+      } else if (st === 'atencao') {
+        elBadge.className = 'tag tag-y';
+        elBadge.textContent = '🟡 Com Ocorrência Aberta (' + abertas.length + ')';
+      } else {
+        elBadge.className = 'tag tag-g';
+        elBadge.textContent = '🟢 Operacional';
+      }
+    }
+
+    if (elTags) {
+      var tList = Array.isArray(eq.tags) ? eq.tags : [];
+      elTags.innerHTML = tList.length > 0
+        ? tList.map(function(t) {
+            return '<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:14px;background:#EFF6FF;color:#0071E3;border:1px solid #BFDBFE;">' + escapeHTML(t) + '</span>';
+          }).join('')
+        : '<span style="font-size:11.5px;color:var(--muted);">Sem tags associadas</span>';
+    }
+
+    if (elKpiOcs)   elKpiOcs.textContent   = ocs.length;
+    if (elKpiRes)   elKpiRes.textContent   = resolvidas.length;
+    if (elKpiTx)    elKpiTx.textContent    = txTot;
+    if (elKpiSaude) elKpiSaude.textContent = saudePct;
+
+    // Botões de ação do rodapé da Ficha de Vida
+    var btnEdit = document.getElementById('btn-ficha-editar');
+    var btnDel  = document.getElementById('btn-ficha-excluir');
+    var btnNova = document.getElementById('btn-ficha-nova-oc');
+    if (btnEdit) btnEdit.onclick = function() { fecharPopup('popup-ficha-vida-equipamento'); abrirModalCadastroEquipamento(eq.id); };
+    if (btnDel)  btnDel.onclick  = function() { excluirEquipamentoParaLixeira(eq.id); };
+    if (btnNova) btnNova.onclick = function() { abrirOcorrenciaDiretaEquipamento(eq.id); };
+
+    if (elTimeline) {
+      if (ocs.length === 0) {
+        elTimeline.innerHTML =
+          '<div style="text-align:center;padding:24px 14px;background:#F8FAFC;border:1px dashed var(--border);border-radius:10px;color:var(--muted);font-size:12px;">' +
+            'Nenhuma ocorrência ou falha registrada no histórico de vida deste equipamento.' +
+          '</div>';
+      } else {
+        elTimeline.innerHTML = ocs.map(function(oc) {
+          var isRes = oc.status !== 'aberta';
+          var corBorda = isRes ? '#10B981' : '#EF4444';
+          var tagSt = isRes
+            ? '<span class="tag tag-g">✓ Resolvida</span>'
+            : '<span class="tag tag-r">● Em Aberto</span>';
+          var descRes = (oc.resolucao && oc.resolucao.descRes)
+            ? '<div style="margin-top:6px;padding:6px 10px;background:#F0FDF4;border-radius:6px;font-size:11.5px;color:#166534;"><strong>Solução aplicada:</strong> ' + escapeHTML(oc.resolucao.descRes) + '</div>'
+            : '';
+
+          return (
+            '<div style="background:#FFFFFF;border:1px solid var(--border-lt);border-left:3.5px solid ' + corBorda + ';border-radius:8px;padding:10px 14px;">' +
+              '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+                '<strong style="font-size:12.5px;color:var(--txt);">' + escapeHTML(oc.titulo) + '</strong>' +
+                tagSt +
+              '</div>' +
+              '<div style="font-size:11.5px;color:var(--txt2);margin-top:4px;">' + escapeHTML(oc.desc || '') + '</div>' +
+              descRes +
+              '<div style="font-size:10.5px;color:var(--muted);margin-top:6px;display:flex;gap:12px;">' +
+                '<span>📅 ' + escapeHTML(oc.dataCriacao || '') + '</span>' +
+                '<span>👤 Resp: ' + escapeHTML(oc.resp || 'Equipe') + '</span>' +
+              '</div>' +
+            '</div>'
+          );
+        }).join('');
+      }
+    }
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    abrirPopup('popup-ficha-vida-equipamento');
+  }
+  window.abrirFichaVidaEquipamento = abrirFichaVidaEquipamento;
+
+
+  /* Garante conexão ativa com o PostgreSQL na nuvem (Modo Offline desativado) */
+  if (typeof isEstacaoConectadaTV === 'function' && !isEstacaoConectadaTV() && typeof conectarComChaveTV === 'function') {
+    conectarComChaveTV(atob('QEludGVncmEyNjIw')).then(function() {
+      if (typeof carregarEquipamentosStore === 'function') carregarEquipamentosStore();
+      if (typeof sincronizarOrcamentoNuvem === 'function') sincronizarOrcamentoNuvem();
+      if (typeof sincronizarEquipeNuvem === 'function') sincronizarEquipeNuvem();
+    });
+  }
   /* ═══════════════════════════════════════════
      FLUXO DE INICIALIZAÇÃO E IDENTIFICAÇÃO DO OPERADOR
   ═══════════════════════════════════════════ */
@@ -11141,6 +11776,7 @@ document.addEventListener('DOMContentLoaded', function () {
   try { carregarRascunhoRecebimento(); } catch(e) {}
   try { carregarRascunhoCompra(); } catch(e) {}
   try { carregarDashboardMetricsStore(); } catch(e) {}
+  try { if (typeof carregarEquipamentosStore === 'function') carregarEquipamentosStore(); } catch(e) {}
   try { carregarOrcamentoStore(); } catch(e) {}
   try { carregarChecklistStore(); } catch(e) {}
   try { if (typeof atualizarSelectsProfissionaisCTRS === 'function') atualizarSelectsProfissionaisCTRS(); } catch(e) {}
@@ -11192,37 +11828,31 @@ document.addEventListener('DOMContentLoaded', function () {
 
   if (!savedUserName || !savedUserName.trim() || savedUserName.trim() === 'Operador') {
     abrirPopup('popup-identificacao-operador');
+    var identEmail = document.getElementById('ident-operador-email');
     var identInput = document.getElementById('ident-operador-nome');
-    if (identInput) setTimeout(function(){ identInput.focus(); }, 180);
+    setTimeout(function() {
+      if (identEmail && identEmail.offsetParent !== null) identEmail.focus();
+      else if (identInput) identInput.focus();
+    }, 180);
   } else {
     atualizarNomeOperadorUI(savedUserName.trim());
+    try {
+      var sEmail = localStorage.getItem('tv_user_email_v1');
+      var sTag   = localStorage.getItem('tv_user_tag_v1');
+      var sCargo = localStorage.getItem('tv_user_cargo_v1');
+      if (sEmail) {
+        var upEm = document.getElementById('up-email'); if (upEm) upEm.textContent = sEmail;
+        var cfEm = document.getElementById('cfg-email'); if (cfEm) cfEm.value = sEmail;
+      }
+      if (sCargo || sTag) {
+        var lblC = (sCargo || 'Operações') + (sTag ? ' [' + sTag + ']' : '');
+        var upRl = document.getElementById('up-role'); if (upRl) upRl.textContent = lblC;
+        var sRl  = document.querySelector('.s-user-role'); if (sRl) sRl.textContent = lblC;
+        var cfCg = document.getElementById('cfg-cargo'); if (cfCg) cfCg.value = lblC;
+      }
+    } catch (e) {}
     try { if (typeof obterOuCriarOperadorPorNome === 'function') obterOuCriarOperadorPorNome(savedUserName.trim()); } catch(e) {}
     abrirPopup('popup-entrada');
   }
-
-  // Atalho global de busca (Ctrl+K ou barra / fora de inputs)
-  window.addEventListener('keydown', function(e) {
-    if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
-      e.preventDefault();
-      focarBuscaGlobal();
-    } else if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target && e.target.tagName) || '')) {
-      e.preventDefault();
-      focarBuscaGlobal();
-    }
-  });
-
-  function focarBuscaGlobal() {
-    if (typeof nav === 'function') {
-      nav('historico');
-    }
-    setTimeout(function() {
-      var hSearch = document.getElementById('hist-search');
-      if (hSearch) {
-        hSearch.focus();
-        hSearch.select();
-      }
-    }, 80);
-  }
-  window.focarBuscaGlobal = focarBuscaGlobal;
 
 }); /* fim DOMContentLoaded */

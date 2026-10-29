@@ -2,23 +2,11 @@
      HISTÓRICO GERAL (Funções de Renderização e Filtros)
   ═══════════════════════════════════════════ */
 
-  var HISTORICO_PAGINA_LIMITE = 40;
-  window.historicoItensVisiveis = HISTORICO_PAGINA_LIMITE;
-
-  function carregarMaisHistorico() {
-    window.historicoItensVisiveis = (window.historicoItensVisiveis || HISTORICO_PAGINA_LIMITE) + 40;
-    renderHistorico();
-  }
-  window.carregarMaisHistorico = carregarMaisHistorico;
-
   function renderHistorico() {
     var container = document.getElementById('hist-list');
     if (!container) return;
 
     var busca = (document.getElementById('hist-search') ? document.getElementById('hist-search').value : '').toLowerCase().trim();
-    if (typeof mesclarSementeFormsSeConectado === 'function') {
-      try { mesclarSementeFormsSeConectado(); } catch(eS) {}
-    }
     var todosItens = getHistoricoCompleto();
 
     // Atualiza os contadores com todos os itens do histórico integrado
@@ -34,48 +22,11 @@
     if (document.getElementById('cnt-hist-rec'))   document.getElementById('cnt-hist-rec').textContent   = cntRec;
     if (document.getElementById('cnt-hist-meus'))  document.getElementById('cnt-hist-meus').textContent  = cntMeus;
 
-    var filtroPraca = (document.getElementById('hist-filtro-praca') ? document.getElementById('hist-filtro-praca').value : '').toLowerCase().trim();
-    var filtroData = (document.getElementById('hist-filtro-data') ? document.getElementById('hist-filtro-data').value : '').toLowerCase().trim();
-    var agora = new Date();
-
     var filtrados = todosItens.filter(function(item) {
       if (historicoFiltroCategoria === 'ocorrencia' && item.tipo !== 'ocorrencia') return false;
       if (historicoFiltroCategoria === 'relatorio' && item.tipo !== 'relatorio') return false;
       if (historicoFiltroCategoria === 'recebimento' && item.tipo !== 'recebimento') return false;
       if (historicoFiltroCategoria === 'meus' && !isItemDoUsuario(item)) return false;
-
-      // Filtro por Praça
-      if (filtroPraca) {
-        var pItem = ((item.praca || '') + ' ' + (item.local || '')).toLowerCase();
-        if (!pItem.includes(filtroPraca)) return false;
-      }
-
-      // Filtro por Data
-      if (filtroData) {
-        var dStr = String(item.dataCriacao || '');
-        if (filtroData === 'hoje') {
-          var yyyy = agora.getFullYear();
-          var mm = String(agora.getMonth() + 1);
-          if (mm.length < 2) mm = '0' + mm;
-          var dd = String(agora.getDate());
-          if (dd.length < 2) dd = '0' + dd;
-          var hojeIso = yyyy + '-' + mm + '-' + dd;
-          var hojeBr = dd + '/' + mm + '/' + yyyy;
-          if (!dStr.includes(hojeIso) && !dStr.includes(hojeBr)) return false;
-        } else if (filtroData === '7d' || filtroData === '30d') {
-          var maxDias = (filtroData === '7d' ? 7 : 30);
-          var ts = 0;
-          if (dStr.indexOf('/') !== -1) {
-            var partsD = dStr.split(' ')[0].split('/');
-            if (partsD.length === 3) ts = new Date(partsD[2] + '-' + partsD[1] + '-' + partsD[0]).getTime();
-          } else if (dStr.indexOf('-') !== -1) {
-            ts = new Date(dStr.split(' ')[0]).getTime();
-          }
-          if (!ts || (agora.getTime() - ts) > (maxDias * 86400000)) return false;
-        } else if (filtroData === '2026' || filtroData === '2025' || filtroData === '2024') {
-          if (!dStr.includes(filtroData)) return false;
-        }
-      }
 
       if (busca) {
         var str = (item.titulo + ' ' + item.equipamento + ' ' + item.criadoPor + ' ' + item.resolvidoPor + ' ' + item.categoria + ' ' + item.local + ' ' + item.descCriacao + ' ' + (item.descResolucao || '')).toLowerCase();
@@ -95,10 +46,6 @@
       renderHistoricoRelacionados(null);
       return;
     }
-
-    // Paginação para desempenho instantâneo (evita montar 1.490 nós no DOM simultaneamente)
-    var limite = busca ? filtrados.length : (window.historicoItensVisiveis || HISTORICO_PAGINA_LIMITE);
-    var itensExibidos = filtrados.slice(0, limite);
 
     function renderCardHistoricoHTML(item) {
       var eMeu = isItemDoUsuario(item);
@@ -162,20 +109,8 @@
       );
     }
 
-    var secoes = agruparPorDias(itensExibidos, function(item){ return item.dataCriacao; });
-    var htmlFinal = renderSecoesComCards(secoes, renderCardHistoricoHTML);
-
-    if (filtrados.length > limite) {
-      var restantes = filtrados.length - limite;
-      htmlFinal +=
-        '<div style="text-align:center;padding:16px 0;margin-top:10px;">' +
-          '<button type="button" class="btn btn-secondary btn-sm" onclick="carregarMaisHistorico()" style="font-weight:600;padding:8px 24px;border-radius:20px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">' +
-            'Carregar mais (' + restantes + ' registros restantes)' +
-          '</button>' +
-        '</div>';
-    }
-
-    container.innerHTML = htmlFinal;
+    var secoes = agruparPorDias(filtrados, function(item){ return item.dataCriacao; });
+    container.innerHTML = renderSecoesComCards(secoes, renderCardHistoricoHTML);
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
@@ -468,69 +403,6 @@
     }
     if (!item) return;
     itemDetalhesAtual = item;
-    window.itemDetalhesAtual = item;
-
-    var isRondaUdi = item && (
-      item.subtipo === 'Tecnologia UDI' ||
-      (item.detalhesRonda && (item.praca === 'Uberlândia' || item.local === 'Uberlandia' || item.local === 'Uberlândia')) ||
-      (item.id && String(item.id).startsWith('rel_udi_')) ||
-      (item.categoria === 'Ronda Técnica' && (item.local === 'Uberlandia' || item.local === 'Uberlândia' || item.praca === 'Uberlândia'))
-    );
-
-    var modalContainer = document.querySelector('#popup-detalhes-historico .modal');
-    var modalTitle = document.getElementById('hist-det-title');
-    var modalTags  = document.getElementById('hist-det-tags');
-    var modalBody  = document.getElementById('hist-det-body');
-    var modalFooter = document.getElementById('hist-det-footer');
-
-    if (isRondaUdi) {
-      if (modalContainer) {
-        modalContainer.classList.add('modal-xl');
-        modalContainer.classList.remove('modal-lg');
-      }
-
-      var detalhes = (typeof extrairDetalhesRondaItem === 'function') ? extrairDetalhesRondaItem(item) : (item.detalhesRonda || {});
-      var temNc = detalhes.naoConformidades && detalhes.naoConformidades.length > 0;
-
-      if (modalTitle) modalTitle.textContent = 'Relatório Diário — Tecnologia UDI (' + (detalhes.data || item.titulo || '') + ')';
-      if (modalTags) {
-        modalTags.innerHTML =
-          '<span class="tag tag-ind">Tecnologia UDI</span> ' +
-          (temNc
-            ? '<span class="tag tag-r" style="font-weight:700;"><i data-lucide="alert-triangle" style="width:11px;height:11px;"></i> Com Não Conformidade (' + detalhes.naoConformidades.length + ')</span> '
-            : '<span class="tag tag-g" style="font-weight:700;"><i data-lucide="check-circle" style="width:11px;height:11px;"></i> 100% Conforme</span> ') +
-          '<span class="tag tag-gray-soft">' + escapeHTML(detalhes.turno || 'Plantão') + '</span>';
-      }
-
-      if (modalBody) {
-        modalBody.innerHTML = (typeof renderMiniRelatorioRondaUdiHTML === 'function')
-          ? renderMiniRelatorioRondaUdiHTML(item)
-          : '<p style="color:var(--muted);padding:14px;">Visualização indisponível.</p>';
-      }
-
-      if (modalFooter) {
-        modalFooter.innerHTML =
-          '<button type="button" class="btn btn-danger btn-sm" id="btn-hist-det-excluir" onclick="excluirOcorrenciaDoModalDetalhes()" style="display:inline-flex;align-items:center;gap:6px;">' +
-            '<i data-lucide="trash-2" style="width:13px;height:13px;stroke-width:2;"></i> Excluir Relatório' +
-          '</button>' +
-          '<div style="display:flex;gap:8px;margin-left:auto;">' +
-            '<button type="button" class="btn btn-secondary btn-sm" onclick="fecharPopup(\'popup-detalhes-historico\')">Fechar</button>' +
-            '<button type="button" class="btn btn-primary btn-sm" id="btn-export-pdf-turno" onclick="exportarFormularioTurnoIndividual(window.itemDetalhesAtual)" style="display:inline-flex;align-items:center;gap:6px;background:#0284C7;border-color:#0284C7;color:#fff;cursor:pointer;">' +
-              '<i data-lucide="printer" style="width:13px;height:13px;stroke-width:2;"></i> Imprimir / Exportar PDF do Turno' +
-            '</button>' +
-          '</div>';
-      }
-
-      abrirPopup('popup-detalhes-historico');
-      if (typeof lucide !== 'undefined') lucide.createIcons();
-      return;
-    }
-
-    // Caso seja Ocorrência comum, garante layout padrão modal-lg e botões originais
-    if (modalContainer) {
-      modalContainer.classList.remove('modal-xl');
-      modalContainer.classList.add('modal-lg');
-    }
 
     // Busca ocorrência vinculada para dados complementares
     var targetOcId = (item.id || '').replace(/^h_oc_/, '');
@@ -682,18 +554,6 @@
               '<strong>O que foi realizado:</strong><br/>' + escapeHTML(descRes) +
             '</div>' +
           '</div>' +
-        '</div>';
-    }
-
-    if (modalFooter) {
-      modalFooter.innerHTML =
-        '<button type="button" class="btn btn-danger btn-sm" id="btn-hist-det-excluir" onclick="excluirOcorrenciaDoModalDetalhes()" style="display:inline-flex;align-items:center;gap:5px;">' +
-          '<i data-lucide="trash-2" style="width:13px;height:13px;stroke-width:2;"></i> Excluir Ocorrência' +
-        '</button>' +
-        '<div style="display:flex;gap:8px;margin-left:auto;">' +
-          '<button type="button" class="btn btn-primary btn-sm" id="btn-hist-det-editar" onclick="editarOcorrenciaDoModalDetalhes()" style="display:inline-flex;align-items:center;gap:5px;">' +
-            '<i data-lucide="pencil" style="width:13px;height:13px;stroke-width:2;"></i> Editar Ocorrência' +
-          '</button>' +
         '</div>';
     }
 

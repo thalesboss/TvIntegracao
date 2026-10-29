@@ -257,6 +257,7 @@
     try { renderResolvidas(); } catch(e) { console.error('Erro em renderResolvidas:', e); }
     try { renderHistorico(); } catch(e) { console.error('Erro em renderHistorico:', e); }
     try { renderDashboards(); } catch(e) { console.error('Erro em renderDashboards:', e); }
+    try { if (typeof renderCatalogoEquipamentos === 'function') renderCatalogoEquipamentos(); } catch(e) { console.error('Erro em renderCatalogoEquipamentos:', e); }
     try { renderOrcamento(); } catch(e) { console.error('Erro em renderOrcamento:', e); }
     try { renderPopupEntrada(); } catch(e) { console.error('Erro em renderPopupEntrada:', e); }
     try { renderPopupLogout(); } catch(e) { console.error('Erro em renderPopupLogout:', e); }

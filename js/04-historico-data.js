@@ -12,68 +12,13 @@
       if (Array.isArray(pHist) && pHist.length > 0) historicoSeedData = pHist;
     }
   } catch(e) {}
-
-  // Função auxiliar para verificar se a estação está conectada ao banco de dados Supabase
-  function isBancoConectado() {
-    return !!(window._isCloudConnected && window._isCloudConnected());
-  }
-  window.isBancoConectado = isBancoConectado;
-
-  function mesclarSementeFormsSeConectado() {
-    if (!isBancoConectado()) {
-      // Se estiver offline ou desconectado, remove dados históricos do Forms da memória ativa
-      var filtradosLocal = (historicoSeedData || []).filter(function(h) {
-        return h && h.id && !h.id.startsWith('rel_udi_forms_');
-      });
-      if (filtradosLocal.length !== (historicoSeedData || []).length) {
-        historicoSeedData = filtradosLocal;
-        window.historicoSeedData = historicoSeedData;
-      }
-      return;
-    }
-
-    // Se conectado ao banco, mescla semente histórica em memória
-    if (Array.isArray(window.historicoUdiExportForms) && window.historicoUdiExportForms.length > 0) {
-      var existIds = {};
-      (historicoSeedData || []).forEach(function(h) { if (h && h.id) existIds[h.id] = true; });
-      var novosDaSemente = window.historicoUdiExportForms.filter(function(h) { return h && h.id && !existIds[h.id]; });
-      if (novosDaSemente.length > 0) {
-        historicoSeedData = historicoSeedData.concat(novosDaSemente);
-        window.historicoSeedData = historicoSeedData;
-      }
-    }
-  }
-  window.mesclarSementeFormsSeConectado = mesclarSementeFormsSeConectado;
-
-  function garantirSementeFormsCarregada(callback) {
-    if (window.historicoUdiExportForms && window.historicoUdiExportForms.length > 0) {
-      mesclarSementeFormsSeConectado();
-      if (typeof callback === 'function') callback();
-      return;
-    }
-    var tentativas = 0;
-    var timer = setInterval(function() {
-      tentativas++;
-      if ((window.historicoUdiExportForms && window.historicoUdiExportForms.length > 0) || tentativas > 30) {
-        clearInterval(timer);
-        mesclarSementeFormsSeConectado();
-        if (typeof callback === 'function') callback();
-      }
-    }, 100);
-  }
-  window.garantirSementeFormsCarregada = garantirSementeFormsCarregada;
-
   window.historicoSeedData = historicoSeedData;
 
   function saveHistorico(list, itemAdicionado) {
     historicoSeedData = list || [];
     window.historicoSeedData = historicoSeedData;
-    // Salva no localStorage apenas novos itens criados no app (evita congelar thread com 1.490 itens históricos)
     try {
-      var locaisParaCache = historicoSeedData.filter(function(h) {
-        return h && h.id && !h.id.startsWith('rel_udi_forms_');
-      });
-      localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(locaisParaCache));
+      localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(historicoSeedData));
     } catch(e) {}
     if (typeof DBService !== 'undefined' && DBService) {
       if (itemAdicionado && typeof DBService.pushHistoricoItem === 'function') {
@@ -88,13 +33,10 @@
     var mapa = {};
     var lista = [];
     var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
-    var conectado = isBancoConectado();
 
     // 1. Itens manuais ou relatórios vindos de historicoSeedData
     (historicoSeedData || []).forEach(function(item) {
       if (item && item.id) {
-        // Se estiver desconectado do banco, NÃO exibe dados históricos exportados do Forms
-        if (!conectado && item.id.startsWith('rel_udi_forms_')) return;
         if (item.status === 'lixeira' || idsNaLixeira.includes(item.id)) return;
         if (typeof pertenceAPracaAtiva === 'function' && !pertenceAPracaAtiva(item)) return;
         mapa[item.id] = true;

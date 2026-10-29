@@ -232,13 +232,33 @@
     var item = lixeiraData.find(function(i){ return i.id === id; });
     if (!item) return;
 
-    if (item.ocOriginal) {
-      ocorrencias = [item.ocOriginal].concat(ocorrencias.filter(function(o){ return o && o.id !== id; }));
-      save(ocorrencias);
-    }
-    if (item.histOriginal) {
-      historicoSeedData = [item.histOriginal].concat(historicoSeedData.filter(function(h){ return h && h.id !== id; }));
-      saveHistorico(historicoSeedData);
+    if (item.histOriginal && item.histOriginal.tipo === 'equipamento') {
+      if (Array.isArray(window.catalogoEquipamentos)) {
+        var jaNoCat = false;
+        window.catalogoEquipamentos.forEach(function(e) {
+          if (e.id === id) {
+            e.status_operacional = 'operacional';
+            jaNoCat = true;
+            if (typeof salvarEquipamentoPostgreSQL === 'function') salvarEquipamentoPostgreSQL(e);
+          }
+        });
+        if (!jaNoCat && item.histOriginal.eqOriginal) {
+          var restEq = Object.assign({}, item.histOriginal.eqOriginal, { status_operacional: 'operacional' });
+          window.catalogoEquipamentos.push(restEq);
+          if (typeof salvarEquipamentoPostgreSQL === 'function') salvarEquipamentoPostgreSQL(restEq);
+        }
+        if (typeof sincronizarDashboardMetricsComCatalogo === 'function') sincronizarDashboardMetricsComCatalogo();
+        if (typeof renderCatalogoEquipamentos === 'function') renderCatalogoEquipamentos();
+      }
+    } else {
+      if (item.ocOriginal) {
+        ocorrencias = [item.ocOriginal].concat(ocorrencias.filter(function(o){ return o && o.id !== id; }));
+        save(ocorrencias);
+      }
+      if (item.histOriginal) {
+        historicoSeedData = [item.histOriginal].concat(historicoSeedData.filter(function(h){ return h && h.id !== id; }));
+        saveHistorico(historicoSeedData);
+      }
     }
 
     lixeiraData = lixeiraData.filter(function(i){ return i.id !== id; });
@@ -247,7 +267,7 @@
     renderAll();
 
     if (typeof mostrarToast === 'function') {
-      mostrarToast('Ocorrência Restaurada', '"' + (item.titulo || 'Item') + '" foi restaurada com sucesso.', 'success');
+      mostrarToast('Item Restaurado', '"' + (item.titulo || 'Item') + '" foi restaurado com sucesso.', 'success');
     }
   }
   window.restaurarOcorrenciaLixeira = restaurarOcorrenciaLixeira;

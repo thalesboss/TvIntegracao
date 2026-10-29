@@ -114,12 +114,362 @@
   window.atualizarNomeUsuario = atualizarNomeOperadorUI;
   window.atualizarNomeOperadorUI = atualizarNomeOperadorUI;
 
+  async function hashSenhaSHA256(texto) {
+    if (!window.crypto || !window.crypto.subtle) {
+      return btoa(unescape(encodeURIComponent(texto)));
+    }
+    var enc = new TextEncoder();
+    var buf = await crypto.subtle.digest('SHA-256', enc.encode(texto));
+    return Array.prototype.map.call(new Uint8Array(buf), function(x) {
+      return ('00' + x.toString(16)).slice(-2);
+    }).join('');
+  }
+  window.hashSenhaSHA256 = hashSenhaSHA256;
+
+  function aplicarPerfilOperadorAutenticado(op) {
+    if (!op) return;
+    var nome  = (op.nome || 'Operador').trim();
+    var email = (op.email || '').trim();
+    var cargo = (op.cargo || 'Técnico de Operações').trim();
+    var tag   = (op.tag_perfil || 'Tecnico').trim();
+    var praca = (op.praca && op.praca.indexOf('Uber') !== -1) ? 'Uberlândia' : 'Juiz de Fora';
+
+    try {
+      localStorage.setItem(USER_NAME_STORAGE_KEY, nome);
+      localStorage.setItem('tv_user_email_v1', email);
+      localStorage.setItem('tv_user_tag_v1', tag);
+      localStorage.setItem('tv_user_cargo_v1', cargo);
+    } catch (e) {}
+
+    if (typeof setPracaAtual === 'function') {
+      setPracaAtual(praca);
+    }
+    atualizarNomeOperadorUI(nome, true);
+
+    var labelCargo = cargo + ' [' + tag + ']';
+    var upEmail = document.getElementById('up-email');
+    if (upEmail && email) upEmail.textContent = email;
+    var cfgEmail = document.getElementById('cfg-email');
+    if (cfgEmail && email) cfgEmail.value = email;
+
+    var upRole = document.getElementById('up-role');
+    if (upRole) upRole.textContent = labelCargo;
+    var sRole = document.querySelector('.s-user-role');
+    if (sRole) sRole.textContent = labelCargo;
+    var cfgCargo = document.getElementById('cfg-cargo');
+    if (cfgCargo) cfgCargo.value = labelCargo;
+  }
+  window.aplicarPerfilOperadorAutenticado = aplicarPerfilOperadorAutenticado;
+
+  function resetarFluxoEmailIdentificacao() {
+    window._operadorLoginPendente = null;
+    var emailInput = document.getElementById('ident-operador-email');
+    var cardEl     = document.getElementById('ident-operador-card');
+    var boxCriar   = document.getElementById('ident-box-criar-senha');
+    var boxDigitar = document.getElementById('ident-box-digitar-senha');
+    var msgEl      = document.getElementById('ident-chave-msg');
+    var btn        = document.getElementById('btn-confirmar-identificacao');
+
+    if (emailInput) {
+      emailInput.disabled = false;
+      emailInput.style.background = 'var(--surface)';
+      emailInput.focus();
+    }
+    if (cardEl)     cardEl.style.display     = 'none';
+    if (boxCriar)   boxCriar.style.display   = 'none';
+    if (boxDigitar) boxDigitar.style.display = 'none';
+    if (msgEl)      msgEl.style.display      = 'none';
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Continuar';
+    }
+  }
+  window.resetarFluxoEmailIdentificacao = resetarFluxoEmailIdentificacao;
+
+  function alternarModoLoginManual() {
+    var wrapEmail  = document.getElementById('ident-step-email-wrap');
+    var wrapManual = document.getElementById('ident-step-manual-wrap');
+    var linkEl     = document.getElementById('link-alternar-modo-login');
+    var msgEl      = document.getElementById('ident-chave-msg');
+    var btn        = document.getElementById('btn-confirmar-identificacao');
+    if (!wrapEmail || !wrapManual) return;
+
+    var indoParaManual = (wrapManual.style.display === 'none');
+    wrapEmail.style.display  = indoParaManual ? 'none' : 'flex';
+    wrapManual.style.display = indoParaManual ? 'flex' : 'none';
+    if (msgEl) msgEl.style.display = 'none';
+
+    if (indoParaManual) {
+      if (linkEl) linkEl.textContent = 'Voltar para Login por E-mail Corporativo';
+      if (btn) btn.textContent = 'Salvar e Continuar';
+      var nomeIn = document.getElementById('ident-operador-nome');
+      if (nomeIn) setTimeout(function() { nomeIn.focus(); }, 100);
+    } else {
+      if (linkEl) linkEl.textContent = 'Entrar com Chave da Estação (Sem e-mail)';
+      resetarFluxoEmailIdentificacao();
+    }
+  }
+  window.alternarModoLoginManual = alternarModoLoginManual;
+
+  function exibirMsgLogin(msgEl, texto, tipo) {
+    if (!msgEl) return;
+    msgEl.style.display = 'block';
+    if (tipo === 'erro') {
+      msgEl.style.background = '#FEF2F2';
+      msgEl.style.border     = '1px solid #FECACA';
+      msgEl.style.color      = '#DC2626';
+    } else if (tipo === 'ok') {
+      msgEl.style.background = '#F0FDF4';
+      msgEl.style.border     = '1px solid #BBF7D0';
+      msgEl.style.color      = '#15803D';
+    } else {
+      msgEl.style.background = '#F8FAFC';
+      msgEl.style.border     = '1px solid var(--border)';
+      msgEl.style.color      = 'var(--muted)';
+    }
+    msgEl.innerHTML = texto;
+  }
+
+  async function garantirConexaoBancoParaLogin() {
+    var jaConectado = (typeof isEstacaoConectadaTV === 'function') && isEstacaoConectadaTV();
+    if (jaConectado) {
+      var u = (typeof DBService !== 'undefined' && DBService.url) ? DBService.url : localStorage.getItem('tv_supabase_url');
+      var k = (typeof DBService !== 'undefined' && DBService.key) ? DBService.key : localStorage.getItem('tv_supabase_key');
+      return { ok: true, url: u.replace(/\/+$/, ''), key: k };
+    }
+    var pack = window.ENCRYPTED_TV_CREDENTIALS || (window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS);
+    if (pack && pack.data && typeof TVCrypto !== 'undefined') {
+      try {
+        var creds = await TVCrypto.decrypt(atob('QEludGVncmEyNjIw'), pack);
+        if (creds && creds.url && creds.key) {
+          return { ok: true, url: creds.url.replace(/\/+$/, ''), key: creds.key, credsObj: creds };
+        }
+      } catch (e) {}
+    }
+    return { ok: false };
+  }
+
   async function confirmarIdentificacaoOperador(entrarModoLocal) {
+    var wrapManual = document.getElementById('ident-step-manual-wrap');
+    var modoManualAtivo = wrapManual && wrapManual.style.display !== 'none';
+    var msgEl = document.getElementById('ident-chave-msg');
+    var btn   = document.getElementById('btn-confirmar-identificacao');
+
+    // Se escolheu trabalhar Offline
+    if (entrarModoLocal) {
+      var nomeOff = (document.getElementById('ident-operador-nome') && document.getElementById('ident-operador-nome').value.trim())
+        || (document.getElementById('ident-operador-email') && document.getElementById('ident-operador-email').value.split('@')[0])
+        || 'Operador';
+      localStorage.removeItem('tv_supabase_url');
+      localStorage.removeItem('tv_supabase_key');
+      if (typeof DBService !== 'undefined' && DBService) {
+        DBService.url = '';
+        DBService.key = '';
+        DBService.mode = 'local';
+      }
+      if (typeof updateCloudStatus === 'function') updateCloudStatus(false, 'Modo Local');
+      localStorage.setItem(USER_NAME_STORAGE_KEY, nomeOff);
+      atualizarNomeOperadorUI(nomeOff);
+      fecharPopup('popup-identificacao-operador');
+      abrirPopup('popup-entrada');
+      return;
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // FLUXO 1: LOGIN POR E-MAIL CORPORATIVO + SENHA (POSTGRESQL / SUPABASE)
+    // ══════════════════════════════════════════════════════════════════
+    if (!modoManualAtivo) {
+      var emailInput = document.getElementById('ident-operador-email');
+      var email = (emailInput ? emailInput.value : '').trim().toLowerCase();
+
+      if (!email || email.indexOf('@') === -1) {
+        exibirMsgLogin(msgEl, 'Por favor, digite seu <strong>e-mail corporativo</strong> válido.', 'erro');
+        if (emailInput) emailInput.focus();
+        return;
+      }
+
+      var con = await garantirConexaoBancoParaLogin();
+      if (!con.ok) {
+        exibirMsgLogin(msgEl, 'Não foi possível conectar ao banco. Use a opção de Chave da Estação abaixo.', 'erro');
+        return;
+      }
+
+      // ETAPA 1: Ainda não buscou o operador no banco para este e-mail
+      if (!window._operadorLoginPendente || (window._operadorLoginPendente.email || '').toLowerCase() !== email) {
+        if (btn) { btn.disabled = true; btn.textContent = 'Verificando e-mail...'; }
+        exibirMsgLogin(msgEl, 'Consultando seu cadastro no banco PostgreSQL...', 'info');
+
+        try {
+          var resOp = await fetch(con.url + '/rest/v1/operadores?email=ilike.' + encodeURIComponent(email) + '&select=*&limit=1', {
+            headers: {
+              'apikey': con.key,
+              'Authorization': 'Bearer ' + con.key,
+              'Cache-Control': 'no-cache'
+            }
+          });
+
+          if (!resOp.ok) {
+            exibirMsgLogin(msgEl, 'Erro ao consultar tabela <code>operadores</code>. Verifique se o SQL foi executado no Supabase.', 'erro');
+            if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
+            return;
+          }
+
+          var listaOp = await resOp.json();
+          if (!Array.isArray(listaOp) || listaOp.length === 0) {
+            exibirMsgLogin(
+              msgEl,
+              '❌ O e-mail <strong>' + escapeHTML(email) + '</strong> ainda não está cadastrado na tabela <code>operadores</code> do banco.<br><span style="font-size:11px;">Solicite o cadastro à TI/Administração ou use "Entrar com Chave da Estação" abaixo.</span>',
+              'erro'
+            );
+            if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
+            return;
+          }
+
+          var op = listaOp[0];
+          if (op.ativo === false) {
+            exibirMsgLogin(msgEl, '❌ Este perfil de operador encontra-se desativado no sistema.', 'erro');
+            if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
+            return;
+          }
+
+          window._operadorLoginPendente = op;
+          if (emailInput) {
+            emailInput.disabled = true;
+            emailInput.style.background = '#F1F5F9';
+          }
+
+          var cardEl    = document.getElementById('ident-operador-card');
+          var cardNome  = document.getElementById('ident-card-nome');
+          var cardTag   = document.getElementById('ident-card-tag');
+          var cardPraca = document.getElementById('ident-card-praca');
+          if (cardNome)  cardNome.textContent  = '👤 ' + (op.nome || 'Operador');
+          if (cardTag)   cardTag.textContent   = op.tag_perfil || 'Tecnico';
+          if (cardPraca) cardPraca.textContent = 'Praça: ' + (op.praca || 'Juiz de Fora') + ' · ' + (op.cargo || 'Operações');
+          if (cardEl)    cardEl.style.display  = 'block';
+
+          if (msgEl) msgEl.style.display = 'none';
+
+          // Verifica se é PRIMEIRO ACESSO (senha_hash nulo ou vazio)
+          if (!op.senha_hash || String(op.senha_hash).trim() === '') {
+            var boxCriar = document.getElementById('ident-box-criar-senha');
+            var boxDig   = document.getElementById('ident-box-digitar-senha');
+            if (boxCriar) boxCriar.style.display = 'flex';
+            if (boxDig)   boxDig.style.display   = 'none';
+            var inNova = document.getElementById('ident-senha-nova');
+            var inConf = document.getElementById('ident-senha-confirma');
+            if (inNova) { inNova.value = ''; setTimeout(function() { inNova.focus(); }, 100); }
+            if (inConf) inConf.value = '';
+            if (btn) { btn.disabled = false; btn.textContent = 'Salvar Senha e Entrar'; }
+          } else {
+            var boxCriar2 = document.getElementById('ident-box-criar-senha');
+            var boxDig2   = document.getElementById('ident-box-digitar-senha');
+            if (boxCriar2) boxCriar2.style.display = 'none';
+            if (boxDig2)   boxDig2.style.display   = 'flex';
+            var inAt = document.getElementById('ident-senha-atual');
+            if (inAt) { inAt.value = ''; setTimeout(function() { inAt.focus(); }, 100); }
+            if (btn) { btn.disabled = false; btn.textContent = 'Entrar no Sistema'; }
+          }
+          return;
+        } catch (errFetch) {
+          exibirMsgLogin(msgEl, 'Falha de conexão com o banco: ' + errFetch.message, 'erro');
+          if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
+          return;
+        }
+      }
+
+      // ETAPA 2: Operador já foi identificado; agora cria a senha (1º acesso) ou valida a senha existente
+      var opAtivo = window._operadorLoginPendente;
+      var primeiroAcesso = !opAtivo.senha_hash || String(opAtivo.senha_hash).trim() === '';
+
+      if (primeiroAcesso) {
+        var sNova = (document.getElementById('ident-senha-nova') ? document.getElementById('ident-senha-nova').value : '').trim();
+        var sConf = (document.getElementById('ident-senha-confirma') ? document.getElementById('ident-senha-confirma').value : '').trim();
+
+        if (sNova.length < 4) {
+          exibirMsgLogin(msgEl, 'A senha deve ter pelo menos <strong>4 caracteres</strong>.', 'erro');
+          return;
+        }
+        if (sNova !== sConf) {
+          exibirMsgLogin(msgEl, 'As duas senhas digitadas <strong>não conferem</strong>. Digite novamente.', 'erro');
+          return;
+        }
+
+        if (btn) { btn.disabled = true; btn.textContent = 'Salvando senha...'; }
+        var novoHash = await hashSenhaSHA256(sNova);
+
+        try {
+          var resPatch = await fetch(con.url + '/rest/v1/operadores?id=eq.' + encodeURIComponent(opAtivo.id), {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': con.key,
+              'Authorization': 'Bearer ' + con.key
+            },
+            body: JSON.stringify({
+              senha_hash: novoHash,
+              atualizado_em: new Date().toISOString()
+            })
+          });
+
+          if (!resPatch.ok) {
+            exibirMsgLogin(msgEl, 'Não foi possível salvar a senha no banco. Verifique se a coluna <code>senha_hash</code> foi criada.', 'erro');
+            if (btn) { btn.disabled = false; btn.textContent = 'Salvar Senha e Entrar'; }
+            return;
+          }
+          opAtivo.senha_hash = novoHash;
+        } catch (errP) {
+          exibirMsgLogin(msgEl, 'Erro de rede ao salvar senha: ' + errP.message, 'erro');
+          if (btn) { btn.disabled = false; btn.textContent = 'Salvar Senha e Entrar'; }
+          return;
+        }
+      } else {
+        var sDigitada = (document.getElementById('ident-senha-atual') ? document.getElementById('ident-senha-atual').value : '').trim();
+        if (!sDigitada) {
+          exibirMsgLogin(msgEl, 'Por favor, digite sua <strong>senha pessoal</strong>.', 'erro');
+          return;
+        }
+        var hashDigitado = await hashSenhaSHA256(sDigitada);
+        if (hashDigitado !== opAtivo.senha_hash && sDigitada !== opAtivo.senha_hash) {
+          exibirMsgLogin(msgEl, '❌ <strong>Senha incorreta.</strong> Tente novamente.', 'erro');
+          var inAtErr = document.getElementById('ident-senha-atual');
+          if (inAtErr) { inAtErr.focus(); inAtErr.select(); }
+          return;
+        }
+      }
+
+      // Login aprovado! Ativa a conexão da estação e aplica perfil completo do banco
+      localStorage.setItem('tv_supabase_url', con.url);
+      localStorage.setItem('tv_supabase_key', con.key);
+      if (typeof DBService !== 'undefined' && DBService) {
+        DBService.url  = con.url;
+        DBService.key  = con.key;
+        DBService.mode = 'supabase';
+      }
+      if (typeof updateCloudStatus === 'function') updateCloudStatus(true);
+
+      aplicarPerfilOperadorAutenticado(opAtivo);
+      window._operadorLoginPendente = null;
+
+      if (typeof DBService !== 'undefined' && typeof DBService.syncRemote === 'function') {
+        await DBService.syncRemote(true);
+      }
+      if (typeof renderAll === 'function') renderAll(true);
+
+      fecharPopup('popup-identificacao-operador');
+      abrirPopup('popup-entrada');
+
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('Acesso Autorizado', 'Bem-vindo(a), ' + opAtivo.nome + ' (' + (opAtivo.tag_perfil || 'Tecnico') + ')!', 'success');
+      }
+      if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
+      return;
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // FLUXO 2: MODO MANUAL POR NOME + CHAVE DA ESTAÇÃO (FALLBACK)
+    // ══════════════════════════════════════════════════════════════════
     var input = document.getElementById('ident-operador-nome');
     var chaveInput = document.getElementById('ident-chave-acesso');
-    var msgEl = document.getElementById('ident-chave-msg');
-    var btn = document.getElementById('btn-confirmar-identificacao') || (event && event.currentTarget);
-
     var nome = input ? input.value.trim() : '';
     if (!nome) {
       alert('Por favor, informe seu nome completo para continuar.');
@@ -136,93 +486,29 @@
     var pack = window.ENCRYPTED_TV_CREDENTIALS || (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS);
     var estacaoJaConectada = typeof isEstacaoConectadaTV === 'function' ? isEstacaoConectadaTV() : false;
 
-    // Se optou conscientemente por entrar em Modo Local
-    if (entrarModoLocal) {
-      localStorage.removeItem('tv_supabase_url');
-      localStorage.removeItem('tv_supabase_key');
-      if (typeof DBService !== 'undefined' && DBService) {
-        DBService.url = '';
-        DBService.key = '';
-        DBService.mode = 'local';
-      }
-      if (typeof updateCloudStatus === 'function') {
-        updateCloudStatus(false, 'Modo Local');
-      }
-      if (typeof renderAll === 'function') {
-        renderAll(true);
-      }
-    } else if (chave) {
-      // Se digitou uma chave, valida e conecta
-      if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-right:6px;vertical-align:middle;"></span> Validando...';
-      }
-      if (msgEl) {
-        msgEl.style.display = 'block';
-        msgEl.style.color = 'var(--muted)';
-        msgEl.textContent = 'Verificando chave com o banco...';
-      }
-
+    if (chave) {
+      if (btn) { btn.disabled = true; btn.textContent = 'Validando...'; }
       var res = await conectarComChaveTV(chave);
       if (!res.ok) {
-        if (msgEl) {
-          msgEl.style.display = 'block';
-          msgEl.style.color = '#DC2626';
-          msgEl.textContent = res.error || 'Chave de acesso incorreta.';
-        }
-        if (chaveInput) {
-          chaveInput.focus();
-          chaveInput.select();
-        }
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = 'Salvar e Continuar';
-        }
+        exibirMsgLogin(msgEl, res.error || 'Chave de acesso incorreta.', 'erro');
+        if (btn) { btn.disabled = false; btn.textContent = 'Salvar e Continuar'; }
         return;
       }
     } else if (!estacaoJaConectada && pack && pack.data) {
-      if (msgEl) {
-        msgEl.style.display = 'block';
-        msgEl.style.color = '#DC2626';
-        msgEl.innerHTML = 'Por favor, digite a Chave de Acesso para conectar à nuvem ou clique em <strong>"Entrar em Modo Local"</strong>.';
-      }
-      if (chaveInput) chaveInput.focus();
+      exibirMsgLogin(msgEl, 'Digite a Chave de Acesso da Estação ou clique em "Trabalhar Offline".', 'erro');
       return;
     }
 
     localStorage.setItem(USER_NAME_STORAGE_KEY, nome);
     atualizarNomeOperadorUI(nome);
-    try {
-      if (typeof obterOuCriarOperadorPorNome === 'function') {
-        await new Promise(function(resolve) {
-          obterOuCriarOperadorPorNome(nome, function(id) {
-            resolve(id);
-          });
-          setTimeout(resolve, 2500);
-        });
-      }
-    } catch(e) {}
-    try { if (typeof carregarOperadoresSugeridos === 'function') carregarOperadoresSugeridos(); } catch(e) {}
-
     if (typeof DBService !== 'undefined' && typeof DBService.syncRemote === 'function') {
       await DBService.syncRemote(true);
     }
-    if (typeof renderAll === 'function') {
-      renderAll(true);
-    }
+    if (typeof renderAll === 'function') renderAll(true);
 
     fecharPopup('popup-identificacao-operador');
     abrirPopup('popup-entrada');
-
-    if (typeof mostrarToast === 'function') {
-      mostrarToast('Operador Identificado', 'Bem-vindo, ' + nome + '!', 'success');
-    }
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = 'Salvar e Continuar';
-    }
+    if (btn) { btn.disabled = false; btn.textContent = 'Salvar e Continuar'; }
   }
   window.confirmarIdentificacaoOperador = confirmarIdentificacaoOperador;
 
@@ -362,9 +648,6 @@
       if (typeof updateCloudStatus === 'function') {
         updateCloudStatus(false, 'Modo Offline');
       }
-      if (typeof renderAll === 'function') {
-        renderAll(true);
-      }
       atualizarUIStatusBancoConfig();
       if (typeof mostrarToast === 'function') {
         mostrarToast('Modo Offline Ativado', 'Estação desconectada da rede. Operando localmente neste computador.', 'info');
@@ -392,13 +675,9 @@
       if (subEl) subEl.textContent = 'Sincronização ativa em tempo real com todos os computadores da TV.';
 
       actionsEl.innerHTML =
-        '<button type="button" class="btn btn-ghost btn-sm" onclick="abrirModalConectarBanco()" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;" title="Coloque uma senha para se conectar">' +
-          '<i data-lucide="key" style="width:13px;height:13px;"></i>' +
-          '<span>Conectar</span>' +
-        '</button>' +
-        '<button type="button" class="btn btn-ghost btn-sm" onclick="desconectarBancoModoLocal(true)" style="color:var(--red);border-color:var(--red-border);display:inline-flex;align-items:center;gap:5px;font-size:12px;" title="Trabalhar apenas neste computador">' +
-          '<i data-lucide="cloud-off" style="width:13px;height:13px;"></i>' +
-          '<span>Trabalhar Offline</span>' +
+        '<button type="button" class="btn btn-primary btn-sm" onclick="if(window.DBService&&DBService.syncRemote)DBService.syncRemote(true);" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;" title="Sincronizar todos os dados com o banco PostgreSQL agora">' +
+          '<i data-lucide="refresh-cw" style="width:13px;height:13px;"></i>' +
+          '<span>Sincronizar Banco Agora</span>' +
         '</button>';
     } else {
       dotEl.style.background = '#EF4444';

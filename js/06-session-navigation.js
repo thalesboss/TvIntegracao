@@ -35,6 +35,8 @@
     fecharPopup('popup-entrada');
 
     // Prepara e abre o popup de identificação do operador
+    var identEmail = document.getElementById('ident-operador-email');
+    if (identEmail) identEmail.value = '';
     var identInput = document.getElementById('ident-operador-nome');
     if (identInput) {
       identInput.value = '';
@@ -44,16 +46,18 @@
       chaveInput.value = '';
     }
 
+    if (typeof resetarFluxoEmailIdentificacao === 'function') {
+      resetarFluxoEmailIdentificacao();
+    }
     if (typeof atualizarUIIdentificacaoOperador === 'function') {
       atualizarUIIdentificacaoOperador();
     }
 
     abrirPopup('popup-identificacao-operador');
-    if (identInput) {
-      setTimeout(function() {
-        identInput.focus();
-      }, 150);
-    }
+    setTimeout(function() {
+      if (identEmail && identEmail.offsetParent !== null) identEmail.focus();
+      else if (identInput) identInput.focus();
+    }, 150);
   }
   window.confirmarLogout = confirmarLogout;
 
@@ -139,6 +143,7 @@
     dashboard_transmissoes: { page:'page-dashboard-ocorrencias',  title:'Dashboard Transmissões — Transmissões ao Vivo',  chip:'Transmissões em Tempo Real' },
     compras_vendas:{ page:'page-compras-vendas', title:'Solicitação de Compras',                chip:'Preencher solicitação de compra' },
     orcamento:     { page:'page-orcamento',      title: 'Orçamento Anual', chip: function() { return 'Ciclo ' + (new Date().getFullYear() + 1); } },
+    equipamentos:  { page:'page-equipamentos',   title:'Catálogo de Equipamentos & Ficha de Vida', chip:'Inventário técnico integrado ao PostgreSQL' },
     ronda:         { page:'page-ronda',          title:'Relatório Diário — Tecnologia UDI',        chip:'Ronda técnica de plantão e infraestrutura' },
     config:        { page:'page-config',         title:'Configurações',                            chip:'Perfil e preferências'      }
   };
@@ -175,6 +180,12 @@
       try {
         if (typeof renderOrcamento === 'function') renderOrcamento();
         if (typeof sincronizarOrcamentoNuvem === 'function') sincronizarOrcamentoNuvem();
+      } catch(e) {}
+    }
+    if (name === 'equipamentos') {
+      try {
+        if (typeof renderCatalogoEquipamentos === 'function') renderCatalogoEquipamentos();
+        if (typeof sincronizarEquipamentosPostgreSQL === 'function') sincronizarEquipamentosPostgreSQL();
       } catch(e) {}
     }
   }
@@ -353,6 +364,12 @@
     try {
       if (typeof window.carregarDashboardMetricsStore === 'function') {
         window.carregarDashboardMetricsStore();
+      }
+      if (typeof window.sincronizarDashboardMetricsComCatalogo === 'function') {
+        window.sincronizarDashboardMetricsComCatalogo();
+      }
+      if (typeof window.renderCatalogoEquipamentos === 'function') {
+        window.renderCatalogoEquipamentos();
       }
       if (typeof window.renderAll === 'function') {
         window.renderAll(true);
