@@ -45,7 +45,9 @@
     var praca = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var isUberlandia = praca.indexOf('Uber') !== -1;
     var equips = [];
-    if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
+    if (typeof obterListaNomesEquipamentosOrdenados === 'function') {
+      equips = obterListaNomesEquipamentosOrdenados(praca);
+    } else if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
       equips = Object.keys(dashboardMetrics.equipamento);
     }
 
@@ -258,7 +260,7 @@
     document.getElementById('edit-oc-resp').value = oc.resp || 'Todos do turno';
     document.getElementById('edit-oc-local').value = oc.local || '';
     document.getElementById('edit-oc-prazo').value = oc.prazo || '';
-    document.getElementById('edit-oc-desc').value = oc.desc || '';
+    document.getElementById('edit-oc-desc').value = String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
 
     atualizarSelectEquipamentosNovaOc();
     if (document.getElementById('edit-oc-telejornal')) {
@@ -311,33 +313,72 @@
     var isMine = (resp === usuarioLogado || resp === 'Operador' || resp.indexOf(usuarioLogado) !== -1 || resp.indexOf('Você') !== -1);
     var anexosAtualizados = (uploadedFilesStore['edit-oc-previews'] || []).slice();
 
-    var resolucaoAtual = Object.assign({}, ocorrencias[idx].resolucao || {});
-    if (anexosAtualizados.length > 0) {
-      resolucaoAtual.anexos = anexosAtualizados;
-    } else {
-      delete resolucaoAtual.anexos;
-    }
-
     var anterior = ocorrencias[idx];
     var mudancas = [];
-    if (titulo !== (anterior.titulo || '')) mudancas.push('Título alterado de "' + (anterior.titulo || '') + '" para "' + titulo + '"');
-    if (prio !== (anterior.prio || '')) mudancas.push('Prioridade alterada de ' + (anterior.prio || 'Média') + ' para ' + prio);
-    if (cat !== (anterior.cat || '')) mudancas.push('Categoria alterada de ' + (anterior.cat || '') + ' para ' + cat);
-    if (resp !== (anterior.resp || '')) mudancas.push('Responsável alterado de ' + (anterior.resp || '') + ' para ' + resp);
-    if (local !== (anterior.local || '')) mudancas.push('Local alterado de "' + (anterior.local || '') + '" para "' + local + '"');
-    if (telVal !== (anterior.telejornal || '')) mudancas.push('Telejornal alterado para ' + (telVal || 'Nenhum'));
-    if (eqVal !== (anterior.equipamento || '')) mudancas.push('Equipamento alterado para ' + (eqVal || 'Nenhum'));
-    if (prazo !== (anterior.prazo || '')) mudancas.push('Prazo alterado para ' + (prazo || 'Sem prazo'));
-    if (desc !== (anterior.desc || '')) mudancas.push('Descrição detalhada atualizada');
-    if (anexosAtualizados.length !== ((anterior.anexos || []).length)) mudancas.push('Anexos atualizados (' + anexosAtualizados.length + ' arquivos)');
 
-    var historicoEdicoes = (anterior.historicoEdicoes && Array.isArray(anterior.historicoEdicoes)) ? anterior.historicoEdicoes.slice() : [];
+    function regMudanca(campo, valAntes, valDepois, textoPadraoVazio) {
+      var vA = (valAntes !== undefined && valAntes !== null && String(valAntes).trim() !== '') ? String(valAntes).trim() : (textoPadraoVazio || 'Não informado');
+      var vD = (valDepois !== undefined && valDepois !== null && String(valDepois).trim() !== '') ? String(valDepois).trim() : (textoPadraoVazio || 'Não informado');
+      if (vA !== vD) {
+        mudancas.push({
+          campo: campo,
+          antes: vA,
+          depois: vD,
+          resumo: campo + ': de "' + vA + '" para "' + vD + '"'
+        });
+      }
+    }
+
+    regMudanca('Título', anterior.titulo || '', titulo, 'Sem título');
+    regMudanca('Prioridade', anterior.prio || 'Média', prio, 'Média');
+    regMudanca('Categoria', anterior.cat || 'Equipamento', cat, 'Equipamento');
+    regMudanca('Responsável', anterior.resp || 'Todos do turno', resp, 'Todos do turno');
+    regMudanca('Local / Praça', anterior.local || '', local, 'Não informado');
+    regMudanca('Telejornal', anterior.telejornal || '', telVal || '', 'Sem telejornal');
+    regMudanca('Equipamento', anterior.equipamento || '', eqVal || '', 'Sem equipamento');
+    regMudanca('Prazo Estimado', anterior.prazo || '', prazo || '', 'Sem prazo');
+
+    var ctrsMarkerExistente = '';
+    if (anterior.desc && String(anterior.desc).indexOf('<!--CTRS_JSON:') !== -1) {
+      var mCtrs = String(anterior.desc).match(/(<!--CTRS_JSON:[^>]+-->)/);
+      if (mCtrs && mCtrs[1]) ctrsMarkerExistente = mCtrs[1];
+    }
+    var descAntLimpa = String(anterior.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
+    regMudanca('Descrição Detalhada', descAntLimpa, desc, 'Sem descrição');
+    if (ctrsMarkerExistente && desc.indexOf('<!--CTRS_JSON:') === -1) {
+      desc = desc + ctrsMarkerExistente;
+    }
+
+    var qtdAnxAntes = (anterior.anexos || []).length;
+    var qtdAnxDepois = anexosAtualizados.length;
+    if (qtdAnxAntes !== qtdAnxDepois) {
+      mudancas.push({
+        campo: 'Anexos',
+        antes: qtdAnxAntes + (qtdAnxAntes === 1 ? ' arquivo' : ' arquivos'),
+        depois: qtdAnxDepois + (qtdAnxDepois === 1 ? ' arquivo' : ' arquivos'),
+        resumo: 'Anexos: de "' + qtdAnxAntes + ' arquivo(s)" para "' + qtdAnxDepois + ' arquivo(s)"'
+      });
+    }
+
+    var historicoEdicoes = (anterior.historicoEdicoes && Array.isArray(anterior.historicoEdicoes))
+      ? anterior.historicoEdicoes.slice()
+      : ((anterior.resolucao && Array.isArray(anterior.resolucao.historicoEdicoes)) ? anterior.resolucao.historicoEdicoes.slice() : []);
     if (mudancas.length > 0) {
       historicoEdicoes.unshift({
         autor: usuarioLogado,
         dataHora: formatDataHoraLocal(),
         mudancas: mudancas
       });
+    }
+
+    var resolucaoAtual = Object.assign({}, ocorrencias[idx].resolucao || {});
+    if (anexosAtualizados.length > 0) {
+      resolucaoAtual.anexos = anexosAtualizados;
+    } else {
+      delete resolucaoAtual.anexos;
+    }
+    if (historicoEdicoes.length > 0) {
+      resolucaoAtual.historicoEdicoes = historicoEdicoes;
     }
 
     ocorrencias[idx] = Object.assign({}, ocorrencias[idx], {

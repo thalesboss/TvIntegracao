@@ -403,6 +403,9 @@ document.addEventListener('DOMContentLoaded', function () {
           return a;
         }).filter(Boolean);
       }
+      if (item.historicoEdicoes && Array.isArray(item.historicoEdicoes) && item.historicoEdicoes.length > 0) {
+        resObj.historicoEdicoes = item.historicoEdicoes;
+      }
       return {
         id: item.id,
         titulo: item.titulo,
@@ -504,9 +507,32 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     },
 
+    formatHistoricoPayload: function(h) {
+      if (!h || !h.id) return null;
+      return {
+        id: h.id,
+        tipo: h.tipo || 'relatorio',
+        subtipo: h.subtipo || '',
+        titulo: h.titulo || '',
+        equipamento: h.equipamento || '',
+        categoria: h.categoria || '',
+        local: h.local || 'Juiz de Fora',
+        dataCriacao: h.dataCriacao || '',
+        criadoPor: h.criadoPor || 'Operador',
+        descCriacao: h.descCriacao || '',
+        status: h.status || 'Concluído',
+        dataResolucao: h.dataResolucao || '',
+        resolvidoPor: h.resolvidoPor || '',
+        descResolucao: h.descResolucao || '',
+        praca: h.praca || h.local || 'Juiz de Fora'
+      };
+    },
+
     pushHistoricoItem: function(histItem) {
       if (!this.url || !this.key || !histItem) return;
       try {
+        var payload = this.formatHistoricoPayload(histItem);
+        if (!payload) return;
         var endpoint = this.url.replace(/\/$/, '') + '/rest/v1/historico';
         fetch(endpoint, {
           method: 'POST',
@@ -516,7 +542,7 @@ document.addEventListener('DOMContentLoaded', function () {
             'Authorization': 'Bearer ' + this.key,
             'Prefer': 'resolution=merge-duplicates'
           },
-          body: JSON.stringify(histItem)
+          body: JSON.stringify(payload)
         }).then(function(res) {
           if (!res.ok) {
             console.warn('[DBService Cloud] Falha ao enviar item de histórico (' + res.status + '):', histItem.id);
@@ -541,6 +567,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (table === 'ocorrencias') {
           payload = data.map(function(item) {
             return self.formatOcorrenciaPayload(item);
+          }).filter(Boolean);
+        } else if (table === 'historico') {
+          payload = data.map(function(item) {
+            return self.formatHistoricoPayload(item);
           }).filter(Boolean);
         }
         fetch(endpoint, {
@@ -646,8 +676,15 @@ document.addEventListener('DOMContentLoaded', function () {
               var mapHist = {};
               remoteFiltered.forEach(function(h){ mapHist[h.id] = h; });
               (historicoSeedData || []).forEach(function(localH){
-                if (localH && localH.id && !mapHist[localH.id]) {
-                  if (!idsNaLixeira.includes(localH.id) && localH.status !== 'lixeira') {
+                if (localH && localH.id) {
+                  if (mapHist[localH.id]) {
+                    if (localH.htmlRelatorio && !mapHist[localH.id].htmlRelatorio) {
+                      mapHist[localH.id].htmlRelatorio = localH.htmlRelatorio;
+                    }
+                    if (localH.dadosCTRS && !mapHist[localH.id].dadosCTRS) {
+                      mapHist[localH.id].dadosCTRS = localH.dadosCTRS;
+                    }
+                  } else if (!idsNaLixeira.includes(localH.id) && localH.status !== 'lixeira') {
                     remoteFiltered.push(localH);
                   }
                 }
@@ -922,6 +959,14 @@ document.addEventListener('DOMContentLoaded', function () {
       status: o.status || 'aberta',
       criado: o.criado || Date.now(),
       dataCriacao: o.dataCriacao || formatDataHoraLocal(o.criado),
+      equipamento: o.equipamento || null,
+      equipamento_id: o.equipamento_id || '',
+      telejornal: o.telejornal || null,
+      historicoEdicoes: Array.isArray(o.historicoEdicoes) ? o.historicoEdicoes : ((res && Array.isArray(res.historicoEdicoes)) ? res.historicoEdicoes : []),
+      ultimaEdicaoPor: o.ultimaEdicaoPor || (res && res.ultimaEdicaoPor) || null,
+      ultimaEdicaoEm: o.ultimaEdicaoEm || (res && res.ultimaEdicaoEm) || null,
+      htmlRelatorio: o.htmlRelatorio || null,
+      dadosCTRS: o.dadosCTRS || null,
       resolucao: res,
       anexos: anx,
       praca: normalizarPracaOcorrencia(o.praca, o.local, o.titulo, o.equipamento || (o.tags && o.tags[1])),
@@ -1243,7 +1288,10 @@ document.addEventListener('DOMContentLoaded', function () {
           '<div class="prio-line ' + prioLine(oc.prio) + '"></div>' +
           '<div class="oc-body">' +
             '<div class="oc-header"><h3>' + escapeHTML(oc.titulo || 'Sem título') + '</h3>' + tagsHTML + '</div>' +
-            '<p class="oc-desc">' + escapeHTML(oc.desc || '') + '</p>' +
+            '<p class="oc-desc">' + escapeHTML(String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim()) + '</p>' +
+            ((oc.htmlRelatorio || oc.dadosCTRS || (oc.desc && String(oc.desc).indexOf('<!--CTRS_JSON:') !== -1) || (oc.tags && oc.tags.indexOf('Relatório TV') !== -1))
+              ? '<div style="margin-top:6px;padding:5px 10px;background:#EFF6FF;border:1px solid #BFDBFE;border-left:3px solid #0071E3;border-radius:6px;font-size:11px;color:#1E3A8A;display:inline-flex;align-items:center;gap:6px;font-weight:700;"><i data-lucide="file-text" style="width:12px;height:12px;color:#0071E3;"></i> Contém Preview do Relatório CTRS na Descrição — Clique para visualizar</div>'
+              : '') +
             '<div class="oc-meta">' +
               '<span class="oc-meta-item"><i data-lucide="' + respIco + '" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i>' + escapeHTML(oc.resp || 'Todos do turno') + '</span>' +
               timeH + prazoH + localH +
@@ -3080,7 +3128,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var isUberlandia = praca.indexOf('Uber') !== -1;
     var equips = [];
 
-    if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
+    if (typeof obterListaNomesEquipamentosOrdenados === 'function') {
+      equips = obterListaNomesEquipamentosOrdenados(praca);
+    } else if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
       equips = Object.keys(dashboardMetrics.equipamento);
     }
 
@@ -3871,12 +3921,7 @@ document.addEventListener('DOMContentLoaded', function () {
         reporterCompleto = (reporter ? reporter + ' <strong style="color:#15803D;">(' + entradas + ')</strong>' : '<strong style="color:#15803D;">(' + entradas + ')</strong>');
       }
 
-      var cidadeCompleta = cidade;
-      if (cidadeCompleta && !cidadeCompleta.toLowerCase().includes(praca.toLowerCase())) {
-        cidadeCompleta = praca + ' &ndash; ' + cidadeCompleta;
-      } else if (!cidadeCompleta) {
-        cidadeCompleta = praca;
-      }
+      var cidadeCompleta = cidade || '&mdash;';
 
       var headerBg    = temNaoConformidade ? '#FEE2E2' : '#DBEAFE';
       var headerColor = temNaoConformidade ? '#991B1B' : '#1E3A8A';
@@ -3889,48 +3934,48 @@ document.addEventListener('DOMContentLoaded', function () {
       transmissoesHTML +=
         '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, Helvetica, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid ' + borderTable + '; margin-bottom:12px;">' +
           '<tr bgcolor="' + headerBg + '" style="background-color:' + headerBg + ';">' +
-            '<td colspan="3" bgcolor="' + headerBg + '" style="background-color:' + headerBg + '; text-align:center; font-weight:bold; font-size:12.5px; color:' + headerColor + '; border:1px solid ' + borderTable + '; padding:6px 10px;">' +
-              'Informa&ccedil;&otilde;es da Transmiss&atilde;o ao Vivo ' + num +
-              (temNaoConformidade ? ' &mdash; ATEN&Ccedil;&Atilde;O: N&Atilde;O CONFORMIDADE' : '') +
+            '<td colspan="3" bgcolor="' + headerBg + '" style="background-color:' + headerBg + '; text-align:center; font-weight:bold; font-size:12.5px; color:' + headerColor + '; border:1px solid ' + borderTable + '; padding:8px 12px;">' +
+              '<strong style="color:' + headerColor + ';">Informa&ccedil;&otilde;es da Transmiss&atilde;o ao Vivo ' + num +
+              (temNaoConformidade ? ' &mdash; ATEN&Ccedil;&Atilde;O: N&Atilde;O CONFORMIDADE' : '') + '</strong>' +
             '</td>' +
           '</tr>' +
           '<tr bgcolor="#F8FAFC" style="background-color:#F8FAFC;">' +
-            '<td colspan="3" bgcolor="#F8FAFC" style="background-color:#F8FAFC; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td colspan="3" bgcolor="#F8FAFC" style="background-color:#F8FAFC; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Cidade:</strong> <strong style="color:#0F2C59;">' + cidadeCompleta + '</strong>' +
             '</td>' +
           '</tr>' +
           '<tr>' +
-            '<td bgcolor="#FFFFFF" style="width:44%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td bgcolor="#FFFFFF" style="width:38%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Infraestrutura de Transmiss&atilde;o Utilizada:</strong> <strong style="color:#1E3A8A;">' + (infra || '&mdash;') + '</strong>' +
             '</td>' +
-            '<td bgcolor="#FFFFFF" style="width:28%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td bgcolor="#FFFFFF" style="width:31%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Hora Abertura Sinal:</strong> <strong>' + horaAbert + '</strong>' +
             '</td>' +
-            '<td bgcolor="' + estAudio.bg + '" style="width:28%; background-color:' + estAudio.bg + '; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td bgcolor="' + estAudio.bg + '" style="width:31%; background-color:' + estAudio.bg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Qualidade &Aacute;udio:</strong> ' + estAudio.texto +
             '</td>' +
           '</tr>' +
           '<tr>' +
-            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Rep&oacute;rter:</strong> ' + reporterCompleto +
             '</td>' +
-            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Hora final (Teste OK):</strong> <strong>' + horaFim + '</strong>' +
             '</td>' +
-            '<td bgcolor="' + estVideo.bg + '" style="background-color:' + estVideo.bg + '; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td bgcolor="' + estVideo.bg + '" style="background-color:' + estVideo.bg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Qualidade V&iacute;deo:</strong> ' + estVideo.texto +
             '</td>' +
           '</tr>' +
           '<tr>' +
-            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Rep&oacute;rter Cinematogr&aacute;fico:</strong> ' + (rc || '&mdash;') +
             '</td>' +
-            '<td colspan="2" bgcolor="' + estStatus.bg + '" style="background-color:' + estStatus.bg + '; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td colspan="2" bgcolor="' + estStatus.bg + '" style="background-color:' + estStatus.bg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Status da Transmiss&atilde;o:</strong> ' + estStatus.texto +
             '</td>' +
           '</tr>' +
           '<tr>' +
-            '<td colspan="3" bgcolor="' + obsCellBg + '" style="background-color:' + obsCellBg + '; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td colspan="3" bgcolor="' + obsCellBg + '" style="background-color:' + obsCellBg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Falhas ocorridas:</strong> ' +
               (falhas ? '<span style="color:#0F172A;">' + falhas + '</span>' : '<span style="color:#64748B;">Sem ocorr&ecirc;ncias.</span>') +
             '</td>' +
@@ -3942,11 +3987,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var renderCelulaJornal = function(sigla, marcado) {
       if (marcado) {
-        return '<td bgcolor="#DBEAFE" style="width:25%; border:1px solid #94A3B8; background-color:#DBEAFE; color:#1E3A8A; padding:6px 10px; text-align:center; font-weight:bold;">' +
+        return '<td bgcolor="#DBEAFE" style="width:25%; border:1px solid #94A3B8; background-color:#DBEAFE; color:#1E3A8A; padding:8px 12px; text-align:center; font-weight:bold;">' +
           '&#10004; <strong>' + sigla + ': X</strong>' +
         '</td>';
       }
-      return '<td bgcolor="#FFFFFF" style="width:25%; border:1px solid #94A3B8; background-color:#FFFFFF; color:#64748B; padding:6px 10px; text-align:center;">' +
+      return '<td bgcolor="#FFFFFF" style="width:25%; border:1px solid #94A3B8; background-color:#FFFFFF; color:#64748B; padding:8px 12px; text-align:center;">' +
         '<strong>' + sigla + ':</strong> &ndash;' +
       '</td>';
     };
@@ -3962,10 +4007,10 @@ document.addEventListener('DOMContentLoaded', function () {
               '<img src="' + LOGO_TV_INTEGRACAO_B64 + '" width="105" height="73" alt="TV Integração" style="display:block; margin:0 auto; width:105px; height:73px; border:0;" />' +
             '</td>' +
             '<td bgcolor="#F8FAFC" style="background-color:#F8FAFC; text-align:center; vertical-align:middle; border:1px solid #94A3B8; padding:10px 14px; line-height:1.45;">' +
-              '<div style="font-size:11px; color:#475569; font-weight:bold; text-transform:uppercase; letter-spacing:0.4px;">Processo Engenharia 1.1.1 &ndash; P02 &ndash; F02</div>' +
-              '<div style="font-size:15px; font-weight:bold; color:#0F2C59; margin-top:4px;">' +
+              '<div style="font-size:11px; color:#334155; font-weight:bold; text-transform:uppercase; letter-spacing:0.4px;"><strong style="color:#334155;">Processo Engenharia 1.1.1 &ndash; P02 &ndash; F02</strong></div>' +
+              '<div style="font-size:15px; font-weight:bold; color:#0F172A; margin-top:4px;"><strong style="color:#0F172A;">' +
                 (isUberlandia ? 'Relat&oacute;rio de Transmiss&atilde;o ao Vivo' : 'Checklist de Transmiss&atilde;o ao Vivo CTRS') +
-              '</div>' +
+              '</strong></div>' +
             '</td>' +
           '</tr>' +
         '</table>' +
@@ -3973,15 +4018,15 @@ document.addEventListener('DOMContentLoaded', function () {
         '<!-- INFORMAÇÕES PRINCIPAIS -->' +
         '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid #94A3B8; margin-bottom:12px;">' +
           '<tr bgcolor="#DBEAFE" style="background-color:#DBEAFE;">' +
-            '<td colspan="4" bgcolor="#DBEAFE" style="background-color:#DBEAFE; text-align:center; font-weight:bold; color:#1E3A8A; border:1px solid #94A3B8; padding:6px 10px; font-size:12.5px;">' +
-              'Informa&ccedil;&otilde;es Principais' +
+            '<td colspan="4" bgcolor="#DBEAFE" style="background-color:#DBEAFE; text-align:center; font-weight:bold; color:#1E3A8A; border:1px solid #94A3B8; padding:8px 12px; font-size:12.5px;">' +
+              '<strong style="color:#0F2C59;">Informa&ccedil;&otilde;es Principais</strong>' +
             '</td>' +
           '</tr>' +
           '<tr>' +
-            '<td colspan="2" bgcolor="#FFFFFF" style="width:50%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td colspan="2" bgcolor="#FFFFFF" style="width:50%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Data:</strong> <strong style="color:#0F2C59;">' + dataFmt + '</strong>' +
             '</td>' +
-            '<td colspan="2" bgcolor="#FFFFFF" style="width:50%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td colspan="2" bgcolor="#FFFFFF" style="width:50%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Pra&ccedil;a:</strong> <strong style="color:#0F2C59;">' + praca + '</strong>' +
             '</td>' +
           '</tr>' +
@@ -3999,8 +4044,8 @@ document.addEventListener('DOMContentLoaded', function () {
         '<!-- LEGENDA -->' +
         '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:11.5px; color:#0F172A; border:1.5px solid #94A3B8; margin-bottom:12px;">' +
           '<tr bgcolor="#F1F5F9" style="background-color:#F1F5F9;">' +
-            '<td colspan="3" bgcolor="#F1F5F9" style="background-color:#F1F5F9; text-align:center; font-weight:bold; color:#1E293B; border:1px solid #94A3B8; padding:5px;">' +
-              'Legenda' +
+            '<td colspan="3" bgcolor="#F1F5F9" style="background-color:#F1F5F9; text-align:center; font-weight:bold; color:#0F172A; border:1px solid #94A3B8; padding:5px;">' +
+              '<strong style="color:#0F172A;">Legenda</strong>' +
             '</td>' +
           '</tr>' +
           '<tr style="text-align:center;">' +
@@ -4013,8 +4058,8 @@ document.addEventListener('DOMContentLoaded', function () {
         '<!-- OBSERVAÇÕES -->' +
         '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid #94A3B8; margin-bottom:8px;">' +
           '<tr bgcolor="#F1F5F9" style="background-color:#F1F5F9;">' +
-            '<td bgcolor="#F1F5F9" style="background-color:#F1F5F9; text-align:center; font-weight:bold; color:#1E293B; border:1px solid #94A3B8; padding:5px;">' +
-              'Observa&ccedil;&otilde;es' +
+            '<td bgcolor="#F1F5F9" style="background-color:#F1F5F9; text-align:center; font-weight:bold; color:#0F172A; border:1px solid #94A3B8; padding:5px;">' +
+              '<strong style="color:#0F172A;">Observa&ccedil;&otilde;es</strong>' +
             '</td>' +
           '</tr>' +
           '<tr>' +
@@ -4025,15 +4070,243 @@ document.addEventListener('DOMContentLoaded', function () {
         '</table>' +
 
         '<div style="font-size:10.5px; color:#64748B; text-align:right; padding-top:2px;">' +
-          'Emitido por: <strong>' + operadorAtual + '</strong>' + (destLimpo ? (' &bull; Destinat&aacute;rio: <strong>' + destLimpo + '</strong>') : '') +
+          'Emitido por: <strong>' + operadorAtual + '</strong>' +
         '</div>' +
       '</div>';
 
     return {
       html: htmlCompleto,
+      dataFmt: dataFmt,
       assunto: (isUberlandia ? 'Transmissão ao Vivo - ' : 'Transmissão ao Vivo - CTRS - ') + (inCheck ? 'IN' : (mg1Check ? 'MG1' : (mg2Check ? 'MG2' : 'OUTROS'))) + ' - ' + praca + ' - ' + dataFmt
     };
   }
+
+  function gerarHTMLPreviewCTRSDados(dadosOuItem) {
+    if (!dadosOuItem) return '';
+    if (dadosOuItem.htmlRelatorio && typeof dadosOuItem.htmlRelatorio === 'string') {
+      return dadosOuItem.htmlRelatorio;
+    }
+
+    var d = dadosOuItem.dadosCTRS || null;
+    var rawJsonSource = (dadosOuItem.descResolucao && dadosOuItem.descResolucao.indexOf('<!--CTRS_JSON:') !== -1)
+      ? dadosOuItem.descResolucao
+      : ((dadosOuItem.descCriacao && dadosOuItem.descCriacao.indexOf('<!--CTRS_JSON:') !== -1)
+          ? dadosOuItem.descCriacao
+          : ((dadosOuItem.desc && dadosOuItem.desc.indexOf('<!--CTRS_JSON:') !== -1) ? dadosOuItem.desc : ''));
+    if (!d && rawJsonSource) {
+      try {
+        var mJson = rawJsonSource.match(/<!--CTRS_JSON:([^>]+)-->/);
+        if (mJson && mJson[1]) {
+          d = JSON.parse(decodeURIComponent(mJson[1]));
+        }
+      } catch (e) {}
+    }
+
+    // Se for um registro antigo do histórico que ainda não tinha dadosCTRS estruturados, reconstrói a partir dos metadados do item
+    if (!d) {
+      var tit = dadosOuItem.titulo || '';
+      var tipoExtraido = 'INTEGRAÇÃO NOTÍCIA';
+      if (tit.indexOf('MG1') !== -1) tipoExtraido = 'MG1';
+      else if (tit.indexOf('MG2') !== -1) tipoExtraido = 'MG2';
+      else if (tit.toUpperCase().indexOf('GIRO') !== -1) tipoExtraido = 'GIRO';
+
+      var dataBase = (dadosOuItem.dataCriacao || '').split(' ')[0] || '';
+      var eqBase = (dadosOuItem.equipamento && dadosOuItem.equipamento !== 'Equipamentos de Transmissão / CTRS')
+        ? dadosOuItem.equipamento
+        : 'LIVE U1';
+
+      d = {
+        dataFmt: dataBase || '—',
+        praca: dadosOuItem.local || dadosOuItem.praca || 'Juiz de Fora',
+        tipo: tipoExtraido,
+        obs: dadosOuItem.descCriacao || '',
+        operador: dadosOuItem.criadoPor || 'Operador',
+        transmissoes: [
+          {
+            cidade: dadosOuItem.local || 'Juiz de Fora',
+            infra: eqBase,
+            horaAbert: '—',
+            horaFim: '—',
+            audioQ: 'C',
+            videoQ: 'C',
+            reporter: '—',
+            entradas: '',
+            rc: '—',
+            statusTx: 'C',
+            falhas: ''
+          }
+        ]
+      };
+    }
+
+    var praca = d.praca || 'Juiz de Fora';
+    var isUberlandia = praca.indexOf('Uber') !== -1;
+    var dataFmt = d.dataFmt || '—';
+    var tipo = (d.tipo || 'INTEGRAÇÃO NOTÍCIA').toUpperCase();
+    var inCheck = (tipo.indexOf('NOTÍCIA') !== -1 || tipo.indexOf('NOTICIA') !== -1 || tipo === 'IN') ? 'X' : '';
+    var mg1Check = (tipo === 'MG1') ? 'X' : '';
+    var mg2Check = (tipo === 'MG2') ? 'X' : '';
+    var outrosCheck = (!inCheck && !mg1Check && !mg2Check) ? 'X' : '';
+    var obs = d.obs || '';
+    var operadorAtual = d.operador || 'Operador';
+
+    var renderCelulaJornal = function(sigla, marcado) {
+      if (marcado) {
+        return '<td bgcolor="#DBEAFE" style="width:25%; border:1px solid #94A3B8; background-color:#DBEAFE; color:#1E3A8A; padding:8px 12px; text-align:center; font-weight:bold;">' +
+          '&#10004; <strong>' + sigla + ': X</strong>' +
+        '</td>';
+      }
+      return '<td bgcolor="#FFFFFF" style="width:25%; border:1px solid #94A3B8; background-color:#FFFFFF; color:#64748B; padding:8px 12px; text-align:center;">' +
+        '<strong>' + sigla + ':</strong> &ndash;' +
+      '</td>';
+    };
+
+    var listaTx = Array.isArray(d.transmissoes) && d.transmissoes.length > 0 ? d.transmissoes : [];
+    var transmissoesHTML = '';
+
+    listaTx.forEach(function(tx, idx) {
+      var num = idx + 1;
+      var audioQ = tx.audioQ || 'C';
+      var videoQ = tx.videoQ || 'C';
+      var statusTx = tx.statusTx || 'C';
+      var estAudio  = getEstiloCelulaQualidadeEmail(audioQ);
+      var estVideo  = getEstiloCelulaQualidadeEmail(videoQ);
+      var estStatus = getEstiloCelulaQualidadeEmail(statusTx);
+      var temNaoConformidade = (audioQ === 'NC' || videoQ === 'NC' || statusTx === 'NC');
+
+      var reporterCompleto = tx.reporter || '&mdash;';
+      if (tx.entradas) {
+        reporterCompleto = (tx.reporter ? tx.reporter + ' <strong style="color:#15803D;">(' + tx.entradas + ')</strong>' : '<strong style="color:#15803D;">(' + tx.entradas + ')</strong>');
+      }
+      var cidadeCompleta = tx.cidade || '&mdash;';
+      var headerBg    = temNaoConformidade ? '#FEE2E2' : '#DBEAFE';
+      var headerColor = temNaoConformidade ? '#991B1B' : '#1E3A8A';
+      var borderTable = temNaoConformidade ? '#FCA5A5' : '#94A3B8';
+      var falhas = tx.falhas || '';
+      var obsCellBg = (falhas && !falhas.toLowerCase().includes('sem ocorrência') && !falhas.toLowerCase().includes('sem ocorrencia'))
+        ? (temNaoConformidade ? '#FEF2F2' : '#FFFBEB')
+        : '#FFFFFF';
+
+      transmissoesHTML +=
+        '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, Helvetica, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid ' + borderTable + '; margin-bottom:12px;">' +
+          '<tr bgcolor="' + headerBg + '" style="background-color:' + headerBg + ';">' +
+            '<td colspan="3" bgcolor="' + headerBg + '" style="background-color:' + headerBg + '; text-align:center; font-weight:bold; font-size:12.5px; color:' + headerColor + '; border:1px solid ' + borderTable + '; padding:8px 12px;">' +
+              '<strong style="color:' + headerColor + ';">Informa&ccedil;&otilde;es da Transmiss&atilde;o ao Vivo ' + num +
+              (temNaoConformidade ? ' &mdash; ATEN&Ccedil;&Atilde;O: N&Atilde;O CONFORMIDADE' : '') + '</strong>' +
+            '</td>' +
+          '</tr>' +
+          '<tr bgcolor="#F8FAFC" style="background-color:#F8FAFC;">' +
+            '<td colspan="3" bgcolor="#F8FAFC" style="background-color:#F8FAFC; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Cidade:</strong> <strong style="color:#0F2C59;">' + cidadeCompleta + '</strong>' +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td bgcolor="#FFFFFF" style="width:38%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Infraestrutura de Transmiss&atilde;o Utilizada:</strong> <strong style="color:#1E3A8A;">' + (tx.infra || '&mdash;') + '</strong>' +
+            '</td>' +
+            '<td bgcolor="#FFFFFF" style="width:31%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Hora Abertura Sinal:</strong> <strong>' + (tx.horaAbert || '&mdash;') + '</strong>' +
+            '</td>' +
+            '<td bgcolor="' + estAudio.bg + '" style="width:31%; background-color:' + estAudio.bg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Qualidade &Aacute;udio:</strong> ' + estAudio.texto +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Rep&oacute;rter:</strong> ' + reporterCompleto +
+            '</td>' +
+            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Hora final (Teste OK):</strong> <strong>' + (tx.horaFim || '&mdash;') + '</strong>' +
+            '</td>' +
+            '<td bgcolor="' + estVideo.bg + '" style="background-color:' + estVideo.bg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Qualidade V&iacute;deo:</strong> ' + estVideo.texto +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Rep&oacute;rter Cinematogr&aacute;fico:</strong> ' + (tx.rc || '&mdash;') +
+            '</td>' +
+            '<td colspan="2" bgcolor="' + estStatus.bg + '" style="background-color:' + estStatus.bg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Status da Transmiss&atilde;o:</strong> ' + estStatus.texto +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td colspan="3" bgcolor="' + obsCellBg + '" style="background-color:' + obsCellBg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Falhas ocorridas:</strong> ' +
+              (falhas ? '<span style="color:#0F172A;">' + falhas + '</span>' : '<span style="color:#64748B;">Sem ocorr&ecirc;ncias.</span>') +
+            '</td>' +
+          '</tr>' +
+        '</table>';
+    });
+
+    return (
+      '<div style="font-family:Segoe UI, Arial, Helvetica, sans-serif; color:#0F172A; max-width:800px; margin:0 auto; padding:10px; background-color:#FFFFFF;">' +
+        '<table cellpadding="6" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid #475569; margin-bottom:12px;">' +
+          '<tr>' +
+            '<td bgcolor="#FFFFFF" style="width:150px; background-color:#FFFFFF; text-align:center; vertical-align:middle; border:1px solid #94A3B8; padding:8px;">' +
+              '<img src="' + LOGO_TV_INTEGRACAO_B64 + '" width="105" height="73" alt="TV Integração" style="display:block; margin:0 auto; width:105px; height:73px; border:0;" />' +
+            '</td>' +
+            '<td bgcolor="#F8FAFC" style="background-color:#F8FAFC; text-align:center; vertical-align:middle; border:1px solid #94A3B8; padding:10px 14px; line-height:1.45;">' +
+              '<div style="font-size:11px; color:#334155; font-weight:bold; text-transform:uppercase; letter-spacing:0.4px;"><strong style="color:#334155;">Processo Engenharia 1.1.1 &ndash; P02 &ndash; F02</strong></div>' +
+              '<div style="font-size:15px; font-weight:bold; color:#0F172A; margin-top:4px;"><strong style="color:#0F172A;">' +
+                (isUberlandia ? 'Relat&oacute;rio de Transmiss&atilde;o ao Vivo' : 'Checklist de Transmiss&atilde;o ao Vivo CTRS') +
+              '</strong></div>' +
+            '</td>' +
+          '</tr>' +
+        '</table>' +
+        '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid #94A3B8; margin-bottom:12px;">' +
+          '<tr bgcolor="#DBEAFE" style="background-color:#DBEAFE;">' +
+            '<td colspan="4" bgcolor="#DBEAFE" style="background-color:#DBEAFE; text-align:center; font-weight:bold; color:#1E3A8A; border:1px solid #94A3B8; padding:8px 12px; font-size:12.5px;">' +
+              '<strong style="color:#0F2C59;">Informa&ccedil;&otilde;es Principais</strong>' +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td colspan="2" bgcolor="#FFFFFF" style="width:50%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Data:</strong> <strong style="color:#0F2C59;">' + dataFmt + '</strong>' +
+            '</td>' +
+            '<td colspan="2" bgcolor="#FFFFFF" style="width:50%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Pra&ccedil;a:</strong> <strong style="color:#0F2C59;">' + praca + '</strong>' +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            renderCelulaJornal('IN', !!inCheck) +
+            renderCelulaJornal('MG1', !!mg1Check) +
+            renderCelulaJornal('MG2', !!mg2Check) +
+            renderCelulaJornal('OUTROS', !!outrosCheck) +
+          '</tr>' +
+        '</table>' +
+        transmissoesHTML +
+        '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:11.5px; color:#0F172A; border:1.5px solid #94A3B8; margin-bottom:12px;">' +
+          '<tr bgcolor="#F1F5F9" style="background-color:#F1F5F9;">' +
+            '<td colspan="3" bgcolor="#F1F5F9" style="background-color:#F1F5F9; text-align:center; font-weight:bold; color:#0F172A; border:1px solid #94A3B8; padding:5px;">' +
+              '<strong style="color:#0F172A;">Legenda</strong>' +
+            '</td>' +
+          '</tr>' +
+          '<tr style="text-align:center;">' +
+            '<td bgcolor="#F0FDF4" style="width:33.3%; background-color:#F0FDF4; border:1px solid #94A3B8; padding:6px 8px; color:#15803D; font-weight:bold;">&#10003; C &ndash; Conforme</td>' +
+            '<td bgcolor="#FEF2F2" style="width:33.3%; background-color:#FEF2F2; border:1px solid #94A3B8; padding:6px 8px; color:#B91C1C; font-weight:bold;">&#9888; NC &ndash; N&atilde;o Conforme</td>' +
+            '<td bgcolor="#F8FAFC" style="width:33.3%; background-color:#F8FAFC; border:1px solid #94A3B8; padding:6px 8px; color:#475569; font-weight:bold;">NA &ndash; N&atilde;o se Aplica</td>' +
+          '</tr>' +
+        '</table>' +
+        '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid #94A3B8; margin-bottom:8px;">' +
+          '<tr bgcolor="#F1F5F9" style="background-color:#F1F5F9;">' +
+            '<td bgcolor="#F1F5F9" style="background-color:#F1F5F9; text-align:center; font-weight:bold; color:#0F172A; border:1px solid #94A3B8; padding:5px;">' +
+              '<strong style="color:#0F172A;">Observa&ccedil;&otilde;es</strong>' +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 10px; min-height:36px; white-space:pre-wrap;">' +
+              (obs ? obs : '<span style="color:#64748B;">Sem observa&ccedil;&otilde;es.</span>') +
+            '</td>' +
+          '</tr>' +
+        '</table>' +
+        '<div style="font-size:10.5px; color:#64748B; text-align:right; padding-top:2px;">' +
+          'Emitido por: <strong>' + operadorAtual + '</strong>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+  window.gerarHTMLPreviewCTRSDados = gerarHTMLPreviewCTRSDados;
 
   function limparFormularioCTRS(confirmar) {
     if (confirmar && !confirm('Deseja realmente limpar todos os campos preenchidos do relatório CTRS?')) {
@@ -4227,40 +4500,254 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     } catch (e) {}
 
-    /* Coleta falhas registradas nas seções sanfonadas */
-    var falhasEncontradas = [];
-    if (obs && !obs.toLowerCase().includes('sem ocorrência') && !obs.toLowerCase().includes('sem ocorrencia')) {
-      falhasEncontradas.push(obs);
+    /* Atualiza métricas do Dashboard de Transmissões (Telejornal + Equipamentos) e coleta falhas */
+    var tipoUp = (tipo || 'INTEGRAÇÃO NOTÍCIA').trim().toUpperCase();
+    var chaveJornal = 'INTEGRAÇÃO NOTÍCIA';
+    if (tipoUp.indexOf('NOTÍCIA') !== -1 || tipoUp.indexOf('NOTICIA') !== -1 || tipoUp === 'IN') {
+      chaveJornal = 'INTEGRAÇÃO NOTÍCIA';
+    } else if (tipoUp === 'MG1') {
+      chaveJornal = 'MG1';
+    } else if (tipoUp === 'MG2') {
+      chaveJornal = 'MG2';
+    } else if (tipoUp.indexOf('GIRO') !== -1) {
+      chaveJornal = 'GIRO MG2';
+    } else {
+      chaveJornal = tipoUp;
     }
 
-    document.querySelectorAll('#page-ctrs .acc-body textarea').forEach(function(txt, i) {
-      var val = txt.value.trim();
-      if (val && !val.toLowerCase().includes('sem ocorrência') && !val.toLowerCase().includes('sem ocorrencia')) {
-        falhasEncontradas.push('Transmissão Vivo ' + (i + 1) + ': ' + val);
+    if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics) {
+      if (!dashboardMetrics.telejornal) dashboardMetrics.telejornal = {};
+      if (!dashboardMetrics.equipamento) dashboardMetrics.equipamento = {};
+      if (!dashboardMetrics.telejornal[chaveJornal]) {
+        dashboardMetrics.telejornal[chaveJornal] = { conf: 0, nc: 0, canc: 0 };
+      }
+    }
+
+    var ehCampoNC = function(val) {
+      if (!val) return false;
+      var v = String(val).trim().toUpperCase();
+      return v.indexOf('NC') === 0 || v.indexOf('NÃO CONFORME') !== -1 || v.indexOf('NAO CONFORME') !== -1;
+    };
+
+    var falhasEstruturadas = [];
+    if (obs && !obs.toLowerCase().includes('sem ocorrência') && !obs.toLowerCase().includes('sem ocorrencia')) {
+      falhasEstruturadas.push({
+        equipamento: '',
+        titulo: 'Falha em Relatório TV (' + chaveJornal + ')',
+        desc: obs,
+        tags: ['Relatório TV', chaveJornal, 'Automática']
+      });
+    }
+
+    var accBlocksEnvio = document.querySelectorAll('#page-ctrs .acc-block');
+    var contabilizouAlgumaTransmissao = false;
+    var transmissoesSalvasHist = [];
+    var equipamentosUsadosHist = [];
+    var metricasContabilizadasHist = [];
+
+    var fmtHoraCurta = function(val) {
+      if (!val) return '—';
+      var parts = val.trim().split(':');
+      if (parts.length === 2) return parts[0] + 'h' + parts[1] + "'";
+      return val.trim();
+    };
+    var fmtCodQual = function(val) {
+      if (!val) return 'C';
+      var v = val.trim().toUpperCase();
+      if (v.indexOf('NC') === 0 || v.indexOf('NÃO CONFORME') !== -1) return 'NC';
+      if (v.indexOf('NA') === 0 || v.indexOf('NÃO SE APLICA') !== -1) return 'NA';
+      return 'C';
+    };
+
+    accBlocksEnvio.forEach(function(acc, idx) {
+      var inputs = acc.querySelectorAll('input, select, textarea');
+      var cidadeTx   = (inputs[0] && inputs[0].value.trim()) || '';
+      var infraTx    = (inputs[1] && inputs[1].value.trim()) || '';
+      if (infraTx === '__novo__') infraTx = '';
+      var horaAbTx   = (inputs[2] && inputs[2].value.trim()) || '';
+      var horaFmTx   = (inputs[3] && inputs[3].value.trim()) || '';
+      var audioVal   = (inputs[4] && inputs[4].value.trim()) || '';
+      var videoVal   = (inputs[5] && inputs[5].value.trim()) || '';
+      var reporterTx = (inputs[6] && inputs[6].value.trim()) || '';
+      var entradasTx = (inputs[7] && inputs[7].value.trim()) || '';
+      var rcTx       = (inputs[8] && inputs[8].value.trim()) || '';
+      var statusVal  = (inputs[9] && inputs[9].value.trim()) || '';
+      var obsTx      = (inputs[10] && inputs[10].value.trim()) || '';
+
+      var audioNC  = ehCampoNC(audioVal);
+      var videoNC  = ehCampoNC(videoVal);
+      var statusNC = ehCampoNC(statusVal);
+      var temNCTx  = audioNC || videoNC || statusNC;
+      var temObsFalha = !!(obsTx && !obsTx.toLowerCase().includes('sem ocorrência') && !obsTx.toLowerCase().includes('sem ocorrencia'));
+
+      var blocoAtivo = !!(infraTx || cidadeTx || horaAbTx || horaFmTx || reporterTx || entradasTx || rcTx || obsTx || temNCTx);
+      if (idx > 0 && !blocoAtivo) return;
+      if (idx === 0 && !blocoAtivo) {
+        transmissoesSalvasHist.push({
+          cidade: cidadeTx,
+          infra: infraTx,
+          horaAbert: fmtHoraCurta(horaAbTx),
+          horaFim: fmtHoraCurta(horaFmTx),
+          audioQ: fmtCodQual(audioVal),
+          videoQ: fmtCodQual(videoVal),
+          reporter: reporterTx,
+          entradas: entradasTx,
+          rc: rcTx,
+          statusTx: fmtCodQual(statusVal),
+          falhas: obsTx
+        });
+        return;
+      }
+
+      contabilizouAlgumaTransmissao = true;
+      if (infraTx && equipamentosUsadosHist.indexOf(infraTx) === -1) {
+        equipamentosUsadosHist.push(infraTx);
+      }
+      transmissoesSalvasHist.push({
+        cidade: cidadeTx,
+        infra: infraTx,
+        horaAbert: fmtHoraCurta(horaAbTx),
+        horaFim: fmtHoraCurta(horaFmTx),
+        audioQ: fmtCodQual(audioVal),
+        videoQ: fmtCodQual(videoVal),
+        reporter: reporterTx,
+        entradas: entradasTx,
+        rc: rcTx,
+        statusTx: fmtCodQual(statusVal),
+        falhas: obsTx
+      });
+
+      metricasContabilizadasHist.push({
+        telejornal: chaveJornal,
+        equipamento: infraTx || '',
+        status: temNCTx ? 'nc' : 'conf'
+      });
+
+      // 1. Contabiliza no Dashboard de Transmissões -> Telejornal
+      if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.telejornal && dashboardMetrics.telejornal[chaveJornal]) {
+        if (temNCTx) {
+          dashboardMetrics.telejornal[chaveJornal].nc = (dashboardMetrics.telejornal[chaveJornal].nc || 0) + 1;
+        } else {
+          dashboardMetrics.telejornal[chaveJornal].conf = (dashboardMetrics.telejornal[chaveJornal].conf || 0) + 1;
+        }
+      }
+
+      // 2. Contabiliza no Dashboard de Transmissões -> Equipamento (se equipamento selecionado)
+      if (infraTx && typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
+        if (!dashboardMetrics.equipamento[infraTx]) {
+          dashboardMetrics.equipamento[infraTx] = { conf: 0, nc: 0, canc: 0 };
+        }
+        if (temNCTx) {
+          dashboardMetrics.equipamento[infraTx].nc = (dashboardMetrics.equipamento[infraTx].nc || 0) + 1;
+        } else {
+          dashboardMetrics.equipamento[infraTx].conf = (dashboardMetrics.equipamento[infraTx].conf || 0) + 1;
+        }
+      }
+
+      // 3. Se houve Não Conforme (Áudio, Vídeo ou Status) ou falha descrita nas observações, gera ocorrência
+      if (temNCTx || temObsFalha) {
+        var itensNC = [];
+        if (audioNC)  itensNC.push('Qualidade do Áudio: NC');
+        if (videoNC)  itensNC.push('Qualidade do Vídeo: NC');
+        if (statusNC) itensNC.push('Status da Transmissão: NC');
+
+        var partesDesc = ['Transmissão Vivo ' + (idx + 1) + ' (' + chaveJornal + ')'];
+        if (infraTx) partesDesc.push('Equipamento: ' + infraTx);
+        if (cidadeTx) partesDesc.push('Local: ' + cidadeTx);
+        if (itensNC.length > 0) partesDesc.push('Não Conformidade(s): ' + itensNC.join(' | '));
+        if (obsTx) partesDesc.push('Observações: ' + obsTx);
+
+        var tagsOc = ['Relatório TV', chaveJornal, 'Automática'];
+        if (infraTx) tagsOc.push(infraTx);
+
+        falhasEstruturadas.push({
+          equipamento: infraTx || '',
+          titulo: infraTx
+            ? ('Falha em Transmissão — ' + infraTx + ' (' + chaveJornal + ')')
+            : ('Falha em Relatório TV (' + chaveJornal + ')'),
+          desc: partesDesc.join(' · '),
+          tags: tagsOc
+        });
       }
     });
 
-    var novasOcorrenciasCriadas = 0;
+    // Se nenhuma transmissão individual foi preenchida mas o relatório do jornal foi enviado, contabiliza 1 conforme para o jornal
+    if (!contabilizouAlgumaTransmissao && typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.telejornal && dashboardMetrics.telejornal[chaveJornal]) {
+      dashboardMetrics.telejornal[chaveJornal].conf = (dashboardMetrics.telejornal[chaveJornal].conf || 0) + 1;
+      metricasContabilizadasHist.push({
+        telejornal: chaveJornal,
+        equipamento: '',
+        status: 'conf'
+      });
+    }
 
-    /* Para cada falha relatada, cria automaticamente uma Ocorrência no Dashboard */
-    falhasEncontradas.forEach(function(falhaTxt, idx) {
+    if (typeof salvarDashboardMetricsStore === 'function') {
+      salvarDashboardMetricsStore();
+    }
+    if (typeof renderDashboards === 'function') {
+      renderDashboards();
+    }
+
+    var falhasEncontradas = falhasEstruturadas.map(function(f) { return f.desc; });
+    var novasOcorrenciasCriadas = 0;
+    var isUberlandia = praca.indexOf('Uber') !== -1;
+    var tituloRelatorio = isUberlandia ? ('Relatório de Transmissão — ' + tipo) : ('Checklist CTRS — ' + tipo + ' (' + praca + ')');
+    var idsOcorrenciasGeradasHist = falhasEstruturadas.map(function(_, idx) {
+      return 'oc_auto_' + Date.now() + '_' + idx;
+    });
+
+    var dadosCTRSHist = {
+      dataFmt: resultado.dataFmt || '',
+      praca: praca,
+      tipo: tipo,
+      chaveJornal: chaveJornal,
+      obs: obs,
+      operador: getUsuarioAtual(),
+      destinatario: destinatario,
+      assunto: assuntoFinal,
+      transmissoes: transmissoesSalvasHist,
+      metricasContabilizadas: metricasContabilizadasHist,
+      idsOcorrenciasGeradas: idsOcorrenciasGeradasHist
+    };
+    var marcadorJsonHist = '';
+    try {
+      marcadorJsonHist = '<!--CTRS_JSON:' + encodeURIComponent(JSON.stringify(dadosCTRSHist)) + '-->';
+    } catch (e) {}
+
+    /* Para cada falha relatada ou NC marcada, cria automaticamente uma Ocorrência no Dashboard com o Preview do Relatório CTRS na descrição */
+    falhasEstruturadas.forEach(function(fObj, idx) {
       novasOcorrenciasCriadas++;
+      var eqIdVinc = '';
+      if (fObj.equipamento && typeof catalogoEquipamentos !== 'undefined' && Array.isArray(catalogoEquipamentos)) {
+        var eqMatch = catalogoEquipamentos.find(function(e) {
+          return e && e.nome && e.nome.toUpperCase() === fObj.equipamento.toUpperCase();
+        });
+        if (eqMatch) eqIdVinc = eqMatch.id;
+      }
+
+      var ocIdNovo = idsOcorrenciasGeradasHist[idx] || ('oc_auto_' + Date.now() + '_' + idx);
+
       var novaOc = {
-        id:          'oc_auto_' + Date.now() + '_' + idx,
-        titulo:      'Falha em Relatório TV (' + tipo + ')',
-        prio:        'Alta',
-        cat:         'Telejornal / Transmissão ao Vivo',
-        resp:        'Todos do turno',
-        local:       praca,
-        prazo:       '12:00',
-        desc:        falhaTxt,
-        mine:        false,
-        tags:        ['Relatório TV', 'Automática'],
-        status:      'aberta',
-        criado:      Date.now(),
-        dataCriacao: nowStr,
-        resolucao:   null,
-        praca:       praca
+        id:             ocIdNovo,
+        titulo:         fObj.titulo,
+        equipamento:    fObj.equipamento || '',
+        equipamento_id: eqIdVinc,
+        telejornal:     chaveJornal,
+        prio:           'Alta',
+        cat:            'Telejornal / Transmissão ao Vivo',
+        resp:           'Todos do turno',
+        local:          praca,
+        prazo:          '12:00',
+        desc:           fObj.desc + marcadorJsonHist,
+        mine:           false,
+        tags:           fObj.tags,
+        status:         'aberta',
+        criado:         Date.now(),
+        dataCriacao:    nowStr,
+        resolucao:      null,
+        praca:          praca,
+        htmlRelatorio:  htmlFinal,
+        dadosCTRS:      dadosCTRSHist
       };
       ocorrencias = [novaOc].concat(ocorrencias);
     });
@@ -4268,26 +4755,34 @@ document.addEventListener('DOMContentLoaded', function () {
     if (novasOcorrenciasCriadas > 0) {
       save(ocorrencias, null, true);
     }
+    if (typeof renderCatalogoEquipamentos === 'function') {
+      renderCatalogoEquipamentos();
+    }
 
-    /* Registra o Relatório no Histórico */
-    var isUberlandia = praca.indexOf('Uber') !== -1;
-    var tituloRelatorio = isUberlandia ? ('Relatório de Transmissão — ' + tipo) : ('Checklist CTRS — ' + tipo + ' (' + praca + ')');
+    /* Registra o Relatório no Histórico com Preview Visual Completo */
+
+    var eqResumoHist = equipamentosUsadosHist.length > 0
+      ? equipamentosUsadosHist.join(', ')
+      : 'Equipamentos de Transmissão / CTRS';
+
     var novoHist = {
       id:            'h_ctrs_' + Date.now(),
       tipo:          'relatorio',
       subtipo:       isUberlandia ? 'Relatório Transmissão' : 'CTRS Transmissão',
       titulo:        tituloRelatorio,
-      equipamento:   'Equipamentos de Transmissão / CTRS',
+      equipamento:   eqResumoHist,
       categoria:     'Transmissão CTRS',
       local:         praca,
       dataCriacao:   nowStr,
       criadoPor:     getUsuarioAtual(),
-      descCriacao:   'Relatório enviado para ' + destinatario + '. ' + (falhasEncontradas.length > 0 ? (falhasEncontradas.length + ' falha(s) identificada(s) e convertida(s) em ocorrência(s).') : 'Sem falhas registradas.'),
-      status:        'Concluído',
+      descCriacao:   'Relatório enviado para ' + destinatario + (equipamentosUsadosHist.length > 0 ? (' · Equipamento(s): ' + eqResumoHist) : '') + '. ' + (falhasEncontradas.length > 0 ? (falhasEncontradas.length + ' falha(s) identificada(s).') : 'Todas as transmissões em conformidade.'),
+      status:        falhasEncontradas.length > 0 ? 'Com Não Conformidade' : 'Conforme',
       dataResolucao: nowStr,
       resolvidoPor:  getUsuarioAtual(),
-      descResolucao: 'Relatório processado, enviado para ' + destinatario + ' e sincronizado com a base de dados.',
-      praca:         praca
+      descResolucao: 'Relatório emitido por ' + getUsuarioAtual() + ' e enviado para ' + destinatario + '.' + marcadorJsonHist,
+      praca:         praca,
+      htmlRelatorio: htmlFinal,
+      dadosCTRS:     dadosCTRSHist
     };
 
     historicoSeedData = [novoHist].concat(historicoSeedData);
@@ -6646,7 +7141,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var praca = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var isUberlandia = praca.indexOf('Uber') !== -1;
     var equips = [];
-    if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
+    if (typeof obterListaNomesEquipamentosOrdenados === 'function') {
+      equips = obterListaNomesEquipamentosOrdenados(praca);
+    } else if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
       equips = Object.keys(dashboardMetrics.equipamento);
     }
 
@@ -6859,7 +7356,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('edit-oc-resp').value = oc.resp || 'Todos do turno';
     document.getElementById('edit-oc-local').value = oc.local || '';
     document.getElementById('edit-oc-prazo').value = oc.prazo || '';
-    document.getElementById('edit-oc-desc').value = oc.desc || '';
+    document.getElementById('edit-oc-desc').value = String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
 
     atualizarSelectEquipamentosNovaOc();
     if (document.getElementById('edit-oc-telejornal')) {
@@ -6912,33 +7409,72 @@ document.addEventListener('DOMContentLoaded', function () {
     var isMine = (resp === usuarioLogado || resp === 'Operador' || resp.indexOf(usuarioLogado) !== -1 || resp.indexOf('Você') !== -1);
     var anexosAtualizados = (uploadedFilesStore['edit-oc-previews'] || []).slice();
 
-    var resolucaoAtual = Object.assign({}, ocorrencias[idx].resolucao || {});
-    if (anexosAtualizados.length > 0) {
-      resolucaoAtual.anexos = anexosAtualizados;
-    } else {
-      delete resolucaoAtual.anexos;
-    }
-
     var anterior = ocorrencias[idx];
     var mudancas = [];
-    if (titulo !== (anterior.titulo || '')) mudancas.push('Título alterado de "' + (anterior.titulo || '') + '" para "' + titulo + '"');
-    if (prio !== (anterior.prio || '')) mudancas.push('Prioridade alterada de ' + (anterior.prio || 'Média') + ' para ' + prio);
-    if (cat !== (anterior.cat || '')) mudancas.push('Categoria alterada de ' + (anterior.cat || '') + ' para ' + cat);
-    if (resp !== (anterior.resp || '')) mudancas.push('Responsável alterado de ' + (anterior.resp || '') + ' para ' + resp);
-    if (local !== (anterior.local || '')) mudancas.push('Local alterado de "' + (anterior.local || '') + '" para "' + local + '"');
-    if (telVal !== (anterior.telejornal || '')) mudancas.push('Telejornal alterado para ' + (telVal || 'Nenhum'));
-    if (eqVal !== (anterior.equipamento || '')) mudancas.push('Equipamento alterado para ' + (eqVal || 'Nenhum'));
-    if (prazo !== (anterior.prazo || '')) mudancas.push('Prazo alterado para ' + (prazo || 'Sem prazo'));
-    if (desc !== (anterior.desc || '')) mudancas.push('Descrição detalhada atualizada');
-    if (anexosAtualizados.length !== ((anterior.anexos || []).length)) mudancas.push('Anexos atualizados (' + anexosAtualizados.length + ' arquivos)');
 
-    var historicoEdicoes = (anterior.historicoEdicoes && Array.isArray(anterior.historicoEdicoes)) ? anterior.historicoEdicoes.slice() : [];
+    function regMudanca(campo, valAntes, valDepois, textoPadraoVazio) {
+      var vA = (valAntes !== undefined && valAntes !== null && String(valAntes).trim() !== '') ? String(valAntes).trim() : (textoPadraoVazio || 'Não informado');
+      var vD = (valDepois !== undefined && valDepois !== null && String(valDepois).trim() !== '') ? String(valDepois).trim() : (textoPadraoVazio || 'Não informado');
+      if (vA !== vD) {
+        mudancas.push({
+          campo: campo,
+          antes: vA,
+          depois: vD,
+          resumo: campo + ': de "' + vA + '" para "' + vD + '"'
+        });
+      }
+    }
+
+    regMudanca('Título', anterior.titulo || '', titulo, 'Sem título');
+    regMudanca('Prioridade', anterior.prio || 'Média', prio, 'Média');
+    regMudanca('Categoria', anterior.cat || 'Equipamento', cat, 'Equipamento');
+    regMudanca('Responsável', anterior.resp || 'Todos do turno', resp, 'Todos do turno');
+    regMudanca('Local / Praça', anterior.local || '', local, 'Não informado');
+    regMudanca('Telejornal', anterior.telejornal || '', telVal || '', 'Sem telejornal');
+    regMudanca('Equipamento', anterior.equipamento || '', eqVal || '', 'Sem equipamento');
+    regMudanca('Prazo Estimado', anterior.prazo || '', prazo || '', 'Sem prazo');
+
+    var ctrsMarkerExistente = '';
+    if (anterior.desc && String(anterior.desc).indexOf('<!--CTRS_JSON:') !== -1) {
+      var mCtrs = String(anterior.desc).match(/(<!--CTRS_JSON:[^>]+-->)/);
+      if (mCtrs && mCtrs[1]) ctrsMarkerExistente = mCtrs[1];
+    }
+    var descAntLimpa = String(anterior.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
+    regMudanca('Descrição Detalhada', descAntLimpa, desc, 'Sem descrição');
+    if (ctrsMarkerExistente && desc.indexOf('<!--CTRS_JSON:') === -1) {
+      desc = desc + ctrsMarkerExistente;
+    }
+
+    var qtdAnxAntes = (anterior.anexos || []).length;
+    var qtdAnxDepois = anexosAtualizados.length;
+    if (qtdAnxAntes !== qtdAnxDepois) {
+      mudancas.push({
+        campo: 'Anexos',
+        antes: qtdAnxAntes + (qtdAnxAntes === 1 ? ' arquivo' : ' arquivos'),
+        depois: qtdAnxDepois + (qtdAnxDepois === 1 ? ' arquivo' : ' arquivos'),
+        resumo: 'Anexos: de "' + qtdAnxAntes + ' arquivo(s)" para "' + qtdAnxDepois + ' arquivo(s)"'
+      });
+    }
+
+    var historicoEdicoes = (anterior.historicoEdicoes && Array.isArray(anterior.historicoEdicoes))
+      ? anterior.historicoEdicoes.slice()
+      : ((anterior.resolucao && Array.isArray(anterior.resolucao.historicoEdicoes)) ? anterior.resolucao.historicoEdicoes.slice() : []);
     if (mudancas.length > 0) {
       historicoEdicoes.unshift({
         autor: usuarioLogado,
         dataHora: formatDataHoraLocal(),
         mudancas: mudancas
       });
+    }
+
+    var resolucaoAtual = Object.assign({}, ocorrencias[idx].resolucao || {});
+    if (anexosAtualizados.length > 0) {
+      resolucaoAtual.anexos = anexosAtualizados;
+    } else {
+      delete resolucaoAtual.anexos;
+    }
+    if (historicoEdicoes.length > 0) {
+      resolucaoAtual.historicoEdicoes = historicoEdicoes;
     }
 
     ocorrencias[idx] = Object.assign({}, ocorrencias[idx], {
@@ -7141,6 +7677,69 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.verificarExpiracaoLixeira = verificarExpiracaoLixeira;
 
+  function extrairDadosCTRSDeItemHistorico(hist) {
+    if (!hist) return null;
+    if (hist.dadosCTRS && typeof hist.dadosCTRS === 'object') return hist.dadosCTRS;
+    if (hist.descResolucao && hist.descResolucao.indexOf('<!--CTRS_JSON:') !== -1) {
+      try {
+        var m = hist.descResolucao.match(/<!--CTRS_JSON:([^>]+)-->/);
+        if (m && m[1]) return JSON.parse(decodeURIComponent(m[1]));
+      } catch (e) {}
+    }
+    return null;
+  }
+
+  function ajustarMetricasDashboardPorRelatorioCTRS(hist, direcao) {
+    if (!hist || typeof dashboardMetrics === 'undefined' || !dashboardMetrics) return;
+    var d = extrairDadosCTRSDeItemHistorico(hist);
+    if (!d) return;
+
+    var delta = direcao < 0 ? -1 : 1;
+    var listaMet = Array.isArray(d.metricasContabilizadas) ? d.metricasContabilizadas : [];
+
+    // Caso não tenha metricasContabilizadas explícito mas tenha transmissoes
+    if (listaMet.length === 0 && Array.isArray(d.transmissoes)) {
+      var tipoUp = (d.chaveJornal || d.tipo || 'INTEGRAÇÃO NOTÍCIA').toUpperCase();
+      var cj = 'INTEGRAÇÃO NOTÍCIA';
+      if (tipoUp.indexOf('NOTÍCIA') !== -1 || tipoUp.indexOf('NOTICIA') !== -1 || tipoUp === 'IN') cj = 'INTEGRAÇÃO NOTÍCIA';
+      else if (tipoUp === 'MG1') cj = 'MG1';
+      else if (tipoUp === 'MG2') cj = 'MG2';
+      else if (tipoUp.indexOf('GIRO') !== -1) cj = 'GIRO MG2';
+      else cj = tipoUp;
+
+      d.transmissoes.forEach(function(tx) {
+        if (!tx) return;
+        var temNC = (tx.audioQ === 'NC' || tx.videoQ === 'NC' || tx.statusTx === 'NC');
+        listaMet.push({
+          telejornal: cj,
+          equipamento: tx.infra || '',
+          status: temNC ? 'nc' : 'conf'
+        });
+      });
+    }
+
+    if (listaMet.length === 0) return;
+
+    listaMet.forEach(function(m) {
+      var campo = (m.status === 'nc') ? 'nc' : 'conf';
+      if (m.telejornal && dashboardMetrics.telejornal && dashboardMetrics.telejornal[m.telejornal]) {
+        var atualTj = dashboardMetrics.telejornal[m.telejornal][campo] || 0;
+        dashboardMetrics.telejornal[m.telejornal][campo] = Math.max(0, atualTj + delta);
+      }
+      if (m.equipamento && dashboardMetrics.equipamento && dashboardMetrics.equipamento[m.equipamento]) {
+        var atualEq = dashboardMetrics.equipamento[m.equipamento][campo] || 0;
+        dashboardMetrics.equipamento[m.equipamento][campo] = Math.max(0, atualEq + delta);
+      }
+    });
+
+    if (typeof salvarDashboardMetricsStore === 'function') {
+      salvarDashboardMetricsStore();
+    }
+    if (typeof renderDashboards === 'function') {
+      renderDashboards();
+    }
+  }
+
   function excluirOcorrencia(id) {
     var targetId = id;
     var oc = ocorrencias.find(function(o){ return o && o.id === targetId; });
@@ -7176,10 +7775,26 @@ document.addEventListener('DOMContentLoaded', function () {
       saveLixeira(lixeiraData);
       salvarItemLixeiraNuvem(itemLixeira);
 
-      // 3. Remove do array de ocorrências ativas e arquivadas imediatamente (estritamente por ID!)
+      // Se for um Relatório CTRS sendo movido para a Lixeira, reverte os contadores de Conforme/Não Conforme no Dashboard de Transmissões
+      var idsOcsVinculadasRelatorio = [];
+      if (hist) {
+        ajustarMetricasDashboardPorRelatorioCTRS(hist, -1);
+        var dadosCtrsVinc = extrairDadosCTRSDeItemHistorico(hist);
+        if (dadosCtrsVinc && Array.isArray(dadosCtrsVinc.idsOcorrenciasGeradas)) {
+          idsOcsVinculadasRelatorio = dadosCtrsVinc.idsOcorrenciasGeradas;
+          idsOcsVinculadasRelatorio.forEach(function(ocIdVinc) {
+            if (typeof DBService !== 'undefined' && DBService && typeof DBService.deleteRemote === 'function') {
+              DBService.deleteRemote('ocorrencias', ocIdVinc);
+            }
+          });
+        }
+      }
+
+      // 3. Remove do array de ocorrências ativas e arquivadas imediatamente (estritamente por ID ou vinculadas ao relatório!)
       ocorrencias = ocorrencias.filter(function(o){
         if (!o) return false;
         if (o.id === idParaSalvar || o.id === targetId) return false;
+        if (idsOcsVinculadasRelatorio.indexOf(o.id) !== -1) return false;
         return true;
       });
 
@@ -7229,8 +7844,9 @@ document.addEventListener('DOMContentLoaded', function () {
         save(ocorrencias);
       }
       if (item.histOriginal) {
+        ajustarMetricasDashboardPorRelatorioCTRS(item.histOriginal, 1);
         historicoSeedData = [item.histOriginal].concat(historicoSeedData.filter(function(h){ return h && h.id !== id; }));
-        saveHistorico(historicoSeedData);
+        saveHistorico(historicoSeedData, item.histOriginal);
       }
     }
 
@@ -7278,7 +7894,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       var oc = item.ocOriginal || {};
-      var desc = oc.desc || (item.histOriginal ? item.histOriginal.descCriacao : 'Sem descrição.');
+      var desc = String(oc.desc || (item.histOriginal ? item.histOriginal.descCriacao : 'Sem descrição.')).replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
       var local = oc.local || (item.histOriginal ? item.histOriginal.local : 'Central Técnica');
       var excluidoEmStr = formatDataHoraLocal(item.dataExclusao);
 
@@ -7442,7 +8058,7 @@ document.addEventListener('DOMContentLoaded', function () {
               '<span class="tag ' + tagClass(oc.prio) + '">' + (oc.prio || 'Média') + '</span>' +
               '<span class="tag tag-teal-soft">' + (oc.cat || 'Equipamento') + '</span>' +
             '</div>' +
-            '<p class="oc-desc">' + (oc.desc || '') + '</p>' +
+            '<p class="oc-desc">' + String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim() + '</p>' +
             resolucaoH +
             '<div class="oc-meta" style="margin-top:8px;">' +
               respH +
@@ -7544,7 +8160,8 @@ document.addEventListener('DOMContentLoaded', function () {
         descRes:   descResolucao,
         data:      Date.now(),
         resolvidoPor: usuarioLogado,
-        anexos:    anexosCombinados
+        anexos:    anexosCombinados,
+        historicoEdicoes: oc.historicoEdicoes || (oc.resolucao && oc.resolucao.historicoEdicoes) || []
       }
     });
     window.ocorrencias = ocorrencias;
@@ -7566,6 +8183,9 @@ document.addEventListener('DOMContentLoaded', function () {
       dataResolucao: nowStr,
       resolvidoPor:  usuarioLogado,
       descResolucao: descResolucao,
+      historicoEdicoes: oc.historicoEdicoes || (oc.resolucao && oc.resolucao.historicoEdicoes) || [],
+      htmlRelatorio: oc.htmlRelatorio || null,
+      dadosCTRS:     oc.dadosCTRS || null,
       tags:          tagsHist,
       anexos:        anexosCombinados,
       praca:         (typeof normalizarPracaOcorrencia === 'function')
@@ -8718,9 +9338,27 @@ document.addEventListener('DOMContentLoaded', function () {
 
       var plClass = isArquivado ? 'pl-gray' : (isParcial ? 'pl-y' : (item.tipo==='ocorrencia'?'pl-r':item.tipo==='relatorio'?'pl-g':'pl-y'));
 
+      var isRelatorioCTRS = (item.tipo === 'relatorio') && (
+        item.subtipo === 'CTRS Transmissão' ||
+        item.subtipo === 'Relatório Transmissão' ||
+        item.categoria === 'Transmissão CTRS' ||
+        (item.id && String(item.id).indexOf('h_ctrs_') === 0)
+      );
+
       var resolucaoBox = '';
-      var textoRes = item.descResolucao || (item.resolucao && item.resolucao.descRes);
-      if (textoRes && textoRes.trim()) {
+      var textoResRaw = item.descResolucao || (item.resolucao && item.resolucao.descRes) || '';
+      var textoRes = String(textoResRaw).replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
+
+      if (isRelatorioCTRS) {
+        resolucaoBox =
+          '<div style="margin-top:8px;padding:7px 11px;background:#EFF6FF;border:1px solid #BFDBFE;border-left:3px solid #0071E3;border-radius:6px;font-size:11.5px;color:#1E3A8A;display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
+            '<span style="display:inline-flex;align-items:center;gap:6px;font-weight:700;">' +
+              '<i data-lucide="file-text" style="width:13px;height:13px;color:#0071E3;"></i>' +
+              'Formulário CTRS — Clique para abrir a visualização completa do relatório' +
+            '</span>' +
+            '<span style="font-size:11px;font-weight:700;color:#0071E3;white-space:nowrap;">👁️ Ver Preview →</span>' +
+          '</div>';
+      } else if (textoRes) {
         resolucaoBox =
           '<div style="margin-top:6px;padding:6px 10px;background:rgba(16,185,129,0.06);border-left:2.5px solid var(--green);border-radius:4px;font-size:11.5px;color:var(--txt2);line-height:1.4;">' +
             '<strong style="color:var(--green-dk);display:flex;align-items:center;gap:4px;font-size:11px;margin-bottom:2px;">' +
@@ -8730,17 +9368,29 @@ document.addEventListener('DOMContentLoaded', function () {
           '</div>';
       }
 
+      var metaFooterHTML = isRelatorioCTRS
+        ? (
+            '<span><i data-lucide="user" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Emitido por: ' + escapeHTML(item.criadoPor || 'Operador') + '</span>' +
+            (item.equipamento && item.equipamento !== 'Equipamentos de Transmissão / CTRS'
+              ? '<span><i data-lucide="radio" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Equipamento(s): ' + escapeHTML(item.equipamento) + '</span>'
+              : '') +
+            '<span><i data-lucide="calendar" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> ' + escapeHTML(item.dataCriacao || item.dataResolucao || '') + '</span>'
+          )
+        : (
+            '<span><i data-lucide="user" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Criado por: ' + escapeHTML(item.criadoPor || 'Sistema') + '</span>' +
+            '<span><i data-lucide="check-circle-2" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Resolvido por: ' + escapeHTML(item.resolvidoPor || 'Pendente') + '</span>' +
+            '<span><i data-lucide="calendar" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> ' + escapeHTML(item.dataResolucao || item.dataCriacao || '') + '</span>'
+          );
+
       return (
         '<article class="' + cardClasses + '" onclick="verDetalhesHistorico(\'' + item.id + '\')" onmouseenter="selecionarItemHistorico(\'' + item.id + '\')" style="cursor:pointer;margin-bottom:10px;' + (isSel ? 'border-color:var(--blue);box-shadow:0 0 0 2px rgba(0,113,227,.15);' : '') + '">' +
           '<div class="prio-line ' + plClass + '"></div>' +
           '<div class="oc-body">' +
             '<div class="oc-header"><h3>' + escapeHTML(item.titulo || 'Sem título') + '</h3>' + tagTipo + tagMeu + '</div>' +
-            '<p class="oc-desc" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + escapeHTML(item.descCriacao || item.desc || 'Sem descrição') + '</p>' +
+            '<p class="oc-desc" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + escapeHTML(String(item.descCriacao || item.desc || 'Sem descrição').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim()) + '</p>' +
             resolucaoBox +
             '<div class="oc-meta" style="margin-top:8px;gap:14px;flex-wrap:wrap;display:flex;align-items:center;font-size:11.5px;">' +
-              '<span><i data-lucide="user" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Criado por: ' + escapeHTML(item.criadoPor || 'Sistema') + '</span>' +
-              '<span><i data-lucide="check-circle-2" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Resolvido por: ' + escapeHTML(item.resolvidoPor || 'Pendente') + '</span>' +
-              '<span><i data-lucide="calendar" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> ' + escapeHTML(item.dataResolucao || item.dataCriacao || '') + '</span>' +
+              metaFooterHTML +
             '</div>' +
           '</div>' +
         '</article>'
@@ -9133,7 +9783,10 @@ document.addEventListener('DOMContentLoaded', function () {
       mediaHTML += '</div></div>';
     }
 
-    var historicoEdicoes = item.historicoEdicoes || (ocFound && ocFound.historicoEdicoes) || [];
+    var historicoEdicoes = item.historicoEdicoes ||
+      (item.resolucao && item.resolucao.historicoEdicoes) ||
+      (ocFound && ocFound.historicoEdicoes) ||
+      (ocFound && ocFound.resolucao && ocFound.resolucao.historicoEdicoes) || [];
     var edicoesHTML = '';
     if (historicoEdicoes && historicoEdicoes.length > 0) {
       edicoesHTML =
@@ -9142,17 +9795,53 @@ document.addEventListener('DOMContentLoaded', function () {
             '<i data-lucide="history" style="width:14px;height:14px;color:var(--blue);stroke-width:2;"></i>' +
             'Histórico de Edições e Alterações (' + historicoEdicoes.length + ')' +
           '</h4>' +
-          '<div style="display:flex;flex-direction:column;gap:8px;">' +
+          '<div style="display:flex;flex-direction:column;gap:10px;">' +
             historicoEdicoes.map(function(ed) {
+              var listaMudancasHTML = (ed.mudancas || []).map(function(m) {
+                var campoM = '', antesM = '', depoisM = '';
+                if (m && typeof m === 'object' && m.campo) {
+                  campoM = m.campo;
+                  antesM = m.antes !== undefined ? String(m.antes) : '—';
+                  depoisM = m.depois !== undefined ? String(m.depois) : '—';
+                } else if (typeof m === 'string') {
+                  var matchDePara = m.match(/^(.+?)\s+alterad[oa]\s+de\s+"?([^"]*)"?\s+para\s+"?([^"]*)"?$/i);
+                  if (matchDePara) {
+                    campoM = matchDePara[1].trim();
+                    antesM = matchDePara[2].trim() || 'Não informado';
+                    depoisM = matchDePara[3].trim() || 'Não informado';
+                  } else {
+                    return '<div style="padding:6px 10px;background:#F8FAFC;border:1px solid var(--border-lt);border-radius:6px;color:var(--txt2);">• ' + escapeHTML(m) + '</div>';
+                  }
+                }
+                return (
+                  '<div style="background:#F8FAFC;border:1px solid var(--border-lt);border-radius:8px;padding:8px 10px;">' +
+                    '<div style="font-size:11px;font-weight:700;color:var(--txt);margin-bottom:6px;display:flex;align-items:center;gap:5px;">' +
+                      '<span style="width:6px;height:6px;border-radius:50%;background:var(--blue);display:inline-block;"></span>' +
+                      escapeHTML(campoM) +
+                    '</div>' +
+                    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+                      '<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:6px;padding:6px 8px;">' +
+                        '<div style="font-size:9.5px;font-weight:800;color:#991B1B;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px;">Antes</div>' +
+                        '<div style="font-size:11.5px;color:#7F1D1D;word-break:break-word;white-space:pre-wrap;">' + escapeHTML(antesM) + '</div>' +
+                      '</div>' +
+                      '<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:6px;padding:6px 8px;">' +
+                        '<div style="font-size:9.5px;font-weight:800;color:#166534;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px;">Depois</div>' +
+                        '<div style="font-size:11.5px;color:#14532D;font-weight:600;word-break:break-word;white-space:pre-wrap;">' + escapeHTML(depoisM) + '</div>' +
+                      '</div>' +
+                    '</div>' +
+                  '</div>'
+                );
+              }).join('');
+
               return (
-                '<div style="background:var(--surface);padding:8px 12px;border-radius:var(--r-md);border:1px solid var(--border-lt);font-size:11.5px;line-height:1.5;">' +
-                  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
-                    '<strong style="color:var(--txt);display:flex;align-items:center;gap:5px;"><i data-lucide="user-check" style="width:12px;height:12px;color:var(--blue);"></i> ' + escapeHTML(ed.autor || 'Operador') + '</strong>' +
-                    '<span style="color:var(--muted);font-size:10.5px;">' + escapeHTML(ed.dataHora || '') + '</span>' +
+                '<div style="background:var(--surface);padding:10px 12px;border-radius:var(--r-md);border:1px solid var(--border-lt);font-size:11.5px;line-height:1.5;">' +
+                  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border-lt);">' +
+                    '<strong style="color:var(--txt);display:flex;align-items:center;gap:5px;"><i data-lucide="user-check" style="width:13px;height:13px;color:var(--blue);"></i> Editado por: ' + escapeHTML(ed.autor || 'Operador') + '</strong>' +
+                    '<span style="color:var(--muted);font-size:11px;font-weight:600;">📅 ' + escapeHTML(ed.dataHora || '') + '</span>' +
                   '</div>' +
-                  '<ul style="margin:0;padding-left:16px;color:var(--txt2);">' +
-                    (ed.mudancas || []).map(function(m){ return '<li>' + escapeHTML(m) + '</li>'; }).join('') +
-                  '</ul>' +
+                  '<div style="display:flex;flex-direction:column;gap:6px;">' +
+                    listaMudancasHTML +
+                  '</div>' +
                 '</div>'
               );
             }).join('') +
@@ -9160,39 +9849,136 @@ document.addEventListener('DOMContentLoaded', function () {
         '</div>';
     }
 
+    var rawDescCriOriginal = String(descCri || '');
+    var rawDescResOriginal = String(descRes || '');
+    descCri = rawDescCriOriginal.replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
+    descRes = rawDescResOriginal.replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
+
+    var isRelatorioCTRSModal = (item.tipo === 'relatorio') && (
+      item.subtipo === 'CTRS Transmissão' ||
+      item.subtipo === 'Relatório Transmissão' ||
+      item.categoria === 'Transmissão CTRS' ||
+      (item.id && String(item.id).indexOf('h_ctrs_') === 0)
+    );
+
+    // Verifica se a Ocorrência possui um Relatório CTRS associado (diretamente ou via histórico)
+    var fonteCTRS = null;
+    if (item.htmlRelatorio || item.dadosCTRS || rawDescCriOriginal.indexOf('<!--CTRS_JSON:') !== -1 || rawDescResOriginal.indexOf('<!--CTRS_JSON:') !== -1) {
+      fonteCTRS = item;
+    } else if (ocFound && (ocFound.htmlRelatorio || ocFound.dadosCTRS || (ocFound.desc && String(ocFound.desc).indexOf('<!--CTRS_JSON:') !== -1))) {
+      fonteCTRS = ocFound;
+    } else if (typeof historicoSeedData !== 'undefined' && Array.isArray(historicoSeedData)) {
+      var idBuscaOc = (ocFound && ocFound.id) ? ocFound.id : String(item.id || '').replace(/^h_oc_/, '');
+      var relVinc = historicoSeedData.find(function(h) {
+        if (!h || h.tipo !== 'relatorio') return false;
+        var dH = h.dadosCTRS;
+        if (!dH && h.descResolucao && h.descResolucao.indexOf('<!--CTRS_JSON:') !== -1) {
+          try {
+            var mH = h.descResolucao.match(/<!--CTRS_JSON:([^>]+)-->/);
+            if (mH && mH[1]) dH = JSON.parse(decodeURIComponent(mH[1]));
+          } catch (e) {}
+        }
+        if (dH && Array.isArray(dH.idsOcorrenciasGeradas) && dH.idsOcorrenciasGeradas.indexOf(idBuscaOc) !== -1) return true;
+        return false;
+      });
+      if (relVinc) fonteCTRS = relVinc;
+    }
+
+    var btnEditarFooter = document.getElementById('btn-hist-det-editar');
+    var btnExcluirFooter = document.getElementById('btn-hist-det-excluir');
+    if (btnEditarFooter) {
+      btnEditarFooter.style.display = isRelatorioCTRSModal ? 'none' : 'inline-flex';
+    }
+    if (btnExcluirFooter) {
+      btnExcluirFooter.innerHTML = isRelatorioCTRSModal
+        ? '<i data-lucide="trash-2" style="width:13px;height:13px;stroke-width:2;"></i> Excluir Relatório'
+        : '<i data-lucide="trash-2" style="width:13px;height:13px;stroke-width:2;"></i> Excluir Ocorrência';
+    }
+
     if (modalBody) {
-      modalBody.innerHTML =
-        '<div class="form-card" style="margin-bottom:12px;background:var(--bg);border:1px solid var(--border-lt);">' +
-          '<h4 style="font-size:12.5px;font-weight:700;color:var(--txt);margin-bottom:8px;display:flex;align-items:center;gap:6px;">' +
-            '<i data-lucide="user" style="width:14px;height:14px;color:var(--blue);stroke-width:2;"></i>' +
-            'Informações de Origem e Registro' +
-          '</h4>' +
-          '<div style="font-size:12px;color:var(--txt2);line-height:1.6;">' +
-            '<strong>Equipamento / Recurso:</strong> ' + escapeHTML(equip) + '<br/>' +
-            '<strong>Criado por:</strong> ' + escapeHTML(autorCri) + ' (' + escapeHTML(dataCri) + ')<br/>' +
-            '<strong>Localidade:</strong> ' + escapeHTML(localidade) + '<br/>' +
-            '<strong>Categoria:</strong> ' + escapeHTML(categoria) + '<br/>' +
-            '<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
-              '<strong>Descrição Registrada:</strong><br/>' + escapeHTML(descCri) +
+      if (isRelatorioCTRSModal && typeof gerarHTMLPreviewCTRSDados === 'function') {
+        var htmlPreviewCTRS = gerarHTMLPreviewCTRSDados(fonteCTRS || item);
+        modalBody.innerHTML =
+          '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:10px 14px;margin-bottom:12px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;font-size:12px;color:#1E3A8A;">' +
+            '<div>' +
+              '<strong>Emitido por:</strong> ' + escapeHTML(autorCri) + ' &nbsp;·&nbsp; ' +
+              '<strong>Enviado em:</strong> ' + escapeHTML(dataCri) + ' &nbsp;·&nbsp; ' +
+              '<strong>Praça:</strong> ' + escapeHTML(localidade) +
+            '</div>' +
+            '<div style="display:flex;gap:6px;">' +
+              '<button type="button" class="btn btn-sm" onclick="copiarPreviewRelatorioHistorico()" style="background:#FFFFFF;color:#0071E3;border:1px solid #93C5FD;font-weight:700;padding:4px 10px;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;">' +
+                '<i data-lucide="copy" style="width:12px;height:12px;"></i> Copiar Relatório' +
+              '</button>' +
+              '<button type="button" class="btn btn-sm" onclick="imprimirPreviewRelatorioHistorico()" style="background:#0071E3;color:#FFFFFF;border:1px solid #0071E3;font-weight:700;padding:4px 10px;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;">' +
+                '<i data-lucide="printer" style="width:12px;height:12px;"></i> Imprimir / PDF' +
+              '</button>' +
             '</div>' +
           '</div>' +
-        '</div>' +
-        edicoesHTML +
-        mediaHTML +
-        '<div class="form-card" style="background:var(--bg);border:1px solid var(--border-lt);">' +
-          '<h4 style="font-size:12.5px;font-weight:700;color:var(--txt);margin-bottom:8px;display:flex;align-items:center;gap:6px;">' +
-            '<i data-lucide="check-circle-2" style="width:14px;height:14px;color:var(--green);stroke-width:2;"></i>' +
-            'Informações de Resolução e Fechamento' +
-          '</h4>' +
-          '<div style="font-size:12px;color:var(--txt2);line-height:1.6;">' +
-            '<strong>Responsável pela Resolução:</strong> ' + escapeHTML(respRes) + '<br/>' +
-            '<strong>Data/Hora de Resolução:</strong> ' + escapeHTML(dataRes) + '<br/>' +
-            '<strong>Status Final:</strong> <span style="color:var(--green);font-weight:600;">' + escapeHTML(statusFinal) + '</span><br/>' +
-            '<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
-              '<strong>O que foi realizado:</strong><br/>' + escapeHTML(descRes) +
+          '<div id="hist-ctrs-preview-container" style="background:#FFFFFF;border:1px solid #CBD5E1;border-radius:10px;padding:16px;box-shadow:0 2px 8px rgba(15,23,42,0.04);overflow-x:auto;">' +
+            htmlPreviewCTRS +
+          '</div>';
+      } else {
+        var blocoPreviewOcorrenciaHTML = '';
+        if (fonteCTRS && typeof gerarHTMLPreviewCTRSDados === 'function') {
+          var htmlPreviewOc = gerarHTMLPreviewCTRSDados(fonteCTRS);
+          if (htmlPreviewOc) {
+            blocoPreviewOcorrenciaHTML =
+              '<div style="margin-top:12px;border-top:1px dashed #CBD5E1;padding-top:12px;">' +
+                '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">' +
+                  '<span style="font-size:11.5px;font-weight:700;color:#1E3A8A;display:inline-flex;align-items:center;gap:6px;">' +
+                    '<i data-lucide="file-text" style="width:14px;height:14px;color:#0071E3;"></i>' +
+                    'Preview do Relatório de Transmissão CTRS (Origem da Ocorrência)' +
+                  '</span>' +
+                  '<div style="display:flex;gap:6px;">' +
+                    '<button type="button" class="btn btn-sm" onclick="copiarPreviewRelatorioHistorico()" style="background:#FFFFFF;color:#0071E3;border:1px solid #93C5FD;font-weight:700;padding:3px 9px;font-size:11px;display:inline-flex;align-items:center;gap:4px;">' +
+                      '<i data-lucide="copy" style="width:11px;height:11px;"></i> Copiar Relatório' +
+                    '</button>' +
+                    '<button type="button" class="btn btn-sm" onclick="imprimirPreviewRelatorioHistorico()" style="background:#0071E3;color:#FFFFFF;border:1px solid #0071E3;font-weight:700;padding:3px 9px;font-size:11px;display:inline-flex;align-items:center;gap:4px;">' +
+                      '<i data-lucide="printer" style="width:11px;height:11px;"></i> Imprimir / PDF' +
+                    '</button>' +
+                  '</div>' +
+                '</div>' +
+                '<div id="hist-ctrs-preview-container" style="background:#FFFFFF;border:1px solid #CBD5E1;border-radius:10px;padding:16px;box-shadow:0 2px 8px rgba(15,23,42,0.04);overflow-x:auto;">' +
+                  htmlPreviewOc +
+                '</div>' +
+              '</div>';
+          }
+        }
+
+        modalBody.innerHTML =
+          '<div class="form-card" style="margin-bottom:12px;background:var(--bg);border:1px solid var(--border-lt);">' +
+            '<h4 style="font-size:12.5px;font-weight:700;color:var(--txt);margin-bottom:8px;display:flex;align-items:center;gap:6px;">' +
+              '<i data-lucide="user" style="width:14px;height:14px;color:var(--blue);stroke-width:2;"></i>' +
+              'Informações de Origem e Registro' +
+            '</h4>' +
+            '<div style="font-size:12px;color:var(--txt2);line-height:1.6;">' +
+              '<strong>Equipamento / Recurso:</strong> ' + escapeHTML(equip) + '<br/>' +
+              '<strong>Criado por:</strong> ' + escapeHTML(autorCri) + ' (' + escapeHTML(dataCri) + ')<br/>' +
+              '<strong>Localidade:</strong> ' + escapeHTML(localidade) + '<br/>' +
+              '<strong>Categoria:</strong> ' + escapeHTML(categoria) + '<br/>' +
+              '<div style="margin-top:8px;padding:10px 12px;background:var(--surface);border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
+                '<strong>Descrição da Ocorrência:</strong><br/>' + escapeHTML(descCri) +
+                blocoPreviewOcorrenciaHTML +
+              '</div>' +
             '</div>' +
           '</div>' +
-        '</div>';
+          edicoesHTML +
+          mediaHTML +
+          '<div class="form-card" style="background:var(--bg);border:1px solid var(--border-lt);">' +
+            '<h4 style="font-size:12.5px;font-weight:700;color:var(--txt);margin-bottom:8px;display:flex;align-items:center;gap:6px;">' +
+              '<i data-lucide="check-circle-2" style="width:14px;height:14px;color:var(--green);stroke-width:2;"></i>' +
+              'Informações de Resolução e Fechamento' +
+            '</h4>' +
+            '<div style="font-size:12px;color:var(--txt2);line-height:1.6;">' +
+              '<strong>Responsável pela Resolução:</strong> ' + escapeHTML(respRes) + '<br/>' +
+              '<strong>Data/Hora de Resolução:</strong> ' + escapeHTML(dataRes) + '<br/>' +
+              '<strong>Status Final:</strong> <span style="color:var(--green);font-weight:600;">' + escapeHTML(statusFinal) + '</span><br/>' +
+              '<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
+                '<strong>O que foi realizado:</strong><br/>' + escapeHTML(descRes) +
+              '</div>' +
+            '</div>' +
+          '</div>';
+      }
     }
 
     abrirPopup('popup-detalhes-historico');
@@ -9265,7 +10051,7 @@ document.addEventListener('DOMContentLoaded', function () {
       tipo:          'ocorrencia',
       subtipo:       oc.cat || 'Equipamento',
       titulo:        oc.titulo,
-      equipamento:   oc.local ? (oc.local + ' — ' + (oc.cat || 'Equipamento')) : (oc.cat || oc.titulo),
+      equipamento:   oc.equipamento || (oc.local ? (oc.local + ' — ' + (oc.cat || 'Equipamento')) : (oc.cat || oc.titulo)),
       categoria:     oc.cat || 'Equipamento',
       local:         oc.local || 'Central Técnica',
       dataCriacao:   formatDataHoraLocal(oc.dataCriacao || oc.criado),
@@ -9275,12 +10061,49 @@ document.addEventListener('DOMContentLoaded', function () {
       dataResolucao: oc.resolucao ? formatDataHoraLocal(oc.resolucao.data) : 'Pendente de resolução',
       resolvidoPor:  oc.resolucao ? (oc.resolvidoPor || getUsuarioAtual()) : 'Aguardando resolução',
       descResolucao: oc.resolucao ? (oc.resolucao.descRes || 'Ocorrência ativa no turno aguardando tratativa da equipe.') : 'Ocorrência ativa no turno aguardando tratativa da equipe.',
+      tags:          oc.tags || [],
+      historicoEdicoes: oc.historicoEdicoes || (oc.resolucao && oc.resolucao.historicoEdicoes) || [],
+      htmlRelatorio: oc.htmlRelatorio || null,
+      dadosCTRS:     oc.dadosCTRS || null,
       anexos:        anexosList
     };
 
     verDetalhesHistoricoDirect(item);
   }
   window.verDetalhesOcorrencia = verDetalhesOcorrencia;
+
+  function copiarPreviewRelatorioHistorico() {
+    var container = document.getElementById('hist-ctrs-preview-container');
+    if (!container) return;
+    var html = container.innerHTML;
+    if (navigator.clipboard && window.ClipboardItem) {
+      try {
+        var blobHtml = new Blob([html], { type: 'text/html' });
+        var blobText = new Blob([container.innerText || ''], { type: 'text/plain' });
+        navigator.clipboard.write([new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })]).then(function() {
+          if (typeof mostrarToast === 'function') {
+            mostrarToast('Relatório Copiado', 'O relatório formatado foi copiado para a área de transferência.', 'success');
+          }
+        });
+        return;
+      } catch (e) {}
+    }
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Relatório Copiado', 'O relatório foi copiado para a área de transferência.', 'success');
+    }
+  }
+  window.copiarPreviewRelatorioHistorico = copiarPreviewRelatorioHistorico;
+
+  function imprimirPreviewRelatorioHistorico() {
+    var container = document.getElementById('hist-ctrs-preview-container');
+    if (!container) return;
+    var w = window.open('', '_blank');
+    if (!w) return;
+    w.document.open();
+    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Relatório CTRS — TV Integração</title><style>@page{size:A4 portrait;margin:12mm;}body{font-family:Segoe UI,Arial,sans-serif;margin:0;padding:12px;background:#fff;}</style></head><body>' + container.innerHTML + '<script>setTimeout(function(){window.print();},350);<\/script></body></html>');
+    w.document.close();
+  }
+  window.imprimirPreviewRelatorioHistorico = imprimirPreviewRelatorioHistorico;
 
 
   /* ═══════════════════════════════════════════
@@ -9733,7 +10556,9 @@ document.addEventListener('DOMContentLoaded', function () {
     tipoEl.value = tipo;
     var items = dashboardMetrics[tipo];
     if (!items) return;
-    var list = Object.keys(items);
+    var list = (tipo === 'equipamento' && typeof obterListaNomesEquipamentosOrdenados === 'function')
+      ? obterListaNomesEquipamentosOrdenados()
+      : Object.keys(items);
 
     selectAlvo.innerHTML = list.map(function(item) {
       return '<option value="' + item + '">' + item + '</option>';
@@ -9866,24 +10691,82 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (histListaEl) {
+      var nomeUp = String(nome || '').toUpperCase().trim();
       var histOcs = (typeof ocorrencias !== 'undefined' ? ocorrencias : []).filter(function(o) {
-        return (o.titulo && o.titulo.indexOf(nome) !== -1) || (o.desc && o.desc.indexOf(nome) !== -1);
+        if (!o || o.status === 'lixeira') return false;
+        if (o.equipamento && String(o.equipamento).toUpperCase().trim() === nomeUp) return true;
+        if (o.telejornal && String(o.telejornal).toUpperCase().trim() === nomeUp) return true;
+        if (Array.isArray(o.tags) && o.tags.some(function(t){ return String(t).toUpperCase().trim() === nomeUp; })) return true;
+        var descLimpa = String(o.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '');
+        return (o.titulo && String(o.titulo).toUpperCase().indexOf(nomeUp) !== -1) || (descLimpa.toUpperCase().indexOf(nomeUp) !== -1);
       });
 
-      if (histOcs.length === 0) {
+      var histRels = (typeof historicoSeedData !== 'undefined' && Array.isArray(historicoSeedData) ? historicoSeedData : []).filter(function(h) {
+        if (!h || h.tipo !== 'relatorio') return false;
+        var isCTRS = (
+          h.subtipo === 'CTRS Transmissão' ||
+          h.subtipo === 'Relatório Transmissão' ||
+          h.categoria === 'Transmissão CTRS' ||
+          (h.id && String(h.id).indexOf('h_ctrs_') === 0)
+        );
+        if (!isCTRS) return false;
+        var dH = h.dadosCTRS;
+        if (!dH && h.descResolucao && h.descResolucao.indexOf('<!--CTRS_JSON:') !== -1) {
+          try {
+            var mH = h.descResolucao.match(/<!--CTRS_JSON:([^>]+)-->/);
+            if (mH && mH[1]) dH = JSON.parse(decodeURIComponent(mH[1]));
+          } catch (e) {}
+        }
+        if (tipo === 'telejornal') {
+          if (dH && ((dH.chaveJornal && String(dH.chaveJornal).toUpperCase() === nomeUp) || (dH.tipo && String(dH.tipo).toUpperCase() === nomeUp))) return true;
+          if (h.titulo && String(h.titulo).toUpperCase().indexOf(nomeUp) !== -1) return true;
+        } else {
+          if (dH && Array.isArray(dH.transmissoes) && dH.transmissoes.some(function(tx){ return tx && tx.infra && String(tx.infra).toUpperCase().trim() === nomeUp; })) return true;
+          if (h.equipamento && String(h.equipamento).toUpperCase().indexOf(nomeUp) !== -1) return true;
+        }
+        return false;
+      });
+
+      if (histOcs.length === 0 && histRels.length === 0) {
         histListaEl.innerHTML =
           '<div style="background:#FFFFFF;border:1px solid var(--border-lt);border-radius:var(--r-sm);padding:8px 10px;font-size:11.5px;color:var(--muted);">' +
-            'Nenhuma ocorrência crítica aberta para este item no momento. Sistema estável e operando normalmente.' +
+            'Nenhuma ocorrência ou relatório registrado para este item no momento. Sistema estável e operando normalmente.' +
           '</div>';
       } else {
-        histListaEl.innerHTML = histOcs.map(function(o) {
-          return (
-            '<div style="background:#FFFFFF;border:1px solid var(--border-lt);border-radius:var(--r-sm);padding:7px 10px;display:flex;justify-content:space-between;align-items:center;font-size:11.5px;">' +
-              '<div><strong style="color:var(--txt);">' + o.titulo + '</strong> <span style="color:var(--muted);">· ' + (o.resp || '') + '</span></div>' +
-              '<span class="tag ' + (o.status === 'resolvida' ? 'tag-g' : 'tag-r') + '">' + (o.status === 'resolvida' ? 'Resolvida' : 'Em Aberto') + '</span>' +
-            '</div>'
-          );
-        }).join('');
+        var htmlItens = '';
+        histOcs.forEach(function(o) {
+          var descLimpa = String(o.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
+          var temPreview = !!(o.htmlRelatorio || o.dadosCTRS || (o.desc && String(o.desc).indexOf('<!--CTRS_JSON:') !== -1) || (o.tags && o.tags.indexOf('Relatório TV') !== -1));
+          htmlItens +=
+            '<div onclick=\"fecharPopup(\'popup-detalhes-transmissao\'); verDetalhesOcorrencia(\'' + o.id + '\')\" style=\"background:#FFFFFF;border:1px solid var(--border-lt);border-left:3px solid ' + (o.status === 'resolvida' ? '#10B981' : '#EF4444') + ';border-radius:var(--r-sm);padding:8px 10px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'var(--blue)\';\" onmouseout=\"this.style.borderColor=\'var(--border-lt)\';\" title=\"Clique para abrir os detalhes e o preview do relatório na descrição\">' +
+              '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+                '<div><strong style="color:var(--txt);">' + escapeHTML(o.titulo) + '</strong> <span style="color:var(--muted);">· ' + escapeHTML(o.dataCriacao || o.resp || '') + '</span></div>' +
+                '<div style="display:flex;align-items:center;gap:6px;">' +
+                  (temPreview ? '<span style="font-size:10.5px;font-weight:700;color:#0071E3;background:#EFF6FF;border:1px solid #BFDBFE;padding:1px 7px;border-radius:10px;">👁️ Preview CTRS</span>' : '') +
+                  '<span class="tag ' + (o.status === 'resolvida' ? 'tag-g' : 'tag-r') + '">' + (o.status === 'resolvida' ? 'Resolvida' : 'Em Aberto') + '</span>' +
+                '</div>' +
+              '</div>' +
+              (descLimpa ? '<div style="font-size:11px;color:var(--txt2);">' + escapeHTML(descLimpa) + '</div>' : '') +
+            '</div>';
+        });
+
+        histRels.forEach(function(r) {
+          var descRelLimpa = String(r.descCriacao || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
+          var isNC = r.status && String(r.status).toLowerCase().indexOf('não conform') !== -1;
+          htmlItens +=
+            '<div onclick=\"fecharPopup(\'popup-detalhes-transmissao\'); verDetalhesHistoricoDirect(\'' + r.id + '\')\" style=\"background:#F8FAFC;border:1px solid #BFDBFE;border-left:3px solid #0071E3;border-radius:var(--r-sm);padding:8px 10px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'#0071E3\';\" onmouseout=\"this.style.borderColor=\'#BFDBFE\';\" title=\"Clique para abrir o Preview Completo do Relatório CTRS\">' +
+              '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+                '<div><strong style="color:#1E3A8A;">📄 ' + escapeHTML(r.titulo) + '</strong> <span style="color:var(--muted);">· ' + escapeHTML(r.dataCriacao || '') + '</span></div>' +
+                '<div style="display:flex;align-items:center;gap:6px;">' +
+                  '<span style="font-size:10.5px;font-weight:700;color:#0071E3;background:#EFF6FF;border:1px solid #93C5FD;padding:1px 7px;border-radius:10px;">👁️ Ver Relatório</span>' +
+                  '<span class="tag ' + (isNC ? 'tag-y' : 'tag-g') + '">' + escapeHTML(r.status || 'Conforme') + '</span>' +
+                '</div>' +
+              '</div>' +
+              (descRelLimpa ? '<div style="font-size:11px;color:var(--txt2);">' + escapeHTML(descRelLimpa) + '</div>' : '') +
+            '</div>';
+        });
+
+        histListaEl.innerHTML = htmlItens;
       }
     }
 
@@ -9902,7 +10785,9 @@ document.addEventListener('DOMContentLoaded', function () {
       tipoEl.value = itemTransmissaoDetalhesAtual.tipo;
       var items = dashboardMetrics[itemTransmissaoDetalhesAtual.tipo];
       if (items) {
-        var list = Object.keys(items);
+        var list = (itemTransmissaoDetalhesAtual.tipo === 'equipamento' && typeof obterListaNomesEquipamentosOrdenados === 'function')
+          ? obterListaNomesEquipamentosOrdenados()
+          : Object.keys(items);
         selectAlvo.innerHTML = list.map(function(item) {
           return '<option value="' + item + '"' + (item === itemTransmissaoDetalhesAtual.nome ? ' selected' : '') + '>' + item + '</option>';
         }).join('');
@@ -9924,17 +10809,21 @@ document.addEventListener('DOMContentLoaded', function () {
       if (typeof catalogoEquipamentos !== 'undefined' && Array.isArray(catalogoEquipamentos) && dashboardMetrics && dashboardMetrics.equipamento) {
         var pracaAt = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
         catalogoEquipamentos.forEach(function(eq) {
-          if (eq && eq.praca === pracaAt && dashboardMetrics.equipamento[eq.nome]) {
+          if (eq && ((eq.praca || '').indexOf('Uber') !== -1) === (pracaAt.indexOf('Uber') !== -1) && dashboardMetrics.equipamento[eq.nome]) {
             var m = dashboardMetrics.equipamento[eq.nome];
             var mud = !eq.metricas || eq.metricas.conf !== m.conf || eq.metricas.nc !== m.nc || eq.metricas.canc !== m.canc;
             if (mud) {
               eq.metricas = { conf: m.conf || 0, nc: m.nc || 0, canc: m.canc || 0 };
+              if (typeof eq.ordem === 'number') eq.metricas.ordem = eq.ordem;
               if (typeof salvarEquipamentoPostgreSQL === 'function') {
                 salvarEquipamentoPostgreSQL(eq);
               }
             }
           }
         });
+        try {
+          localStorage.setItem('tv_equipamentos_catalogo_v1', JSON.stringify(catalogoEquipamentos));
+        } catch (eCat) {}
       }
     } catch (e) {}
   }
@@ -10112,7 +11001,12 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!grid) return;
 
     var equips = (dashboardMetrics && dashboardMetrics.equipamento) ? dashboardMetrics.equipamento : {};
-    var eqKeys = Object.keys(equips);
+    var eqKeys = (typeof obterListaNomesEquipamentosOrdenados === 'function')
+      ? obterListaNomesEquipamentosOrdenados().filter(function(k) { return !!equips[k]; })
+      : Object.keys(equips);
+    Object.keys(equips).forEach(function(k) {
+      if (eqKeys.indexOf(k) === -1) eqKeys.push(k);
+    });
     var htmlCards = '';
 
     eqKeys.forEach(function(key) {
@@ -10162,8 +11056,109 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.renderEquipamentosCards = renderEquipamentosCards;
 
+  function reconciliarMetricasComHistoricoCTRS() {
+    if (typeof dashboardMetrics === 'undefined' || !dashboardMetrics) return;
+    if (typeof historicoSeedData === 'undefined' || !Array.isArray(historicoSeedData)) return;
+
+    var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+    var isUdi = pracaAtiva.indexOf('Uber') !== -1;
+    var idsLixeira = (typeof lixeiraData !== 'undefined' && Array.isArray(lixeiraData))
+      ? lixeiraData.map(function(i){ return i && i.id; }).filter(Boolean)
+      : [];
+
+    var minTj = {};
+    var minEq = {};
+
+    historicoSeedData.forEach(function(h) {
+      if (!h || h.tipo !== 'relatorio' || h.status === 'lixeira' || idsLixeira.indexOf(h.id) !== -1) return;
+      var hPraca = h.praca || h.local || 'Juiz de Fora';
+      if ((hPraca.indexOf('Uber') !== -1) !== isUdi) return;
+
+      var d = h.dadosCTRS || null;
+      if (!d && h.descResolucao && h.descResolucao.indexOf('<!--CTRS_JSON:') !== -1) {
+        try {
+          var m = h.descResolucao.match(/<!--CTRS_JSON:([^>]+)-->/);
+          if (m && m[1]) d = JSON.parse(decodeURIComponent(m[1]));
+        } catch (e) {}
+      }
+      if (!d) return;
+
+      var listaM = Array.isArray(d.metricasContabilizadas) ? d.metricasContabilizadas.slice() : [];
+      if (listaM.length === 0 && Array.isArray(d.transmissoes)) {
+        var tipoUp = (d.chaveJornal || d.tipo || 'INTEGRAÇÃO NOTÍCIA').toUpperCase();
+        var cj = 'INTEGRAÇÃO NOTÍCIA';
+        if (tipoUp.indexOf('NOTÍCIA') !== -1 || tipoUp.indexOf('NOTICIA') !== -1 || tipoUp === 'IN') cj = 'INTEGRAÇÃO NOTÍCIA';
+        else if (tipoUp === 'MG1') cj = 'MG1';
+        else if (tipoUp === 'MG2') cj = 'MG2';
+        else if (tipoUp.indexOf('GIRO') !== -1) cj = 'GIRO MG2';
+        else cj = tipoUp;
+
+        d.transmissoes.forEach(function(tx) {
+          if (!tx) return;
+          var temNC = (tx.audioQ === 'NC' || tx.videoQ === 'NC' || tx.statusTx === 'NC');
+          listaM.push({
+            telejornal: cj,
+            equipamento: tx.infra || '',
+            status: temNC ? 'nc' : 'conf'
+          });
+        });
+      }
+
+      listaM.forEach(function(mItem) {
+        var st = (mItem.status === 'nc') ? 'nc' : 'conf';
+        if (mItem.telejornal) {
+          var tjKey = String(mItem.telejornal).trim().toUpperCase();
+          if (!minTj[tjKey]) minTj[tjKey] = { conf: 0, nc: 0 };
+          minTj[tjKey][st] += 1;
+        }
+        if (mItem.equipamento) {
+          var eqKey = String(mItem.equipamento).trim().toUpperCase();
+          if (!minEq[eqKey]) minEq[eqKey] = { conf: 0, nc: 0 };
+          minEq[eqKey][st] += 1;
+        }
+      });
+    });
+
+    var alterou = false;
+    if (dashboardMetrics.telejornal) {
+      Object.keys(minTj).forEach(function(tjKey) {
+        if (dashboardMetrics.telejornal[tjKey]) {
+          if ((dashboardMetrics.telejornal[tjKey].conf || 0) < minTj[tjKey].conf) {
+            dashboardMetrics.telejornal[tjKey].conf = minTj[tjKey].conf;
+            alterou = true;
+          }
+          if ((dashboardMetrics.telejornal[tjKey].nc || 0) < minTj[tjKey].nc) {
+            dashboardMetrics.telejornal[tjKey].nc = minTj[tjKey].nc;
+            alterou = true;
+          }
+        }
+      });
+    }
+    if (dashboardMetrics.equipamento) {
+      Object.keys(minEq).forEach(function(eqKey) {
+        if (!dashboardMetrics.equipamento[eqKey]) {
+          dashboardMetrics.equipamento[eqKey] = { conf: 0, nc: 0, canc: 0 };
+        }
+        if ((dashboardMetrics.equipamento[eqKey].conf || 0) < minEq[eqKey].conf) {
+          dashboardMetrics.equipamento[eqKey].conf = minEq[eqKey].conf;
+          alterou = true;
+        }
+        if ((dashboardMetrics.equipamento[eqKey].nc || 0) < minEq[eqKey].nc) {
+          dashboardMetrics.equipamento[eqKey].nc = minEq[eqKey].nc;
+          alterou = true;
+        }
+      });
+    }
+
+    if (alterou && typeof salvarDashboardMetricsStore === 'function') {
+      salvarDashboardMetricsStore();
+    }
+  }
+  window.reconciliarMetricasComHistoricoCTRS = reconciliarMetricasComHistoricoCTRS;
+
   function renderDashboards() {
     if (typeof dashboardMetrics === 'undefined' || !dashboardMetrics) return;
+    reconciliarMetricasComHistoricoCTRS();
 
     var pieMapping = {
       'INTEGRAÇÃO NOTÍCIA': 'pie-tj-noticia',
@@ -11013,6 +12008,16 @@ document.addEventListener('DOMContentLoaded', function () {
     var nomeUp = String(eq.nome).trim().toUpperCase();
     var p = (eq.praca && String(eq.praca).indexOf('Uber') !== -1) ? 'Uberlândia' : 'Juiz de Fora';
     var tagsArr = normalizarTagsEquipamento(eq.tags);
+    var metRaw = (eq.metricas && typeof eq.metricas === 'object') ? eq.metricas : { conf: 0, nc: 0, canc: 0 };
+    var ordemVal = (typeof eq.ordem === 'number') ? eq.ordem : (typeof metRaw.ordem === 'number' ? metRaw.ordem : undefined);
+    var metObj = {
+      conf: metRaw.conf || 0,
+      nc: metRaw.nc || 0,
+      canc: metRaw.canc || 0
+    };
+    if (typeof ordemVal === 'number') {
+      metObj.ordem = ordemVal;
+    }
     return {
       id: eq.id || ('eq_' + Date.now() + '_' + Math.floor(Math.random() * 1000)),
       codigo_patrimonio: (eq.codigo_patrimonio || eq.plaqueta || '').trim(),
@@ -11025,11 +12030,102 @@ document.addEventListener('DOMContentLoaded', function () {
       tags: tagsArr,
       status_operacional: eq.status_operacional || 'operacional',
       obs_tecnicas: (eq.obs_tecnicas || eq.obs || '').trim(),
-      metricas: (eq.metricas && typeof eq.metricas === 'object') ? eq.metricas : { conf: 0, nc: 0, canc: 0 },
+      ordem: ordemVal,
+      metricas: metObj,
       criado_por: eq.criado_por || 'Sistema',
       criado_em: eq.criado_em || Date.now()
     };
   }
+
+  var ORDEM_EQUIPAMENTOS_STORAGE_KEY = 'tv_equipamentos_ordem_custom_v1';
+
+  function salvarOrdemPersonalizadaEquipamentos(pracaAtiva, listaNomes) {
+    try {
+      var isUdi = String(pracaAtiva || '').indexOf('Uber') !== -1;
+      var chavePraca = isUdi ? 'udi' : 'jf';
+      var raw = localStorage.getItem(ORDEM_EQUIPAMENTOS_STORAGE_KEY);
+      var obj = raw ? JSON.parse(raw) : {};
+      if (!obj || typeof obj !== 'object') obj = {};
+      obj[chavePraca] = listaNomes;
+      localStorage.setItem(ORDEM_EQUIPAMENTOS_STORAGE_KEY, JSON.stringify(obj));
+    } catch (e) {}
+  }
+
+  function aplicarOrdemPersonalizadaNoCatalogo() {
+    var posSeedJF = {};
+    EQUIPAMENTOS_SEED_JF.forEach(function(s, i) { posSeedJF[s.nome] = i; });
+
+    var temOrdemCustomJF = false;
+    var temOrdemCustomUDI = false;
+    try {
+      var raw = localStorage.getItem(ORDEM_EQUIPAMENTOS_STORAGE_KEY);
+      var obj = raw ? JSON.parse(raw) : null;
+      if (obj && typeof obj === 'object') {
+        ['jf', 'udi'].forEach(function(chavePraca) {
+          var lista = obj[chavePraca];
+          if (Array.isArray(lista) && lista.length > 0) {
+            if (chavePraca === 'jf') temOrdemCustomJF = true;
+            if (chavePraca === 'udi') temOrdemCustomUDI = true;
+            catalogoEquipamentos.forEach(function(eq) {
+              if (!eq) return;
+              var eqUdi = String(eq.praca || '').indexOf('Uber') !== -1;
+              if ((chavePraca === 'udi') === eqUdi) {
+                var idx = lista.indexOf(eq.nome);
+                if (idx !== -1) {
+                  eq.ordem = idx;
+                  if (!eq.metricas || typeof eq.metricas !== 'object') eq.metricas = { conf: 0, nc: 0, canc: 0 };
+                  eq.metricas.ordem = idx;
+                }
+              }
+            });
+          }
+        });
+      }
+    } catch (e) {}
+
+    // Se não há ordem customizada salva (ou se algum item padrão perdeu o campo ordem antes da correção),
+    // garante que os equipamentos padrão de JF sigam a ordem original do catálogo (LIVE U1, LIVE U2, ...)
+    var itensJF = (catalogoEquipamentos || []).filter(function(eq) {
+      return eq && String(eq.praca || '').indexOf('Uber') === -1;
+    });
+    var algumSemOrdemJF = itensJF.some(function(eq) { return typeof eq.ordem !== 'number'; });
+
+    if (!temOrdemCustomJF && algumSemOrdemJF) {
+      itensJF.forEach(function(eq) {
+        if (posSeedJF[eq.nome] !== undefined) {
+          eq.ordem = posSeedJF[eq.nome];
+          if (!eq.metricas || typeof eq.metricas !== 'object') eq.metricas = { conf: 0, nc: 0, canc: 0 };
+          eq.metricas.ordem = eq.ordem;
+        }
+      });
+    }
+
+    catalogoEquipamentos.sort(function(a, b) {
+      if (!a || !b) return 0;
+      var oa = (typeof a.ordem === 'number') ? a.ordem : (posSeedJF[a.nome] !== undefined ? posSeedJF[a.nome] : 999999);
+      var ob = (typeof b.ordem === 'number') ? b.ordem : (posSeedJF[b.nome] !== undefined ? posSeedJF[b.nome] : 999999);
+      if (oa !== ob) return oa - ob;
+      return (a.criado_em || 0) - (b.criado_em || 0);
+    });
+  }
+
+  function obterListaNomesEquipamentosOrdenados(pracaOpcional) {
+    aplicarOrdemPersonalizadaNoCatalogo();
+    var pracaAtiva = pracaOpcional || ((typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora');
+    var isUdi = String(pracaAtiva).indexOf('Uber') !== -1;
+    var ativos = (catalogoEquipamentos || []).filter(function(eq) {
+      if (!eq || eq.status_operacional === 'lixeira') return false;
+      return isUdi ? (eq.praca === 'Uberlândia') : (eq.praca === 'Juiz de Fora');
+    });
+    if (ativos.length > 0) {
+      return ativos.map(function(eq) { return eq.nome; });
+    }
+    if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
+      return Object.keys(dashboardMetrics.equipamento);
+    }
+    return [];
+  }
+  window.obterListaNomesEquipamentosOrdenados = obterListaNomesEquipamentosOrdenados;
 
   function salvarCatalogoEquipamentosLocal() {
     window.catalogoEquipamentos = catalogoEquipamentos;
@@ -11041,8 +12137,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function sincronizarDashboardMetricsComCatalogo() {
     if (typeof dashboardMetrics === 'undefined' || !dashboardMetrics) return;
-    if (!dashboardMetrics.equipamento) dashboardMetrics.equipamento = {};
+    if (!dashboardMetrics.equipamento || Object.keys(dashboardMetrics.equipamento).length === 0) {
+      if (typeof carregarDashboardMetricsStore === 'function') {
+        try { carregarDashboardMetricsStore(); } catch (eLoad) {}
+      }
+      if (!dashboardMetrics.equipamento) dashboardMetrics.equipamento = {};
+    }
 
+    aplicarOrdemPersonalizadaNoCatalogo();
     var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var isUdi = pracaAtiva.indexOf('Uber') !== -1;
 
@@ -11056,9 +12158,9 @@ document.addEventListener('DOMContentLoaded', function () {
       var existente = dashboardMetrics.equipamento[eq.nome];
       var metBanco = (eq.metricas && typeof eq.metricas === 'object') ? eq.metricas : {};
       novoMapaEq[eq.nome] = {
-        conf: Math.max(existente ? (existente.conf || 0) : 0, metBanco.conf || 0),
-        nc:   Math.max(existente ? (existente.nc   || 0) : 0, metBanco.nc   || 0),
-        canc: Math.max(existente ? (existente.canc || 0) : 0, metBanco.canc || 0),
+        conf: existente && typeof existente.conf === 'number' ? existente.conf : (metBanco.conf || 0),
+        nc:   existente && typeof existente.nc   === 'number' ? existente.nc   : (metBanco.nc   || 0),
+        canc: existente && typeof existente.canc === 'number' ? existente.canc : (metBanco.canc || 0),
         id: eq.id,
         codigo_patrimonio: eq.codigo_patrimonio,
         numero_serie: eq.numero_serie,
@@ -11145,10 +12247,21 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!Array.isArray(remotos)) return;
       var mapaRemoto = {};
       var listaRemota = [];
+      var mapaLocalOrdem = {};
+      (catalogoEquipamentos || []).forEach(function(locEq) {
+        if (locEq && locEq.id && typeof locEq.ordem === 'number') {
+          mapaLocalOrdem[locEq.id] = locEq.ordem;
+        }
+      });
       remotos.forEach(function(rawRem) {
         var tinhaHash = Array.isArray(rawRem.tags) && rawRem.tags.some(function(t) { return String(t).indexOf('#') !== -1; });
         var san = sanitizarEquipamento(rawRem);
         if (san) {
+          if (typeof san.ordem !== 'number' && typeof mapaLocalOrdem[san.id] === 'number') {
+            san.ordem = mapaLocalOrdem[san.id];
+            if (!san.metricas || typeof san.metricas !== 'object') san.metricas = { conf: 0, nc: 0, canc: 0 };
+            san.metricas.ordem = san.ordem;
+          }
           listaRemota.push(san);
           mapaRemoto[san.id] = san;
           if (tinhaHash) {
@@ -11168,6 +12281,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       if (listaRemota.length > 0 || pendentesLocais.length > 0) {
         catalogoEquipamentos = listaRemota.concat(pendentesLocais);
+        aplicarOrdemPersonalizadaNoCatalogo();
         salvarCatalogoEquipamentosLocal();
         renderCatalogoEquipamentos();
         if (typeof renderDashboards === 'function') renderDashboards();
@@ -11259,6 +12373,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function renderCatalogoEquipamentos() {
     var grid = document.getElementById('equipamentos-catalogo-grid');
     if (!grid) return;
+    aplicarOrdemPersonalizadaNoCatalogo();
 
     var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var isUdi = pracaAtiva.indexOf('Uber') !== -1;
@@ -11346,12 +12461,19 @@ document.addEventListener('DOMContentLoaded', function () {
         : '<span style="font-size:10.5px;color:var(--muted);">Sem tags</span>';
 
       return (
-        '<div class="dash-card" style="padding:16px;display:flex;flex-direction:column;justify-content:space-between;gap:12px;cursor:pointer;transition:all .15s ease;' + borderStyle + '" onclick="abrirFichaVidaEquipamento(\'' + escapeHTML(eq.id) + '\')" title="Clique para abrir o Ficheiro de Vida completo deste equipamento">' +
+        '<div class="dash-card eq-draggable-card" data-eq-id="' + escapeHTML(eq.id) + '" ' +
+          'onpointerdown="iniciarArrastoEquipamento(event, \'' + escapeHTML(eq.id) + '\')" ' +
+          'style="padding:16px;display:flex;flex-direction:column;justify-content:space-between;gap:12px;cursor:grab;user-select:none;-webkit-user-select:none;transition:box-shadow .15s ease, border-color .15s ease;' + borderStyle + '" ' +
+          'onclick="if(!window._arrastandoEqAgora) abrirFichaVidaEquipamento(\'' + escapeHTML(eq.id) + '\')" ' +
+          'title="Segure e arraste o card para mudar a ordem, ou clique para abrir o Ficheiro de Vida">' +
           '<div>' +
             '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">' +
-              '<div>' +
-                '<div style="font-size:14px;font-weight:800;color:var(--txt);letter-spacing:-0.01em;">' + escapeHTML(eq.nome) + '</div>' +
-                '<div style="font-size:11.5px;color:var(--muted);margin-top:1px;">' + escapeHTML(eq.fabricante_modelo || eq.categoria) + '</div>' +
+              '<div style="display:flex;align-items:flex-start;gap:6px;">' +
+                '<span title="Segure e arraste para reordenar" style="color:var(--muted);cursor:grab;display:inline-flex;align-items:center;margin-top:2px;opacity:0.85;"><i data-lucide="grip-vertical" style="width:15px;height:15px;"></i></span>' +
+                '<div>' +
+                  '<div style="font-size:14px;font-weight:800;color:var(--txt);letter-spacing:-0.01em;">' + escapeHTML(eq.nome) + '</div>' +
+                  '<div style="font-size:11.5px;color:var(--muted);margin-top:1px;">' + escapeHTML(eq.fabricante_modelo || eq.categoria) + '</div>' +
+                '</div>' +
               '</div>' +
               badgeStatus +
             '</div>' +
@@ -11399,6 +12521,267 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.renderCatalogoEquipamentos = renderCatalogoEquipamentos;
+
+  var _eqDragState = null;
+  window._arrastandoEqAgora = false;
+
+  function animarFlipCardsGrid(grid, rectsAntes, cardIgnorado) {
+    if (!grid || !rectsAntes) return;
+    var cards = grid.querySelectorAll('.eq-draggable-card, .dash-card-add');
+    cards.forEach(function(c) {
+      if (c === cardIgnorado) return;
+      var idKey = c.getAttribute('data-eq-id') || '__add_card__';
+      var antes = rectsAntes[idKey];
+      if (!antes) return;
+      var depois = c.getBoundingClientRect();
+      var dx = antes.left - depois.left;
+      var dy = antes.top - depois.top;
+      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+        c.style.transition = 'none';
+        c.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+        void c.offsetWidth;
+        c.style.transition = 'transform 220ms cubic-bezier(0.2, 0, 0, 1)';
+        c.style.transform = '';
+      }
+    });
+  }
+
+  function capturarRectsGrid(grid, cardIgnorado) {
+    var mapa = {};
+    if (!grid) return mapa;
+    var cards = grid.querySelectorAll('.eq-draggable-card, .dash-card-add');
+    cards.forEach(function(c) {
+      if (c === cardIgnorado) return;
+      var idKey = c.getAttribute('data-eq-id') || '__add_card__';
+      mapa[idKey] = c.getBoundingClientRect();
+    });
+    return mapa;
+  }
+
+  function iniciarArrastoEquipamento(ev, eqId) {
+    if (!ev || (typeof ev.button === 'number' && ev.button !== 0)) return;
+    if (ev.target && ev.target.closest('button, a, input, select, textarea')) return;
+
+    var card = ev.currentTarget;
+    var grid = document.getElementById('equipamentos-catalogo-grid');
+    if (!card || !grid) return;
+
+    var rect = card.getBoundingClientRect();
+    _eqDragState = {
+      eqId: eqId,
+      card: card,
+      grid: grid,
+      startX: ev.clientX,
+      startY: ev.clientY,
+      offsetX: ev.clientX - rect.left,
+      offsetY: ev.clientY - rect.top,
+      width: rect.width,
+      height: rect.height,
+      started: false,
+      movedOrder: false,
+      placeholder: null,
+      origStyle: card.getAttribute('style') || ''
+    };
+
+    document.addEventListener('pointermove', moverArrastoEquipamento, { passive: false });
+    document.addEventListener('pointerup', encerrarArrastoEquipamento);
+    document.addEventListener('pointercancel', encerrarArrastoEquipamento);
+  }
+  window.iniciarArrastoEquipamento = iniciarArrastoEquipamento;
+
+  function moverArrastoEquipamento(ev) {
+    if (!_eqDragState) return;
+    var st = _eqDragState;
+    var dx = ev.clientX - st.startX;
+    var dy = ev.clientY - st.startY;
+
+    if (!st.started) {
+      if (Math.hypot(dx, dy) < 6) return;
+      st.started = true;
+      window._arrastandoEqAgora = true;
+
+      // Cria o espaço reservado (placeholder) na grade mantendo o layout firme
+      var ph = document.createElement('div');
+      ph.className = 'eq-drag-placeholder';
+      ph.style.width = '100%';
+      ph.style.height = st.height + 'px';
+      ph.style.minHeight = st.height + 'px';
+      ph.style.border = '2px dashed #3B82F6';
+      ph.style.borderRadius = 'var(--r-lg, 14px)';
+      ph.style.background = 'rgba(239, 246, 255, 0.65)';
+      ph.style.boxSizing = 'border-box';
+
+      var bgComp = window.getComputedStyle(st.card).backgroundColor;
+      st.grid.replaceChild(ph, st.card);
+      document.body.appendChild(st.card);
+      st.placeholder = ph;
+
+      // Destaca o próprio container real sólido (100% opaco) acompanhando o mouse
+      var c = st.card;
+      c.style.position = 'fixed';
+      c.style.left = (ev.clientX - st.offsetX) + 'px';
+      c.style.top = (ev.clientY - st.offsetY) + 'px';
+      c.style.width = st.width + 'px';
+      c.style.height = st.height + 'px';
+      c.style.margin = '0';
+      c.style.zIndex = '99999';
+      c.style.opacity = '1';
+      if (bgComp && bgComp !== 'rgba(0, 0, 0, 0)') {
+        c.style.backgroundColor = bgComp;
+      } else {
+        c.style.backgroundColor = '#FFFFFF';
+      }
+      c.style.pointerEvents = 'none';
+      c.style.cursor = 'grabbing';
+      c.style.transform = 'scale(1.025)';
+      c.style.boxShadow = '0 22px 44px rgba(15, 23, 42, 0.24), 0 0 0 2px #0071E3';
+      c.style.transition = 'transform 120ms ease, box-shadow 120ms ease';
+      document.body.style.cursor = 'grabbing';
+      document.body.style.userSelect = 'none';
+    }
+
+    if (ev.cancelable) ev.preventDefault();
+
+    // Move o container sólido diretamente com o ponteiro
+    st.card.style.left = (ev.clientX - st.offsetX) + 'px';
+    st.card.style.top = (ev.clientY - st.offsetY) + 'px';
+
+    // Auto-scroll suave se chegar perto do topo ou base da área de rolagem
+    var scrollContainer = st.grid.closest('.scroll-area') || document.documentElement;
+    if (scrollContainer) {
+      var scRect = scrollContainer.getBoundingClientRect ? scrollContainer.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+      if (ev.clientY < scRect.top + 60) {
+        scrollContainer.scrollTop -= 10;
+      } else if (ev.clientY > scRect.bottom - 60) {
+        scrollContainer.scrollTop += 10;
+      }
+    }
+
+    // Verifica sobre qual card o ponteiro está passando para abrir espaço em tempo real
+    var elemAbaixo = document.elementFromPoint(ev.clientX, ev.clientY);
+    if (!elemAbaixo) return;
+    var cardAlvo = elemAbaixo.closest('#equipamentos-catalogo-grid .eq-draggable-card');
+    if (!cardAlvo || cardAlvo === st.card) return;
+
+    var Filhos = Array.prototype.slice.call(st.grid.children);
+    var idxPh = Filhos.indexOf(st.placeholder);
+    var idxAlvo = Filhos.indexOf(cardAlvo);
+    if (idxPh === -1 || idxAlvo === -1 || idxPh === idxAlvo) return;
+
+    var rectsAntes = capturarRectsGrid(st.grid, st.card);
+    if (idxPh < idxAlvo) {
+      st.grid.insertBefore(st.placeholder, cardAlvo.nextSibling);
+    } else {
+      st.grid.insertBefore(st.placeholder, cardAlvo);
+    }
+    st.movedOrder = true;
+    animarFlipCardsGrid(st.grid, rectsAntes, st.card);
+  }
+
+  function encerrarArrastoEquipamento(ev) {
+    document.removeEventListener('pointermove', moverArrastoEquipamento);
+    document.removeEventListener('pointerup', encerrarArrastoEquipamento);
+    document.removeEventListener('pointercancel', encerrarArrastoEquipamento);
+
+    if (!_eqDragState) return;
+    var st = _eqDragState;
+    _eqDragState = null;
+
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+
+    if (!st.started) {
+      window._arrastandoEqAgora = false;
+      return;
+    }
+
+    var phRect = st.placeholder ? st.placeholder.getBoundingClientRect() : null;
+    var c = st.card;
+
+    var finalizarPosicao = function() {
+      if (st.placeholder && st.placeholder.parentNode === st.grid) {
+        st.grid.replaceChild(c, st.placeholder);
+      } else if (c.parentNode !== st.grid) {
+        st.grid.appendChild(c);
+      }
+      c.setAttribute('style', st.origStyle);
+
+      if (st.movedOrder) {
+        persistirNovaOrdemGridEquipamentos(st.grid);
+      }
+
+      setTimeout(function() {
+        window._arrastandoEqAgora = false;
+      }, 60);
+    };
+
+    if (phRect) {
+      c.style.transition = 'left 150ms cubic-bezier(0.2, 0, 0, 1), top 150ms cubic-bezier(0.2, 0, 0, 1), transform 150ms ease, box-shadow 150ms ease';
+      c.style.left = phRect.left + 'px';
+      c.style.top = phRect.top + 'px';
+      c.style.transform = 'scale(1)';
+      c.style.boxShadow = '0 4px 12px rgba(15, 23, 42, 0.08)';
+      setTimeout(finalizarPosicao, 155);
+    } else {
+      finalizarPosicao();
+    }
+  }
+
+  function persistirNovaOrdemGridEquipamentos(grid) {
+    if (!grid) return;
+    var cardsNoDom = Array.prototype.slice.call(grid.querySelectorAll('.eq-draggable-card'));
+    var idsOrdenadosVisiveis = cardsNoDom.map(function(el) {
+      return el.getAttribute('data-eq-id');
+    }).filter(Boolean);
+
+    if (idsOrdenadosVisiveis.length < 2) return;
+
+    var mapaPorId = {};
+    catalogoEquipamentos.forEach(function(eq) {
+      if (eq && eq.id) mapaPorId[eq.id] = eq;
+    });
+
+    // Substitui nas posições correspondentes mantendo a ordem exata da grade visual
+    var posicoesOriginais = [];
+    for (var i = 0; i < catalogoEquipamentos.length; i++) {
+      var item = catalogoEquipamentos[i];
+      if (item && idsOrdenadosVisiveis.indexOf(item.id) !== -1) {
+        posicoesOriginais.push(i);
+      }
+    }
+
+    for (var j = 0; j < posicoesOriginais.length; j++) {
+      var novoEq = mapaPorId[idsOrdenadosVisiveis[j]];
+      if (novoEq) {
+        catalogoEquipamentos[posicoesOriginais[j]] = novoEq;
+      }
+    }
+
+    var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+    var isUdi = pracaAtiva.indexOf('Uber') !== -1;
+    var ordemCounter = 0;
+    var nomesNaNovaOrdem = [];
+    catalogoEquipamentos.forEach(function(eq) {
+      if (!eq || eq.status_operacional === 'lixeira') return;
+      var mesmaPraca = isUdi ? (eq.praca === 'Uberlândia') : (eq.praca === 'Juiz de Fora');
+      if (mesmaPraca) {
+        eq.ordem = ordemCounter++;
+        nomesNaNovaOrdem.push(eq.nome);
+        if (!eq.metricas || typeof eq.metricas !== 'object') {
+          eq.metricas = { conf: 0, nc: 0, canc: 0 };
+        }
+        eq.metricas.ordem = eq.ordem;
+        salvarEquipamentoPostgreSQL(eq);
+      }
+    });
+
+    salvarOrdemPersonalizadaEquipamentos(pracaAtiva, nomesNaNovaOrdem);
+    salvarCatalogoEquipamentosLocal();
+    if (typeof renderDashboards === 'function') renderDashboards();
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Ordem Atualizada', 'A nova ordem dos equipamentos foi aplicada em todos os menus.', 'info');
+    }
+  }
 
   function renderSeletorTagsModalEq() {
     var container = document.getElementById('eq-modal-tags- selector') || document.getElementById('eq-modal-tags-selector');
@@ -11715,29 +13098,53 @@ document.addEventListener('DOMContentLoaded', function () {
     if (btnNova) btnNova.onclick = function() { abrirOcorrenciaDiretaEquipamento(eq.id); };
 
     if (elTimeline) {
-      if (ocs.length === 0) {
+      var nomeEqUp = String(eq.nome || '').toUpperCase().trim();
+      var relsEq = (typeof historicoSeedData !== 'undefined' && Array.isArray(historicoSeedData) ? historicoSeedData : []).filter(function(h) {
+        if (!h || h.tipo !== 'relatorio') return false;
+        var dH = h.dadosCTRS;
+        if (!dH && h.descResolucao && h.descResolucao.indexOf('<!--CTRS_JSON:') !== -1) {
+          try {
+            var mH = h.descResolucao.match(/<!--CTRS_JSON:([^>]+)-->/);
+            if (mH && mH[1]) dH = JSON.parse(decodeURIComponent(mH[1]));
+          } catch (e) {}
+        }
+        if (dH && Array.isArray(dH.transmissoes) && dH.transmissoes.some(function(tx){ return tx && tx.infra && String(tx.infra).toUpperCase().trim() === nomeEqUp; })) return true;
+        if (h.equipamento && String(h.equipamento).toUpperCase().indexOf(nomeEqUp) !== -1) return true;
+        return false;
+      });
+
+      if (ocs.length === 0 && relsEq.length === 0) {
         elTimeline.innerHTML =
           '<div style="text-align:center;padding:24px 14px;background:#F8FAFC;border:1px dashed var(--border);border-radius:10px;color:var(--muted);font-size:12px;">' +
-            'Nenhuma ocorrência ou falha registrada no histórico de vida deste equipamento.' +
+            'Nenhuma ocorrência ou relatório registrado no histórico de vida deste equipamento.' +
           '</div>';
       } else {
-        elTimeline.innerHTML = ocs.map(function(oc) {
+        var htmlOcs = ocs.map(function(oc) {
           var isRes = oc.status !== 'aberta';
           var corBorda = isRes ? '#10B981' : '#EF4444';
           var tagSt = isRes
             ? '<span class="tag tag-g">✓ Resolvida</span>'
             : '<span class="tag tag-r">● Em Aberto</span>';
-          var descRes = (oc.resolucao && oc.resolucao.descRes)
-            ? '<div style="margin-top:6px;padding:6px 10px;background:#F0FDF4;border-radius:6px;font-size:11.5px;color:#166534;"><strong>Solução aplicada:</strong> ' + escapeHTML(oc.resolucao.descRes) + '</div>'
+          var descLimpa = String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
+          var descResLimpa = (oc.resolucao && oc.resolucao.descRes)
+            ? String(oc.resolucao.descRes).replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim()
+            : '';
+          var descRes = descResLimpa
+            ? '<div style="margin-top:6px;padding:6px 10px;background:#F0FDF4;border-radius:6px;font-size:11.5px;color:#166534;"><strong>Solução aplicada:</strong> ' + escapeHTML(descResLimpa) + '</div>'
+            : '';
+
+          var temPreviewOc = !!(oc.htmlRelatorio || oc.dadosCTRS || (oc.desc && String(oc.desc).indexOf('<!--CTRS_JSON:') !== -1));
+          var previewBtn = temPreviewOc
+            ? '<span style="font-size:10.5px;font-weight:700;color:#0071E3;background:#EFF6FF;border:1px solid #BFDBFE;padding:2px 8px;border-radius:10px;">👁️ Ver Relatório na Descrição</span>'
             : '';
 
           return (
-            '<div style="background:#FFFFFF;border:1px solid var(--border-lt);border-left:3.5px solid ' + corBorda + ';border-radius:8px;padding:10px 14px;">' +
-              '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+            '<div onclick=\"fecharPopup(\'popup-ficha-vida-equipamento\'); verDetalhesOcorrencia(\'' + oc.id + '\')\" style=\"background:#FFFFFF;border:1px solid var(--border-lt);border-left:3.5px solid ' + corBorda + ';border-radius:8px;padding:10px 14px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'var(--blue)\';\" onmouseout=\"this.style.borderColor=\'var(--border-lt)\';\" title=\"Clique para abrir a ocorrência completa com o preview do relatório\">' +
+              '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
                 '<strong style="font-size:12.5px;color:var(--txt);">' + escapeHTML(oc.titulo) + '</strong>' +
-                tagSt +
+                '<div style="display:flex;align-items:center;gap:6px;">' + previewBtn + tagSt + '</div>' +
               '</div>' +
-              '<div style="font-size:11.5px;color:var(--txt2);margin-top:4px;">' + escapeHTML(oc.desc || '') + '</div>' +
+              '<div style="font-size:11.5px;color:var(--txt2);margin-top:4px;">' + escapeHTML(descLimpa) + '</div>' +
               descRes +
               '<div style="font-size:10.5px;color:var(--muted);margin-top:6px;display:flex;gap:12px;">' +
                 '<span>📅 ' + escapeHTML(oc.dataCriacao || '') + '</span>' +
@@ -11746,6 +13153,29 @@ document.addEventListener('DOMContentLoaded', function () {
             '</div>'
           );
         }).join('');
+
+        var htmlRels = relsEq.map(function(r) {
+          var descRelLimpa = String(r.descCriacao || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
+          var isNC = r.status && String(r.status).toLowerCase().indexOf('não conform') !== -1;
+          return (
+            '<div onclick=\"fecharPopup(\'popup-ficha-vida-equipamento\'); verDetalhesHistoricoDirect(\'' + r.id + '\')\" style=\"background:#F8FAFC;border:1px solid #BFDBFE;border-left:3.5px solid #0071E3;border-radius:8px;padding:10px 14px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'#0071E3\';\" onmouseout=\"this.style.borderColor=\'#BFDBFE\';\" title=\"Clique para abrir o Preview Completo do Relatório CTRS\">' +
+              '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
+                '<strong style="font-size:12.5px;color:#1E3A8A;">📄 ' + escapeHTML(r.titulo) + '</strong>' +
+                '<div style="display:flex;align-items:center;gap:6px;">' +
+                  '<span style="font-size:10.5px;font-weight:700;color:#0071E3;background:#EFF6FF;border:1px solid #93C5FD;padding:2px 8px;border-radius:10px;">👁️ Ver Preview CTRS</span>' +
+                  '<span class="tag ' + (isNC ? 'tag-y' : 'tag-g') + '">' + escapeHTML(r.status || 'Conforme') + '</span>' +
+                '</div>' +
+              '</div>' +
+              '<div style="font-size:11.5px;color:var(--txt2);margin-top:4px;">' + escapeHTML(descRelLimpa) + '</div>' +
+              '<div style="font-size:10.5px;color:var(--muted);margin-top:6px;display:flex;gap:12px;">' +
+                '<span>📅 ' + escapeHTML(r.dataCriacao || '') + '</span>' +
+                '<span>👤 Emitido por: ' + escapeHTML(r.criadoPor || 'Operador') + '</span>' +
+              '</div>' +
+            '</div>'
+          );
+        }).join('');
+
+        elTimeline.innerHTML = htmlOcs + htmlRels;
       }
     }
 
@@ -11767,6 +13197,7 @@ document.addEventListener('DOMContentLoaded', function () {
      FLUXO DE INICIALIZAÇÃO E IDENTIFICAÇÃO DO OPERADOR
   ═══════════════════════════════════════════ */
   /* Render inicial */
+  try { carregarDashboardMetricsStore(); } catch(e) {}
   try { if (typeof aplicarModoPraca === 'function') aplicarModoPraca(); } catch(e) {}
   try { carregarFotoPerfilSalva(); } catch(e) {}
   try { loadNotificacoes(); } catch(e) {}

@@ -301,6 +301,9 @@ document.addEventListener('DOMContentLoaded', function () {
           return a;
         }).filter(Boolean);
       }
+      if (item.historicoEdicoes && Array.isArray(item.historicoEdicoes) && item.historicoEdicoes.length > 0) {
+        resObj.historicoEdicoes = item.historicoEdicoes;
+      }
       return {
         id: item.id,
         titulo: item.titulo,
@@ -402,9 +405,32 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     },
 
+    formatHistoricoPayload: function(h) {
+      if (!h || !h.id) return null;
+      return {
+        id: h.id,
+        tipo: h.tipo || 'relatorio',
+        subtipo: h.subtipo || '',
+        titulo: h.titulo || '',
+        equipamento: h.equipamento || '',
+        categoria: h.categoria || '',
+        local: h.local || 'Juiz de Fora',
+        dataCriacao: h.dataCriacao || '',
+        criadoPor: h.criadoPor || 'Operador',
+        descCriacao: h.descCriacao || '',
+        status: h.status || 'Concluído',
+        dataResolucao: h.dataResolucao || '',
+        resolvidoPor: h.resolvidoPor || '',
+        descResolucao: h.descResolucao || '',
+        praca: h.praca || h.local || 'Juiz de Fora'
+      };
+    },
+
     pushHistoricoItem: function(histItem) {
       if (!this.url || !this.key || !histItem) return;
       try {
+        var payload = this.formatHistoricoPayload(histItem);
+        if (!payload) return;
         var endpoint = this.url.replace(/\/$/, '') + '/rest/v1/historico';
         fetch(endpoint, {
           method: 'POST',
@@ -414,7 +440,7 @@ document.addEventListener('DOMContentLoaded', function () {
             'Authorization': 'Bearer ' + this.key,
             'Prefer': 'resolution=merge-duplicates'
           },
-          body: JSON.stringify(histItem)
+          body: JSON.stringify(payload)
         }).then(function(res) {
           if (!res.ok) {
             console.warn('[DBService Cloud] Falha ao enviar item de histórico (' + res.status + '):', histItem.id);
@@ -439,6 +465,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (table === 'ocorrencias') {
           payload = data.map(function(item) {
             return self.formatOcorrenciaPayload(item);
+          }).filter(Boolean);
+        } else if (table === 'historico') {
+          payload = data.map(function(item) {
+            return self.formatHistoricoPayload(item);
           }).filter(Boolean);
         }
         fetch(endpoint, {
@@ -544,8 +574,15 @@ document.addEventListener('DOMContentLoaded', function () {
               var mapHist = {};
               remoteFiltered.forEach(function(h){ mapHist[h.id] = h; });
               (historicoSeedData || []).forEach(function(localH){
-                if (localH && localH.id && !mapHist[localH.id]) {
-                  if (!idsNaLixeira.includes(localH.id) && localH.status !== 'lixeira') {
+                if (localH && localH.id) {
+                  if (mapHist[localH.id]) {
+                    if (localH.htmlRelatorio && !mapHist[localH.id].htmlRelatorio) {
+                      mapHist[localH.id].htmlRelatorio = localH.htmlRelatorio;
+                    }
+                    if (localH.dadosCTRS && !mapHist[localH.id].dadosCTRS) {
+                      mapHist[localH.id].dadosCTRS = localH.dadosCTRS;
+                    }
+                  } else if (!idsNaLixeira.includes(localH.id) && localH.status !== 'lixeira') {
                     remoteFiltered.push(localH);
                   }
                 }
@@ -820,6 +857,14 @@ document.addEventListener('DOMContentLoaded', function () {
       status: o.status || 'aberta',
       criado: o.criado || Date.now(),
       dataCriacao: o.dataCriacao || formatDataHoraLocal(o.criado),
+      equipamento: o.equipamento || null,
+      equipamento_id: o.equipamento_id || '',
+      telejornal: o.telejornal || null,
+      historicoEdicoes: Array.isArray(o.historicoEdicoes) ? o.historicoEdicoes : ((res && Array.isArray(res.historicoEdicoes)) ? res.historicoEdicoes : []),
+      ultimaEdicaoPor: o.ultimaEdicaoPor || (res && res.ultimaEdicaoPor) || null,
+      ultimaEdicaoEm: o.ultimaEdicaoEm || (res && res.ultimaEdicaoEm) || null,
+      htmlRelatorio: o.htmlRelatorio || null,
+      dadosCTRS: o.dadosCTRS || null,
       resolucao: res,
       anexos: anx,
       praca: normalizarPracaOcorrencia(o.praca, o.local, o.titulo, o.equipamento || (o.tags && o.tags[1])),

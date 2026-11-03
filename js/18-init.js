@@ -10,6 +10,7 @@
      FLUXO DE INICIALIZAÇÃO E IDENTIFICAÇÃO DO OPERADOR
   ═══════════════════════════════════════════ */
   /* Render inicial */
+  try { carregarDashboardMetricsStore(); } catch(e) {}
   try { if (typeof aplicarModoPraca === 'function') aplicarModoPraca(); } catch(e) {}
   try { carregarFotoPerfilSalva(); } catch(e) {}
   try { loadNotificacoes(); } catch(e) {}

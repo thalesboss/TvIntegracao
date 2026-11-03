@@ -50,7 +50,9 @@
     var isUberlandia = praca.indexOf('Uber') !== -1;
     var equips = [];
 
-    if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
+    if (typeof obterListaNomesEquipamentosOrdenados === 'function') {
+      equips = obterListaNomesEquipamentosOrdenados(praca);
+    } else if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
       equips = Object.keys(dashboardMetrics.equipamento);
     }
 
@@ -841,12 +843,7 @@
         reporterCompleto = (reporter ? reporter + ' <strong style="color:#15803D;">(' + entradas + ')</strong>' : '<strong style="color:#15803D;">(' + entradas + ')</strong>');
       }
 
-      var cidadeCompleta = cidade;
-      if (cidadeCompleta && !cidadeCompleta.toLowerCase().includes(praca.toLowerCase())) {
-        cidadeCompleta = praca + ' &ndash; ' + cidadeCompleta;
-      } else if (!cidadeCompleta) {
-        cidadeCompleta = praca;
-      }
+      var cidadeCompleta = cidade || '&mdash;';
 
       var headerBg    = temNaoConformidade ? '#FEE2E2' : '#DBEAFE';
       var headerColor = temNaoConformidade ? '#991B1B' : '#1E3A8A';
@@ -859,48 +856,48 @@
       transmissoesHTML +=
         '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, Helvetica, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid ' + borderTable + '; margin-bottom:12px;">' +
           '<tr bgcolor="' + headerBg + '" style="background-color:' + headerBg + ';">' +
-            '<td colspan="3" bgcolor="' + headerBg + '" style="background-color:' + headerBg + '; text-align:center; font-weight:bold; font-size:12.5px; color:' + headerColor + '; border:1px solid ' + borderTable + '; padding:6px 10px;">' +
-              'Informa&ccedil;&otilde;es da Transmiss&atilde;o ao Vivo ' + num +
-              (temNaoConformidade ? ' &mdash; ATEN&Ccedil;&Atilde;O: N&Atilde;O CONFORMIDADE' : '') +
+            '<td colspan="3" bgcolor="' + headerBg + '" style="background-color:' + headerBg + '; text-align:center; font-weight:bold; font-size:12.5px; color:' + headerColor + '; border:1px solid ' + borderTable + '; padding:8px 12px;">' +
+              '<strong style="color:' + headerColor + ';">Informa&ccedil;&otilde;es da Transmiss&atilde;o ao Vivo ' + num +
+              (temNaoConformidade ? ' &mdash; ATEN&Ccedil;&Atilde;O: N&Atilde;O CONFORMIDADE' : '') + '</strong>' +
             '</td>' +
           '</tr>' +
           '<tr bgcolor="#F8FAFC" style="background-color:#F8FAFC;">' +
-            '<td colspan="3" bgcolor="#F8FAFC" style="background-color:#F8FAFC; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td colspan="3" bgcolor="#F8FAFC" style="background-color:#F8FAFC; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Cidade:</strong> <strong style="color:#0F2C59;">' + cidadeCompleta + '</strong>' +
             '</td>' +
           '</tr>' +
           '<tr>' +
-            '<td bgcolor="#FFFFFF" style="width:44%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td bgcolor="#FFFFFF" style="width:38%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Infraestrutura de Transmiss&atilde;o Utilizada:</strong> <strong style="color:#1E3A8A;">' + (infra || '&mdash;') + '</strong>' +
             '</td>' +
-            '<td bgcolor="#FFFFFF" style="width:28%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td bgcolor="#FFFFFF" style="width:31%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Hora Abertura Sinal:</strong> <strong>' + horaAbert + '</strong>' +
             '</td>' +
-            '<td bgcolor="' + estAudio.bg + '" style="width:28%; background-color:' + estAudio.bg + '; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td bgcolor="' + estAudio.bg + '" style="width:31%; background-color:' + estAudio.bg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Qualidade &Aacute;udio:</strong> ' + estAudio.texto +
             '</td>' +
           '</tr>' +
           '<tr>' +
-            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Rep&oacute;rter:</strong> ' + reporterCompleto +
             '</td>' +
-            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Hora final (Teste OK):</strong> <strong>' + horaFim + '</strong>' +
             '</td>' +
-            '<td bgcolor="' + estVideo.bg + '" style="background-color:' + estVideo.bg + '; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td bgcolor="' + estVideo.bg + '" style="background-color:' + estVideo.bg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Qualidade V&iacute;deo:</strong> ' + estVideo.texto +
             '</td>' +
           '</tr>' +
           '<tr>' +
-            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Rep&oacute;rter Cinematogr&aacute;fico:</strong> ' + (rc || '&mdash;') +
             '</td>' +
-            '<td colspan="2" bgcolor="' + estStatus.bg + '" style="background-color:' + estStatus.bg + '; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td colspan="2" bgcolor="' + estStatus.bg + '" style="background-color:' + estStatus.bg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Status da Transmiss&atilde;o:</strong> ' + estStatus.texto +
             '</td>' +
           '</tr>' +
           '<tr>' +
-            '<td colspan="3" bgcolor="' + obsCellBg + '" style="background-color:' + obsCellBg + '; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td colspan="3" bgcolor="' + obsCellBg + '" style="background-color:' + obsCellBg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Falhas ocorridas:</strong> ' +
               (falhas ? '<span style="color:#0F172A;">' + falhas + '</span>' : '<span style="color:#64748B;">Sem ocorr&ecirc;ncias.</span>') +
             '</td>' +
@@ -912,11 +909,11 @@
 
     var renderCelulaJornal = function(sigla, marcado) {
       if (marcado) {
-        return '<td bgcolor="#DBEAFE" style="width:25%; border:1px solid #94A3B8; background-color:#DBEAFE; color:#1E3A8A; padding:6px 10px; text-align:center; font-weight:bold;">' +
+        return '<td bgcolor="#DBEAFE" style="width:25%; border:1px solid #94A3B8; background-color:#DBEAFE; color:#1E3A8A; padding:8px 12px; text-align:center; font-weight:bold;">' +
           '&#10004; <strong>' + sigla + ': X</strong>' +
         '</td>';
       }
-      return '<td bgcolor="#FFFFFF" style="width:25%; border:1px solid #94A3B8; background-color:#FFFFFF; color:#64748B; padding:6px 10px; text-align:center;">' +
+      return '<td bgcolor="#FFFFFF" style="width:25%; border:1px solid #94A3B8; background-color:#FFFFFF; color:#64748B; padding:8px 12px; text-align:center;">' +
         '<strong>' + sigla + ':</strong> &ndash;' +
       '</td>';
     };
@@ -932,10 +929,10 @@
               '<img src="' + LOGO_TV_INTEGRACAO_B64 + '" width="105" height="73" alt="TV Integração" style="display:block; margin:0 auto; width:105px; height:73px; border:0;" />' +
             '</td>' +
             '<td bgcolor="#F8FAFC" style="background-color:#F8FAFC; text-align:center; vertical-align:middle; border:1px solid #94A3B8; padding:10px 14px; line-height:1.45;">' +
-              '<div style="font-size:11px; color:#475569; font-weight:bold; text-transform:uppercase; letter-spacing:0.4px;">Processo Engenharia 1.1.1 &ndash; P02 &ndash; F02</div>' +
-              '<div style="font-size:15px; font-weight:bold; color:#0F2C59; margin-top:4px;">' +
+              '<div style="font-size:11px; color:#334155; font-weight:bold; text-transform:uppercase; letter-spacing:0.4px;"><strong style="color:#334155;">Processo Engenharia 1.1.1 &ndash; P02 &ndash; F02</strong></div>' +
+              '<div style="font-size:15px; font-weight:bold; color:#0F172A; margin-top:4px;"><strong style="color:#0F172A;">' +
                 (isUberlandia ? 'Relat&oacute;rio de Transmiss&atilde;o ao Vivo' : 'Checklist de Transmiss&atilde;o ao Vivo CTRS') +
-              '</div>' +
+              '</strong></div>' +
             '</td>' +
           '</tr>' +
         '</table>' +
@@ -943,15 +940,15 @@
         '<!-- INFORMAÇÕES PRINCIPAIS -->' +
         '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid #94A3B8; margin-bottom:12px;">' +
           '<tr bgcolor="#DBEAFE" style="background-color:#DBEAFE;">' +
-            '<td colspan="4" bgcolor="#DBEAFE" style="background-color:#DBEAFE; text-align:center; font-weight:bold; color:#1E3A8A; border:1px solid #94A3B8; padding:6px 10px; font-size:12.5px;">' +
-              'Informa&ccedil;&otilde;es Principais' +
+            '<td colspan="4" bgcolor="#DBEAFE" style="background-color:#DBEAFE; text-align:center; font-weight:bold; color:#1E3A8A; border:1px solid #94A3B8; padding:8px 12px; font-size:12.5px;">' +
+              '<strong style="color:#0F2C59;">Informa&ccedil;&otilde;es Principais</strong>' +
             '</td>' +
           '</tr>' +
           '<tr>' +
-            '<td colspan="2" bgcolor="#FFFFFF" style="width:50%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td colspan="2" bgcolor="#FFFFFF" style="width:50%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Data:</strong> <strong style="color:#0F2C59;">' + dataFmt + '</strong>' +
             '</td>' +
-            '<td colspan="2" bgcolor="#FFFFFF" style="width:50%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:6px 10px;">' +
+            '<td colspan="2" bgcolor="#FFFFFF" style="width:50%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Pra&ccedil;a:</strong> <strong style="color:#0F2C59;">' + praca + '</strong>' +
             '</td>' +
           '</tr>' +
@@ -969,8 +966,8 @@
         '<!-- LEGENDA -->' +
         '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:11.5px; color:#0F172A; border:1.5px solid #94A3B8; margin-bottom:12px;">' +
           '<tr bgcolor="#F1F5F9" style="background-color:#F1F5F9;">' +
-            '<td colspan="3" bgcolor="#F1F5F9" style="background-color:#F1F5F9; text-align:center; font-weight:bold; color:#1E293B; border:1px solid #94A3B8; padding:5px;">' +
-              'Legenda' +
+            '<td colspan="3" bgcolor="#F1F5F9" style="background-color:#F1F5F9; text-align:center; font-weight:bold; color:#0F172A; border:1px solid #94A3B8; padding:5px;">' +
+              '<strong style="color:#0F172A;">Legenda</strong>' +
             '</td>' +
           '</tr>' +
           '<tr style="text-align:center;">' +
@@ -983,8 +980,8 @@
         '<!-- OBSERVAÇÕES -->' +
         '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid #94A3B8; margin-bottom:8px;">' +
           '<tr bgcolor="#F1F5F9" style="background-color:#F1F5F9;">' +
-            '<td bgcolor="#F1F5F9" style="background-color:#F1F5F9; text-align:center; font-weight:bold; color:#1E293B; border:1px solid #94A3B8; padding:5px;">' +
-              'Observa&ccedil;&otilde;es' +
+            '<td bgcolor="#F1F5F9" style="background-color:#F1F5F9; text-align:center; font-weight:bold; color:#0F172A; border:1px solid #94A3B8; padding:5px;">' +
+              '<strong style="color:#0F172A;">Observa&ccedil;&otilde;es</strong>' +
             '</td>' +
           '</tr>' +
           '<tr>' +
@@ -995,15 +992,243 @@
         '</table>' +
 
         '<div style="font-size:10.5px; color:#64748B; text-align:right; padding-top:2px;">' +
-          'Emitido por: <strong>' + operadorAtual + '</strong>' + (destLimpo ? (' &bull; Destinat&aacute;rio: <strong>' + destLimpo + '</strong>') : '') +
+          'Emitido por: <strong>' + operadorAtual + '</strong>' +
         '</div>' +
       '</div>';
 
     return {
       html: htmlCompleto,
+      dataFmt: dataFmt,
       assunto: (isUberlandia ? 'Transmissão ao Vivo - ' : 'Transmissão ao Vivo - CTRS - ') + (inCheck ? 'IN' : (mg1Check ? 'MG1' : (mg2Check ? 'MG2' : 'OUTROS'))) + ' - ' + praca + ' - ' + dataFmt
     };
   }
+
+  function gerarHTMLPreviewCTRSDados(dadosOuItem) {
+    if (!dadosOuItem) return '';
+    if (dadosOuItem.htmlRelatorio && typeof dadosOuItem.htmlRelatorio === 'string') {
+      return dadosOuItem.htmlRelatorio;
+    }
+
+    var d = dadosOuItem.dadosCTRS || null;
+    var rawJsonSource = (dadosOuItem.descResolucao && dadosOuItem.descResolucao.indexOf('<!--CTRS_JSON:') !== -1)
+      ? dadosOuItem.descResolucao
+      : ((dadosOuItem.descCriacao && dadosOuItem.descCriacao.indexOf('<!--CTRS_JSON:') !== -1)
+          ? dadosOuItem.descCriacao
+          : ((dadosOuItem.desc && dadosOuItem.desc.indexOf('<!--CTRS_JSON:') !== -1) ? dadosOuItem.desc : ''));
+    if (!d && rawJsonSource) {
+      try {
+        var mJson = rawJsonSource.match(/<!--CTRS_JSON:([^>]+)-->/);
+        if (mJson && mJson[1]) {
+          d = JSON.parse(decodeURIComponent(mJson[1]));
+        }
+      } catch (e) {}
+    }
+
+    // Se for um registro antigo do histórico que ainda não tinha dadosCTRS estruturados, reconstrói a partir dos metadados do item
+    if (!d) {
+      var tit = dadosOuItem.titulo || '';
+      var tipoExtraido = 'INTEGRAÇÃO NOTÍCIA';
+      if (tit.indexOf('MG1') !== -1) tipoExtraido = 'MG1';
+      else if (tit.indexOf('MG2') !== -1) tipoExtraido = 'MG2';
+      else if (tit.toUpperCase().indexOf('GIRO') !== -1) tipoExtraido = 'GIRO';
+
+      var dataBase = (dadosOuItem.dataCriacao || '').split(' ')[0] || '';
+      var eqBase = (dadosOuItem.equipamento && dadosOuItem.equipamento !== 'Equipamentos de Transmissão / CTRS')
+        ? dadosOuItem.equipamento
+        : 'LIVE U1';
+
+      d = {
+        dataFmt: dataBase || '—',
+        praca: dadosOuItem.local || dadosOuItem.praca || 'Juiz de Fora',
+        tipo: tipoExtraido,
+        obs: dadosOuItem.descCriacao || '',
+        operador: dadosOuItem.criadoPor || 'Operador',
+        transmissoes: [
+          {
+            cidade: dadosOuItem.local || 'Juiz de Fora',
+            infra: eqBase,
+            horaAbert: '—',
+            horaFim: '—',
+            audioQ: 'C',
+            videoQ: 'C',
+            reporter: '—',
+            entradas: '',
+            rc: '—',
+            statusTx: 'C',
+            falhas: ''
+          }
+        ]
+      };
+    }
+
+    var praca = d.praca || 'Juiz de Fora';
+    var isUberlandia = praca.indexOf('Uber') !== -1;
+    var dataFmt = d.dataFmt || '—';
+    var tipo = (d.tipo || 'INTEGRAÇÃO NOTÍCIA').toUpperCase();
+    var inCheck = (tipo.indexOf('NOTÍCIA') !== -1 || tipo.indexOf('NOTICIA') !== -1 || tipo === 'IN') ? 'X' : '';
+    var mg1Check = (tipo === 'MG1') ? 'X' : '';
+    var mg2Check = (tipo === 'MG2') ? 'X' : '';
+    var outrosCheck = (!inCheck && !mg1Check && !mg2Check) ? 'X' : '';
+    var obs = d.obs || '';
+    var operadorAtual = d.operador || 'Operador';
+
+    var renderCelulaJornal = function(sigla, marcado) {
+      if (marcado) {
+        return '<td bgcolor="#DBEAFE" style="width:25%; border:1px solid #94A3B8; background-color:#DBEAFE; color:#1E3A8A; padding:8px 12px; text-align:center; font-weight:bold;">' +
+          '&#10004; <strong>' + sigla + ': X</strong>' +
+        '</td>';
+      }
+      return '<td bgcolor="#FFFFFF" style="width:25%; border:1px solid #94A3B8; background-color:#FFFFFF; color:#64748B; padding:8px 12px; text-align:center;">' +
+        '<strong>' + sigla + ':</strong> &ndash;' +
+      '</td>';
+    };
+
+    var listaTx = Array.isArray(d.transmissoes) && d.transmissoes.length > 0 ? d.transmissoes : [];
+    var transmissoesHTML = '';
+
+    listaTx.forEach(function(tx, idx) {
+      var num = idx + 1;
+      var audioQ = tx.audioQ || 'C';
+      var videoQ = tx.videoQ || 'C';
+      var statusTx = tx.statusTx || 'C';
+      var estAudio  = getEstiloCelulaQualidadeEmail(audioQ);
+      var estVideo  = getEstiloCelulaQualidadeEmail(videoQ);
+      var estStatus = getEstiloCelulaQualidadeEmail(statusTx);
+      var temNaoConformidade = (audioQ === 'NC' || videoQ === 'NC' || statusTx === 'NC');
+
+      var reporterCompleto = tx.reporter || '&mdash;';
+      if (tx.entradas) {
+        reporterCompleto = (tx.reporter ? tx.reporter + ' <strong style="color:#15803D;">(' + tx.entradas + ')</strong>' : '<strong style="color:#15803D;">(' + tx.entradas + ')</strong>');
+      }
+      var cidadeCompleta = tx.cidade || '&mdash;';
+      var headerBg    = temNaoConformidade ? '#FEE2E2' : '#DBEAFE';
+      var headerColor = temNaoConformidade ? '#991B1B' : '#1E3A8A';
+      var borderTable = temNaoConformidade ? '#FCA5A5' : '#94A3B8';
+      var falhas = tx.falhas || '';
+      var obsCellBg = (falhas && !falhas.toLowerCase().includes('sem ocorrência') && !falhas.toLowerCase().includes('sem ocorrencia'))
+        ? (temNaoConformidade ? '#FEF2F2' : '#FFFBEB')
+        : '#FFFFFF';
+
+      transmissoesHTML +=
+        '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, Helvetica, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid ' + borderTable + '; margin-bottom:12px;">' +
+          '<tr bgcolor="' + headerBg + '" style="background-color:' + headerBg + ';">' +
+            '<td colspan="3" bgcolor="' + headerBg + '" style="background-color:' + headerBg + '; text-align:center; font-weight:bold; font-size:12.5px; color:' + headerColor + '; border:1px solid ' + borderTable + '; padding:8px 12px;">' +
+              '<strong style="color:' + headerColor + ';">Informa&ccedil;&otilde;es da Transmiss&atilde;o ao Vivo ' + num +
+              (temNaoConformidade ? ' &mdash; ATEN&Ccedil;&Atilde;O: N&Atilde;O CONFORMIDADE' : '') + '</strong>' +
+            '</td>' +
+          '</tr>' +
+          '<tr bgcolor="#F8FAFC" style="background-color:#F8FAFC;">' +
+            '<td colspan="3" bgcolor="#F8FAFC" style="background-color:#F8FAFC; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Cidade:</strong> <strong style="color:#0F2C59;">' + cidadeCompleta + '</strong>' +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td bgcolor="#FFFFFF" style="width:38%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Infraestrutura de Transmiss&atilde;o Utilizada:</strong> <strong style="color:#1E3A8A;">' + (tx.infra || '&mdash;') + '</strong>' +
+            '</td>' +
+            '<td bgcolor="#FFFFFF" style="width:31%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Hora Abertura Sinal:</strong> <strong>' + (tx.horaAbert || '&mdash;') + '</strong>' +
+            '</td>' +
+            '<td bgcolor="' + estAudio.bg + '" style="width:31%; background-color:' + estAudio.bg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Qualidade &Aacute;udio:</strong> ' + estAudio.texto +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Rep&oacute;rter:</strong> ' + reporterCompleto +
+            '</td>' +
+            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Hora final (Teste OK):</strong> <strong>' + (tx.horaFim || '&mdash;') + '</strong>' +
+            '</td>' +
+            '<td bgcolor="' + estVideo.bg + '" style="background-color:' + estVideo.bg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Qualidade V&iacute;deo:</strong> ' + estVideo.texto +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Rep&oacute;rter Cinematogr&aacute;fico:</strong> ' + (tx.rc || '&mdash;') +
+            '</td>' +
+            '<td colspan="2" bgcolor="' + estStatus.bg + '" style="background-color:' + estStatus.bg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Status da Transmiss&atilde;o:</strong> ' + estStatus.texto +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td colspan="3" bgcolor="' + obsCellBg + '" style="background-color:' + obsCellBg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Falhas ocorridas:</strong> ' +
+              (falhas ? '<span style="color:#0F172A;">' + falhas + '</span>' : '<span style="color:#64748B;">Sem ocorr&ecirc;ncias.</span>') +
+            '</td>' +
+          '</tr>' +
+        '</table>';
+    });
+
+    return (
+      '<div style="font-family:Segoe UI, Arial, Helvetica, sans-serif; color:#0F172A; max-width:800px; margin:0 auto; padding:10px; background-color:#FFFFFF;">' +
+        '<table cellpadding="6" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid #475569; margin-bottom:12px;">' +
+          '<tr>' +
+            '<td bgcolor="#FFFFFF" style="width:150px; background-color:#FFFFFF; text-align:center; vertical-align:middle; border:1px solid #94A3B8; padding:8px;">' +
+              '<img src="' + LOGO_TV_INTEGRACAO_B64 + '" width="105" height="73" alt="TV Integração" style="display:block; margin:0 auto; width:105px; height:73px; border:0;" />' +
+            '</td>' +
+            '<td bgcolor="#F8FAFC" style="background-color:#F8FAFC; text-align:center; vertical-align:middle; border:1px solid #94A3B8; padding:10px 14px; line-height:1.45;">' +
+              '<div style="font-size:11px; color:#334155; font-weight:bold; text-transform:uppercase; letter-spacing:0.4px;"><strong style="color:#334155;">Processo Engenharia 1.1.1 &ndash; P02 &ndash; F02</strong></div>' +
+              '<div style="font-size:15px; font-weight:bold; color:#0F172A; margin-top:4px;"><strong style="color:#0F172A;">' +
+                (isUberlandia ? 'Relat&oacute;rio de Transmiss&atilde;o ao Vivo' : 'Checklist de Transmiss&atilde;o ao Vivo CTRS') +
+              '</strong></div>' +
+            '</td>' +
+          '</tr>' +
+        '</table>' +
+        '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid #94A3B8; margin-bottom:12px;">' +
+          '<tr bgcolor="#DBEAFE" style="background-color:#DBEAFE;">' +
+            '<td colspan="4" bgcolor="#DBEAFE" style="background-color:#DBEAFE; text-align:center; font-weight:bold; color:#1E3A8A; border:1px solid #94A3B8; padding:8px 12px; font-size:12.5px;">' +
+              '<strong style="color:#0F2C59;">Informa&ccedil;&otilde;es Principais</strong>' +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td colspan="2" bgcolor="#FFFFFF" style="width:50%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Data:</strong> <strong style="color:#0F2C59;">' + dataFmt + '</strong>' +
+            '</td>' +
+            '<td colspan="2" bgcolor="#FFFFFF" style="width:50%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
+              '<strong>Pra&ccedil;a:</strong> <strong style="color:#0F2C59;">' + praca + '</strong>' +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            renderCelulaJornal('IN', !!inCheck) +
+            renderCelulaJornal('MG1', !!mg1Check) +
+            renderCelulaJornal('MG2', !!mg2Check) +
+            renderCelulaJornal('OUTROS', !!outrosCheck) +
+          '</tr>' +
+        '</table>' +
+        transmissoesHTML +
+        '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:11.5px; color:#0F172A; border:1.5px solid #94A3B8; margin-bottom:12px;">' +
+          '<tr bgcolor="#F1F5F9" style="background-color:#F1F5F9;">' +
+            '<td colspan="3" bgcolor="#F1F5F9" style="background-color:#F1F5F9; text-align:center; font-weight:bold; color:#0F172A; border:1px solid #94A3B8; padding:5px;">' +
+              '<strong style="color:#0F172A;">Legenda</strong>' +
+            '</td>' +
+          '</tr>' +
+          '<tr style="text-align:center;">' +
+            '<td bgcolor="#F0FDF4" style="width:33.3%; background-color:#F0FDF4; border:1px solid #94A3B8; padding:6px 8px; color:#15803D; font-weight:bold;">&#10003; C &ndash; Conforme</td>' +
+            '<td bgcolor="#FEF2F2" style="width:33.3%; background-color:#FEF2F2; border:1px solid #94A3B8; padding:6px 8px; color:#B91C1C; font-weight:bold;">&#9888; NC &ndash; N&atilde;o Conforme</td>' +
+            '<td bgcolor="#F8FAFC" style="width:33.3%; background-color:#F8FAFC; border:1px solid #94A3B8; padding:6px 8px; color:#475569; font-weight:bold;">NA &ndash; N&atilde;o se Aplica</td>' +
+          '</tr>' +
+        '</table>' +
+        '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid #94A3B8; margin-bottom:8px;">' +
+          '<tr bgcolor="#F1F5F9" style="background-color:#F1F5F9;">' +
+            '<td bgcolor="#F1F5F9" style="background-color:#F1F5F9; text-align:center; font-weight:bold; color:#0F172A; border:1px solid #94A3B8; padding:5px;">' +
+              '<strong style="color:#0F172A;">Observa&ccedil;&otilde;es</strong>' +
+            '</td>' +
+          '</tr>' +
+          '<tr>' +
+            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 10px; min-height:36px; white-space:pre-wrap;">' +
+              (obs ? obs : '<span style="color:#64748B;">Sem observa&ccedil;&otilde;es.</span>') +
+            '</td>' +
+          '</tr>' +
+        '</table>' +
+        '<div style="font-size:10.5px; color:#64748B; text-align:right; padding-top:2px;">' +
+          'Emitido por: <strong>' + operadorAtual + '</strong>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+  window.gerarHTMLPreviewCTRSDados = gerarHTMLPreviewCTRSDados;
 
   function limparFormularioCTRS(confirmar) {
     if (confirmar && !confirm('Deseja realmente limpar todos os campos preenchidos do relatório CTRS?')) {
@@ -1197,40 +1422,254 @@
       });
     } catch (e) {}
 
-    /* Coleta falhas registradas nas seções sanfonadas */
-    var falhasEncontradas = [];
-    if (obs && !obs.toLowerCase().includes('sem ocorrência') && !obs.toLowerCase().includes('sem ocorrencia')) {
-      falhasEncontradas.push(obs);
+    /* Atualiza métricas do Dashboard de Transmissões (Telejornal + Equipamentos) e coleta falhas */
+    var tipoUp = (tipo || 'INTEGRAÇÃO NOTÍCIA').trim().toUpperCase();
+    var chaveJornal = 'INTEGRAÇÃO NOTÍCIA';
+    if (tipoUp.indexOf('NOTÍCIA') !== -1 || tipoUp.indexOf('NOTICIA') !== -1 || tipoUp === 'IN') {
+      chaveJornal = 'INTEGRAÇÃO NOTÍCIA';
+    } else if (tipoUp === 'MG1') {
+      chaveJornal = 'MG1';
+    } else if (tipoUp === 'MG2') {
+      chaveJornal = 'MG2';
+    } else if (tipoUp.indexOf('GIRO') !== -1) {
+      chaveJornal = 'GIRO MG2';
+    } else {
+      chaveJornal = tipoUp;
     }
 
-    document.querySelectorAll('#page-ctrs .acc-body textarea').forEach(function(txt, i) {
-      var val = txt.value.trim();
-      if (val && !val.toLowerCase().includes('sem ocorrência') && !val.toLowerCase().includes('sem ocorrencia')) {
-        falhasEncontradas.push('Transmissão Vivo ' + (i + 1) + ': ' + val);
+    if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics) {
+      if (!dashboardMetrics.telejornal) dashboardMetrics.telejornal = {};
+      if (!dashboardMetrics.equipamento) dashboardMetrics.equipamento = {};
+      if (!dashboardMetrics.telejornal[chaveJornal]) {
+        dashboardMetrics.telejornal[chaveJornal] = { conf: 0, nc: 0, canc: 0 };
+      }
+    }
+
+    var ehCampoNC = function(val) {
+      if (!val) return false;
+      var v = String(val).trim().toUpperCase();
+      return v.indexOf('NC') === 0 || v.indexOf('NÃO CONFORME') !== -1 || v.indexOf('NAO CONFORME') !== -1;
+    };
+
+    var falhasEstruturadas = [];
+    if (obs && !obs.toLowerCase().includes('sem ocorrência') && !obs.toLowerCase().includes('sem ocorrencia')) {
+      falhasEstruturadas.push({
+        equipamento: '',
+        titulo: 'Falha em Relatório TV (' + chaveJornal + ')',
+        desc: obs,
+        tags: ['Relatório TV', chaveJornal, 'Automática']
+      });
+    }
+
+    var accBlocksEnvio = document.querySelectorAll('#page-ctrs .acc-block');
+    var contabilizouAlgumaTransmissao = false;
+    var transmissoesSalvasHist = [];
+    var equipamentosUsadosHist = [];
+    var metricasContabilizadasHist = [];
+
+    var fmtHoraCurta = function(val) {
+      if (!val) return '—';
+      var parts = val.trim().split(':');
+      if (parts.length === 2) return parts[0] + 'h' + parts[1] + "'";
+      return val.trim();
+    };
+    var fmtCodQual = function(val) {
+      if (!val) return 'C';
+      var v = val.trim().toUpperCase();
+      if (v.indexOf('NC') === 0 || v.indexOf('NÃO CONFORME') !== -1) return 'NC';
+      if (v.indexOf('NA') === 0 || v.indexOf('NÃO SE APLICA') !== -1) return 'NA';
+      return 'C';
+    };
+
+    accBlocksEnvio.forEach(function(acc, idx) {
+      var inputs = acc.querySelectorAll('input, select, textarea');
+      var cidadeTx   = (inputs[0] && inputs[0].value.trim()) || '';
+      var infraTx    = (inputs[1] && inputs[1].value.trim()) || '';
+      if (infraTx === '__novo__') infraTx = '';
+      var horaAbTx   = (inputs[2] && inputs[2].value.trim()) || '';
+      var horaFmTx   = (inputs[3] && inputs[3].value.trim()) || '';
+      var audioVal   = (inputs[4] && inputs[4].value.trim()) || '';
+      var videoVal   = (inputs[5] && inputs[5].value.trim()) || '';
+      var reporterTx = (inputs[6] && inputs[6].value.trim()) || '';
+      var entradasTx = (inputs[7] && inputs[7].value.trim()) || '';
+      var rcTx       = (inputs[8] && inputs[8].value.trim()) || '';
+      var statusVal  = (inputs[9] && inputs[9].value.trim()) || '';
+      var obsTx      = (inputs[10] && inputs[10].value.trim()) || '';
+
+      var audioNC  = ehCampoNC(audioVal);
+      var videoNC  = ehCampoNC(videoVal);
+      var statusNC = ehCampoNC(statusVal);
+      var temNCTx  = audioNC || videoNC || statusNC;
+      var temObsFalha = !!(obsTx && !obsTx.toLowerCase().includes('sem ocorrência') && !obsTx.toLowerCase().includes('sem ocorrencia'));
+
+      var blocoAtivo = !!(infraTx || cidadeTx || horaAbTx || horaFmTx || reporterTx || entradasTx || rcTx || obsTx || temNCTx);
+      if (idx > 0 && !blocoAtivo) return;
+      if (idx === 0 && !blocoAtivo) {
+        transmissoesSalvasHist.push({
+          cidade: cidadeTx,
+          infra: infraTx,
+          horaAbert: fmtHoraCurta(horaAbTx),
+          horaFim: fmtHoraCurta(horaFmTx),
+          audioQ: fmtCodQual(audioVal),
+          videoQ: fmtCodQual(videoVal),
+          reporter: reporterTx,
+          entradas: entradasTx,
+          rc: rcTx,
+          statusTx: fmtCodQual(statusVal),
+          falhas: obsTx
+        });
+        return;
+      }
+
+      contabilizouAlgumaTransmissao = true;
+      if (infraTx && equipamentosUsadosHist.indexOf(infraTx) === -1) {
+        equipamentosUsadosHist.push(infraTx);
+      }
+      transmissoesSalvasHist.push({
+        cidade: cidadeTx,
+        infra: infraTx,
+        horaAbert: fmtHoraCurta(horaAbTx),
+        horaFim: fmtHoraCurta(horaFmTx),
+        audioQ: fmtCodQual(audioVal),
+        videoQ: fmtCodQual(videoVal),
+        reporter: reporterTx,
+        entradas: entradasTx,
+        rc: rcTx,
+        statusTx: fmtCodQual(statusVal),
+        falhas: obsTx
+      });
+
+      metricasContabilizadasHist.push({
+        telejornal: chaveJornal,
+        equipamento: infraTx || '',
+        status: temNCTx ? 'nc' : 'conf'
+      });
+
+      // 1. Contabiliza no Dashboard de Transmissões -> Telejornal
+      if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.telejornal && dashboardMetrics.telejornal[chaveJornal]) {
+        if (temNCTx) {
+          dashboardMetrics.telejornal[chaveJornal].nc = (dashboardMetrics.telejornal[chaveJornal].nc || 0) + 1;
+        } else {
+          dashboardMetrics.telejornal[chaveJornal].conf = (dashboardMetrics.telejornal[chaveJornal].conf || 0) + 1;
+        }
+      }
+
+      // 2. Contabiliza no Dashboard de Transmissões -> Equipamento (se equipamento selecionado)
+      if (infraTx && typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
+        if (!dashboardMetrics.equipamento[infraTx]) {
+          dashboardMetrics.equipamento[infraTx] = { conf: 0, nc: 0, canc: 0 };
+        }
+        if (temNCTx) {
+          dashboardMetrics.equipamento[infraTx].nc = (dashboardMetrics.equipamento[infraTx].nc || 0) + 1;
+        } else {
+          dashboardMetrics.equipamento[infraTx].conf = (dashboardMetrics.equipamento[infraTx].conf || 0) + 1;
+        }
+      }
+
+      // 3. Se houve Não Conforme (Áudio, Vídeo ou Status) ou falha descrita nas observações, gera ocorrência
+      if (temNCTx || temObsFalha) {
+        var itensNC = [];
+        if (audioNC)  itensNC.push('Qualidade do Áudio: NC');
+        if (videoNC)  itensNC.push('Qualidade do Vídeo: NC');
+        if (statusNC) itensNC.push('Status da Transmissão: NC');
+
+        var partesDesc = ['Transmissão Vivo ' + (idx + 1) + ' (' + chaveJornal + ')'];
+        if (infraTx) partesDesc.push('Equipamento: ' + infraTx);
+        if (cidadeTx) partesDesc.push('Local: ' + cidadeTx);
+        if (itensNC.length > 0) partesDesc.push('Não Conformidade(s): ' + itensNC.join(' | '));
+        if (obsTx) partesDesc.push('Observações: ' + obsTx);
+
+        var tagsOc = ['Relatório TV', chaveJornal, 'Automática'];
+        if (infraTx) tagsOc.push(infraTx);
+
+        falhasEstruturadas.push({
+          equipamento: infraTx || '',
+          titulo: infraTx
+            ? ('Falha em Transmissão — ' + infraTx + ' (' + chaveJornal + ')')
+            : ('Falha em Relatório TV (' + chaveJornal + ')'),
+          desc: partesDesc.join(' · '),
+          tags: tagsOc
+        });
       }
     });
 
-    var novasOcorrenciasCriadas = 0;
+    // Se nenhuma transmissão individual foi preenchida mas o relatório do jornal foi enviado, contabiliza 1 conforme para o jornal
+    if (!contabilizouAlgumaTransmissao && typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.telejornal && dashboardMetrics.telejornal[chaveJornal]) {
+      dashboardMetrics.telejornal[chaveJornal].conf = (dashboardMetrics.telejornal[chaveJornal].conf || 0) + 1;
+      metricasContabilizadasHist.push({
+        telejornal: chaveJornal,
+        equipamento: '',
+        status: 'conf'
+      });
+    }
 
-    /* Para cada falha relatada, cria automaticamente uma Ocorrência no Dashboard */
-    falhasEncontradas.forEach(function(falhaTxt, idx) {
+    if (typeof salvarDashboardMetricsStore === 'function') {
+      salvarDashboardMetricsStore();
+    }
+    if (typeof renderDashboards === 'function') {
+      renderDashboards();
+    }
+
+    var falhasEncontradas = falhasEstruturadas.map(function(f) { return f.desc; });
+    var novasOcorrenciasCriadas = 0;
+    var isUberlandia = praca.indexOf('Uber') !== -1;
+    var tituloRelatorio = isUberlandia ? ('Relatório de Transmissão — ' + tipo) : ('Checklist CTRS — ' + tipo + ' (' + praca + ')');
+    var idsOcorrenciasGeradasHist = falhasEstruturadas.map(function(_, idx) {
+      return 'oc_auto_' + Date.now() + '_' + idx;
+    });
+
+    var dadosCTRSHist = {
+      dataFmt: resultado.dataFmt || '',
+      praca: praca,
+      tipo: tipo,
+      chaveJornal: chaveJornal,
+      obs: obs,
+      operador: getUsuarioAtual(),
+      destinatario: destinatario,
+      assunto: assuntoFinal,
+      transmissoes: transmissoesSalvasHist,
+      metricasContabilizadas: metricasContabilizadasHist,
+      idsOcorrenciasGeradas: idsOcorrenciasGeradasHist
+    };
+    var marcadorJsonHist = '';
+    try {
+      marcadorJsonHist = '<!--CTRS_JSON:' + encodeURIComponent(JSON.stringify(dadosCTRSHist)) + '-->';
+    } catch (e) {}
+
+    /* Para cada falha relatada ou NC marcada, cria automaticamente uma Ocorrência no Dashboard com o Preview do Relatório CTRS na descrição */
+    falhasEstruturadas.forEach(function(fObj, idx) {
       novasOcorrenciasCriadas++;
+      var eqIdVinc = '';
+      if (fObj.equipamento && typeof catalogoEquipamentos !== 'undefined' && Array.isArray(catalogoEquipamentos)) {
+        var eqMatch = catalogoEquipamentos.find(function(e) {
+          return e && e.nome && e.nome.toUpperCase() === fObj.equipamento.toUpperCase();
+        });
+        if (eqMatch) eqIdVinc = eqMatch.id;
+      }
+
+      var ocIdNovo = idsOcorrenciasGeradasHist[idx] || ('oc_auto_' + Date.now() + '_' + idx);
+
       var novaOc = {
-        id:          'oc_auto_' + Date.now() + '_' + idx,
-        titulo:      'Falha em Relatório TV (' + tipo + ')',
-        prio:        'Alta',
-        cat:         'Telejornal / Transmissão ao Vivo',
-        resp:        'Todos do turno',
-        local:       praca,
-        prazo:       '12:00',
-        desc:        falhaTxt,
-        mine:        false,
-        tags:        ['Relatório TV', 'Automática'],
-        status:      'aberta',
-        criado:      Date.now(),
-        dataCriacao: nowStr,
-        resolucao:   null,
-        praca:       praca
+        id:             ocIdNovo,
+        titulo:         fObj.titulo,
+        equipamento:    fObj.equipamento || '',
+        equipamento_id: eqIdVinc,
+        telejornal:     chaveJornal,
+        prio:           'Alta',
+        cat:            'Telejornal / Transmissão ao Vivo',
+        resp:           'Todos do turno',
+        local:          praca,
+        prazo:          '12:00',
+        desc:           fObj.desc + marcadorJsonHist,
+        mine:           false,
+        tags:           fObj.tags,
+        status:         'aberta',
+        criado:         Date.now(),
+        dataCriacao:    nowStr,
+        resolucao:      null,
+        praca:          praca,
+        htmlRelatorio:  htmlFinal,
+        dadosCTRS:      dadosCTRSHist
       };
       ocorrencias = [novaOc].concat(ocorrencias);
     });
@@ -1238,26 +1677,34 @@
     if (novasOcorrenciasCriadas > 0) {
       save(ocorrencias, null, true);
     }
+    if (typeof renderCatalogoEquipamentos === 'function') {
+      renderCatalogoEquipamentos();
+    }
 
-    /* Registra o Relatório no Histórico */
-    var isUberlandia = praca.indexOf('Uber') !== -1;
-    var tituloRelatorio = isUberlandia ? ('Relatório de Transmissão — ' + tipo) : ('Checklist CTRS — ' + tipo + ' (' + praca + ')');
+    /* Registra o Relatório no Histórico com Preview Visual Completo */
+
+    var eqResumoHist = equipamentosUsadosHist.length > 0
+      ? equipamentosUsadosHist.join(', ')
+      : 'Equipamentos de Transmissão / CTRS';
+
     var novoHist = {
       id:            'h_ctrs_' + Date.now(),
       tipo:          'relatorio',
       subtipo:       isUberlandia ? 'Relatório Transmissão' : 'CTRS Transmissão',
       titulo:        tituloRelatorio,
-      equipamento:   'Equipamentos de Transmissão / CTRS',
+      equipamento:   eqResumoHist,
       categoria:     'Transmissão CTRS',
       local:         praca,
       dataCriacao:   nowStr,
       criadoPor:     getUsuarioAtual(),
-      descCriacao:   'Relatório enviado para ' + destinatario + '. ' + (falhasEncontradas.length > 0 ? (falhasEncontradas.length + ' falha(s) identificada(s) e convertida(s) em ocorrência(s).') : 'Sem falhas registradas.'),
-      status:        'Concluído',
+      descCriacao:   'Relatório enviado para ' + destinatario + (equipamentosUsadosHist.length > 0 ? (' · Equipamento(s): ' + eqResumoHist) : '') + '. ' + (falhasEncontradas.length > 0 ? (falhasEncontradas.length + ' falha(s) identificada(s).') : 'Todas as transmissões em conformidade.'),
+      status:        falhasEncontradas.length > 0 ? 'Com Não Conformidade' : 'Conforme',
       dataResolucao: nowStr,
       resolvidoPor:  getUsuarioAtual(),
-      descResolucao: 'Relatório processado, enviado para ' + destinatario + ' e sincronizado com a base de dados.',
-      praca:         praca
+      descResolucao: 'Relatório emitido por ' + getUsuarioAtual() + ' e enviado para ' + destinatario + '.' + marcadorJsonHist,
+      praca:         praca,
+      htmlRelatorio: htmlFinal,
+      dadosCTRS:     dadosCTRSHist
     };
 
     historicoSeedData = [novoHist].concat(historicoSeedData);

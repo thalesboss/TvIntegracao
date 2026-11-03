@@ -61,7 +61,9 @@
     tipoEl.value = tipo;
     var items = dashboardMetrics[tipo];
     if (!items) return;
-    var list = Object.keys(items);
+    var list = (tipo === 'equipamento' && typeof obterListaNomesEquipamentosOrdenados === 'function')
+      ? obterListaNomesEquipamentosOrdenados()
+      : Object.keys(items);
 
     selectAlvo.innerHTML = list.map(function(item) {
       return '<option value="' + item + '">' + item + '</option>';
@@ -194,24 +196,82 @@
     }
 
     if (histListaEl) {
+      var nomeUp = String(nome || '').toUpperCase().trim();
       var histOcs = (typeof ocorrencias !== 'undefined' ? ocorrencias : []).filter(function(o) {
-        return (o.titulo && o.titulo.indexOf(nome) !== -1) || (o.desc && o.desc.indexOf(nome) !== -1);
+        if (!o || o.status === 'lixeira') return false;
+        if (o.equipamento && String(o.equipamento).toUpperCase().trim() === nomeUp) return true;
+        if (o.telejornal && String(o.telejornal).toUpperCase().trim() === nomeUp) return true;
+        if (Array.isArray(o.tags) && o.tags.some(function(t){ return String(t).toUpperCase().trim() === nomeUp; })) return true;
+        var descLimpa = String(o.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '');
+        return (o.titulo && String(o.titulo).toUpperCase().indexOf(nomeUp) !== -1) || (descLimpa.toUpperCase().indexOf(nomeUp) !== -1);
       });
 
-      if (histOcs.length === 0) {
+      var histRels = (typeof historicoSeedData !== 'undefined' && Array.isArray(historicoSeedData) ? historicoSeedData : []).filter(function(h) {
+        if (!h || h.tipo !== 'relatorio') return false;
+        var isCTRS = (
+          h.subtipo === 'CTRS Transmissão' ||
+          h.subtipo === 'Relatório Transmissão' ||
+          h.categoria === 'Transmissão CTRS' ||
+          (h.id && String(h.id).indexOf('h_ctrs_') === 0)
+        );
+        if (!isCTRS) return false;
+        var dH = h.dadosCTRS;
+        if (!dH && h.descResolucao && h.descResolucao.indexOf('<!--CTRS_JSON:') !== -1) {
+          try {
+            var mH = h.descResolucao.match(/<!--CTRS_JSON:([^>]+)-->/);
+            if (mH && mH[1]) dH = JSON.parse(decodeURIComponent(mH[1]));
+          } catch (e) {}
+        }
+        if (tipo === 'telejornal') {
+          if (dH && ((dH.chaveJornal && String(dH.chaveJornal).toUpperCase() === nomeUp) || (dH.tipo && String(dH.tipo).toUpperCase() === nomeUp))) return true;
+          if (h.titulo && String(h.titulo).toUpperCase().indexOf(nomeUp) !== -1) return true;
+        } else {
+          if (dH && Array.isArray(dH.transmissoes) && dH.transmissoes.some(function(tx){ return tx && tx.infra && String(tx.infra).toUpperCase().trim() === nomeUp; })) return true;
+          if (h.equipamento && String(h.equipamento).toUpperCase().indexOf(nomeUp) !== -1) return true;
+        }
+        return false;
+      });
+
+      if (histOcs.length === 0 && histRels.length === 0) {
         histListaEl.innerHTML =
           '<div style="background:#FFFFFF;border:1px solid var(--border-lt);border-radius:var(--r-sm);padding:8px 10px;font-size:11.5px;color:var(--muted);">' +
-            'Nenhuma ocorrência crítica aberta para este item no momento. Sistema estável e operando normalmente.' +
+            'Nenhuma ocorrência ou relatório registrado para este item no momento. Sistema estável e operando normalmente.' +
           '</div>';
       } else {
-        histListaEl.innerHTML = histOcs.map(function(o) {
-          return (
-            '<div style="background:#FFFFFF;border:1px solid var(--border-lt);border-radius:var(--r-sm);padding:7px 10px;display:flex;justify-content:space-between;align-items:center;font-size:11.5px;">' +
-              '<div><strong style="color:var(--txt);">' + o.titulo + '</strong> <span style="color:var(--muted);">· ' + (o.resp || '') + '</span></div>' +
-              '<span class="tag ' + (o.status === 'resolvida' ? 'tag-g' : 'tag-r') + '">' + (o.status === 'resolvida' ? 'Resolvida' : 'Em Aberto') + '</span>' +
-            '</div>'
-          );
-        }).join('');
+        var htmlItens = '';
+        histOcs.forEach(function(o) {
+          var descLimpa = String(o.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
+          var temPreview = !!(o.htmlRelatorio || o.dadosCTRS || (o.desc && String(o.desc).indexOf('<!--CTRS_JSON:') !== -1) || (o.tags && o.tags.indexOf('Relatório TV') !== -1));
+          htmlItens +=
+            '<div onclick=\"fecharPopup(\'popup-detalhes-transmissao\'); verDetalhesOcorrencia(\'' + o.id + '\')\" style=\"background:#FFFFFF;border:1px solid var(--border-lt);border-left:3px solid ' + (o.status === 'resolvida' ? '#10B981' : '#EF4444') + ';border-radius:var(--r-sm);padding:8px 10px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'var(--blue)\';\" onmouseout=\"this.style.borderColor=\'var(--border-lt)\';\" title=\"Clique para abrir os detalhes e o preview do relatório na descrição\">' +
+              '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+                '<div><strong style="color:var(--txt);">' + escapeHTML(o.titulo) + '</strong> <span style="color:var(--muted);">· ' + escapeHTML(o.dataCriacao || o.resp || '') + '</span></div>' +
+                '<div style="display:flex;align-items:center;gap:6px;">' +
+                  (temPreview ? '<span style="font-size:10.5px;font-weight:700;color:#0071E3;background:#EFF6FF;border:1px solid #BFDBFE;padding:1px 7px;border-radius:10px;">👁️ Preview CTRS</span>' : '') +
+                  '<span class="tag ' + (o.status === 'resolvida' ? 'tag-g' : 'tag-r') + '">' + (o.status === 'resolvida' ? 'Resolvida' : 'Em Aberto') + '</span>' +
+                '</div>' +
+              '</div>' +
+              (descLimpa ? '<div style="font-size:11px;color:var(--txt2);">' + escapeHTML(descLimpa) + '</div>' : '') +
+            '</div>';
+        });
+
+        histRels.forEach(function(r) {
+          var descRelLimpa = String(r.descCriacao || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
+          var isNC = r.status && String(r.status).toLowerCase().indexOf('não conform') !== -1;
+          htmlItens +=
+            '<div onclick=\"fecharPopup(\'popup-detalhes-transmissao\'); verDetalhesHistoricoDirect(\'' + r.id + '\')\" style=\"background:#F8FAFC;border:1px solid #BFDBFE;border-left:3px solid #0071E3;border-radius:var(--r-sm);padding:8px 10px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'#0071E3\';\" onmouseout=\"this.style.borderColor=\'#BFDBFE\';\" title=\"Clique para abrir o Preview Completo do Relatório CTRS\">' +
+              '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+                '<div><strong style="color:#1E3A8A;">📄 ' + escapeHTML(r.titulo) + '</strong> <span style="color:var(--muted);">· ' + escapeHTML(r.dataCriacao || '') + '</span></div>' +
+                '<div style="display:flex;align-items:center;gap:6px;">' +
+                  '<span style="font-size:10.5px;font-weight:700;color:#0071E3;background:#EFF6FF;border:1px solid #93C5FD;padding:1px 7px;border-radius:10px;">👁️ Ver Relatório</span>' +
+                  '<span class="tag ' + (isNC ? 'tag-y' : 'tag-g') + '">' + escapeHTML(r.status || 'Conforme') + '</span>' +
+                '</div>' +
+              '</div>' +
+              (descRelLimpa ? '<div style="font-size:11px;color:var(--txt2);">' + escapeHTML(descRelLimpa) + '</div>' : '') +
+            '</div>';
+        });
+
+        histListaEl.innerHTML = htmlItens;
       }
     }
 
@@ -230,7 +290,9 @@
       tipoEl.value = itemTransmissaoDetalhesAtual.tipo;
       var items = dashboardMetrics[itemTransmissaoDetalhesAtual.tipo];
       if (items) {
-        var list = Object.keys(items);
+        var list = (itemTransmissaoDetalhesAtual.tipo === 'equipamento' && typeof obterListaNomesEquipamentosOrdenados === 'function')
+          ? obterListaNomesEquipamentosOrdenados()
+          : Object.keys(items);
         selectAlvo.innerHTML = list.map(function(item) {
           return '<option value="' + item + '"' + (item === itemTransmissaoDetalhesAtual.nome ? ' selected' : '') + '>' + item + '</option>';
         }).join('');
@@ -252,17 +314,21 @@
       if (typeof catalogoEquipamentos !== 'undefined' && Array.isArray(catalogoEquipamentos) && dashboardMetrics && dashboardMetrics.equipamento) {
         var pracaAt = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
         catalogoEquipamentos.forEach(function(eq) {
-          if (eq && eq.praca === pracaAt && dashboardMetrics.equipamento[eq.nome]) {
+          if (eq && ((eq.praca || '').indexOf('Uber') !== -1) === (pracaAt.indexOf('Uber') !== -1) && dashboardMetrics.equipamento[eq.nome]) {
             var m = dashboardMetrics.equipamento[eq.nome];
             var mud = !eq.metricas || eq.metricas.conf !== m.conf || eq.metricas.nc !== m.nc || eq.metricas.canc !== m.canc;
             if (mud) {
               eq.metricas = { conf: m.conf || 0, nc: m.nc || 0, canc: m.canc || 0 };
+              if (typeof eq.ordem === 'number') eq.metricas.ordem = eq.ordem;
               if (typeof salvarEquipamentoPostgreSQL === 'function') {
                 salvarEquipamentoPostgreSQL(eq);
               }
             }
           }
         });
+        try {
+          localStorage.setItem('tv_equipamentos_catalogo_v1', JSON.stringify(catalogoEquipamentos));
+        } catch (eCat) {}
       }
     } catch (e) {}
   }
@@ -440,7 +506,12 @@
     if (!grid) return;
 
     var equips = (dashboardMetrics && dashboardMetrics.equipamento) ? dashboardMetrics.equipamento : {};
-    var eqKeys = Object.keys(equips);
+    var eqKeys = (typeof obterListaNomesEquipamentosOrdenados === 'function')
+      ? obterListaNomesEquipamentosOrdenados().filter(function(k) { return !!equips[k]; })
+      : Object.keys(equips);
+    Object.keys(equips).forEach(function(k) {
+      if (eqKeys.indexOf(k) === -1) eqKeys.push(k);
+    });
     var htmlCards = '';
 
     eqKeys.forEach(function(key) {
@@ -490,8 +561,109 @@
   }
   window.renderEquipamentosCards = renderEquipamentosCards;
 
+  function reconciliarMetricasComHistoricoCTRS() {
+    if (typeof dashboardMetrics === 'undefined' || !dashboardMetrics) return;
+    if (typeof historicoSeedData === 'undefined' || !Array.isArray(historicoSeedData)) return;
+
+    var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+    var isUdi = pracaAtiva.indexOf('Uber') !== -1;
+    var idsLixeira = (typeof lixeiraData !== 'undefined' && Array.isArray(lixeiraData))
+      ? lixeiraData.map(function(i){ return i && i.id; }).filter(Boolean)
+      : [];
+
+    var minTj = {};
+    var minEq = {};
+
+    historicoSeedData.forEach(function(h) {
+      if (!h || h.tipo !== 'relatorio' || h.status === 'lixeira' || idsLixeira.indexOf(h.id) !== -1) return;
+      var hPraca = h.praca || h.local || 'Juiz de Fora';
+      if ((hPraca.indexOf('Uber') !== -1) !== isUdi) return;
+
+      var d = h.dadosCTRS || null;
+      if (!d && h.descResolucao && h.descResolucao.indexOf('<!--CTRS_JSON:') !== -1) {
+        try {
+          var m = h.descResolucao.match(/<!--CTRS_JSON:([^>]+)-->/);
+          if (m && m[1]) d = JSON.parse(decodeURIComponent(m[1]));
+        } catch (e) {}
+      }
+      if (!d) return;
+
+      var listaM = Array.isArray(d.metricasContabilizadas) ? d.metricasContabilizadas.slice() : [];
+      if (listaM.length === 0 && Array.isArray(d.transmissoes)) {
+        var tipoUp = (d.chaveJornal || d.tipo || 'INTEGRAÇÃO NOTÍCIA').toUpperCase();
+        var cj = 'INTEGRAÇÃO NOTÍCIA';
+        if (tipoUp.indexOf('NOTÍCIA') !== -1 || tipoUp.indexOf('NOTICIA') !== -1 || tipoUp === 'IN') cj = 'INTEGRAÇÃO NOTÍCIA';
+        else if (tipoUp === 'MG1') cj = 'MG1';
+        else if (tipoUp === 'MG2') cj = 'MG2';
+        else if (tipoUp.indexOf('GIRO') !== -1) cj = 'GIRO MG2';
+        else cj = tipoUp;
+
+        d.transmissoes.forEach(function(tx) {
+          if (!tx) return;
+          var temNC = (tx.audioQ === 'NC' || tx.videoQ === 'NC' || tx.statusTx === 'NC');
+          listaM.push({
+            telejornal: cj,
+            equipamento: tx.infra || '',
+            status: temNC ? 'nc' : 'conf'
+          });
+        });
+      }
+
+      listaM.forEach(function(mItem) {
+        var st = (mItem.status === 'nc') ? 'nc' : 'conf';
+        if (mItem.telejornal) {
+          var tjKey = String(mItem.telejornal).trim().toUpperCase();
+          if (!minTj[tjKey]) minTj[tjKey] = { conf: 0, nc: 0 };
+          minTj[tjKey][st] += 1;
+        }
+        if (mItem.equipamento) {
+          var eqKey = String(mItem.equipamento).trim().toUpperCase();
+          if (!minEq[eqKey]) minEq[eqKey] = { conf: 0, nc: 0 };
+          minEq[eqKey][st] += 1;
+        }
+      });
+    });
+
+    var alterou = false;
+    if (dashboardMetrics.telejornal) {
+      Object.keys(minTj).forEach(function(tjKey) {
+        if (dashboardMetrics.telejornal[tjKey]) {
+          if ((dashboardMetrics.telejornal[tjKey].conf || 0) < minTj[tjKey].conf) {
+            dashboardMetrics.telejornal[tjKey].conf = minTj[tjKey].conf;
+            alterou = true;
+          }
+          if ((dashboardMetrics.telejornal[tjKey].nc || 0) < minTj[tjKey].nc) {
+            dashboardMetrics.telejornal[tjKey].nc = minTj[tjKey].nc;
+            alterou = true;
+          }
+        }
+      });
+    }
+    if (dashboardMetrics.equipamento) {
+      Object.keys(minEq).forEach(function(eqKey) {
+        if (!dashboardMetrics.equipamento[eqKey]) {
+          dashboardMetrics.equipamento[eqKey] = { conf: 0, nc: 0, canc: 0 };
+        }
+        if ((dashboardMetrics.equipamento[eqKey].conf || 0) < minEq[eqKey].conf) {
+          dashboardMetrics.equipamento[eqKey].conf = minEq[eqKey].conf;
+          alterou = true;
+        }
+        if ((dashboardMetrics.equipamento[eqKey].nc || 0) < minEq[eqKey].nc) {
+          dashboardMetrics.equipamento[eqKey].nc = minEq[eqKey].nc;
+          alterou = true;
+        }
+      });
+    }
+
+    if (alterou && typeof salvarDashboardMetricsStore === 'function') {
+      salvarDashboardMetricsStore();
+    }
+  }
+  window.reconciliarMetricasComHistoricoCTRS = reconciliarMetricasComHistoricoCTRS;
+
   function renderDashboards() {
     if (typeof dashboardMetrics === 'undefined' || !dashboardMetrics) return;
+    reconciliarMetricasComHistoricoCTRS();
 
     var pieMapping = {
       'INTEGRAÇÃO NOTÍCIA': 'pie-tj-noticia',

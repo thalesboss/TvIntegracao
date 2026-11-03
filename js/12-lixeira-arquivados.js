@@ -168,6 +168,69 @@
   }
   window.verificarExpiracaoLixeira = verificarExpiracaoLixeira;
 
+  function extrairDadosCTRSDeItemHistorico(hist) {
+    if (!hist) return null;
+    if (hist.dadosCTRS && typeof hist.dadosCTRS === 'object') return hist.dadosCTRS;
+    if (hist.descResolucao && hist.descResolucao.indexOf('<!--CTRS_JSON:') !== -1) {
+      try {
+        var m = hist.descResolucao.match(/<!--CTRS_JSON:([^>]+)-->/);
+        if (m && m[1]) return JSON.parse(decodeURIComponent(m[1]));
+      } catch (e) {}
+    }
+    return null;
+  }
+
+  function ajustarMetricasDashboardPorRelatorioCTRS(hist, direcao) {
+    if (!hist || typeof dashboardMetrics === 'undefined' || !dashboardMetrics) return;
+    var d = extrairDadosCTRSDeItemHistorico(hist);
+    if (!d) return;
+
+    var delta = direcao < 0 ? -1 : 1;
+    var listaMet = Array.isArray(d.metricasContabilizadas) ? d.metricasContabilizadas : [];
+
+    // Caso não tenha metricasContabilizadas explícito mas tenha transmissoes
+    if (listaMet.length === 0 && Array.isArray(d.transmissoes)) {
+      var tipoUp = (d.chaveJornal || d.tipo || 'INTEGRAÇÃO NOTÍCIA').toUpperCase();
+      var cj = 'INTEGRAÇÃO NOTÍCIA';
+      if (tipoUp.indexOf('NOTÍCIA') !== -1 || tipoUp.indexOf('NOTICIA') !== -1 || tipoUp === 'IN') cj = 'INTEGRAÇÃO NOTÍCIA';
+      else if (tipoUp === 'MG1') cj = 'MG1';
+      else if (tipoUp === 'MG2') cj = 'MG2';
+      else if (tipoUp.indexOf('GIRO') !== -1) cj = 'GIRO MG2';
+      else cj = tipoUp;
+
+      d.transmissoes.forEach(function(tx) {
+        if (!tx) return;
+        var temNC = (tx.audioQ === 'NC' || tx.videoQ === 'NC' || tx.statusTx === 'NC');
+        listaMet.push({
+          telejornal: cj,
+          equipamento: tx.infra || '',
+          status: temNC ? 'nc' : 'conf'
+        });
+      });
+    }
+
+    if (listaMet.length === 0) return;
+
+    listaMet.forEach(function(m) {
+      var campo = (m.status === 'nc') ? 'nc' : 'conf';
+      if (m.telejornal && dashboardMetrics.telejornal && dashboardMetrics.telejornal[m.telejornal]) {
+        var atualTj = dashboardMetrics.telejornal[m.telejornal][campo] || 0;
+        dashboardMetrics.telejornal[m.telejornal][campo] = Math.max(0, atualTj + delta);
+      }
+      if (m.equipamento && dashboardMetrics.equipamento && dashboardMetrics.equipamento[m.equipamento]) {
+        var atualEq = dashboardMetrics.equipamento[m.equipamento][campo] || 0;
+        dashboardMetrics.equipamento[m.equipamento][campo] = Math.max(0, atualEq + delta);
+      }
+    });
+
+    if (typeof salvarDashboardMetricsStore === 'function') {
+      salvarDashboardMetricsStore();
+    }
+    if (typeof renderDashboards === 'function') {
+      renderDashboards();
+    }
+  }
+
   function excluirOcorrencia(id) {
     var targetId = id;
     var oc = ocorrencias.find(function(o){ return o && o.id === targetId; });
@@ -203,10 +266,26 @@
       saveLixeira(lixeiraData);
       salvarItemLixeiraNuvem(itemLixeira);
 
-      // 3. Remove do array de ocorrências ativas e arquivadas imediatamente (estritamente por ID!)
+      // Se for um Relatório CTRS sendo movido para a Lixeira, reverte os contadores de Conforme/Não Conforme no Dashboard de Transmissões
+      var idsOcsVinculadasRelatorio = [];
+      if (hist) {
+        ajustarMetricasDashboardPorRelatorioCTRS(hist, -1);
+        var dadosCtrsVinc = extrairDadosCTRSDeItemHistorico(hist);
+        if (dadosCtrsVinc && Array.isArray(dadosCtrsVinc.idsOcorrenciasGeradas)) {
+          idsOcsVinculadasRelatorio = dadosCtrsVinc.idsOcorrenciasGeradas;
+          idsOcsVinculadasRelatorio.forEach(function(ocIdVinc) {
+            if (typeof DBService !== 'undefined' && DBService && typeof DBService.deleteRemote === 'function') {
+              DBService.deleteRemote('ocorrencias', ocIdVinc);
+            }
+          });
+        }
+      }
+
+      // 3. Remove do array de ocorrências ativas e arquivadas imediatamente (estritamente por ID ou vinculadas ao relatório!)
       ocorrencias = ocorrencias.filter(function(o){
         if (!o) return false;
         if (o.id === idParaSalvar || o.id === targetId) return false;
+        if (idsOcsVinculadasRelatorio.indexOf(o.id) !== -1) return false;
         return true;
       });
 
@@ -256,8 +335,9 @@
         save(ocorrencias);
       }
       if (item.histOriginal) {
+        ajustarMetricasDashboardPorRelatorioCTRS(item.histOriginal, 1);
         historicoSeedData = [item.histOriginal].concat(historicoSeedData.filter(function(h){ return h && h.id !== id; }));
-        saveHistorico(historicoSeedData);
+        saveHistorico(historicoSeedData, item.histOriginal);
       }
     }
 
@@ -305,7 +385,7 @@
       }
 
       var oc = item.ocOriginal || {};
-      var desc = oc.desc || (item.histOriginal ? item.histOriginal.descCriacao : 'Sem descrição.');
+      var desc = String(oc.desc || (item.histOriginal ? item.histOriginal.descCriacao : 'Sem descrição.')).replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
       var local = oc.local || (item.histOriginal ? item.histOriginal.local : 'Central Técnica');
       var excluidoEmStr = formatDataHoraLocal(item.dataExclusao);
 
@@ -469,7 +549,7 @@
               '<span class="tag ' + tagClass(oc.prio) + '">' + (oc.prio || 'Média') + '</span>' +
               '<span class="tag tag-teal-soft">' + (oc.cat || 'Equipamento') + '</span>' +
             '</div>' +
-            '<p class="oc-desc">' + (oc.desc || '') + '</p>' +
+            '<p class="oc-desc">' + String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim() + '</p>' +
             resolucaoH +
             '<div class="oc-meta" style="margin-top:8px;">' +
               respH +
@@ -571,7 +651,8 @@
         descRes:   descResolucao,
         data:      Date.now(),
         resolvidoPor: usuarioLogado,
-        anexos:    anexosCombinados
+        anexos:    anexosCombinados,
+        historicoEdicoes: oc.historicoEdicoes || (oc.resolucao && oc.resolucao.historicoEdicoes) || []
       }
     });
     window.ocorrencias = ocorrencias;
@@ -593,6 +674,9 @@
       dataResolucao: nowStr,
       resolvidoPor:  usuarioLogado,
       descResolucao: descResolucao,
+      historicoEdicoes: oc.historicoEdicoes || (oc.resolucao && oc.resolucao.historicoEdicoes) || [],
+      htmlRelatorio: oc.htmlRelatorio || null,
+      dadosCTRS:     oc.dadosCTRS || null,
       tags:          tagsHist,
       anexos:        anexosCombinados,
       praca:         (typeof normalizarPracaOcorrencia === 'function')
