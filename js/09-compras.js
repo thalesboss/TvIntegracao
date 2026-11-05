@@ -1,7 +1,3 @@
-  /* ═══════════════════════════════════════════
-     REQUISIÇÃO DE COMPRAS E VENDAS
-  ═══════════════════════════════════════════ */
-
   function adicionarLinhaItemCompra() {
     var tbody = document.getElementById('req-itens-tbody');
     if (!tbody) return;
@@ -21,14 +17,12 @@
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.adicionarLinhaItemCompra = adicionarLinhaItemCompra;
-
   function removerLinhaItemCompra(btn) {
     var tr = btn.closest('tr');
     if (tr) tr.remove();
     try { salvarRascunhoCompra(true); } catch(e) {}
   }
   window.removerLinhaItemCompra = removerLinhaItemCompra;
-
   function salvarRascunhoCompra(silencioso) {
     try {
       var pracaEl       = document.getElementById('req-praca');
@@ -38,7 +32,6 @@
       var destinoEl     = document.getElementById('req-destino');
       var centroEl      = document.getElementById('req-centrocusto');
       var projetoEl     = document.getElementById('req-projeto');
-
       var itens = [];
       var tbody = document.getElementById('req-itens-tbody');
       if (tbody) {
@@ -59,7 +52,6 @@
           }
         });
       }
-
       var dados = {
         praca:       pracaEl ? pracaEl.value : '',
         carater:     caraterEl ? caraterEl.value : '',
@@ -77,14 +69,12 @@
     } catch (e) {}
   }
   window.salvarRascunhoCompra = salvarRascunhoCompra;
-
   function carregarRascunhoCompra() {
     try {
       var raw = localStorage.getItem('tv_compras_rascunho_v1');
       if (!raw) return;
       var dados = JSON.parse(raw);
       if (!dados) return;
-
       var pracaEl       = document.getElementById('req-praca');
       var caraterEl     = document.getElementById('req-carater');
       var solicitanteEl = document.getElementById('req-solicitante');
@@ -92,7 +82,6 @@
       var destinoEl     = document.getElementById('req-destino');
       var centroEl      = document.getElementById('req-centrocusto');
       var projetoEl     = document.getElementById('req-projeto');
-
       if (pracaEl && dados.praca !== undefined)             pracaEl.value = dados.praca;
       if (caraterEl && dados.carater !== undefined)         caraterEl.value = dados.carater;
       if (solicitanteEl && dados.solicitante !== undefined) solicitanteEl.value = dados.solicitante;
@@ -100,7 +89,6 @@
       if (destinoEl && dados.destino !== undefined)         destinoEl.value = dados.destino;
       if (centroEl && dados.centro !== undefined)           centroEl.value = dados.centro;
       if (projetoEl && dados.projeto !== undefined)         projetoEl.value = dados.projeto;
-
       if (Array.isArray(dados.itens) && dados.itens.length > 0) {
         var tbody = document.getElementById('req-itens-tbody');
         if (tbody) {
@@ -126,7 +114,6 @@
     } catch (e) {}
   }
   window.carregarRascunhoCompra = carregarRascunhoCompra;
-
   function limparFormularioCompras(confirmar) {
     if (confirmar && !confirm('Deseja realmente limpar a requisição de compras?')) {
       return;
@@ -157,7 +144,6 @@
     } catch (e) {}
   }
   window.limparFormularioCompras = limparFormularioCompras;
-
   function enviarRequisicaoCompra() {
     var nowStr = formatDataHoraLocal();
     var pracaEl       = document.getElementById('req-praca');
@@ -167,7 +153,6 @@
     var destinoEl     = document.getElementById('req-destino');
     var centroEl      = document.getElementById('req-centrocusto');
     var projetoEl     = document.getElementById('req-projeto');
-
     var praca       = pracaEl ? pracaEl.value : 'Juiz de Fora';
     var carater     = caraterEl ? caraterEl.value : 'Normal';
     var solicitante = (solicitanteEl && solicitanteEl.value.trim()) ? solicitanteEl.value.trim() : getUsuarioAtual();
@@ -175,18 +160,14 @@
     var destino     = destinoEl ? destinoEl.value.trim() : '';
     var centro      = centroEl ? centroEl.value : 'Manutenção Técnica - JF';
     var projeto     = projetoEl ? projetoEl.value.trim() : 'Padrão';
-
     if (!motivo || !destino) {
       alert('Por favor, preencha a Justificativa/Motivo e o Uso a que se destina antes de enviar.');
       return;
     }
-
-    /* Coleta itens com validação estrita de quantidade */
     var tbody = document.getElementById('req-itens-tbody');
     var linhas = tbody ? tbody.querySelectorAll('tr') : [];
     var itensResumo = [];
     var erroValidacao = false;
-
     linhas.forEach(function(tr) {
       var qInput = tr.querySelector('.item-quant');
       var dInput = tr.querySelector('.item-desc');
@@ -195,7 +176,6 @@
       var c = tr.querySelector('.item-cod') ? tr.querySelector('.item-cod').value.trim() : '';
       var f = tr.querySelector('.item-fab') ? tr.querySelector('.item-fab').value.trim() : '';
       var l = tr.querySelector('.item-link') ? tr.querySelector('.item-link').value.trim() : '';
-
       if (d || c || f || l || q) {
         if (!q || parseInt(q, 10) <= 0 || isNaN(parseInt(q, 10))) {
           erroValidacao = true;
@@ -209,7 +189,6 @@
         }
       }
     });
-
     if (erroValidacao) {
       if (typeof mostrarToast === 'function') {
         mostrarToast('Quantidade Obrigatória', 'Por favor, informe uma quantidade válida (número maior que 0) para o material solicitado.', 'warning');
@@ -218,12 +197,10 @@
       }
       return;
     }
-
     var titulo = 'Requisição de Compra — ' + praca + ' (' + carater + ')';
     var descCompleta = 'Justificativa: ' + motivo + '\n' +
                        'Itens: ' + (itensResumo.length > 0 ? itensResumo.join('; ') : 'Material/Equipamento solicitado') + '\n' +
                        'Aplicação: ' + destino + ' | Centro de Custo: ' + centro + ' | Projeto: ' + projeto;
-
     var novoHist = {
       id:            'h_req_' + Date.now(),
       tipo:          'compra',
@@ -241,23 +218,16 @@
       descResolucao: 'Solicitação registrada no sistema. Aguardando validação do chefe imediato para envio à gerência e compras.',
       praca:         praca
     };
-
     historicoSeedData = [novoHist].concat(historicoSeedData);
     saveHistorico(historicoSeedData, novoHist);
-
-    // Limpa o rascunho e o formulário para a próxima requisição
     limparFormularioCompras(false);
-
     renderAll();
-
     if (typeof adicionarNotificacao === 'function') {
       adicionarNotificacao('Requisição de Compra Enviada', titulo + ' cadastrada para aprovação.', 'success');
     }
-
     alert('Requisição de Compra cadastrada com sucesso no Histórico!\n\nNota: A função de envio por e-mail ainda não está disponível.');
   }
   window.enviarRequisicaoCompra = enviarRequisicaoCompra;
-
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-compras', salvarRascunhoCompra);
   }

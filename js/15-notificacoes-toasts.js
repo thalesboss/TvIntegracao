@@ -1,14 +1,8 @@
-  /* ═══════════════════════════════════════════
-     SISTEMA DE TOAST NOTIFICATIONS & CENTRAL DE ALERTAS
-  ═══════════════════════════════════════════ */
-
   var NOTIF_STORAGE_KEY = 'tv_notificacoes_v2';
   var NOTIF_DISMISSED_KEY = 'tv_notificacoes_dismissed_v2';
   var notificacoesStore = [];
   var notificacoesDispensadas = [];
-
   var INITIAL_NOTIFICACOES_SEED = [];
-
   function getNotifDBCredentials() {
     var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
     var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
@@ -20,14 +14,12 @@
     }
     return { url: url ? url.replace(/\/+$/, '') : '', key: key };
   }
-
   function salvarDispensadas() {
     window.notificacoesDispensadas = notificacoesDispensadas;
     try {
       localStorage.setItem(NOTIF_DISMISSED_KEY, JSON.stringify(notificacoesDispensadas));
     } catch(e) {}
   }
-
   function loadNotificacoes() {
     try {
       var savedDisp = localStorage.getItem(NOTIF_DISMISSED_KEY);
@@ -36,7 +28,6 @@
     } catch(e) {
       notificacoesDispensadas = [];
     }
-
     try {
       var saved = localStorage.getItem(NOTIF_STORAGE_KEY);
       notificacoesStore = saved ? JSON.parse(saved) : [];
@@ -44,13 +35,11 @@
     } catch(e) {
       notificacoesStore = [];
     }
-
     window.notificacoesStore = notificacoesStore;
     window.notificacoesDispensadas = notificacoesDispensadas;
     atualizarBadgesNotificacoes();
     sincronizarNotificacoesNuvem();
   }
-
   function saveNotificacoes() {
     window.notificacoesStore = notificacoesStore;
     try {
@@ -58,11 +47,9 @@
     } catch(e) {}
     atualizarBadgesNotificacoes();
   }
-
   function sincronizarNotificacoesNuvem() {
     var db = getNotifDBCredentials();
     if (!db.url || !db.key) return;
-
     fetch(db.url + '/rest/v1/notificacoes?select=*&order=id.desc&limit=50', {
       headers: {
         'apikey': db.key,
@@ -85,11 +72,9 @@
     .catch(function() {});
   }
   window.sincronizarNotificacoesNuvem = sincronizarNotificacoesNuvem;
-
   function salvarNotificacaoNuvem(notif) {
     var db = getNotifDBCredentials();
     if (!db.url || !db.key || !notif) return;
-
     fetch(db.url + '/rest/v1/notificacoes', {
       method: 'POST',
       headers: {
@@ -102,7 +87,6 @@
     }).catch(function() {});
   }
   window.salvarNotificacaoNuvem = salvarNotificacaoNuvem;
-
   function marcarTodasLidasNuvem() {
     var db = getNotifDBCredentials();
     if (!db.url || !db.key) return;
@@ -118,7 +102,6 @@
     }).catch(function() {});
   }
   window.marcarTodasLidasNuvem = marcarTodasLidasNuvem;
-
   function deletarNotificacaoNuvem(id) {
     var db = getNotifDBCredentials();
     if (!db.url || !db.key || !id) return;
@@ -132,7 +115,6 @@
     }).catch(function() {});
   }
   window.deletarNotificacaoNuvem = deletarNotificacaoNuvem;
-
   function deletarTodasNotificacoesNuvem() {
     var db = getNotifDBCredentials();
     if (!db.url || !db.key) return;
@@ -146,14 +128,11 @@
     }).catch(function() {});
   }
   window.deletarTodasNotificacoesNuvem = deletarTodasNotificacoesNuvem;
-
   function mostrarToast(titulo, mensagem, tipo) {
     var container = document.getElementById('toast-container');
     if (!container) return;
-
     var toastType = tipo || 'info';
     var iconName = toastType === 'success' ? 'check-circle' : (toastType === 'warning' || toastType === 'warn') ? 'alert-triangle' : (toastType === 'danger' || toastType === 'error') ? 'alert-circle' : 'info';
-
     var toastEl = document.createElement('div');
     toastEl.className = 'toast toast-' + toastType;
     toastEl.innerHTML =
@@ -163,23 +142,18 @@
         '<div class="toast-msg">' + (mensagem || '') + '</div>' +
       '</div>' +
       '<button class="toast-close" type="button" aria-label="Fechar notificação">&times;</button>';
-
     function fecharComAnimacao() {
       toastEl.classList.add('toast-exit');
       setTimeout(function() {
         if (toastEl.parentNode) toastEl.remove();
       }, 380);
     }
-
     var closeBtn = toastEl.querySelector('.toast-close');
     if (closeBtn) {
       closeBtn.onclick = fecharComAnimacao;
     }
-
     container.appendChild(toastEl);
     if (typeof lucide !== 'undefined') lucide.createIcons();
-
-    /* Remove automaticamente com física de transição suave em 4.5s */
     setTimeout(function() {
       if (toastEl.parentNode) {
         fecharComAnimacao();
@@ -187,12 +161,10 @@
     }, 4500);
   }
   window.mostrarToast = mostrarToast;
-
   function adicionarNotificacao(titulo, mensagem, tipo, exibirToast, chaveAutomatica) {
     if (chaveAutomatica && Array.isArray(notificacoesDispensadas) && notificacoesDispensadas.includes(chaveAutomatica)) {
       return;
     }
-
     var novaNotif = {
       id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
       titulo: titulo || 'Notificação do Sistema',
@@ -203,11 +175,9 @@
       chaveAutomatica: chaveAutomatica || null,
       praca: (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora'
     };
-
     var jaExiste = (notificacoesStore || []).some(function(n) {
       return n && ((chaveAutomatica && n.chaveAutomatica === chaveAutomatica) || (n.titulo === titulo && n.msg === mensagem));
     });
-
     if (!jaExiste) {
       notificacoesStore.unshift(novaNotif);
       saveNotificacoes();
@@ -218,7 +188,6 @@
     }
   }
   window.adicionarNotificacao = adicionarNotificacao;
-
   function removerNotificacao(id) {
     var notif = (notificacoesStore || []).find(function(n){ return n && n.id === id; });
     if (notif && notif.chaveAutomatica) {
@@ -233,12 +202,10 @@
     renderNotificacoes();
   }
   window.removerNotificacao = removerNotificacao;
-
   function atualizarBadgesNotificacoes() {
     var badgeSidebar = document.querySelector('.notif-badge');
     var notifDot = document.querySelector('.notif-dot');
     var naoLidas = (notificacoesStore || []).filter(function(n){ return n && !n.lida; }).length;
-
     if (badgeSidebar) {
       if (naoLidas > 0) {
         badgeSidebar.textContent = naoLidas;
@@ -252,10 +219,8 @@
       notifDot.style.display = naoLidas > 0 ? 'block' : 'none';
     }
   }
-
   function verificarNotificacoesAutomaticas() {
     var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
-    // 1. Ocorrências com prazo expirado (ignora seeds demonstrativas)
     (ocorrencias || []).forEach(function(oc) {
       if (oc && oc.status === 'aberta' && !String(oc.id).startsWith('oc_init_') && !idsNaLixeira.includes(oc.id) && isOcorrenciaVencida(oc)) {
         var chaveOc = 'vencida_' + oc.id + '_' + (oc.prazo || '');
@@ -264,8 +229,6 @@
         adicionarNotificacao(tit, msg, 'warning', false, chaveOc);
       }
     });
-
-    // 2. Ocorrências arquivadas pendentes para o turno (ignora seeds demonstrativas)
     var arquivadas = getArquivadas().filter(function(oc){ return !String(oc.id).startsWith('oc_init_') && !idsNaLixeira.includes(oc.id); });
     if (arquivadas.length > 0) {
       var chaveArq = 'arq_status_' + arquivadas.map(function(a){ return a.id; }).sort().join('_');
@@ -275,16 +238,13 @@
     }
   }
   window.verificarNotificacoesAutomaticas = verificarNotificacoesAutomaticas;
-
   function renderNotificacoes() {
     var container = document.getElementById('notif-list-body');
     atualizarBadgesNotificacoes();
     if (!container) return;
-
     var daPraca = (notificacoesStore || []).filter(function(n) {
       return n && (typeof pertenceAPracaAtiva !== 'function' || pertenceAPracaAtiva(n));
     });
-
     if (daPraca.length === 0) {
       container.innerHTML =
         '<div style="text-align:center;padding:32px 16px;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-md);">' +
@@ -295,18 +255,15 @@
       if (typeof lucide !== 'undefined') lucide.createIcons();
       return;
     }
-
     container.innerHTML = daPraca.map(function(n) {
       var isWarning = n.tipo === 'warning' || n.tipo === 'warn';
       var isDanger  = n.tipo === 'danger'  || n.tipo === 'error';
       var isSuccess = n.tipo === 'success' || n.tipo === 'ok';
-
       var bgCor     = isDanger ? '#FEF2F2' : isWarning ? '#FFFBEB' : isSuccess ? '#F0FDF4' : '#EFF6FF';
       var borderCor = isDanger ? '#FECACA' : isWarning ? '#FDE68A' : isSuccess ? '#BBF7D0' : '#BFDBFE';
       var txtCor    = isDanger ? '#DC2626' : isWarning ? '#D97706' : isSuccess ? '#16A34A' : '#2563EB';
       var icoNome   = isDanger ? 'alert-circle' : isWarning ? 'alert-triangle' : isSuccess ? 'check-circle-2' : 'info';
       var unreadBadge = !n.lida ? '<span class="tag tag-blue" style="font-size:9.5px;padding:1px 6px;margin-left:6px;font-weight:600;">Nova</span>' : '';
-
       return (
         '<div style="background:' + bgCor + ';border:1px solid ' + borderCor + ';border-radius:var(--r-md);padding:10px 12px;display:flex;gap:10px;align-items:flex-start;position:relative;">' +
           '<div style="color:' + txtCor + ';margin-top:1px;"><i data-lucide="' + icoNome + '" style="width:16px;height:16px;stroke-width:2.2;"></i></div>' +
@@ -323,11 +280,9 @@
         '</div>'
       );
     }).join('');
-
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.renderNotificacoes = renderNotificacoes;
-
   function abrirNotificacoes() {
     var teveNaoLidas = false;
     (notificacoesStore || []).forEach(function(n){
@@ -346,9 +301,7 @@
     }
   }
   window.abrirNotificacoes = abrirNotificacoes;
-
   function limparTodasNotificacoes() {
-    // 1. Marca todas as notificações atuais como dispensadas para que o robô não as recrie
     var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
     (ocorrencias || []).forEach(function(oc) {
       if (oc && oc.status === 'aberta' && !idsNaLixeira.includes(oc.id)) {
@@ -358,7 +311,6 @@
         }
       }
     });
-
     var arquivadas = getArquivadas().filter(function(oc){ return !idsNaLixeira.includes(oc.id); });
     if (arquivadas.length > 0) {
       var chaveArq = 'arq_status_' + arquivadas.map(function(a){ return a.id; }).sort().join('_');
@@ -366,14 +318,12 @@
         notificacoesDispensadas.push(chaveArq);
       }
     }
-
     (notificacoesStore || []).forEach(function(n) {
       if (n && n.chaveAutomatica && !notificacoesDispensadas.includes(n.chaveAutomatica)) {
         notificacoesDispensadas.push(n.chaveAutomatica);
       }
     });
     salvarDispensadas();
-
     notificacoesStore = [];
     saveNotificacoes();
     deletarTodasNotificacoesNuvem();

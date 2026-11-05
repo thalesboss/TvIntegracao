@@ -1,69 +1,43 @@
-/* ═══════════════════════════════════════════
-   RELATÓRIO DIÁRIO — TECNOLOGIA UDI (RONDA TÉCNICA)
-   Módulo exclusivo da praça de Uberlândia para acompanhamento de
-   Centro Exibidor, Transmissores, Recepção Satélite, CPA, Central e Energia.
-═══════════════════════════════════════════ */
-
 (function () {
   var RONDA_DRAFT_KEY = 'tv_rascunho_ronda_udi_v1';
-
   var RONDA_ITEMS = [
-    // Centro Exibidor
     { id: 'exib_signa',      secao: 'exibidor',     nome: 'SIGNA (Automação / Exibição)' },
     { id: 'exib_smartware',  secao: 'exibidor',     nome: 'SMARTWARE' },
     { id: 'exib_multiview',  secao: 'exibidor',     nome: 'MULTIVIEW' },
     { id: 'exib_clearcom',   secao: 'exibidor',     nome: 'CLEARCOM (Intercomunicação)' },
     { id: 'exib_globoplay',  secao: 'exibidor',     nome: 'GLOBOPLAY (Sinal OTT)' },
-
-    // Transmissor & RF
     { id: 'trans_temp',      secao: 'transmissor',  nome: 'TEMPERATURA DO TRANSMISSOR' },
-
-    // Receptores de Satélite
     { id: 'sat_rede_tit',    secao: 'satelite',     nome: 'SAT REDE TIT' },
     { id: 'sat_sp_tit',      secao: 'satelite',     nome: 'SAT SP TIT' },
     { id: 'sat_bh_tit',      secao: 'satelite',     nome: 'SAT BH TIT' },
     { id: 'sat_eventos',     secao: 'satelite',     nome: 'SAT EVENTOS' },
-
-    // Rotas de Contribuição e Recepção
     { id: 'rota_makito',     secao: 'rotas',        nome: 'SRT (MAKITO)' },
     { id: 'rota_mpls',       secao: 'rotas',        nome: 'SINAIS VIA MPLS' },
     { id: 'rota_l2l',        secao: 'rotas',        nome: 'SINAIS VIA L2L' },
-
-    // Central Técnica
     { id: 'ct_frames',       secao: 'central',      nome: 'FRAMES' },
     { id: 'ct_multiview',    secao: 'central',      nome: 'MULTIVIEW' },
     { id: 'ct_clearcom',     secao: 'central',      nome: 'CLEARCOM' },
     { id: 'ct_temp',         secao: 'central',      nome: 'TEMPERATURA CENTRAL' },
-
-    // CPA (Controle de Produção e Áudio)
     { id: 'cpa_frames',      secao: 'cpa',          nome: 'FRAMES CPA' },
     { id: 'cpa_multiview',   secao: 'cpa',          nome: 'MULTIVIEW CPA' },
     { id: 'cpa_retorno',     secao: 'cpa',          nome: 'RETORNO VIVOS' },
     { id: 'cpa_mochilinks',  secao: 'cpa',          nome: 'MOCHILINKS (LiveU / Links)' },
-
-    // Cadeia Satélite (Uplink)
     { id: 'sat_mux',         secao: 'cadeia_sat',   nome: 'MUX' },
     { id: 'sat_modulador',   secao: 'cadeia_sat',   nome: 'MODULADOR' },
     { id: 'sat_encoder',     secao: 'cadeia_sat',   nome: 'ENCODER' },
     { id: 'sat_buc',         secao: 'cadeia_sat',   nome: 'BUC (Block Upconverter)' },
-
-    // Infraestrutura e Energia
     { id: 'eng_gerador',     secao: 'energia',      nome: 'GERADOR' },
     { id: 'eng_nobreak',     secao: 'energia',      nome: 'NO-BREAK' }
   ];
-
   window.RONDA_ITEMS_UDI = RONDA_ITEMS;
-
   function setRondaStatus(btn, status) {
     if (!btn) return;
     var group = btn.closest('.ronda-toggle-group');
     if (!group) return;
     var parentItem = btn.closest('.ronda-item');
-
     var buttons = group.querySelectorAll('.ronda-btn-pill');
     buttons.forEach(function (b) { b.classList.remove('active'); });
     btn.classList.add('active');
-
     if (parentItem) {
       if (status === 'nc') {
         parentItem.classList.add('has-nc');
@@ -71,16 +45,13 @@
         parentItem.classList.remove('has-nc');
       }
     }
-
     verificarNaoConformidadesRonda();
     salvarRascunhoRondaDebounced();
   }
   window.setRondaStatus = setRondaStatus;
-
   function marcarTudoConformeRonda() {
     var container = document.getElementById('page-ronda');
     if (!container) return;
-
     var confButtons = container.querySelectorAll('.ronda-btn-pill.conf');
     confButtons.forEach(function (btn) {
       var group = btn.closest('.ronda-toggle-group');
@@ -91,45 +62,35 @@
       var parentItem = btn.closest('.ronda-item');
       if (parentItem) parentItem.classList.remove('has-nc');
     });
-
     verificarNaoConformidadesRonda();
     salvarRascunhoRondaDebounced();
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Ronda Técnica', 'Todos os sistemas marcados como Conforme.', 'success');
     }
   }
   window.marcarTudoConformeRonda = marcarTudoConformeRonda;
-
   function limparFormularioRonda() {
     var container = document.getElementById('page-ronda');
     if (!container) return;
-
     if (!confirm('Deseja limpar todos os campos do Relatório Diário de Tecnologia?')) return;
-
     container.querySelectorAll('.ronda-btn-pill').forEach(function (btn) {
       btn.classList.remove('active');
     });
     container.querySelectorAll('.ronda-item').forEach(function (it) {
       it.classList.remove('has-nc');
     });
-
     var numInputs = container.querySelectorAll('input[type="number"], textarea');
     numInputs.forEach(function (inp) { inp.value = ''; });
-
     try { localStorage.removeItem(RONDA_DRAFT_KEY); } catch(e) {}
     verificarNaoConformidadesRonda();
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Formulário Limpo', 'Os campos foram reiniciados.', 'info');
     }
   }
   window.limparFormularioRonda = limparFormularioRonda;
-
   function obterNaoConformidadesRonda() {
     var container = document.getElementById('page-ronda');
     if (!container) return [];
-
     var ncs = [];
     var ncButtons = container.querySelectorAll('.ronda-btn-pill.nc.active');
     ncButtons.forEach(function (btn) {
@@ -143,15 +104,12 @@
     return ncs;
   }
   window.obterNaoConformidadesRonda = obterNaoConformidadesRonda;
-
   function verificarNaoConformidadesRonda() {
     var ncs = obterNaoConformidadesRonda();
     var banner = document.getElementById('ronda-nc-alert');
     var badge = document.getElementById('ronda-nc-count-badge');
     var listTxt = document.getElementById('ronda-nc-list-txt');
-
     if (!banner) return;
-
     if (ncs.length > 0) {
       banner.style.display = 'flex';
       if (badge) badge.textContent = ncs.length + (ncs.length === 1 ? ' não conformidade' : ' não conformidades');
@@ -163,7 +121,6 @@
     }
   }
   window.verificarNaoConformidadesRonda = verificarNaoConformidadesRonda;
-
   function gerarOcorrenciaNaoConformidadesRonda() {
     var ncs = obterNaoConformidadesRonda();
     if (ncs.length === 0) {
@@ -172,13 +129,11 @@
       }
       return;
     }
-
     var nomesStr = ncs.map(function (n) { return n.nome; }).join(', ');
     var descAuto = 'Não conformidade técnica registrada na Ronda Diária de Tecnologia (Uberlândia) pelo operador ' +
       getUsuarioAtual() + ' em ' + formatDataHoraLocal() + '.\n\nSistemas afetados:\n- ' +
       ncs.map(function (n) { return n.nome; }).join('\n- ') +
       '\n\nFavor verificar parâmetros e atuar na normalização dos equipamentos.';
-
     var popNova = document.getElementById('popup-nova-oc');
     if (popNova && typeof abrirPopup === 'function') {
       abrirPopup('popup-nova-oc');
@@ -187,7 +142,6 @@
       var locEl = document.getElementById('nova-local');
       var descEl = document.getElementById('nova-desc');
       var prioEl = document.getElementById('nova-prio');
-
       if (titEl) titEl.value = 'Falha / Anomalia na Ronda UDI: ' + (ncs[0] ? ncs[0].nome : 'Sistemas');
       if (catEl) catEl.value = 'Equipamento';
       if (locEl) locEl.value = 'Uberlândia — Central / Transmissor';
@@ -197,7 +151,6 @@
     }
   }
   window.gerarOcorrenciaNaoConformidadesRonda = gerarOcorrenciaNaoConformidadesRonda;
-
   function salvarRelatorioRonda() {
     var dataEl = document.getElementById('ronda-data');
     var obsEl  = document.getElementById('ronda-obs');
@@ -206,7 +159,6 @@
     var satRedeDb = document.getElementById('ronda-sat-rede-db');
     var satBhDb   = document.getElementById('ronda-sat-bh-db');
     var satSpDb   = document.getElementById('ronda-sat-sp-db');
-
     var dataVal = (dataEl && dataEl.value) ? dataEl.value : (new Date().toISOString().split('T')[0]);
     var obsVal  = obsEl ? obsEl.value.trim() : '';
     var potVal  = potEl ? potEl.value.trim() : '';
@@ -214,8 +166,6 @@
     var ncs     = obterNaoConformidadesRonda();
     var usuario = getUsuarioAtual();
     var nowFmt  = formatDataHoraLocal();
-
-    // Mapeamento dos status de todos os itens
     var statusMap = {};
     RONDA_ITEMS.forEach(function (item) {
       var group = document.querySelector('.ronda-toggle-group[data-item-id="' + item.id + '"]');
@@ -228,7 +178,6 @@
         }
       }
     });
-
     var resumoItens = [];
     if (potVal) resumoItens.push('Potência: ' + potVal + ' W (Refletida: ' + (refVal || '0') + ' W)');
     if (satRedeDb && satRedeDb.value) resumoItens.push('SAT Rede C/N: ' + satRedeDb.value + ' dB');
@@ -237,11 +186,9 @@
     } else {
       resumoItens.push('✅ Todos os 26 sistemas avaliados em conformidade operacional.');
     }
-
     var descFinal = 'Relatório diário de tecnologia e ronda de infraestrutura executado em Uberlândia.\n\n' +
       resumoItens.join('\n') +
       (obsVal ? ('\n\nObservações do plantão:\n' + obsVal) : '');
-
     var novoRelatorio = {
       id:            'rel_udi_' + Date.now(),
       tipo:          'relatorio',
@@ -270,26 +217,17 @@
         obs: obsVal
       }
     };
-
-    // 1. Salvar no histórico de Uberlândia
     if (Array.isArray(window.historicoSeedData)) {
       window.historicoSeedData = [novoRelatorio].concat(window.historicoSeedData);
       if (typeof saveHistorico === 'function') {
         saveHistorico(window.historicoSeedData, novoRelatorio);
       }
     }
-
-    // 2. Limpar rascunho
     try { localStorage.removeItem(RONDA_DRAFT_KEY); } catch(e) {}
-
-    // 3. Notificar sucesso e re-renderizar histórico
     if (typeof renderAll === 'function') renderAll(true);
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Relatório Registrado', 'Relatório Diário de Tecnologia UDI gravado no Histórico com sucesso!', 'success');
     }
-
-    // 4. Se houver NC, sugerir abrir ocorrência
     if (ncs.length > 0) {
       setTimeout(function () {
         if (confirm('O relatório foi salvo contendo ' + ncs.length + ' não conformidade(s).\n\nDeseja registrar uma ocorrência no Dashboard agora?')) {
@@ -299,18 +237,14 @@
     }
   }
   window.salvarRelatorioRonda = salvarRelatorioRonda;
-
-  /* ── Rascunho Automático Local (Autosave para não perder nada ao fechar ou atualizar) ── */
   var saveDraftTimeout = null;
   function salvarRascunhoRondaDebounced() {
     clearTimeout(saveDraftTimeout);
     saveDraftTimeout = setTimeout(salvarRascunhoRonda, 400);
   }
-
   function salvarRascunhoRonda() {
     var container = document.getElementById('page-ronda');
     if (!container) return;
-
     var statusMap = {};
     RONDA_ITEMS.forEach(function (item) {
       var group = container.querySelector('.ronda-toggle-group[data-item-id="' + item.id + '"]');
@@ -319,7 +253,6 @@
         if (active) statusMap[item.id] = active.classList.contains('nc') ? 'nc' : 'conf';
       }
     });
-
     var draft = {
       data: document.getElementById('ronda-data') ? document.getElementById('ronda-data').value : '',
       obs: document.getElementById('ronda-obs') ? document.getElementById('ronda-obs').value : '',
@@ -330,34 +263,26 @@
       satSp: document.getElementById('ronda-sat-sp-db') ? document.getElementById('ronda-sat-sp-db').value : '',
       status: statusMap
     };
-
     try {
       localStorage.setItem(RONDA_DRAFT_KEY, JSON.stringify(draft));
     } catch(e) {}
   }
-
   function carregarRascunhoRonda() {
     var container = document.getElementById('page-ronda');
     if (!container) return;
-
-    // Atualiza data atual se vazia
     var dataEl = document.getElementById('ronda-data');
     if (dataEl && !dataEl.value) {
       dataEl.value = new Date().toISOString().split('T')[0];
     }
-
-    // Atualiza nome do operador se vazio
     var opEl = document.getElementById('ronda-operador-badge');
     if (opEl) {
       opEl.textContent = getUsuarioAtual();
     }
-
     try {
       var raw = localStorage.getItem(RONDA_DRAFT_KEY);
       if (!raw) return;
       var draft = JSON.parse(raw);
       if (!draft) return;
-
       if (draft.data && dataEl) dataEl.value = draft.data;
       if (draft.obs && document.getElementById('ronda-obs')) document.getElementById('ronda-obs').value = draft.obs;
       if (draft.pot && document.getElementById('ronda-pot-direta')) document.getElementById('ronda-pot-direta').value = draft.pot;
@@ -365,7 +290,6 @@
       if (draft.satRede && document.getElementById('ronda-sat-rede-db')) document.getElementById('ronda-sat-rede-db').value = draft.satRede;
       if (draft.satBh && document.getElementById('ronda-sat-bh-db')) document.getElementById('ronda-sat-bh-db').value = draft.satBh;
       if (draft.satSp && document.getElementById('ronda-sat-sp-db')) document.getElementById('ronda-sat-sp-db').value = draft.satSp;
-
       if (draft.status && typeof draft.status === 'object') {
         Object.keys(draft.status).forEach(function (id) {
           var val = draft.status[id];
@@ -388,19 +312,12 @@
     } catch(e) {}
   }
   window.carregarRascunhoRonda = carregarRascunhoRonda;
-
-  // Registrar listeners de input para autosave nos campos numéricos
   document.addEventListener('DOMContentLoaded', function () {
     var container = document.getElementById('page-ronda');
     if (container) {
       container.addEventListener('input', salvarRascunhoRondaDebounced);
     }
   });
-
-  /* ═══════════════════════════════════════════════════════════
-     VISÃO GERAL ANALÍTICA & MÉTRICAS COM GRÁFICOS (ESTILO FORMS)
-  ═══════════════════════════════════════════════════════════ */
-
   function calcularMetricasRondaUdi() {
     var relatorios = [];
     if (Array.isArray(window.historicoSeedData)) {
@@ -408,9 +325,7 @@
         return h && (h.subtipo === 'Tecnologia UDI' || (h.detalhesRonda && h.praca === 'Uberlândia'));
       });
     }
-
     var totalGeral = relatorios.length;
-
     var turnos = [
       { id: 't1', label: '00h00 - 06h00', count: 0, cor: '#6366F1' },
       { id: 't2', label: '06h00 - 12h00', count: 0, cor: '#EC4899' },
@@ -418,12 +333,10 @@
       { id: 't4', label: '18h00 - 00h00', count: 0, cor: '#10B981' },
       { id: 't5', label: 'Outra',          count: 0, cor: '#F59E0B' }
     ];
-
     var statusStats = {};
     RONDA_ITEMS.forEach(function(item) {
       statusStats[item.id] = { conf: 0, nc: 0, total: 0 };
     });
-
     var datasRecentes = [];
     var naoConformidades = [];
     var potencias = [];
@@ -431,15 +344,12 @@
     var satRedeVals = [];
     var satBhVals = [];
     var satSpVals = [];
-
     relatorios.forEach(function(r) {
       var d = r.detalhesRonda || {};
-
       var dataR = d.data || (r.dataCriacao ? r.dataCriacao.split(' ')[0] : '');
       if (dataR && datasRecentes.indexOf(dataR) === -1) {
         datasRecentes.push(dataR);
       }
-
       if (r.dataCriacao) {
         var parts = r.dataCriacao.split(' ');
         var hora = parseInt(parts[1] || '12', 10);
@@ -449,7 +359,6 @@
         else if (hora >= 18) turnos[3].count++;
         else turnos[4].count++;
       }
-
       if (d.statusSistemas && typeof d.statusSistemas === 'object') {
         Object.keys(d.statusSistemas).forEach(function(id) {
           if (!statusStats[id]) statusStats[id] = { conf: 0, nc: 0, total: 0 };
@@ -459,7 +368,6 @@
           else statusStats[id].conf++;
         });
       }
-
       if (d.potenciaW) {
         var pNum = parseFloat(d.potenciaW);
         if (!isNaN(pNum)) potencias.push(pNum);
@@ -468,7 +376,6 @@
         var rNum = parseFloat(d.refletidaW);
         if (!isNaN(rNum)) refletidas.push(rNum);
       }
-
       if (d.satRedeDb) {
         var sNum = parseFloat(d.satRedeDb);
         if (!isNaN(sNum)) satRedeVals.push(sNum);
@@ -481,7 +388,6 @@
         var spNum = parseFloat(d.satSpDb);
         if (!isNaN(spNum)) satSpVals.push(spNum);
       }
-
       if (d.naoConformidades && Array.isArray(d.naoConformidades)) {
         d.naoConformidades.forEach(function(nc) {
           naoConformidades.push('DATA: ' + (dataR || 'Recente') + ' - ' + nc);
@@ -491,7 +397,6 @@
         naoConformidades.push('DATA: ' + (dataR || 'Recente') + ' - Obs: ' + d.obs);
       }
     });
-
     var statusMap = {};
     RONDA_ITEMS.forEach(function(item) {
       var s = statusStats[item.id] || { conf: 0, nc: 0, total: 0 };
@@ -505,20 +410,17 @@
         statusMap[item.id] = { conf: 0, nc: 0, total: 0 };
       }
     });
-
     function calcMedia(arr) {
       if (!arr || arr.length === 0) return null;
       var sum = 0;
       arr.forEach(function(v){ sum += v; });
       return sum / arr.length;
     }
-
     var potMedia = calcMedia(potencias);
     var refMedia = calcMedia(refletidas);
     var satRedeMedia = calcMedia(satRedeVals);
     var satBhMedia = calcMedia(satBhVals);
     var satSpMedia = calcMedia(satSpVals);
-
     return {
       total: totalGeral,
       tempoMedio: totalGeral > 0 ? '12:00' : '--',
@@ -539,17 +441,14 @@
       satSpRecentes: satSpVals.slice(-3).reverse().map(function(v){ return String(v); })
     };
   }
-
   function gerarDonutSvg(turnos, total) {
     var size = 150;
     var center = size / 2;
     var radius = 50;
     var stroke = 22;
     var circ = 2 * Math.PI * radius;
-
     var sum = 0;
     turnos.forEach(function(t){ sum += t.count; });
-
     if (sum === 0) {
       return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '" style="overflow:visible;flex-shrink:0;">\n' +
         '<circle cx="' + center + '" cy="' + center + '" r="' + radius + '" fill="transparent" stroke="#E2E8F0" stroke-width="' + stroke + '" />\n' +
@@ -557,7 +456,6 @@
         '<text x="' + center + '" y="' + (center + 4) + '" text-anchor="middle" font-size="10" font-weight="800" fill="#94A3B8">0 RESPOSTAS</text>\n' +
         '</svg>';
     }
-
     var offset = 0;
     var circlesHtml = '';
     turnos.forEach(function(t) {
@@ -571,14 +469,12 @@
         'transform="rotate(-90 ' + center + ' ' + center + ')" />\n';
       offset += dash;
     });
-
     return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '" style="overflow:visible;flex-shrink:0;">\n' +
       circlesHtml +
       '<circle cx="' + center + '" cy="' + center + '" r="' + (radius - stroke/2 - 2) + '" fill="#FFFFFF" />\n' +
       '<text x="' + center + '" y="' + (center + 4) + '" text-anchor="middle" font-size="10" font-weight="800" fill="#0F172A">TURNOS</text>\n' +
       '</svg>';
   }
-
   function gerarLinhasBarrasConformidade(itens, statusStats) {
     var html = '<div class="vg-bar-list">';
     itens.forEach(function(item) {
@@ -600,14 +496,10 @@
     html += '</div>';
     return html;
   }
-
   function abrirVisaoGeralRondaUdi() {
     var contEl = document.getElementById('popup-visao-geral-ronda-content');
     if (!contEl) return;
-
     var m = calcularMetricasRondaUdi();
-
-    // Filtra itens por seção
     var exibItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'exibidor'; });
     var transItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'transmissor'; });
     var satItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'satelite'; });
@@ -616,13 +508,9 @@
     var cpaItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'cpa'; });
     var satCadItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'cadeia_sat'; });
     var engItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'energia'; });
-
     var totalTurnos = 0;
     m.turnos.forEach(function(t){ totalTurnos += t.count; });
-
     var html = '';
-
-    // 1. CARDS DO TOPO
     html += '<div class="vg-top-cards">' +
       '<div class="vg-stat-box">' +
         '<div class="vg-stat-lbl"><span>Total de Respostas</span><i data-lucide="users" style="width:16px;height:16px;color:#3B82F6;"></i></div>' +
@@ -637,12 +525,9 @@
         '<div class="vg-stat-num">' + m.duracao + '</div>' +
       '</div>' +
     '</div>';
-
-    // 2. DIA TRABALHADO
     var recentesHtml = m.datasRecentes.length > 0
       ? m.datasRecentes.map(function(d){ return '<div class="vg-recent-item">📅 &quot;' + d + '&quot;</div>'; }).join('')
       : '<div class="vg-recent-item" style="color:#94A3B8;font-style:italic;">Nenhuma resposta registrada ainda</div>';
-
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">1. DIA TRABALHADO:</div>' +
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;">' +
@@ -656,8 +541,6 @@
         '</div>' +
       '</div>' +
     '</div>';
-
-    // 3. TURNO TRABALHADO (DONUT)
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">2. TURNO TRABALHADO:</div>' +
       '<div style="display:flex;align-items:center;justify-content:space-around;flex-wrap:wrap;gap:20px;">' +
@@ -676,36 +559,26 @@
         '</div>' +
       '</div>' +
     '</div>';
-
-    // Legenda global de conformidade
     var legendaHtml = '<div class="vg-legend">' +
       '<span><span class="vg-legend-dot" style="background:#E06A3B;"></span> CONFORME</span>' +
       '<span><span class="vg-legend-dot" style="background:#3B82F6;"></span> NÃO CONFORME</span>' +
     '</div>';
-
-    // 4. CENTRO EXIBIDOR
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">3. CENTRO EXIBIDOR:</div>' +
       legendaHtml +
       gerarLinhasBarrasConformidade(exibItens, m.statusMap) +
     '</div>';
-
-    // 5. TRANSMISSOR
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">4. TRANSMISSOR:</div>' +
       legendaHtml +
       gerarLinhasBarrasConformidade(transItens, m.statusMap) +
     '</div>';
-
-    // 6 & 7. POTÊNCIAS DO TRANSMISSOR
     var potRecentesHtml = m.potenciasRecentes.length > 0
       ? m.potenciasRecentes.map(function(v){ return '<div class="vg-recent-item">&quot;' + v + '&quot;</div>'; }).join('')
       : '<div class="vg-recent-item" style="color:#94A3B8;font-style:italic;">Sem respostas</div>';
-
     var refRecentesHtml = m.refletidasRecentes.length > 0
       ? m.refletidasRecentes.map(function(v){ return '<div class="vg-recent-item">&quot;' + v + '&quot;</div>'; }).join('')
       : '<div class="vg-recent-item" style="color:#94A3B8;font-style:italic;">Sem respostas</div>';
-
     html += '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:16px;">' +
       '<div class="vg-q-card">' +
         '<div class="vg-q-title">5. Potência do Transmissor (W):</div>' +
@@ -722,15 +595,11 @@
         '<div class="vg-recent-list">' + refRecentesHtml + '</div>' +
       '</div>' +
     '</div>';
-
-    // 8. RECEPTORES DE SATÉLITE
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">7. RECEPTORES DE SATÉLITE (VÍDEO E CANAL DE VOZ):</div>' +
       legendaHtml +
       gerarLinhasBarrasConformidade(satItens, m.statusMap) +
     '</div>';
-
-    // 9, 10 & 11. C/N DOS SATÉLITES
     html += '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:16px;">' +
       '<div class="vg-q-card">' +
         '<div class="vg-q-title">8. SAT REDE TIT C/N (dB):</div>' +
@@ -748,62 +617,46 @@
         '<div style="font-size:12px;color:#64748B;margin-top:2px;">' + (m.total > 0 ? 'Margem operacional calculada' : 'Sem leituras registradas') + '</div>' +
       '</div>' +
     '</div>';
-
-    // 12. ROTAS DE CONTRIBUIÇÃO
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">11. ROTA DE CONTRIBUIÇÃO E RECEPÇÃO DE SINAIS DAS PRAÇAS:</div>' +
       legendaHtml +
       gerarLinhasBarrasConformidade(rotasItens, m.statusMap) +
     '</div>';
-
-    // 13. CENTRAL TÉCNICA
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">12. CENTRAL TÉCNICA:</div>' +
       legendaHtml +
       gerarLinhasBarrasConformidade(ctItens, m.statusMap) +
     '</div>';
-
-    // 14. CPA
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">13. CPA:</div>' +
       legendaHtml +
       gerarLinhasBarrasConformidade(cpaItens, m.statusMap) +
     '</div>';
-
-    // 15. CADEIA SATÉLITE
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">14. CADEIA SATÉLITE:</div>' +
       legendaHtml +
       gerarLinhasBarrasConformidade(satCadItens, m.statusMap) +
     '</div>';
-
-    // 16. ENERGIA
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">15. ENERGIA:</div>' +
       legendaHtml +
       gerarLinhasBarrasConformidade(engItens, m.statusMap) +
     '</div>';
-
-    // 17. RELATE AQUI TODAS AS NÃO CONFORMIDADES
     var ncHtml = m.naoConformidades.length > 0
       ? m.naoConformidades.map(function(nc){ return '<div class="vg-recent-item">⚠️ ' + escapeHTML(nc) + '</div>'; }).join('')
       : '<div class="vg-recent-item" style="color:#94A3B8;font-style:italic;">Nenhuma não conformidade registrada</div>';
-
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">16. RELATE AQUI TODAS AS NÃO CONFORMIDADES DO HORÁRIO:</div>' +
       '<div style="font-size:26px;font-weight:800;color:#0F172A;margin-bottom:4px;">' + m.naoConformidades.length.toLocaleString('pt-BR') + '</div>' +
       '<div style="font-size:12px;color:#64748B;margin-bottom:12px;">' + (m.total > 0 ? 'Registros no período' : 'Nenhum registro') + '</div>' +
       '<div class="vg-recent-list">' + ncHtml + '</div>' +
     '</div>';
-
     contEl.innerHTML = html;
     if (typeof abrirPopup === 'function') abrirPopup('popup-visao-geral-ronda');
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.abrirVisaoGeralRondaUdi = abrirVisaoGeralRondaUdi;
   window.calcularMetricasRondaUdi = calcularMetricasRondaUdi;
-
-  /* ── Exportação Idêntica ao Microsoft Forms (Impressão / PDF) ── */
   function exportarVisaoGeralFormsPdf() {
     var m = calcularMetricasRondaUdi();
     var exibItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'exibidor'; });
@@ -814,12 +667,9 @@
     var cpaItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'cpa'; });
     var satCadItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'cadeia_sat'; });
     var engItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'energia'; });
-
     var totalTurnos = 0;
     m.turnos.forEach(function(t){ totalTurnos += t.count; });
-
     var dataHoraEmissao = new Date().toLocaleDateString('pt-BR') + ', ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
-
     var htmlDoc = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</title>' +
       '<style>' +
       '@page { size: A4 portrait; margin: 10mm 15mm; }' +
@@ -852,12 +702,9 @@
         '<button onclick="window.print()" style="padding:9px 18px;background:#2563EB;color:#fff;font-weight:700;border:none;border-radius:6px;cursor:pointer;box-shadow:0 3px 10px rgba(37,99,235,0.3);font-size:13px;">🖨️ Imprimir / Salvar em PDF</button>' +
         '<button onclick="window.close()" style="padding:9px 14px;background:#64748B;color:#fff;font-weight:600;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Fechar</button>' +
       '</div>';
-
-    // ═══ PÁGINA 1 ═══
     var datasPdfHtml = m.datasRecentes.length > 0
       ? m.datasRecentes.map(function(d){ return '&quot;' + d + '&quot;'; }).join('<br/>')
       : 'Nenhuma resposta registrada ainda';
-
     htmlDoc += '<div class="page-container">' +
       '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
       '<div class="main-title">Visão Geral das Respostas <span class="badge-ativo">Ativo</span></div>' +
@@ -903,20 +750,15 @@
       '</div>' +
       '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>1/5</span></div>' +
     '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 2 ═══
     var potPdfRecentes = m.potenciasRecentes.length > 0
       ? m.potenciasRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
       : 'Sem leituras registradas';
-
     var refPdfRecentes = m.refletidasRecentes.length > 0
       ? m.refletidasRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
       : 'Sem leituras registradas';
-
     var satRedePdfRecentes = m.satRedeRecentes.length > 0
       ? m.satRedeRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
       : 'Sem leituras registradas';
-
     htmlDoc += '<div class="page-container">' +
       '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
       '<div class="q-block">' +
@@ -953,16 +795,12 @@
       '</div>' +
       '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>2/5</span></div>' +
     '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 3 ═══
     var satBhPdfRecentes = m.satBhRecentes.length > 0
       ? m.satBhRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
       : 'Sem leituras registradas';
-
     var satSpPdfRecentes = m.satSpRecentes.length > 0
       ? m.satSpRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
       : 'Sem leituras registradas';
-
     htmlDoc += '<div class="page-container">' +
       '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
       '<div class="q-block">' +
@@ -991,8 +829,6 @@
       '</div>' +
       '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>3/5</span></div>' +
     '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 4 ═══
     htmlDoc += '<div class="page-container">' +
       '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
       '<div class="q-block">' +
@@ -1017,12 +853,9 @@
       '</div>' +
       '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>4/5</span></div>' +
     '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 5 ═══
     var ncPdfHtml = m.naoConformidades.length > 0
       ? m.naoConformidades.map(function(nc){ return '<div>' + escapeHTML(nc) + '</div>'; }).join('')
       : '<div>Nenhuma não conformidade registrada.</div>';
-
     htmlDoc += '<div class="page-container">' +
       '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
       '<div class="q-block">' +
@@ -1040,9 +873,7 @@
       '</div>' +
       '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>5/5</span></div>' +
     '</div>';
-
     htmlDoc += '<script>setTimeout(function(){ window.print(); }, 500);<\/script></body></html>';
-
     var printWin = window.open('', '_blank');
     if (printWin) {
       printWin.document.open();
@@ -1055,8 +886,6 @@
     }
   }
   window.exportarVisaoGeralFormsPdf = exportarVisaoGeralFormsPdf;
-
-  /* ── Exportação do Formulário Individual do Turno (4 páginas — estilo questionário Forms) ── */
   function exportarFormularioTurnoIndividual() {
     var dataEl = document.getElementById('ronda-data');
     var potEl  = document.getElementById('ronda-pot-direta');
@@ -1065,12 +894,9 @@
     var satBhDb   = document.getElementById('ronda-sat-bh-db');
     var satSpDb   = document.getElementById('ronda-sat-sp-db');
     var obsEl  = document.getElementById('ronda-obs');
-
     var dataVal = (dataEl && dataEl.value) ? dataEl.value : new Date().toISOString().split('T')[0];
     var usuario = getUsuarioAtual();
     var dataHora = new Date().toLocaleDateString('pt-BR') + ', ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
-
-    // Determina turno pelo horário atual
     var h = new Date().getHours();
     var turnoCheck = [false, false, false, false, false];
     if (h >= 0 && h < 6) turnoCheck[0] = true;
@@ -1078,7 +904,6 @@
     else if (h >= 12 && h < 18) turnoCheck[2] = true;
     else if (h >= 18) turnoCheck[3] = true;
     else turnoCheck[4] = true;
-
     function renderTabelaForms(itens) {
       var h = '<table style="width:100%;border-collapse:collapse;margin-top:8px;">';
       h += '<thead><tr style="font-size:10.5px;color:#64748B;border-bottom:1px solid #E2E8F0;"><th style="text-align:left;padding:6px 4px;font-weight:600;">SISTEMA / EQUIPAMENTO</th><th style="width:110px;text-align:center;padding:6px 4px;font-weight:700;color:#059669;">CONFORME</th><th style="width:110px;text-align:center;padding:6px 4px;font-weight:700;color:#DC2626;">NÃO CONFORME</th></tr></thead>';
@@ -1096,7 +921,6 @@
       h += '</tbody></table>';
       return h;
     }
-
     var exibItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'exibidor'; });
     var transItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'transmissor'; });
     var satItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'satelite'; });
@@ -1105,7 +929,6 @@
     var cpaItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'cpa'; });
     var satCadItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'cadeia_sat'; });
     var engItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'energia'; });
-
     var htmlDoc = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</title>' +
       '<style>' +
       '@page { size: A4 portrait; margin: 12mm 15mm; }' +
@@ -1124,8 +947,6 @@
         '<button onclick="window.print()" style="padding:9px 18px;background:#2563EB;color:#fff;font-weight:700;border:none;border-radius:6px;cursor:pointer;box-shadow:0 3px 10px rgba(37,99,235,0.3);font-size:13px;">🖨️ Imprimir / Salvar em PDF</button>' +
         '<button onclick="window.close()" style="padding:9px 14px;background:#64748B;color:#fff;font-weight:600;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Fechar</button>' +
       '</div>';
-
-    // ═══ PÁGINA 1 ═══
     htmlDoc += '<div class="page-container">' +
       '<div class="page-header-top"><span>' + dataHora + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
       '<div class="form-title">RELATÓRIO DIÁRIO - TECNOLOGIA UDI</div>' +
@@ -1144,8 +965,6 @@
       renderTabelaForms(transItens) +
       '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>1/4</span></div>' +
     '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 2 ═══
     htmlDoc += '<div class="page-container">' +
       '<div class="page-header-top"><span>' + dataHora + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
       '<div class="q-num">5. Potência do Transmissor (W): *</div>' +
@@ -1164,8 +983,6 @@
       renderTabelaForms(rotasItens) +
       '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>2/4</span></div>' +
     '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 3 ═══
     htmlDoc += '<div class="page-container">' +
       '<div class="page-header-top"><span>' + dataHora + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
       '<div class="q-num">12. CENTRAL TÉCNICA:</div>' +
@@ -1180,8 +997,6 @@
       '<div class="input-line" style="min-height:70px;white-space:pre-wrap;">' + ((obsEl && obsEl.value) ? escapeHTML(obsEl.value) : 'Tudo operando dentro dos parâmetros de conformidade técnica.') + '</div>' +
       '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>3/4</span></div>' +
     '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 4 ═══
     htmlDoc += '<div class="page-container">' +
       '<div class="page-header-top"><span>' + dataHora + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
       '<div style="text-align:center;margin-top:120px;padding:30px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;">' +
@@ -1196,9 +1011,7 @@
       '</div>' +
       '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>4/4</span></div>' +
     '</div>';
-
     htmlDoc += '<script>setTimeout(function(){ window.print(); }, 500);<\/script></body></html>';
-
     var printWin = window.open('', '_blank');
     if (printWin) {
       printWin.document.open();
@@ -1212,5 +1025,4 @@
   }
   window.exportarFormularioTurnoIndividual = exportarFormularioTurnoIndividual;
   window.exportarVisaoGeralFormsPdf = exportarVisaoGeralFormsPdf;
-
 })();

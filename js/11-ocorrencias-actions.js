@@ -1,14 +1,9 @@
-  /* ═══════════════════════════════════════════
-     POPUP: NOVA OCORRÊNCIA
-  ═══════════════════════════════════════════ */
-
   var novaTitulo  = document.getElementById('nova-titulo');
   var novaDesc    = document.getElementById('nova-desc');
   var novaCounter = document.getElementById('nova-counter');
   var btnCriar    = document.getElementById('btn-criar');
   var novaFile    = document.getElementById('nova-arquivos');
   var novaPrevs   = document.getElementById('nova-previews');
-
   function validarNova() {
     var tituloVal = novaTitulo ? novaTitulo.value.trim() : '';
     var descVal   = novaDesc ? novaDesc.value.trim() : '';
@@ -20,10 +15,8 @@
     }
   }
   window.validarNova = validarNova;
-
   if (btnCriar) { btnCriar.style.opacity = '0.38'; btnCriar.style.cursor = 'not-allowed'; btnCriar._valido = false; }
   if (novaTitulo) novaTitulo.addEventListener('input', validarNova);
-
   if (novaDesc && novaCounter) {
     novaDesc.addEventListener('input', function() {
       var len = this.value.trim().length;
@@ -40,7 +33,6 @@
       validarNova();
     });
   }
-
   function atualizarSelectEquipamentosNovaOc() {
     var praca = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var isUberlandia = praca.indexOf('Uber') !== -1;
@@ -50,21 +42,17 @@
     } else if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
       equips = Object.keys(dashboardMetrics.equipamento);
     }
-
     var selNova = document.getElementById('nova-equipamento');
     var selEdit = document.getElementById('edit-oc-equipamento');
-
     [selNova, selEdit].forEach(function(sel) {
       if (!sel) return;
       var curVal = sel.value;
       var html = '<option value="">Sem equipamento específico</option>';
-
       if (isUberlandia) {
         equips.forEach(function(eq) {
           html += '<option value="' + escapeHTML(eq) + '">' + escapeHTML(eq) + '</option>';
         });
       } else {
-        // Juiz de Fora: equipamentos do dashboard ou os 13 padrão de JF
         if (equips.length === 0) {
           equips = ['LIVE U1', 'LIVE U2', 'LIVE U3', 'LIVE U4', 'LIVE U SMART', 'REDAÇÃO', 'KMJ', 'NET PRAÇA', 'NET PORTARIA', 'FORMATOS NET', 'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR'];
         }
@@ -75,7 +63,6 @@
       html += '<option value="__novo__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo Equipamento...</option>';
       sel.innerHTML = html;
       if (curVal && curVal !== '__novo__') sel.value = curVal;
-
       if (!sel._hasNovoEqListener) {
         sel._hasNovoEqListener = true;
         sel.addEventListener('change', function() {
@@ -89,11 +76,9 @@
     });
   }
   window.atualizarSelectEquipamentosNovaOc = atualizarSelectEquipamentosNovaOc;
-
   function criarNovaOcorrencia() {
     var tituloVal = novaTitulo ? novaTitulo.value.trim() : '';
     var descVal = novaDesc ? novaDesc.value.trim() : '';
-
     if (!tituloVal) {
       if (typeof mostrarToast === 'function') {
         mostrarToast('Título Necessário', 'Por favor, informe o título da ocorrência.', 'warning');
@@ -101,7 +86,6 @@
       if (novaTitulo) novaTitulo.focus();
       return;
     }
-
     if (descVal.length < 10) {
       if (typeof mostrarToast === 'function') {
         mostrarToast('Descrição Curta', 'A descrição deve ter pelo menos 10 caracteres (' + descVal.length + '/10).', 'warning');
@@ -109,18 +93,14 @@
       if (novaDesc) novaDesc.focus();
       return;
     }
-
     var respVal = document.getElementById('nova-resp') ? document.getElementById('nova-resp').value : '';
     var userAtual = getUsuarioAtual();
     var isMine = (respVal === userAtual || respVal === 'Operador' || respVal.indexOf(userAtual) !== -1 || respVal.indexOf('Você') !== -1);
-
     var telVal = document.getElementById('nova-telejornal') ? document.getElementById('nova-telejornal').value : '';
     var eqVal  = document.getElementById('nova-equipamento') ? document.getElementById('nova-equipamento').value : '';
-
     var tagsArr = ['Nova'];
     if (telVal) tagsArr.push(telVal);
     if (eqVal)  tagsArr.push(eqVal);
-
     var anexosFinais = (uploadedFilesStore['nova-previews'] || []).slice();
     var novo = {
       id:          'oc_' + Date.now(),
@@ -143,8 +123,6 @@
       praca:       (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora'),
       _pendingSync: true
     };
-
-    // Atualizar métricas dos Dashboards correspondentes em tempo real
     var atualizouDash = false;
     if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics) {
       if (telVal && dashboardMetrics.telejornal && dashboardMetrics.telejornal[telVal]) {
@@ -160,7 +138,6 @@
         if (typeof renderDashboards === 'function') renderDashboards();
       }
     }
-
     ocorrencias = [novo].concat(ocorrencias);
     window.ocorrencias = ocorrencias;
     save(ocorrencias, novo, true);
@@ -168,8 +145,6 @@
     fecharPopup('popup-nova-oc');
     adicionarNotificacao('Nova Ocorrência Criada', novo.titulo + ' (' + novo.prio + ' Prioridade)', novo.prio === 'Alta' ? 'warning' : 'info');
     renderAll();
-
-    /* reset */
     if (novaTitulo) novaTitulo.value = '';
     if (novaDesc)   novaDesc.value   = '';
     if (novaFile)   novaFile.value   = '';
@@ -185,22 +160,15 @@
     validarNova();
   }
   window.criarNovaOcorrencia = criarNovaOcorrencia;
-
   if (btnCriar) {
     btnCriar.addEventListener('click', criarNovaOcorrencia);
   }
-
-  /* ═══════════════════════════════════════════
-     POPUP: RESOLVER OCORRÊNCIA
-  ═══════════════════════════════════════════ */
-
   var resolverAtualId = null;
   var resolverDesc    = document.getElementById('resolver-desc');
   var resolverCounter = document.getElementById('resolver-counter');
   var btnConfirmar    = document.getElementById('btn-confirmar-resolver');
   var resolverFile    = document.getElementById('resolver-arquivos');
   var resolverPrevs   = document.getElementById('resolver-previews');
-
   function validarResolver() {
     var ok = resolverDesc && resolverDesc.value.trim().length >= 10;
     if (btnConfirmar) {
@@ -209,9 +177,7 @@
       btnConfirmar._valido = ok;
     }
   }
-
   if (btnConfirmar) { btnConfirmar.style.opacity = '0.38'; btnConfirmar.style.cursor = 'not-allowed'; btnConfirmar._valido = false; }
-
   if (resolverDesc && resolverCounter) {
     resolverDesc.addEventListener('input', function() {
       var len = this.value.trim().length;
@@ -225,31 +191,23 @@
       validarResolver();
     });
   }
-
   function abrirResolver(id) {
     var oc = ocorrencias.find(function(o){ return o.id === id; });
     if (!oc) return;
     resolverAtualId = id;
     var tituloEl = document.getElementById('resolver-titulo-oc');
     if (tituloEl) tituloEl.textContent = oc.titulo;
-
-    /* reset */
     if (resolverDesc)    resolverDesc.value = '';
     if (resolverFile)    resolverFile.value = '';
     if (resolverPrevs)   resolverPrevs.innerHTML = '';
     uploadedFilesStore['resolver-previews'] = [];
     if (resolverCounter) { resolverCounter.textContent = 'Mínimo 10 caracteres'; resolverCounter.className = 'char-count'; }
     document.getElementById('resolver-status').value = 'Resolvido';
-    /* reset pills visuais */
     if (typeof selecionarStatus === 'function') selecionarStatus('Resolvido');
     validarResolver();
     abrirPopup('popup-resolver');
   }
   window.abrirResolver = abrirResolver;
-
-  /* ═══════════════════════════════════════════
-     EDIÇÃO DE OCORRÊNCIAS
-  ═══════════════════════════════════════════ */
   function abrirEditarOcorrencia(id) {
     var oc = ocorrencias.find(function(o){ return o && o.id === id; });
     if (!oc) return;
@@ -261,7 +219,6 @@
     document.getElementById('edit-oc-local').value = oc.local || '';
     document.getElementById('edit-oc-prazo').value = oc.prazo || '';
     document.getElementById('edit-oc-desc').value = String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
-
     atualizarSelectEquipamentosNovaOc();
     if (document.getElementById('edit-oc-telejornal')) {
       document.getElementById('edit-oc-telejornal').value = oc.telejornal || '';
@@ -269,19 +226,14 @@
     if (document.getElementById('edit-oc-equipamento')) {
       document.getElementById('edit-oc-equipamento').value = oc.equipamento || '';
     }
-
     var subEl = document.getElementById('edit-oc-subtitle');
     if (subEl) subEl.textContent = 'Editando ocorrência: ' + (oc.titulo || oc.id) + ' — aberto para toda a equipe.';
-
-    /* Carrega anexos existentes */
     var anexosExistentes = oc.anexos || (oc.resolucao && oc.resolucao.anexos) || [];
     uploadedFilesStore['edit-oc-previews'] = anexosExistentes.slice();
     renderPreviewsForContainer('edit-oc-previews');
-
     abrirPopup('popup-editar-oc');
   }
   window.abrirEditarOcorrencia = abrirEditarOcorrencia;
-
   function salvarEdicaoOcorrencia() {
     var id = document.getElementById('edit-oc-id').value;
     var titulo = document.getElementById('edit-oc-titulo').value.trim();
@@ -293,7 +245,6 @@
     var telVal = document.getElementById('edit-oc-telejornal') ? document.getElementById('edit-oc-telejornal').value : '';
     var eqVal  = document.getElementById('edit-oc-equipamento') ? document.getElementById('edit-oc-equipamento').value : '';
     var desc = document.getElementById('edit-oc-desc').value.trim();
-
     if (!titulo) {
       alert('Por favor, informe o título da ocorrência.');
       return;
@@ -302,20 +253,16 @@
       alert('Por favor, informe a descrição detalhada da ocorrência.');
       return;
     }
-
     var idx = ocorrencias.findIndex(function(o){ return o && o.id === id; });
     if (idx === -1) {
       alert('Ocorrência não encontrada.');
       return;
     }
-
     var usuarioLogado = getUsuarioAtual();
     var isMine = (resp === usuarioLogado || resp === 'Operador' || resp.indexOf(usuarioLogado) !== -1 || resp.indexOf('Você') !== -1);
     var anexosAtualizados = (uploadedFilesStore['edit-oc-previews'] || []).slice();
-
     var anterior = ocorrencias[idx];
     var mudancas = [];
-
     function regMudanca(campo, valAntes, valDepois, textoPadraoVazio) {
       var vA = (valAntes !== undefined && valAntes !== null && String(valAntes).trim() !== '') ? String(valAntes).trim() : (textoPadraoVazio || 'Não informado');
       var vD = (valDepois !== undefined && valDepois !== null && String(valDepois).trim() !== '') ? String(valDepois).trim() : (textoPadraoVazio || 'Não informado');
@@ -328,7 +275,6 @@
         });
       }
     }
-
     regMudanca('Título', anterior.titulo || '', titulo, 'Sem título');
     regMudanca('Prioridade', anterior.prio || 'Média', prio, 'Média');
     regMudanca('Categoria', anterior.cat || 'Equipamento', cat, 'Equipamento');
@@ -337,7 +283,6 @@
     regMudanca('Telejornal', anterior.telejornal || '', telVal || '', 'Sem telejornal');
     regMudanca('Equipamento', anterior.equipamento || '', eqVal || '', 'Sem equipamento');
     regMudanca('Prazo Estimado', anterior.prazo || '', prazo || '', 'Sem prazo');
-
     var ctrsMarkerExistente = '';
     if (anterior.desc && String(anterior.desc).indexOf('<!--CTRS_JSON:') !== -1) {
       var mCtrs = String(anterior.desc).match(/(<!--CTRS_JSON:[^>]+-->)/);
@@ -348,7 +293,6 @@
     if (ctrsMarkerExistente && desc.indexOf('<!--CTRS_JSON:') === -1) {
       desc = desc + ctrsMarkerExistente;
     }
-
     var qtdAnxAntes = (anterior.anexos || []).length;
     var qtdAnxDepois = anexosAtualizados.length;
     if (qtdAnxAntes !== qtdAnxDepois) {
@@ -359,7 +303,6 @@
         resumo: 'Anexos: de "' + qtdAnxAntes + ' arquivo(s)" para "' + qtdAnxDepois + ' arquivo(s)"'
       });
     }
-
     var historicoEdicoes = (anterior.historicoEdicoes && Array.isArray(anterior.historicoEdicoes))
       ? anterior.historicoEdicoes.slice()
       : ((anterior.resolucao && Array.isArray(anterior.resolucao.historicoEdicoes)) ? anterior.resolucao.historicoEdicoes.slice() : []);
@@ -370,7 +313,6 @@
         mudancas: mudancas
       });
     }
-
     var resolucaoAtual = Object.assign({}, ocorrencias[idx].resolucao || {});
     if (anexosAtualizados.length > 0) {
       resolucaoAtual.anexos = anexosAtualizados;
@@ -380,7 +322,6 @@
     if (historicoEdicoes.length > 0) {
       resolucaoAtual.historicoEdicoes = historicoEdicoes;
     }
-
     ocorrencias[idx] = Object.assign({}, ocorrencias[idx], {
       titulo:           titulo,
       prio:             prio,
@@ -398,7 +339,6 @@
       ultimaEdicaoPor:  usuarioLogado,
       ultimaEdicaoEm:   formatDataHoraLocal()
     });
-
     save(ocorrencias, ocorrencias[idx], false);
     fecharPopup('popup-editar-oc');
     renderAll();
@@ -407,5 +347,4 @@
     }
   }
   window.salvarEdicaoOcorrencia = salvarEdicaoOcorrencia;
-
   var itemDetalhesAtual = null;

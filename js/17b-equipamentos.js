@@ -1,10 +1,5 @@
-  /* ═══════════════════════════════════════════
-     CATÁLOGO DE EQUIPAMENTOS & FICHEIRO DE VIDA — POSTGRESQL / SUPABASE
-  ═══════════════════════════════════════════ */
-
   var EQUIPAMENTOS_STORAGE_KEY = 'tv_equipamentos_catalogo_v1';
   var TAGS_PADRAO_EQUIPAMENTOS = ['LiveU', 'Transmissão', 'Estúdio', 'Áudio', 'Vídeo', 'RF', 'Rede/Fibra', 'Satélite', 'Energia'];
-
   var EQUIPAMENTOS_SEED_JF = [
     { id: 'eq_jf_liveu1',  codigo_patrimonio: 'PAT-JF-001', numero_serie: 'SN-LU600-01', nome: 'LIVE U1',      categoria: 'Mochilink / LiveU', fabricante_modelo: 'LiveU LU600 HEVC',       praca: 'Juiz de Fora', setor_local: 'Jornalismo Externo', tags: ['LiveU', 'Transmissão'], status_operacional: 'operacional', obs_tecnicas: 'Unidade móvel principal para entradas ao vivo externas.' },
     { id: 'eq_jf_liveu2',  codigo_patrimonio: 'PAT-JF-002', numero_serie: 'SN-LU600-02', nome: 'LIVE U2',      categoria: 'Mochilink / LiveU', fabricante_modelo: 'LiveU LU600 HEVC',       praca: 'Juiz de Fora', setor_local: 'Jornalismo Externo', tags: ['LiveU', 'Transmissão'], status_operacional: 'operacional', obs_tecnicas: 'Unidade móvel de reportagem externa.' },
@@ -20,11 +15,9 @@
     { id: 'eq_jf_net3',    codigo_patrimonio: 'PAT-JF-012', numero_serie: 'SN-SW-3AND',  nome: 'NET 3º ANDAR', categoria: 'Link de Internet',  fabricante_modelo: 'Switch / Ponto 3º Andar',praca: 'Juiz de Fora', setor_local: '3º Andar',          tags: ['Rede/Fibra'],            status_operacional: 'operacional', obs_tecnicas: 'Infraestrutura de rede do 3º andar.' },
     { id: 'eq_jf_net4',    codigo_patrimonio: 'PAT-JF-013', numero_serie: 'SN-SW-4AND',  nome: 'NET 4º ANDAR', categoria: 'Link de Internet',  fabricante_modelo: 'Switch / Ponto 4º Andar',praca: 'Juiz de Fora', setor_local: '4º Andar',          tags: ['Rede/Fibra'],            status_operacional: 'operacional', obs_tecnicas: 'Infraestrutura de rede do 4º andar.' }
   ];
-
   var catalogoEquipamentos = [];
   var filtroEquipamentoTag = 'todos';
   var tagsSelecionadasModalEq = [];
-
   function getEquipamentosDBCredentials() {
     var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
     var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
@@ -36,7 +29,6 @@
     }
     return { url: url ? url.replace(/\/+$/, '') : '', key: key };
   }
-
   function normalizarTagsEquipamento(tagsRaw) {
     if (!Array.isArray(tagsRaw)) return [];
     var vistos = {};
@@ -52,7 +44,6 @@
     });
     return limpas;
   }
-
   function sanitizarEquipamento(eq) {
     if (!eq || !eq.nome) return null;
     var nomeUp = String(eq.nome).trim().toUpperCase();
@@ -86,9 +77,7 @@
       criado_em: eq.criado_em || Date.now()
     };
   }
-
   var ORDEM_EQUIPAMENTOS_STORAGE_KEY = 'tv_equipamentos_ordem_custom_v1';
-
   function salvarOrdemPersonalizadaEquipamentos(pracaAtiva, listaNomes) {
     try {
       var isUdi = String(pracaAtiva || '').indexOf('Uber') !== -1;
@@ -100,11 +89,9 @@
       localStorage.setItem(ORDEM_EQUIPAMENTOS_STORAGE_KEY, JSON.stringify(obj));
     } catch (e) {}
   }
-
   function aplicarOrdemPersonalizadaNoCatalogo() {
     var posSeedJF = {};
     EQUIPAMENTOS_SEED_JF.forEach(function(s, i) { posSeedJF[s.nome] = i; });
-
     var temOrdemCustomJF = false;
     var temOrdemCustomUDI = false;
     try {
@@ -132,14 +119,10 @@
         });
       }
     } catch (e) {}
-
-    // Se não há ordem customizada salva (ou se algum item padrão perdeu o campo ordem antes da correção),
-    // garante que os equipamentos padrão de JF sigam a ordem original do catálogo (LIVE U1, LIVE U2, ...)
     var itensJF = (catalogoEquipamentos || []).filter(function(eq) {
       return eq && String(eq.praca || '').indexOf('Uber') === -1;
     });
     var algumSemOrdemJF = itensJF.some(function(eq) { return typeof eq.ordem !== 'number'; });
-
     if (!temOrdemCustomJF && algumSemOrdemJF) {
       itensJF.forEach(function(eq) {
         if (posSeedJF[eq.nome] !== undefined) {
@@ -149,7 +132,6 @@
         }
       });
     }
-
     catalogoEquipamentos.sort(function(a, b) {
       if (!a || !b) return 0;
       var oa = (typeof a.ordem === 'number') ? a.ordem : (posSeedJF[a.nome] !== undefined ? posSeedJF[a.nome] : 999999);
@@ -158,7 +140,6 @@
       return (a.criado_em || 0) - (b.criado_em || 0);
     });
   }
-
   function obterListaNomesEquipamentosOrdenados(pracaOpcional) {
     aplicarOrdemPersonalizadaNoCatalogo();
     var pracaAtiva = pracaOpcional || ((typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora');
@@ -176,7 +157,6 @@
     return [];
   }
   window.obterListaNomesEquipamentosOrdenados = obterListaNomesEquipamentosOrdenados;
-
   function salvarCatalogoEquipamentosLocal() {
     window.catalogoEquipamentos = catalogoEquipamentos;
     try {
@@ -184,7 +164,6 @@
     } catch (e) {}
     sincronizarDashboardMetricsComCatalogo();
   }
-
   function sincronizarDashboardMetricsComCatalogo() {
     if (typeof dashboardMetrics === 'undefined' || !dashboardMetrics) return;
     if (!dashboardMetrics.equipamento || Object.keys(dashboardMetrics.equipamento).length === 0) {
@@ -193,16 +172,13 @@
       }
       if (!dashboardMetrics.equipamento) dashboardMetrics.equipamento = {};
     }
-
     aplicarOrdemPersonalizadaNoCatalogo();
     var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var isUdi = pracaAtiva.indexOf('Uber') !== -1;
-
     var ativosDaPraca = (catalogoEquipamentos || []).filter(function(eq) {
       if (!eq || eq.status_operacional === 'lixeira') return false;
       return isUdi ? (eq.praca === 'Uberlândia') : (eq.praca === 'Juiz de Fora');
     });
-
     var novoMapaEq = {};
     ativosDaPraca.forEach(function(eq) {
       var existente = dashboardMetrics.equipamento[eq.nome];
@@ -218,7 +194,6 @@
         obs: eq.obs_tecnicas
       };
     });
-
     dashboardMetrics.equipamento = novoMapaEq;
     if (typeof salvarDashboardMetricsStore === 'function') {
       salvarDashboardMetricsStore();
@@ -229,7 +204,6 @@
     } catch (e) {}
   }
   window.sincronizarDashboardMetricsComCatalogo = sincronizarDashboardMetricsComCatalogo;
-
   function carregarEquipamentosStore() {
     try {
       var raw = localStorage.getItem(EQUIPAMENTOS_STORAGE_KEY);
@@ -240,14 +214,10 @@
         }
       }
     } catch (e) {}
-
-    // Se ainda não houver equipamentos de Juiz de Fora no catálogo, inicializa com os 13 padrão
     var temJF = catalogoEquipamentos.some(function(e) { return e.praca === 'Juiz de Fora'; });
     if (!temJF) {
       catalogoEquipamentos = EQUIPAMENTOS_SEED_JF.map(sanitizarEquipamento).concat(catalogoEquipamentos);
     }
-
-    // Migra qualquer equipamento que tenha sido cadastrado anteriormente no dashboardMetrics
     try {
       ['tv_dashboard_metrics_v2_jf', 'tv_dashboard_metrics_v2_udi'].forEach(function(k) {
         var mRaw = localStorage.getItem(k);
@@ -274,17 +244,14 @@
         }
       });
     } catch (eMig) {}
-
     salvarCatalogoEquipamentosLocal();
     renderCatalogoEquipamentos();
     sincronizarEquipamentosPostgreSQL();
   }
   window.carregarEquipamentosStore = carregarEquipamentosStore;
-
   function sincronizarEquipamentosPostgreSQL() {
     var db = getEquipamentosDBCredentials();
     if (!db.url || !db.key) return;
-
     fetch(db.url + '/rest/v1/equipamentos?select=*&order=criado_em.asc', {
       headers: {
         'apikey': db.key,
@@ -319,16 +286,12 @@
           }
         }
       });
-
-      // Preserva itens locais que ainda não subiram para o banco PostgreSQL
       var pendentesLocais = (catalogoEquipamentos || []).filter(function(loc) {
         return loc && loc.id && !mapaRemoto[loc.id];
       });
-
       if (pendentesLocais.length > 0) {
         pendentesLocais.forEach(function(p) { salvarEquipamentoPostgreSQL(p); });
       }
-
       if (listaRemota.length > 0 || pendentesLocais.length > 0) {
         catalogoEquipamentos = listaRemota.concat(pendentesLocais);
         aplicarOrdemPersonalizadaNoCatalogo();
@@ -342,11 +305,9 @@
     });
   }
   window.sincronizarEquipamentosPostgreSQL = sincronizarEquipamentosPostgreSQL;
-
   function salvarEquipamentoPostgreSQL(eq) {
     var db = getEquipamentosDBCredentials();
     if (!db.url || !db.key || !eq) return;
-
     var payload = {
       id: eq.id,
       codigo_patrimonio: eq.codigo_patrimonio || '',
@@ -363,7 +324,6 @@
       criado_por: eq.criado_por || 'Operador',
       criado_em: eq.criado_em || Date.now()
     };
-
     fetch(db.url + '/rest/v1/equipamentos', {
       method: 'POST',
       headers: {
@@ -376,7 +336,6 @@
     })
     .then(function(res) {
       if (res.ok) {
-        console.log('[PostgreSQL Equipamentos] ✅ Equipamento sincronizado no banco:', eq.nome);
       }
     })
     .catch(function(err) {
@@ -384,13 +343,11 @@
     });
   }
   window.salvarEquipamentoPostgreSQL = salvarEquipamentoPostgreSQL;
-
   function obterOcorrenciasDoEquipamento(eq) {
     if (!eq) return [];
     var nomeBusca = (eq.nome || '').toUpperCase();
     var idBusca = eq.id || '';
     var todasOcs = (typeof ocorrencias !== 'undefined' && Array.isArray(ocorrencias)) ? ocorrencias : [];
-
     return todasOcs.filter(function(oc) {
       if (!oc || oc.status === 'lixeira') return false;
       if (idBusca && oc.equipamento_id === idBusca) return true;
@@ -401,7 +358,6 @@
     });
   }
   window.obterOcorrenciasDoEquipamento = obterOcorrenciasDoEquipamento;
-
   function calcularStatusEquipamentoDinamico(eq) {
     if (!eq) return 'operacional';
     if (eq.status_operacional === 'manutencao') return 'manutencao';
@@ -409,7 +365,6 @@
     var temAberta = ocs.some(function(o) { return o.status === 'aberta'; });
     return temAberta ? 'atencao' : 'operacional';
   }
-
   function filtrarEquipamentosPorTag(tag, btn) {
     filtroEquipamentoTag = tag ? String(tag).replace(/^#+/, '').trim() : 'todos';
     if (btn && btn.closest('.pills')) {
@@ -419,26 +374,20 @@
     renderCatalogoEquipamentos();
   }
   window.filtrarEquipamentosPorTag = filtrarEquipamentosPorTag;
-
   function renderCatalogoEquipamentos() {
     var grid = document.getElementById('equipamentos-catalogo-grid');
     if (!grid) return;
     aplicarOrdemPersonalizadaNoCatalogo();
-
     var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var isUdi = pracaAtiva.indexOf('Uber') !== -1;
     var pracaBadge = document.getElementById('eq-catalogo-praca-badge');
     if (pracaBadge) pracaBadge.textContent = isUdi ? 'Uberlândia' : 'Juiz de Fora';
-
     var buscaInput = document.getElementById('eq-catalogo-search');
     var termo = buscaInput ? buscaInput.value.trim().toLowerCase() : '';
-
     var doCatalogoPraca = (catalogoEquipamentos || []).filter(function(eq) {
       if (!eq || eq.status_operacional === 'lixeira') return false;
       return isUdi ? (eq.praca === 'Uberlândia') : (eq.praca === 'Juiz de Fora');
     });
-
-    // KPIs de topo
     var totEq = doCatalogoPraca.length;
     var totOp = 0, totAtencao = 0, totManut = 0;
     doCatalogoPraca.forEach(function(eq) {
@@ -447,14 +396,12 @@
       else if (st === 'atencao') totAtencao++;
       else totOp++;
     });
-
     var kpiTot = document.getElementById('eq-kpi-total');
     var kpiOp  = document.getElementById('eq-kpi-operacional');
     var kpiAt  = document.getElementById('eq-kpi-atencao');
     if (kpiTot) kpiTot.textContent = totEq;
     if (kpiOp)  kpiOp.textContent  = totOp;
     if (kpiAt)  kpiAt.textContent  = (totAtencao + totManut);
-
     var filtrados = doCatalogoPraca.filter(function(eq) {
       if (filtroEquipamentoTag !== 'todos') {
         var tagsEq = Array.isArray(eq.tags) ? eq.tags : [];
@@ -474,7 +421,6 @@
       }
       return true;
     });
-
     if (filtrados.length === 0) {
       grid.innerHTML =
         '<div style="grid-column:1/-1;text-align:center;padding:42px 20px;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);">' +
@@ -486,30 +432,25 @@
       if (typeof lucide !== 'undefined') lucide.createIcons();
       return;
     }
-
     grid.innerHTML = filtrados.map(function(eq) {
       var st = calcularStatusEquipamentoDinamico(eq);
       var ocs = obterOcorrenciasDoEquipamento(eq);
       var abertasCount = ocs.filter(function(o){ return o.status === 'aberta'; }).length;
-
       var badgeStatus = st === 'manutencao'
         ? '<span class="tag tag-r">🔴 Em Manutenção</span>'
         : st === 'atencao'
         ? '<span class="tag tag-y">🟡 ' + abertasCount + ' Ocorrência(s)</span>'
         : '<span class="tag tag-g">🟢 Operacional</span>';
-
       var borderStyle = st === 'atencao'
         ? 'border-color:#FDE68A;background:#FFFBEB;'
         : st === 'manutencao'
         ? 'border-color:#FECACA;background:#FEF2F2;'
         : '';
-
       var tagsHTML = (Array.isArray(eq.tags) && eq.tags.length > 0)
         ? eq.tags.map(function(t) {
             return '<span style="font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:12px;background:#EFF6FF;color:#0071E3;border:1px solid #BFDBFE;">' + escapeHTML(t) + '</span>';
           }).join('')
         : '<span style="font-size:10.5px;color:var(--muted);">Sem tags</span>';
-
       return (
         '<div class="dash-card eq-draggable-card" data-eq-id="' + escapeHTML(eq.id) + '" ' +
           'onpointerdown="iniciarArrastoEquipamento(event, \'' + escapeHTML(eq.id) + '\')" ' +
@@ -527,17 +468,14 @@
               '</div>' +
               badgeStatus +
             '</div>' +
-
             '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;background:rgba(255,255,255,0.75);border:1px solid var(--border-lt);border-radius:8px;padding:8px 10px;font-size:11px;margin-bottom:10px;">' +
               '<div><span style="color:var(--muted);display:block;font-size:10px;">ID / PATRIMÔNIO</span><strong style="color:var(--txt);font-family:monospace;">' + escapeHTML(eq.codigo_patrimonio || 'Não inf.') + '</strong></div>' +
               '<div><span style="color:var(--muted);display:block;font-size:10px;">Nº DE SÉRIE</span><strong style="color:var(--txt);font-family:monospace;">' + escapeHTML(eq.numero_serie || 'Não inf.') + '</strong></div>' +
             '</div>' +
-
             '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px;">' +
               tagsHTML +
             '</div>' +
           '</div>' +
-
           '<div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border-lt);font-size:11.5px;" onclick="event.stopPropagation();">' +
             '<button type="button" class="btn btn-ghost btn-xs" onclick="abrirFichaVidaEquipamento(\'' + escapeHTML(eq.id) + '\')" style="color:var(--blue);font-weight:600;padding:4px 8px;display:inline-flex;align-items:center;gap:4px;">' +
               '<i data-lucide="file-text" style="width:12px;height:12px;"></i> Ficheiro de Vida (' + ocs.length + ')' +
@@ -567,14 +505,11 @@
         '</div>' +
       '</div>'
     );
-
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.renderCatalogoEquipamentos = renderCatalogoEquipamentos;
-
   var _eqDragState = null;
   window._arrastandoEqAgora = false;
-
   function animarFlipCardsGrid(grid, rectsAntes, cardIgnorado) {
     if (!grid || !rectsAntes) return;
     var cards = grid.querySelectorAll('.eq-draggable-card, .dash-card-add');
@@ -595,7 +530,6 @@
       }
     });
   }
-
   function capturarRectsGrid(grid, cardIgnorado) {
     var mapa = {};
     if (!grid) return mapa;
@@ -607,15 +541,12 @@
     });
     return mapa;
   }
-
   function iniciarArrastoEquipamento(ev, eqId) {
     if (!ev || (typeof ev.button === 'number' && ev.button !== 0)) return;
     if (ev.target && ev.target.closest('button, a, input, select, textarea')) return;
-
     var card = ev.currentTarget;
     var grid = document.getElementById('equipamentos-catalogo-grid');
     if (!card || !grid) return;
-
     var rect = card.getBoundingClientRect();
     _eqDragState = {
       eqId: eqId,
@@ -632,25 +563,20 @@
       placeholder: null,
       origStyle: card.getAttribute('style') || ''
     };
-
     document.addEventListener('pointermove', moverArrastoEquipamento, { passive: false });
     document.addEventListener('pointerup', encerrarArrastoEquipamento);
     document.addEventListener('pointercancel', encerrarArrastoEquipamento);
   }
   window.iniciarArrastoEquipamento = iniciarArrastoEquipamento;
-
   function moverArrastoEquipamento(ev) {
     if (!_eqDragState) return;
     var st = _eqDragState;
     var dx = ev.clientX - st.startX;
     var dy = ev.clientY - st.startY;
-
     if (!st.started) {
       if (Math.hypot(dx, dy) < 6) return;
       st.started = true;
       window._arrastandoEqAgora = true;
-
-      // Cria o espaço reservado (placeholder) na grade mantendo o layout firme
       var ph = document.createElement('div');
       ph.className = 'eq-drag-placeholder';
       ph.style.width = '100%';
@@ -660,13 +586,10 @@
       ph.style.borderRadius = 'var(--r-lg, 14px)';
       ph.style.background = 'rgba(239, 246, 255, 0.65)';
       ph.style.boxSizing = 'border-box';
-
       var bgComp = window.getComputedStyle(st.card).backgroundColor;
       st.grid.replaceChild(ph, st.card);
       document.body.appendChild(st.card);
       st.placeholder = ph;
-
-      // Destaca o próprio container real sólido (100% opaco) acompanhando o mouse
       var c = st.card;
       c.style.position = 'fixed';
       c.style.left = (ev.clientX - st.offsetX) + 'px';
@@ -689,14 +612,9 @@
       document.body.style.cursor = 'grabbing';
       document.body.style.userSelect = 'none';
     }
-
     if (ev.cancelable) ev.preventDefault();
-
-    // Move o container sólido diretamente com o ponteiro
     st.card.style.left = (ev.clientX - st.offsetX) + 'px';
     st.card.style.top = (ev.clientY - st.offsetY) + 'px';
-
-    // Auto-scroll suave se chegar perto do topo ou base da área de rolagem
     var scrollContainer = st.grid.closest('.scroll-area') || document.documentElement;
     if (scrollContainer) {
       var scRect = scrollContainer.getBoundingClientRect ? scrollContainer.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
@@ -706,18 +624,14 @@
         scrollContainer.scrollTop += 10;
       }
     }
-
-    // Verifica sobre qual card o ponteiro está passando para abrir espaço em tempo real
     var elemAbaixo = document.elementFromPoint(ev.clientX, ev.clientY);
     if (!elemAbaixo) return;
     var cardAlvo = elemAbaixo.closest('#equipamentos-catalogo-grid .eq-draggable-card');
     if (!cardAlvo || cardAlvo === st.card) return;
-
     var Filhos = Array.prototype.slice.call(st.grid.children);
     var idxPh = Filhos.indexOf(st.placeholder);
     var idxAlvo = Filhos.indexOf(cardAlvo);
     if (idxPh === -1 || idxAlvo === -1 || idxPh === idxAlvo) return;
-
     var rectsAntes = capturarRectsGrid(st.grid, st.card);
     if (idxPh < idxAlvo) {
       st.grid.insertBefore(st.placeholder, cardAlvo.nextSibling);
@@ -727,27 +641,21 @@
     st.movedOrder = true;
     animarFlipCardsGrid(st.grid, rectsAntes, st.card);
   }
-
   function encerrarArrastoEquipamento(ev) {
     document.removeEventListener('pointermove', moverArrastoEquipamento);
     document.removeEventListener('pointerup', encerrarArrastoEquipamento);
     document.removeEventListener('pointercancel', encerrarArrastoEquipamento);
-
     if (!_eqDragState) return;
     var st = _eqDragState;
     _eqDragState = null;
-
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
-
     if (!st.started) {
       window._arrastandoEqAgora = false;
       return;
     }
-
     var phRect = st.placeholder ? st.placeholder.getBoundingClientRect() : null;
     var c = st.card;
-
     var finalizarPosicao = function() {
       if (st.placeholder && st.placeholder.parentNode === st.grid) {
         st.grid.replaceChild(c, st.placeholder);
@@ -755,16 +663,13 @@
         st.grid.appendChild(c);
       }
       c.setAttribute('style', st.origStyle);
-
       if (st.movedOrder) {
         persistirNovaOrdemGridEquipamentos(st.grid);
       }
-
       setTimeout(function() {
         window._arrastandoEqAgora = false;
       }, 60);
     };
-
     if (phRect) {
       c.style.transition = 'left 150ms cubic-bezier(0.2, 0, 0, 1), top 150ms cubic-bezier(0.2, 0, 0, 1), transform 150ms ease, box-shadow 150ms ease';
       c.style.left = phRect.left + 'px';
@@ -776,22 +681,17 @@
       finalizarPosicao();
     }
   }
-
   function persistirNovaOrdemGridEquipamentos(grid) {
     if (!grid) return;
     var cardsNoDom = Array.prototype.slice.call(grid.querySelectorAll('.eq-draggable-card'));
     var idsOrdenadosVisiveis = cardsNoDom.map(function(el) {
       return el.getAttribute('data-eq-id');
     }).filter(Boolean);
-
     if (idsOrdenadosVisiveis.length < 2) return;
-
     var mapaPorId = {};
     catalogoEquipamentos.forEach(function(eq) {
       if (eq && eq.id) mapaPorId[eq.id] = eq;
     });
-
-    // Substitui nas posições correspondentes mantendo a ordem exata da grade visual
     var posicoesOriginais = [];
     for (var i = 0; i < catalogoEquipamentos.length; i++) {
       var item = catalogoEquipamentos[i];
@@ -799,14 +699,12 @@
         posicoesOriginais.push(i);
       }
     }
-
     for (var j = 0; j < posicoesOriginais.length; j++) {
       var novoEq = mapaPorId[idsOrdenadosVisiveis[j]];
       if (novoEq) {
         catalogoEquipamentos[posicoesOriginais[j]] = novoEq;
       }
     }
-
     var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var isUdi = pracaAtiva.indexOf('Uber') !== -1;
     var ordemCounter = 0;
@@ -824,7 +722,6 @@
         salvarEquipamentoPostgreSQL(eq);
       }
     });
-
     salvarOrdemPersonalizadaEquipamentos(pracaAtiva, nomesNaNovaOrdem);
     salvarCatalogoEquipamentosLocal();
     if (typeof renderDashboards === 'function') renderDashboards();
@@ -832,7 +729,6 @@
       mostrarToast('Ordem Atualizada', 'A nova ordem dos equipamentos foi aplicada em todos os menus.', 'info');
     }
   }
-
   function renderSeletorTagsModalEq() {
     var container = document.getElementById('eq-modal-tags- selector') || document.getElementById('eq-modal-tags-selector');
     if (!container) return;
@@ -848,7 +744,6 @@
       );
     }).join('');
   }
-
   function toggleTagModalEquipamento(tag) {
     var idx = tagsSelecionadasModalEq.indexOf(tag);
     if (idx === -1) tagsSelecionadasModalEq.push(tag);
@@ -856,7 +751,6 @@
     renderSeletorTagsModalEq();
   }
   window.toggleTagModalEquipamento = toggleTagModalEquipamento;
-
   function abrirModalCadastroEquipamento(idEdicao) {
     var idEl     = document.getElementById('novo-eq-id');
     var nomeEl   = document.getElementById('novo-eq-nome');
@@ -868,11 +762,9 @@
     var statusEl = document.getElementById('novo-eq-status');
     var obsEl    = document.getElementById('novo-eq-obs');
     var titleEl  = document.getElementById('novo-eq-title');
-
     var eqExistente = idEdicao
       ? (catalogoEquipamentos || []).find(function(e) { return e.id === idEdicao || e.nome === idEdicao; })
       : null;
-
     if (eqExistente) {
       if (titleEl)  titleEl.textContent = 'Modificar Equipamento · ' + eqExistente.nome;
       if (idEl)     idEl.value     = eqExistente.id;
@@ -898,14 +790,12 @@
       if (obsEl)    obsEl.value    = '';
       tagsSelecionadasModalEq = ['Transmissão'];
     }
-
     renderSeletorTagsModalEq();
     abrirPopup('popup-novo-equipamento');
     if (nomeEl) setTimeout(function() { nomeEl.focus(); }, 150);
   }
   window.abrirModalCadastroEquipamento = abrirModalCadastroEquipamento;
   window.abrirModalNovoEquipamento = abrirModalCadastroEquipamento;
-
   function salvarNovoEquipamentoDashboard() {
     var idEl     = document.getElementById('novo-eq-id');
     var nomeEl   = document.getElementById('novo-eq-nome');
@@ -916,7 +806,6 @@
     var setorEl  = document.getElementById('novo-eq-setor');
     var statusEl = document.getElementById('novo-eq-status');
     var obsEl    = document.getElementById('novo-eq-obs');
-
     var idEdicao = idEl ? idEl.value.trim() : '';
     var nome = (nomeEl ? nomeEl.value : '').trim().toUpperCase();
     if (!nome) {
@@ -924,7 +813,6 @@
       if (nomeEl) nomeEl.focus();
       return;
     }
-
     var praca = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var duplicado = (catalogoEquipamentos || []).find(function(e) {
       return e.status_operacional !== 'lixeira' && e.praca === praca && e.nome === nome && e.id !== idEdicao;
@@ -933,7 +821,6 @@
       alert('Já existe um equipamento ativo com o nome "' + nome + '" na praça de ' + praca + '.');
       return;
     }
-
     var itemSalvo = null;
     if (idEdicao) {
       catalogoEquipamentos = catalogoEquipamentos.map(function(e) {
@@ -969,22 +856,18 @@
       });
       catalogoEquipamentos.push(itemSalvo);
     }
-
     window._ultimoEqAdicionado = nome;
     salvarCatalogoEquipamentosLocal();
     if (itemSalvo) salvarEquipamentoPostgreSQL(itemSalvo);
-
     if (window._eqTriggeringSelect) {
       try {
         window._eqTriggeringSelect.value = nome;
       } catch (eSel) {}
       window._eqTriggeringSelect = null;
     }
-
     fecharPopup('popup-novo-equipamento');
     renderCatalogoEquipamentos();
     if (typeof renderDashboards === 'function') renderDashboards();
-
     if (typeof mostrarToast === 'function') {
       mostrarToast(
         idEdicao ? 'Equipamento Atualizado' : 'Equipamento Cadastrado',
@@ -994,20 +877,15 @@
     }
   }
   window.salvarNovoEquipamentoDashboard = salvarNovoEquipamentoDashboard;
-
   function excluirEquipamentoParaLixeira(idEq) {
     var eq = (catalogoEquipamentos || []).find(function(e) { return e.id === idEq || e.nome === idEq; });
     if (!eq) return;
-
     if (!confirm('Deseja mover o equipamento "' + eq.nome + '" para a Lixeira?\n\nEle deixará de aparecer nos novos relatórios, mas seu histórico será preservado na Lixeira por 7 dias.')) {
       return;
     }
-
     eq.status_operacional = 'lixeira';
     salvarCatalogoEquipamentosLocal();
     salvarEquipamentoPostgreSQL(eq);
-
-    // Adiciona registro também na Lixeira Geral do Sistema para permitir restauração
     if (typeof lixeiraData !== 'undefined' && Array.isArray(lixeiraData)) {
       var itemLixeira = {
         id: eq.id,
@@ -1032,23 +910,19 @@
       if (typeof saveLixeira === 'function') saveLixeira(lixeiraData);
       if (typeof salvarItemLixeiraNuvem === 'function') salvarItemLixeiraNuvem(itemLixeira);
     }
-
     fecharPopup('popup-ficha-vida-equipamento');
     renderCatalogoEquipamentos();
     if (typeof renderDashboards === 'function') renderDashboards();
     if (typeof renderLixeira === 'function') renderLixeira();
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Equipamento na Lixeira', eq.nome + ' foi movido para a Lixeira.', 'info');
     }
   }
   window.excluirEquipamentoParaLixeira = excluirEquipamentoParaLixeira;
-
   function abrirOcorrenciaDiretaEquipamento(idOuNome) {
     var eq = (catalogoEquipamentos || []).find(function(e) { return e.id === idOuNome || e.nome === idOuNome; });
     fecharPopup('popup-ficha-vida-equipamento');
     abrirPopup('popup-nova-oc');
-
     if (eq) {
       var selEq = document.getElementById('nova-equipamento');
       if (selEq) selEq.value = eq.nome;
@@ -1064,20 +938,14 @@
     }
   }
   window.abrirOcorrenciaDiretaEquipamento = abrirOcorrenciaDiretaEquipamento;
-
-  /* ═══════════════════════════════════════════
-     FICHEIRO DE VIDA DO EQUIPAMENTO (MODAL COMPLETO)
-  ═══════════════════════════════════════════ */
   function abrirFichaVidaEquipamento(idOuNome) {
     var eq = (catalogoEquipamentos || []).find(function(e) {
       return e.status_operacional !== 'lixeira' && (e.id === idOuNome || e.nome === idOuNome);
     });
     if (!eq) return;
-
     var ocs = obterOcorrenciasDoEquipamento(eq);
     var abertas = ocs.filter(function(o) { return o.status === 'aberta'; });
     var resolvidas = ocs.filter(function(o) { return o.status !== 'aberta'; });
-
     var metricObj = (typeof dashboardMetrics !== 'undefined' && dashboardMetrics.equipamento)
       ? dashboardMetrics.equipamento[eq.nome]
       : null;
@@ -1086,7 +954,6 @@
     var txCanc = metricObj ? (metricObj.canc || 0) : 0;
     var txTot  = txConf + txNc + txCanc;
     var saudePct = txTot > 0 ? ((txConf / txTot) * 100).toFixed(1) + '%' : (abertas.length === 0 ? '100%' : 'Atenção');
-
     var elNome   = document.getElementById('ficha-eq-nome');
     var elSub    = document.getElementById('ficha-eq-sub');
     var elBadge  = document.getElementById('ficha-eq-status-badge');
@@ -1096,13 +963,11 @@
     var elLocal  = document.getElementById('ficha-eq-local');
     var elObs    = document.getElementById('ficha-eq-obs');
     var elTags   = document.getElementById('ficha-eq-tags');
-
     var elKpiOcs   = document.getElementById('ficha-kpi-ocs');
     var elKpiRes   = document.getElementById('ficha-kpi-resolvidas');
     var elKpiTx    = document.getElementById('ficha-kpi-tx');
     var elKpiSaude = document.getElementById('ficha-kpi-saude');
     var elTimeline = document.getElementById('ficha-eq-timeline');
-
     if (elNome)   elNome.textContent   = eq.nome;
     if (elSub)    elSub.textContent    = (eq.categoria || 'Equipamento') + ' · ' + eq.praca;
     if (elPat)    elPat.textContent    = eq.codigo_patrimonio || 'Não cadastrado';
@@ -1110,7 +975,6 @@
     if (elModelo) elModelo.textContent = eq.fabricante_modelo || eq.categoria || 'Padrão';
     if (elLocal)  elLocal.textContent  = (eq.setor_local || 'Central Técnica') + ' (' + eq.praca + ')';
     if (elObs)    elObs.textContent    = eq.obs_tecnicas || 'Nenhuma observação técnica registrada para este equipamento.';
-
     var st = calcularStatusEquipamentoDinamico(eq);
     if (elBadge) {
       if (st === 'manutencao') {
@@ -1124,7 +988,6 @@
         elBadge.textContent = '🟢 Operacional';
       }
     }
-
     if (elTags) {
       var tList = Array.isArray(eq.tags) ? eq.tags : [];
       elTags.innerHTML = tList.length > 0
@@ -1133,20 +996,16 @@
           }).join('')
         : '<span style="font-size:11.5px;color:var(--muted);">Sem tags associadas</span>';
     }
-
     if (elKpiOcs)   elKpiOcs.textContent   = ocs.length;
     if (elKpiRes)   elKpiRes.textContent   = resolvidas.length;
     if (elKpiTx)    elKpiTx.textContent    = txTot;
     if (elKpiSaude) elKpiSaude.textContent = saudePct;
-
-    // Botões de ação do rodapé da Ficha de Vida
     var btnEdit = document.getElementById('btn-ficha-editar');
     var btnDel  = document.getElementById('btn-ficha-excluir');
     var btnNova = document.getElementById('btn-ficha-nova-oc');
     if (btnEdit) btnEdit.onclick = function() { fecharPopup('popup-ficha-vida-equipamento'); abrirModalCadastroEquipamento(eq.id); };
     if (btnDel)  btnDel.onclick  = function() { excluirEquipamentoParaLixeira(eq.id); };
     if (btnNova) btnNova.onclick = function() { abrirOcorrenciaDiretaEquipamento(eq.id); };
-
     if (elTimeline) {
       var nomeEqUp = String(eq.nome || '').toUpperCase().trim();
       var relsEq = (typeof historicoSeedData !== 'undefined' && Array.isArray(historicoSeedData) ? historicoSeedData : []).filter(function(h) {
@@ -1162,7 +1021,6 @@
         if (h.equipamento && String(h.equipamento).toUpperCase().indexOf(nomeEqUp) !== -1) return true;
         return false;
       });
-
       if (ocs.length === 0 && relsEq.length === 0) {
         elTimeline.innerHTML =
           '<div style="text-align:center;padding:24px 14px;background:#F8FAFC;border:1px dashed var(--border);border-radius:10px;color:var(--muted);font-size:12px;">' +
@@ -1182,12 +1040,10 @@
           var descRes = descResLimpa
             ? '<div style="margin-top:6px;padding:6px 10px;background:#F0FDF4;border-radius:6px;font-size:11.5px;color:#166534;"><strong>Solução aplicada:</strong> ' + escapeHTML(descResLimpa) + '</div>'
             : '';
-
           var temPreviewOc = !!(oc.htmlRelatorio || oc.dadosCTRS || (oc.desc && String(oc.desc).indexOf('<!--CTRS_JSON:') !== -1));
           var previewBtn = temPreviewOc
             ? '<span style="font-size:10.5px;font-weight:700;color:#0071E3;background:#EFF6FF;border:1px solid #BFDBFE;padding:2px 8px;border-radius:10px;">👁️ Ver Relatório na Descrição</span>'
             : '';
-
           return (
             '<div onclick=\"fecharPopup(\'popup-ficha-vida-equipamento\'); verDetalhesOcorrencia(\'' + oc.id + '\')\" style=\"background:#FFFFFF;border:1px solid var(--border-lt);border-left:3.5px solid ' + corBorda + ';border-radius:8px;padding:10px 14px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'var(--blue)\';\" onmouseout=\"this.style.borderColor=\'var(--border-lt)\';\" title=\"Clique para abrir a ocorrência completa com o preview do relatório\">' +
               '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
@@ -1203,7 +1059,6 @@
             '</div>'
           );
         }).join('');
-
         var htmlRels = relsEq.map(function(r) {
           var descRelLimpa = String(r.descCriacao || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
           var isNC = r.status && String(r.status).toLowerCase().indexOf('não conform') !== -1;
@@ -1224,11 +1079,9 @@
             '</div>'
           );
         }).join('');
-
         elTimeline.innerHTML = htmlOcs + htmlRels;
       }
     }
-
     if (typeof lucide !== 'undefined') lucide.createIcons();
     abrirPopup('popup-ficha-vida-equipamento');
   }

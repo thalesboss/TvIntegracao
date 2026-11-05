@@ -1,6 +1,4 @@
-  /* ─── Render: Dashboard Resolvidas & Power BI ─── */
   var resolvidasFiltro = 'todas';
-
   function filtrarResolvidas(filtro, el) {
     resolvidasFiltro = filtro;
     document.querySelectorAll('#page-resolvidas .pill').forEach(function(p) { p.classList.remove('on'); });
@@ -8,45 +6,33 @@
     renderResolvidas();
   }
   window.filtrarResolvidas = filtrarResolvidas;
-
   function renderResolvidas() {
     var listEl = document.getElementById('resolvidas-list');
     if (!listEl) return;
-
     var resolvidas = getResolvidas();
     var abertas = getAbertas();
     var vencidas = abertas.filter(function(o){ return isOcorrenciaVencida(o); });
     var abertasNoPrazo = abertas.filter(function(o){ return !isOcorrenciaVencida(o); });
-
     var totRes = resolvidas.length;
     var totAb  = abertasNoPrazo.length;
     var totVen = vencidas.length;
     var totalGeral = totRes + totAb + totVen;
-
-    /* Atualiza KPIs em Resolvidas */
     var elG = document.querySelector('.sn-resolvidas-g');
     var elB = document.querySelector('.sn-resolvidas-b');
     var elR = document.querySelector('.sn-resolvidas-r');
     if (elG) elG.textContent = totRes;
     if (elB) elB.textContent = totAb;
     if (elR) elR.textContent = totVen;
-
-    /* Taxas em % */
     var pctRes = totalGeral > 0 ? Math.round((totRes / totalGeral) * 100) : 0;
     var pctAb  = totalGeral > 0 ? Math.round((totAb / totalGeral) * 100) : 0;
     var pctVen = totalGeral > 0 ? (100 - pctRes - pctAb) : 0;
     if (pctVen < 0) pctVen = 0;
-
     var badgePct = document.getElementById('pct-resolucao-badge');
     if (badgePct) badgePct.textContent = 'Taxa de Resolução: ' + pctRes + '%';
-
     var txtTot = document.getElementById('txt-total-ocorrencias');
     if (txtTot) txtTot.textContent = totalGeral + ' ocorrências registradas';
-
     var pieTot = document.getElementById('pie-resolvidas-tot');
     if (pieTot) pieTot.textContent = totalGeral;
-
-    /* Render Gráfico de Pizza Donut (Conic-Gradient vibrante com alta definição) */
     var pieEl = document.getElementById('pie-chart-circle');
     if (pieEl) {
       if (totalGeral === 0) {
@@ -57,15 +43,12 @@
         pieEl.style.background = 'conic-gradient(#10B981 0% ' + p1 + '%, #0071E3 ' + p1 + '% ' + p2 + '%, #EF4444 ' + p2 + '% 100%)';
       }
     }
-
     var lblG = document.getElementById('lbl-pct-g');
     var lblB = document.getElementById('lbl-pct-b');
     var lblR = document.getElementById('lbl-pct-r');
     if (lblG) lblG.textContent = pctRes + '% (' + totRes + ' resolvidas)';
     if (lblB) lblB.textContent = pctAb + '% (' + totAb + ' no prazo)';
     if (lblR) lblR.textContent = pctVen + '% (' + totVen + ' expiradas)';
-
-    /* Lista filtrada */
     var itensExibir = [];
     if (resolvidasFiltro === 'todas') {
       itensExibir = resolvidas.map(function(o){ return { item: o, isVencida: false }; })
@@ -75,16 +58,13 @@
     } else if (resolvidasFiltro === 'vencidas') {
       itensExibir = vencidas.map(function(o){ return { item: o, isVencida: true }; });
     }
-
     if (itensExibir.length === 0) {
       listEl.innerHTML = '<p style="color:var(--muted);font-size:13px;text-align:center;padding:24px 0;">Nenhum registro nesta categoria.</p>';
       return;
     }
-
     listEl.innerHTML = itensExibir.map(function(obj) {
       var oc = obj.item;
       var isV = obj.isVencida;
-
       if (isV) {
         return (
           '<article class="oc-card vencida" style="cursor:pointer;" onclick="verDetalhesOcorrenciaResolvida(\'' + oc.id + '\')">' +
@@ -117,7 +97,6 @@
         var cardStyle = isParcial ? 'cursor:pointer;' : 'background:var(--bg); border:1px solid #A8E6BB; cursor:pointer;';
         var prioLineClass = isParcial ? 'pl-y' : 'pl-g';
         var tagStatusClass = isParcial ? 'tag-y' : 'tag-g';
-
         return (
           '<article class="' + cardClass + '" style="' + cardStyle + '" onclick="verDetalhesOcorrenciaResolvida(\'' + oc.id + '\')">' +
             '<div class="prio-line ' + prioLineClass + '"></div>' +
@@ -137,11 +116,8 @@
         );
       }
     }).join('');
-
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
-
-  /* ─── Stats ─── */
   function updateStats() {
     try {
       var ab  = getAbertas().length;
@@ -152,7 +128,6 @@
       var diaAnt = ocorrencias.filter(function(o){
         return o && o.status==='aberta' && isOcorrenciaDiaAnterior(o) && (typeof pertenceAPracaAtiva !== 'function' || pertenceAPracaAtiva(o));
       }).length;
-
       var els = {
         r: document.querySelector('.sn-r'),
         y: document.querySelector('.sn-y'),
@@ -163,8 +138,6 @@
       if (els.y) els.y.textContent = atrasadas;
       if (els.g) els.g.textContent = res;
       if (els.b) els.b.textContent = diaAnt;
-
-      /* Badge sidebar - atualiza badge de notificações */
       var notifBadge = document.querySelector('.notif-badge');
       if (notifBadge) {
         var numNotifs = (typeof notificacoesStore !== 'undefined' && Array.isArray(notificacoesStore)) ? notificacoesStore.filter(function(n){ return !n.lida; }).length : 0;
@@ -174,22 +147,18 @@
       console.warn('Erro ao atualizar estatísticas:', err);
     }
   }
-
   function renderPopupEntrada() {
     var container = document.getElementById('popup-entrada-pendencias');
     if (!container) return;
-
     var abertas = getAbertas();
     if (abertas.length === 0) {
       container.innerHTML = '<div class="info-item blue"><div class="ii-dot blue"></div><div><strong>Sem Pendências</strong>Nenhuma ocorrência pendente no momento.</div></div>';
       return;
     }
-
     container.innerHTML = abertas.slice(0, 4).map(function(oc) {
       var isVencida = isOcorrenciaVencida(oc);
       var corClass = (oc.prio === 'Alta' || isVencida) ? 'red' : 'blue';
       var tagTexto = isVencida ? 'Prazo Expirado' : ((oc.prio || 'Média') + ' Prioridade');
-
       return (
         '<div class="info-item ' + corClass + '">' +
           '<div class="ii-dot ' + corClass + '"></div>' +
@@ -201,17 +170,14 @@
       );
     }).join('');
   }
-
   function renderPopupLogout() {
     var container = document.getElementById('popup-logout-checklist');
     if (!container) return;
-
     var abertas = getAbertas();
     if (abertas.length === 0) {
       container.innerHTML = '<p style="font-size:12px;color:var(--muted);padding:6px 0;">Todas as ocorrências do turno foram concluídas!</p>';
       return;
     }
-
     container.innerHTML = abertas.map(function(oc) {
       var cid = 'chk_out_' + oc.id;
       var isVencida = isOcorrenciaVencida(oc);
@@ -224,8 +190,6 @@
       );
     }).join('');
   }
-
-  /* ─── renderAll: atualiza TUDO de uma vez com isolamento de falhas e diffing de performance ─── */
   var lastRenderSignature = '';
   function calcularAssinaturaEstado() {
     var pracaSig = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'JF';
@@ -236,7 +200,6 @@
     var horaMinuto = new Date().getMinutes();
     return pracaSig + '#' + ocSig + '#' + lixSig + '#' + notifSig + '#' + histCount + '#' + horaMinuto;
   }
-
   function renderAll(forcar) {
     var novaSig = calcularAssinaturaEstado();
     if (forcar !== true && novaSig === lastRenderSignature) {
@@ -244,7 +207,6 @@
       return;
     }
     lastRenderSignature = novaSig;
-
     try { renderCards(); } catch(e) { console.error('Erro em renderCards:', e); }
     try { renderArquivados(); } catch(e) { console.error('Erro em renderArquivados:', e); }
     try { renderLixeira(); } catch(e) { console.error('Erro em renderLixeira:', e); }
@@ -264,8 +226,6 @@
     try { updateStats(); } catch(e) { console.error('Erro em updateStats:', e); }
   }
   window.renderAll = renderAll;
-
-  // Autosave contínuo em segundo plano para formulários (proteção contra queda de energia/fechamento)
   var debounceTimers = {};
   function registrarAutosaveListener(pageId, salvarFn) {
     var page = document.getElementById(pageId);

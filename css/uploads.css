@@ -41,7 +41,6 @@
   color: var(--muted);
   margin-top: 2px;
 }
-
 .upload-previews {
   display: flex;
   flex-wrap: wrap;
@@ -110,4 +109,3 @@
   background: var(--red-lt) !important;
   border-color: var(--red-border) !important;
 }
-

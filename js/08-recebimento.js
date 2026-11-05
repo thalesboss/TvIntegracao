@@ -1,7 +1,3 @@
-  /* ═══════════════════════════════════════════
-     RECEBIMENTOS DE EQUIPAMENTOS
-  ═══════════════════════════════════════════ */
-
   function adicionarLinhaMaterial(tabelaId) {
     var tbody = document.querySelector('#' + (tabelaId || 'tb-rec') + ' tbody');
     if (!tbody) return;
@@ -21,14 +17,12 @@
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.adicionarLinhaMaterial = adicionarLinhaMaterial;
-
   function removerLinhaMaterial(btn) {
     var tr = btn.closest('tr');
     if (tr) tr.remove();
     try { salvarRascunhoRecebimento(true); } catch(e) {}
   }
   window.removerLinhaMaterial = removerLinhaMaterial;
-
   function selecionarFormaPagamento(labelEl) {
     var group = labelEl.closest('.rec-payment-group');
     if (!group) return;
@@ -42,14 +36,12 @@
     if (currentRadio) currentRadio.checked = true;
   }
   window.selecionarFormaPagamento = selecionarFormaPagamento;
-
   function salvarRascunhoRecebimento(silencioso) {
     try {
       var remEl = document.getElementById('rec-remetente');
       var nfEl  = document.getElementById('rec-nf');
       var recEl = document.getElementById('rec-recebedor');
       var obsEl = document.getElementById('rec-obs');
-
       var materiais = [];
       var tbody = document.querySelector('#rec-materiais-tbody') || document.querySelector('#tb-rec tbody');
       if (tbody) {
@@ -70,7 +62,6 @@
           }
         });
       }
-
       var dados = {
         remetente: remEl ? remEl.value : '',
         nf:        nfEl ? nfEl.value : '',
@@ -85,24 +76,20 @@
     } catch (e) {}
   }
   window.salvarRascunhoRecebimento = salvarRascunhoRecebimento;
-
   function carregarRascunhoRecebimento() {
     try {
       var raw = localStorage.getItem('tv_recebimento_rascunho_v1');
       if (!raw) return;
       var dados = JSON.parse(raw);
       if (!dados) return;
-
       var remEl = document.getElementById('rec-remetente');
       var nfEl  = document.getElementById('rec-nf');
       var recEl = document.getElementById('rec-recebedor');
       var obsEl = document.getElementById('rec-obs');
-
       if (remEl && dados.remetente !== undefined) remEl.value = dados.remetente;
       if (nfEl && dados.nf !== undefined)        nfEl.value = dados.nf;
       if (recEl && dados.recebedor !== undefined) recEl.value = dados.recebedor;
       if (obsEl && dados.obs !== undefined)      obsEl.value = dados.obs;
-
       if (Array.isArray(dados.materiais) && dados.materiais.length > 0) {
         var tbody = document.querySelector('#rec-materiais-tbody') || document.querySelector('#tb-rec tbody');
         if (tbody) {
@@ -128,7 +115,6 @@
     } catch (e) {}
   }
   window.carregarRascunhoRecebimento = carregarRascunhoRecebimento;
-
   function limparFormularioRecebimento(confirmar) {
     if (confirmar && !confirm('Deseja realmente limpar todos os campos do recebimento?')) {
       return;
@@ -155,27 +141,21 @@
     } catch (e) {}
   }
   window.limparFormularioRecebimento = limparFormularioRecebimento;
-
   function enviarRecebimento(modelo) {
     var nowStr = formatDataHoraLocal();
     var m = (modelo !== undefined && modelo !== null) ? modelo : '';
-
     var remEl = document.getElementById('rec' + m + '-remetente') || document.getElementById('rec-remetente');
     var nfEl  = document.getElementById('rec' + m + '-nf') || document.getElementById('rec-nf');
     var recEl = document.getElementById('rec' + m + '-recebedor') || document.getElementById('rec-recebedor');
     var obsEl = document.getElementById('rec' + m + '-obs') || document.getElementById('rec-obs');
-
     var remetente = remEl ? remEl.value.trim() : '';
     var nf        = nfEl ? nfEl.value.trim() : '';
     var recebedor = (recEl && recEl.value.trim()) ? recEl.value.trim() : getUsuarioAtual();
     var obs       = obsEl ? obsEl.value.trim() : '';
-
-    /* Validação e coleta de itens de recebimento */
     var tbody = document.querySelector('#rec-materiais-tbody') || document.querySelector('#tb-rec tbody');
     var linhas = tbody ? tbody.querySelectorAll('tr') : [];
     var itensResumo = [];
     var erroValidacao = false;
-
     linhas.forEach(function(tr) {
       var qInput = tr.querySelector('.item-quant');
       var dInput = tr.querySelector('.item-desc');
@@ -184,7 +164,6 @@
       var p = tr.querySelector('.item-plaq') ? tr.querySelector('.item-plaq').value.trim() : '';
       var s = tr.querySelector('.item-serie') ? tr.querySelector('.item-serie').value.trim() : '';
       var loc = tr.querySelector('.item-local') ? tr.querySelector('.item-local').value.trim() : '';
-
       if (d || p || s || loc || q) {
         if (!q || parseInt(q, 10) <= 0 || isNaN(parseInt(q, 10))) {
           erroValidacao = true;
@@ -198,7 +177,6 @@
         }
       }
     });
-
     if (erroValidacao) {
       if (typeof mostrarToast === 'function') {
         mostrarToast('Quantidade Obrigatória', 'Por favor, informe uma quantidade válida (número maior que 0) para o material recebido.', 'warning');
@@ -207,9 +185,7 @@
       }
       return;
     }
-
     var titulo = 'Recebimento N.F ' + (nf || 'S/N') + (remetente ? (' — ' + remetente) : '');
-
     var novoHist = {
       id:            'h_rec_' + Date.now(),
       tipo:          'recebimento',
@@ -226,13 +202,9 @@
       resolvidoPor:  recebedor,
       descResolucao: 'Conferido e integrado automaticamente ao sistema patrimonial e relatórios.'
     };
-
     historicoSeedData = [novoHist].concat(historicoSeedData);
     saveHistorico(historicoSeedData, novoHist);
-
-    // Limpa o rascunho e o formulário para o próximo recebimento
     limparFormularioRecebimento(false);
-
     renderAll();
     if (typeof mostrarToast === 'function') {
       mostrarToast('Recebimento Registrado', 'Salvo no Histórico. O envio por e-mail ainda não está disponível.', 'info');
@@ -240,7 +212,6 @@
     alert('Recebimento de Equipamentos registrado com sucesso no Histórico!\n\nNota: A função de envio por e-mail ainda não está disponível.');
   }
   window.enviarRecebimento = enviarRecebimento;
-
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-recebimento', salvarRascunhoRecebimento);
   }

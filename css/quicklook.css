@@ -1,6 +1,3 @@
-/* ═══════════════════════════════════════════════════════════════════════════
-   VISUALIZADOR RÁPIDO DE MÍDIA EM ALTA RESOLUÇÃO (LIGHTBOX)
-   ═══════════════════════════════════════════════════════════════════════════ */
 .quicklook-overlay {
   background: rgba(245, 245, 247, 0.55) !important;
   backdrop-filter: blur(28px) saturate(180%) contrast(100%) !important;
@@ -106,8 +103,6 @@
   box-shadow: 0 14px 40px -8px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.05), inset 0 0 0 1px rgba(0, 0, 0, 0.06);
   user-select: none;
 }
-
-/* ── Indicador Flutuante de Versão Beta ── */
 .beta-capsule,
 .apple-beta-capsule {
   position: absolute;
@@ -128,4 +123,3 @@
   z-index: 2;
   text-transform: uppercase;
 }
-

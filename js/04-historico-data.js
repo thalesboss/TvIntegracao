@@ -1,10 +1,5 @@
-  /* ═══════════════════════════════════════════
-     HISTÓRICO GERAL — ESTRUTURA DE DADOS
-  ═══════════════════════════════════════════ */
-
   var HISTORICO_LOCAL_STORAGE_KEY = 'tv_historico_seed_v2';
   var historicoSeedData = [];
-
   try {
     var rawHist = localStorage.getItem(HISTORICO_LOCAL_STORAGE_KEY);
     if (rawHist) {
@@ -13,7 +8,6 @@
     }
   } catch(e) {}
   window.historicoSeedData = historicoSeedData;
-
   function saveHistorico(list, itemAdicionado) {
     historicoSeedData = list || [];
     window.historicoSeedData = historicoSeedData;
@@ -28,13 +22,10 @@
       }
     }
   }
-
   function getHistoricoCompleto() {
     var mapa = {};
     var lista = [];
     var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
-
-    // 1. Itens manuais ou relatórios vindos de historicoSeedData
     (historicoSeedData || []).forEach(function(item) {
       if (item && item.id) {
         if (item.status === 'lixeira' || idsNaLixeira.includes(item.id)) return;
@@ -43,8 +34,6 @@
         lista.push(item);
       }
     });
-
-    // 2. Ocorrências resolvidas ou arquivadas vindas de ocorrencias (do dashboard/banco)
     (ocorrencias || []).forEach(function(oc) {
       if (!oc || !oc.id) return;
       if (oc.status === 'lixeira' || idsNaLixeira.includes(oc.id)) return;
@@ -61,7 +50,6 @@
           var anexosLista = (oc.anexos && Array.isArray(oc.anexos) && oc.anexos.length > 0)
             ? oc.anexos
             : ((oc.resolucao && Array.isArray(oc.resolucao.anexos)) ? oc.resolucao.anexos : []);
-
           var itemOcHist = {
             id:            oc.id,
             tipo:          'ocorrencia',
@@ -89,36 +77,28 @@
         }
       }
     });
-
-    // Ordena pelo mais recente
     lista.sort(function(a, b) {
       var tA = a.dataResolucao || a.dataCriacao || '';
       var tB = b.dataResolucao || b.dataCriacao || '';
       return tB.localeCompare(tA);
     });
-
     return lista;
   }
   window.getHistoricoCompleto = getHistoricoCompleto;
-
   function loadHistorico() {
     return getHistoricoCompleto();
   }
-
   var historicoFiltroCategoria = 'todos';
   var itemHistoricoSelecionado = null;
-
   function getNomeUsuarioAtual() {
     return getUsuarioAtual().toLowerCase();
   }
-
   function isItemDoUsuario(item) {
     var usuarioAtual = getNomeUsuarioAtual();
     var criado = (item.criadoPor || '').toLowerCase();
     var resolvido = (item.resolvidoPor || '').toLowerCase();
     return criado.includes(usuarioAtual) || resolvido.includes(usuarioAtual);
   }
-
   function getTagTipoBadge(item) {
     if (item.tipo === 'ocorrencia') {
       return '<span class="tag tag-blue-soft">Ocorrência</span>';

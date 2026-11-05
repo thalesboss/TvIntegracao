@@ -1,6 +1,3 @@
-/* ═══════════════════════════════════════════
-   POPUP — funções base globais
-═══════════════════════════════════════════ */
 function abrirPopup(id) {
   var el = document.getElementById(id);
   if (el) {
@@ -56,26 +53,22 @@ function abrirQuickLook(src, nome) {
   var img = document.getElementById('quicklook-img');
   var nameEl = document.getElementById('quicklook-filename');
   var dlBtn = document.getElementById('quicklook-download-btn');
-
   if (img) img.src = src;
   if (nameEl) nameEl.textContent = nome || 'Imagem';
   if (dlBtn) {
     dlBtn.href = src;
     dlBtn.download = nome || 'imagem_anexa';
   }
-
   abrirPopup('popup-quicklook');
   if (typeof lucide !== 'undefined') {
     lucide.createIcons();
   }
 }
-
 function fecharQuickLook() {
   fecharPopup('popup-quicklook');
   var img = document.getElementById('quicklook-img');
   if (img) img.src = '';
 }
-
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape' || e.keyCode === 27) {
     var ql = document.getElementById('popup-quicklook');
@@ -84,15 +77,12 @@ document.addEventListener('keydown', function(e) {
     }
   }
 });
-
 window.abrirPopup             = abrirPopup;
 window.fecharPopup            = fecharPopup;
 window.abrirQuickLook         = abrirQuickLook;
 window.fecharQuickLook        = fecharQuickLook;
 window.toggleBtnIniciarSessao = toggleBtnIniciarSessao;
 window.iniciarSessao          = iniciarSessao;
-
-/* Fechar popups clicando fora no overlay escuro */
 document.addEventListener('click', function(e) {
   if (e.target && e.target.classList && e.target.classList.contains('overlay') && e.target.id !== 'popup-entrada' && e.target.id !== 'popup-identificacao-operador') {
     fecharPopup(e.target.id);

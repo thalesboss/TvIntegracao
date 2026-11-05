@@ -1,7 +1,3 @@
-  /* ═══════════════════════════════════════════
-     HELPERS DE RENDER
-  ═══════════════════════════════════════════ */
-
   function formatDataHoraLocal(dateInput) {
     var d;
     if (dateInput) {
@@ -14,7 +10,6 @@
       d = new Date();
     }
     if (isNaN(d.getTime())) d = new Date();
-
     var ano = d.getFullYear();
     var mes = String(d.getMonth() + 1);
     if (mes.length < 2) mes = '0' + mes;
@@ -24,14 +19,11 @@
     if (hora.length < 2) hora = '0' + hora;
     var min = String(d.getMinutes());
     if (min.length < 2) min = '0' + min;
-
     return ano + '-' + mes + '-' + dia + ' ' + hora + ':' + min;
   }
   window.formatDataHoraLocal = formatDataHoraLocal;
-
   function prioLine(prio) { return prio==='Alta'?'pl-r':prio==='Média'?'pl-y':'pl-g'; }
   function tagClass(prio) { return prio==='Alta'?'tag-r':prio==='Média'?'tag-y':'tag-g'; }
-
   function isOcorrenciaVencida(oc) {
     if (!oc || oc.status !== 'aberta') return false;
     if (oc.tags && Array.isArray(oc.tags) && oc.tags.indexOf('Atrasada') !== -1) return true;
@@ -47,7 +39,6 @@
     return false;
   }
   window.isOcorrenciaVencida = isOcorrenciaVencida;
-
   function isOcorrenciaDiaAnterior(oc) {
     if (!oc || !oc.criado) return false;
     var dataOc = new Date(Number(oc.criado) || oc.criado);
@@ -58,7 +49,6 @@
     return diaOc < diaHoje;
   }
   window.isOcorrenciaDiaAnterior = isOcorrenciaDiaAnterior;
-
   function isOcorrenciaNova(oc) {
     if (!oc || !oc.criado) return false;
     var timestampCriacao = Number(oc.criado) || oc.criado;
@@ -67,7 +57,6 @@
     return diffHoras >= 0 && diffHoras < 24;
   }
   window.isOcorrenciaNova = isOcorrenciaNova;
-
   function formatDataRelativa(timestampOrStr) {
     if (!timestampOrStr) return '';
     var dateObj = null;
@@ -81,14 +70,11 @@
       }
     }
     if (!dateObj || isNaN(dateObj.getTime())) return '';
-
     var now = new Date();
     var hojeZero = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     var itemZero = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()).getTime();
     var diffDays = Math.round((hojeZero - itemZero) / (1000 * 60 * 60 * 24));
-
     var horaStr = ('0' + dateObj.getHours()).slice(-2) + ':' + ('0' + dateObj.getMinutes()).slice(-2);
-
     if (diffDays === 0) {
       return 'Criada hoje às ' + horaStr;
     } else if (diffDays === 1) {
@@ -102,16 +88,11 @@
       return dia + '/' + mes + ' às ' + horaStr;
     }
   }
-
   var filtroOcorrenciasAtivo = 'todas';
-
-  /* ─── Render: lista principal de ocorrências ativas ─── */
   function renderCards() {
     var container = document.getElementById('oc-list');
     if (!container) return;
-
     var lista = getAbertas();
-
     if (filtroOcorrenciasAtivo === 'alta') {
       lista = lista.filter(function(o) { return (o.prio || '').toLowerCase() === 'alta'; });
     } else if (filtroOcorrenciasAtivo === 'media') {
@@ -121,7 +102,6 @@
     } else if (filtroOcorrenciasAtivo === 'atrasadas') {
       lista = lista.filter(function(o) { return isOcorrenciaVencida(o); });
     }
-
     if (lista.length === 0) {
       container.innerHTML =
         '<p style="color:var(--muted);font-size:13px;text-align:center;padding:28px 0;">' +
@@ -129,17 +109,12 @@
       if (typeof lucide !== 'undefined') lucide.createIcons();
       return;
     }
-
-    /* Agrupamento temporal (Hoje, Ontem, Dias Anteriores) */
     var secoes = agruparPorDias(lista, function(oc){ return oc.criado || oc.dataCriacao; });
-
     function renderCardHTML(oc) {
       var isVencida = isOcorrenciaVencida(oc);
       var isParcial = (oc.resolucao && oc.resolucao.statusRes === 'Parcialmente resolvido') || (oc.tags || []).indexOf('Parcialmente Resolvida') !== -1;
       var isNova = isOcorrenciaNova(oc);
-
       var tagsHTML = '<span class="tag ' + tagClass(oc.prio) + '">' + (oc.prio || 'Média') + '</span>';
-      
       if (oc.mine) {
         tagsHTML += '<span class="tag" style="background:#EEF2FF;color:#4F46E5;border:1px solid #C7D2FE;font-weight:600;"><i data-lucide="user-check" style="width:11px;height:11px;stroke-width:2.5;margin-right:3px;"></i>Atribuída a você</span>';
       }
@@ -152,17 +127,14 @@
       if (isNova) {
         tagsHTML += '<span class="tag" style="background:#F8FAFC;color:#475569;border:1px solid #E2E8F0;font-weight:600;">Nova</span>';
       }
-
       (oc.tags || []).forEach(function(t) {
         if (t !== 'Nova' && t !== 'Atrasada' && t !== 'Turno anterior' && t !== 'Parcialmente Resolvida' && t !== 'Só para você' && t !== 'Dia Anterior') {
           tagsHTML += '<span class="tag tag-y">' + escapeHTML(t) + '</span>';
         }
       });
-
       var respIco  = (oc.resp === 'Todos do turno') ? 'users' : 'user';
       var timeRel  = formatDataRelativa(oc.criado || oc.dataCriacao);
       var timeH    = timeRel ? '<span class="oc-meta-item" style="color:var(--muted);"><i data-lucide="clock" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + timeRel + '</span>' : '';
-      
       var prazoH   = '';
       if (oc.prazo) {
         if (isVencida) {
@@ -171,14 +143,11 @@
           prazoH = '<span class="oc-meta-item"><i data-lucide="timer" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i>Prazo: ' + escapeHTML(oc.prazo) + '</span>';
         }
       }
-
       var localH   = oc.local ? '<span class="oc-meta-item"><i data-lucide="map-pin" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + escapeHTML(oc.local) + '</span>' : '';
-
       var cardClasses = 'oc-card';
       if (isVencida) cardClasses += ' vencida';
       else if (isParcial) cardClasses += ' parcialmente-resolvida';
       else if (oc.mine) cardClasses += ' mine';
-
       return (
         '<article class="' + cardClasses + '" data-id="' + oc.id + '" onclick="verDetalhesOcorrencia(\'' + oc.id + '\')" style="margin-bottom:10px;" title="Clique para ver detalhes">' +
           '<div class="prio-line ' + prioLine(oc.prio) + '"></div>' +
@@ -201,23 +170,18 @@
         '</article>'
       );
     }
-
     container.innerHTML = renderSecoesComCards(secoes, renderCardHTML);
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.renderCards = renderCards;
-
-  /* ── Helper Global: Agrupamento temporal (Hoje, Ontem, Dias Anteriores) ── */
   function agruparPorDias(itens, fnData) {
     var now = new Date();
     var hojeZero = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-
     var grupos = {
       hoje: [],
       ontem: [],
       anteriores: []
     };
-
     (itens || []).forEach(function(item) {
       var valData = fnData ? fnData(item) : (item.criado || item.dataCriacao || item.dataExclusao);
       var ts;
@@ -231,11 +195,9 @@
         ts = Date.now();
       }
       if (!ts || isNaN(ts)) ts = Date.now();
-
       var d = new Date(ts);
       var itemZero = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
       var diffDays = Math.round((hojeZero - itemZero) / (1000 * 60 * 60 * 24));
-
       if (diffDays <= 0) {
         grupos.hoje.push(item);
       } else if (diffDays === 1) {
@@ -244,14 +206,12 @@
         grupos.anteriores.push(item);
       }
     });
-
     return [
       { key: 'hoje', titulo: 'Hoje', icone: 'calendar', items: grupos.hoje },
       { key: 'ontem', titulo: 'Ontem', icone: 'history', items: grupos.ontem },
       { key: 'anteriores', titulo: 'Dias Anteriores', icone: 'archive', items: grupos.anteriores }
     ];
   }
-
   function renderSecoesComCards(secoes, fnRenderCard) {
     var html = '';
     (secoes || []).forEach(function(sec) {
@@ -267,17 +227,11 @@
     });
     return html;
   }
-
-  /* ─── Render: painéis aside (CTRS + Falhas) ─── */
-  /* Ambos usam o mesmo nome "Ocorrências" e os mesmos dados */
   function renderAside(containerId) {
     var container = document.getElementById(containerId);
     if (!container) return;
-
     var abertas    = getAbertas();
     var resolvidas = getResolvidas();
-
-    /* ── Mini cards das abertas ── */
     var abertasHTML = '';
     if (abertas.length === 0) {
       abertasHTML = '<p style="font-size:11.5px;color:var(--muted);padding:8px 0;">Nenhuma ocorrência ativa.</p>';
@@ -292,11 +246,9 @@
           }
         });
         if (oc.mine) tagsPrio += '<span class="tag" style="background:#EEF2FF;color:#4F46E5;border:1px solid #C7D2FE;font-weight:600;">Atribuída a você</span>';
-
         var meta = escapeHTML(oc.resp || 'Todos do turno');
         if (oc.prazo) meta += ' · ' + escapeHTML(oc.prazo);
         if (oc.local) meta += ' · ' + escapeHTML(oc.local);
-
         return (
           '<div class="mini-oc' + (oc.mine ? ' mine' : '') + '" onclick="abrirResolver(\'' + oc.id + '\')">' +
             '<div class="mini-top"><div class="mini-dot ' + dotClass + '"></div>' +
@@ -307,8 +259,6 @@
         );
       }).join('');
     }
-
-    /* ── Lista de resolvidas ── */
     var resolvidasHTML = '';
     if (resolvidas.length > 0) {
       resolvidasHTML =
@@ -324,7 +274,6 @@
           );
         }).join('');
     }
-
     container.innerHTML =
       '<div class="aside-lbl">Ocorrências (' + abertas.length + ')</div>' +
       abertasHTML +

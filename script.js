@@ -1,6 +1,3 @@
-/* ═══════════════════════════════════════════
-   POPUP — funções base globais
-═══════════════════════════════════════════ */
 function abrirPopup(id) {
   var el = document.getElementById(id);
   if (el) {
@@ -56,26 +53,22 @@ function abrirQuickLook(src, nome) {
   var img = document.getElementById('quicklook-img');
   var nameEl = document.getElementById('quicklook-filename');
   var dlBtn = document.getElementById('quicklook-download-btn');
-
   if (img) img.src = src;
   if (nameEl) nameEl.textContent = nome || 'Imagem';
   if (dlBtn) {
     dlBtn.href = src;
     dlBtn.download = nome || 'imagem_anexa';
   }
-
   abrirPopup('popup-quicklook');
   if (typeof lucide !== 'undefined') {
     lucide.createIcons();
   }
 }
-
 function fecharQuickLook() {
   fecharPopup('popup-quicklook');
   var img = document.getElementById('quicklook-img');
   if (img) img.src = '';
 }
-
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape' || e.keyCode === 27) {
     var ql = document.getElementById('popup-quicklook');
@@ -84,34 +77,22 @@ document.addEventListener('keydown', function(e) {
     }
   }
 });
-
 window.abrirPopup             = abrirPopup;
 window.fecharPopup            = fecharPopup;
 window.abrirQuickLook         = abrirQuickLook;
 window.fecharQuickLook        = fecharQuickLook;
 window.toggleBtnIniciarSessao = toggleBtnIniciarSessao;
 window.iniciarSessao          = iniciarSessao;
-
-/* Fechar popups clicando fora no overlay escuro */
 document.addEventListener('click', function(e) {
   if (e.target && e.target.classList && e.target.classList.contains('overlay') && e.target.id !== 'popup-entrada' && e.target.id !== 'popup-identificacao-operador') {
     fecharPopup(e.target.id);
   }
 });
 
-
 document.addEventListener('DOMContentLoaded', function () {
-  console.log('✅ [Sistema TV] Versão 7.9 — Blindagem de Testes: Sincronização Otimizada, Anti-XSS e Cache Resiliente');
-
-  /* ═══════════════════════════════════════════
-     BANCO DE DADOS & SERVIÇO DE ARMAZENAMENTO (DB ADAPTER SERVICE)
-     Interface modular para transição transparente entre LocalStorage e Backend API (Supabase/Firebase/REST)
-  ═══════════════════════════════════════════ */
-
   var USER_NAME_STORAGE_KEY    = 'tv_user_name_v1';
   var PHOTO_STORAGE_KEY        = 'tv_user_photo_v1';
   var OCORRENCIAS_CACHE_KEY    = 'tv_ocorrencias_cache_v2';
-
   function escapeHTML(str) {
     if (str === null || str === undefined) return '';
     return String(str)
@@ -122,7 +103,6 @@ document.addEventListener('DOMContentLoaded', function () {
       .replace(/'/g, '&#39;');
   }
   window.escapeHTML = escapeHTML;
-
   function getUsuarioAtual() {
     var stored = localStorage.getItem(USER_NAME_STORAGE_KEY);
     if (stored && stored.trim()) return stored.trim();
@@ -130,7 +110,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (upName && upName.textContent && upName.textContent.trim()) return upName.textContent.trim();
     return 'Operador';
   }
-
   var dashboardMetrics = {
     telejornal: {
       'INTEGRAÇÃO NOTÍCIA': { conf: 0, nc: 0, canc: 0 },
@@ -154,11 +133,6 @@ document.addEventListener('DOMContentLoaded', function () {
       'KMJ':          { conf: 0, nc: 0, canc: 0 }
     }
   };
-
-  /* ═══════════════════════════════════════════
-     CRIPTOGRAFIA DE ALTA SEGURANÇA (AES-GCM 256 + PBKDF2 250.000 ITERAÇÕES)
-     Permite deploy seguro no GitHub público protegendo as credenciais do Supabase
-  ═══════════════════════════════════════════ */
   var TVCrypto = {
     buf2hex: function(buffer) {
       return Array.prototype.map.call(new Uint8Array(buffer), function(x) {
@@ -250,22 +224,17 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   };
   window.TVCrypto = TVCrypto;
-
-  // Pacote Criptografado Global de Alta Segurança (AES-256-GCM + PBKDF2)
-  // Descriptografado exclusivamente em memória pela Chave de Acesso da Equipe
   window.ENCRYPTED_TV_CREDENTIALS = window.ENCRYPTED_TV_CREDENTIALS || (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS) || {
     salt: '9f6ca6650ad6670436a478d785b65dbd',
     iv: '289b276d312c24f6a3d6102e',
     data: '9c1e2b61b20cc9d3596ad6bb98944e2acce2ffeaab2e2e43c669d3a2a6918f761be4d464e984b4255195293aaa0d6cf993381959d332101d0d01bec6a89f08421d11a8e26be003711dd3602b37cad059ef6eefd47bc0615a9b26b050bcc25ca36a98cb18b46541aeb86b07cf32206a4e8699adaa0f8493e124'
   };
-
   function isEstacaoConectadaTV() {
     var u = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
     var k = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
     return Boolean(u && k && u.indexOf('seu-projeto') === -1 && k.indexOf('sua-chave') === -1);
   }
   window.isEstacaoConectadaTV = isEstacaoConectadaTV;
-
   function atualizarUIIdentificacaoOperador() {
     var group = document.getElementById('ident-chave-group');
     var label = document.getElementById('ident-chave-label');
@@ -273,10 +242,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var input = document.getElementById('ident-chave-acesso');
     var msg   = document.getElementById('ident-chave-msg');
     if (!group) return;
-
     var conectada = isEstacaoConectadaTV();
     var pack = window.ENCRYPTED_TV_CREDENTIALS || (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS);
-
     if (conectada) {
       if (label) label.innerHTML = 'Chave de Acesso <span style="font-weight:400;color:var(--muted);font-size:11px;">(Opcional neste computador)</span>';
       if (hint)  hint.innerHTML  = '';
@@ -296,32 +263,26 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.atualizarUIIdentificacaoOperador = atualizarUIIdentificacaoOperador;
-
   async function conectarComChaveTV(passphrase) {
     var pack = window.ENCRYPTED_TV_CREDENTIALS || (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS);
     if (!passphrase || !passphrase.trim()) {
       return { ok: false, error: 'Por favor, informe a Chave de Acesso da TV.' };
     }
-
     if (!pack || !pack.data) {
       return { ok: false, error: 'Nenhum pacote criptografado configurado. Configure no config.js ou na aba Configurações.' };
     }
-
     try {
       var creds = await TVCrypto.decrypt(passphrase.trim(), pack);
       if (!creds || !creds.url || !creds.key) {
         return { ok: false, error: 'Pacote criptográfico não contém URL ou chave válidas.' };
       }
-
       SUPABASE_URL = creds.url;
       SUPABASE_ANON_KEY = creds.key;
       DBService.url = creds.url;
       DBService.key = creds.key;
       DBService.mode = 'supabase';
-
       localStorage.setItem('tv_supabase_url', creds.url);
       localStorage.setItem('tv_supabase_key', creds.key);
-
       updateCloudStatus(true);
       if (typeof carregarCredenciaisSupabaseConfig === 'function') {
         carregarCredenciaisSupabaseConfig();
@@ -329,7 +290,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (typeof DBService.syncRemote === 'function') {
         await DBService.syncRemote(true);
       }
-
       return { ok: true, creds: creds };
     } catch (err) {
       console.warn('[TVCrypto] Falha de autenticação:', err);
@@ -337,7 +297,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.conectarComChaveTV = conectarComChaveTV;
-
   var envConfig = (typeof window !== 'undefined' && window.ENV_CONFIG) ? window.ENV_CONFIG : {};
   var SUPABASE_URL = (envConfig.SUPABASE_URL && envConfig.SUPABASE_URL.indexOf('seu-projeto') === -1)
     ? envConfig.SUPABASE_URL
@@ -345,47 +304,33 @@ document.addEventListener('DOMContentLoaded', function () {
   var SUPABASE_ANON_KEY = (envConfig.SUPABASE_ANON_KEY && envConfig.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1)
     ? envConfig.SUPABASE_ANON_KEY
     : (localStorage.getItem('tv_supabase_key') || '');
-
   var JF_EXCLUSIVOS = ['NET PRAÇA', 'NET PORTARIA', 'FORMATOS NET', 'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR', 'KMJ'];
-
   function normalizarPracaOcorrencia(praca, local, titulo, equipamento) {
     var l = (local || '').toString();
     var t = (titulo || '').toString();
     var p = (praca || '').toString().trim();
     var eq = (equipamento || '').toString().toUpperCase();
-
-    // 1. Se local ou título contém 'Juiz', é estritamente Juiz de Fora
     if (l.indexOf('Juiz') !== -1 || t.indexOf('Juiz') !== -1) {
       return 'Juiz de Fora';
     }
-
-    // 2. Se local ou título contém 'Uber', é estritamente Uberlândia
     if (l.indexOf('Uber') !== -1 || t.indexOf('Uber') !== -1) {
       return 'Uberlândia';
     }
-
-    // 3. Equipamentos exclusivos de Juiz de Fora
     for (var i = 0; i < JF_EXCLUSIVOS.length; i++) {
       if (eq === JF_EXCLUSIVOS[i] || t.toUpperCase().indexOf(JF_EXCLUSIVOS[i]) !== -1) {
         return 'Juiz de Fora';
       }
     }
-
-    // 4. Se tiver praça explicitamente gravada e válida
     if (p) {
       return p.indexOf('Uber') !== -1 ? 'Uberlândia' : 'Juiz de Fora';
     }
-
-    // 5. Padrão estrito para ocorrências legadas: Juiz de Fora (NUNCA usar getPracaAtual() como fallback!)
     return 'Juiz de Fora';
   }
   window.normalizarPracaOcorrencia = normalizarPracaOcorrencia;
-
   var DBService = {
     mode: (SUPABASE_URL && SUPABASE_ANON_KEY) ? 'supabase' : 'local',
     url: SUPABASE_URL,
     key: SUPABASE_ANON_KEY,
-
     getOcorrencias: function() { return load(); },
     formatOcorrenciaPayload: function(item) {
       if (!item) return null;
@@ -424,26 +369,21 @@ document.addEventListener('DOMContentLoaded', function () {
         praca: normalizarPracaOcorrencia(item.praca, item.local, item.titulo, item.equipamento || (item.tags && item.tags[1]))
       };
     },
-
-    saveOcorrencias: function(list, itemModificado, isNovo) { 
+    saveOcorrencias: function(list, itemModificado, isNovo) {
       save(list, itemModificado, isNovo);
     },
-
     getHistorico: function() { return loadHistorico(); },
-    saveHistorico: function(list, itemAdicionado) { 
+    saveHistorico: function(list, itemAdicionado) {
       saveHistorico(list, itemAdicionado);
     },
-
     getFotoPerfil: function() { return localStorage.getItem(PHOTO_STORAGE_KEY); },
     saveFotoPerfil: function(url) { localStorage.setItem(PHOTO_STORAGE_KEY, url); },
     removeFotoPerfil: function() { localStorage.removeItem(PHOTO_STORAGE_KEY); },
-
     enviarNotificacaoEmail: function(assunto, corpo, destinatarios) {
       if (typeof mostrarToast === 'function') {
         mostrarToast('E-mail', 'Essa função de envio de e-mail ainda não está disponível.', 'info');
       }
     },
-
     deleteRemote: function(table, id) {
       if (!this.url || !this.key || !id) return;
       var self = this;
@@ -456,7 +396,6 @@ document.addEventListener('DOMContentLoaded', function () {
             'Authorization': 'Bearer ' + this.key
           }
         }).then(function(res) {
-          console.log('[DBService Cloud] Registro excluído com sucesso do Supabase (' + table + '):', id);
         }).catch(function(err) {
           console.warn('[DBService Cloud] Falha ao excluir registro do Supabase:', err);
         });
@@ -464,7 +403,6 @@ document.addEventListener('DOMContentLoaded', function () {
         console.warn('[DBService Cloud] Exceção no deleteRemote:', e);
       }
     },
-
     upsertOcorrenciaRemota: function(item, isNovo) {
       if (!this.url || !this.key || !item || !item.id) return;
       try {
@@ -497,7 +435,6 @@ document.addEventListener('DOMContentLoaded', function () {
           if (!res.ok) {
             console.warn('[DBService Cloud] Falha ao sincronizar ocorrência pontual (' + res.status + '):', item.id);
           } else {
-            console.log('[DBService Cloud] ✅ Ocorrência sincronizada pontualmente (' + method + '):', item.id);
           }
         }).catch(function(err) {
           console.warn('[DBService Cloud] Erro no envio pontual da ocorrência:', err);
@@ -506,7 +443,6 @@ document.addEventListener('DOMContentLoaded', function () {
         console.warn('[DBService Cloud] Exceção em upsertOcorrenciaRemota:', e);
       }
     },
-
     formatHistoricoPayload: function(h) {
       if (!h || !h.id) return null;
       return {
@@ -527,7 +463,6 @@ document.addEventListener('DOMContentLoaded', function () {
         praca: h.praca || h.local || 'Juiz de Fora'
       };
     },
-
     pushHistoricoItem: function(histItem) {
       if (!this.url || !this.key || !histItem) return;
       try {
@@ -547,7 +482,6 @@ document.addEventListener('DOMContentLoaded', function () {
           if (!res.ok) {
             console.warn('[DBService Cloud] Falha ao enviar item de histórico (' + res.status + '):', histItem.id);
           } else {
-            console.log('[DBService Cloud] ✅ Histórico sincronizado pontualmente (POST):', histItem.id);
           }
         }).catch(function(err) {
           console.warn('[DBService Cloud] Erro no pushHistoricoItem:', err);
@@ -556,7 +490,6 @@ document.addEventListener('DOMContentLoaded', function () {
         console.warn('[DBService Cloud] Exceção em pushHistoricoItem:', e);
       }
     },
-
     pushRemote: function(table, data) {
       if (!this.url || !this.key) return;
       if (!Array.isArray(data) || data.length === 0) return;
@@ -593,11 +526,9 @@ document.addEventListener('DOMContentLoaded', function () {
         console.warn('[DBService Cloud] Exceção no push remoto:', e);
       }
     },
-
     init: function() {
       this.syncRemote();
     },
-
     syncRemote: function(force) {
       if (!this.url) this.url = (envConfig && envConfig.SUPABASE_URL && envConfig.SUPABASE_URL.indexOf('seu-projeto') === -1) ? envConfig.SUPABASE_URL : (localStorage.getItem('tv_supabase_url') || '');
       if (!this.key) this.key = (envConfig && envConfig.SUPABASE_ANON_KEY && envConfig.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) ? envConfig.SUPABASE_ANON_KEY : (localStorage.getItem('tv_supabase_key') || '');
@@ -605,7 +536,6 @@ document.addEventListener('DOMContentLoaded', function () {
         updateCloudStatus(false, 'Modo Local');
         return Promise.resolve(false);
       }
-
       var now = Date.now();
       if (!force && this._lastSyncTime && (now - this._lastSyncTime < 15000)) {
         return Promise.resolve(false); // Evita chamadas repetidas desnecessárias em menos de 15 segundos
@@ -613,10 +543,8 @@ document.addEventListener('DOMContentLoaded', function () {
       this._lastSyncTime = now;
       this.mode = 'supabase';
       var self = this;
-
       return new Promise(function(resolveSync) {
         try {
-          // 1. Sincroniza Ocorrências em tempo real (Supabase REST) com limite inteligente
           var urlOc = self.url.replace(/\/$/, '') + '/rest/v1/ocorrencias?select=*&order=criado.desc&limit=100';
           var pOc = fetch(urlOc, {
             headers: {
@@ -651,8 +579,6 @@ document.addEventListener('DOMContentLoaded', function () {
             updateCloudStatus(false);
             console.warn('[DBService Cloud Sync] Offline ou conectando ao Supabase...', err);
           });
-
-          // 2. Sincroniza Histórico em tempo real (Supabase REST) com limite inteligente
           var urlHist = self.url.replace(/\/$/, '') + '/rest/v1/historico?select=*&order=dataCriacao.desc&limit=100';
           var pHist = fetch(urlHist, {
             headers: {
@@ -700,32 +626,21 @@ document.addEventListener('DOMContentLoaded', function () {
           .catch(function(err) {
             console.warn('[DBService Cloud Sync Hist] Offline ou conectando ao Supabase...', err);
           });
-
-          // 3. Sincroniza Checklist e Rotinas em tempo real (Supabase)
           try {
             if (typeof sincronizarChecklistNuvem === 'function') sincronizarChecklistNuvem();
           } catch(eChk) {}
-
-          // 4. Sincroniza Orçamentos em tempo real (Supabase)
           try {
             if (typeof sincronizarOrcamentoNuvem === 'function') sincronizarOrcamentoNuvem();
           } catch(eOrc) {}
-
-          // 5. Sincroniza Lixeira em tempo real (Supabase)
           try {
             if (typeof sincronizarLixeiraNuvem === 'function') sincronizarLixeiraNuvem();
           } catch(eLix) {}
-
-          // 6. Sincroniza Notificações em tempo real (Supabase)
           try {
             if (typeof sincronizarNotificacoesNuvem === 'function') sincronizarNotificacoesNuvem();
           } catch(eNot) {}
-
-          // 7. Sincroniza Equipe de Jornalismo (Repórteres e RCs) em tempo real (Supabase)
           try {
             if (typeof sincronizarEquipeNuvem === 'function') sincronizarEquipeNuvem();
           } catch(eEq) {}
-
           Promise.all([pOc, pHist]).then(function() {
             if (typeof renderAll === 'function') renderAll(true);
             resolveSync(true);
@@ -742,12 +657,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   };
   window.DBService = DBService;
-
-  /* ═══════════════════════════════════════════
-     RESOLUÇÃO INTELIGENTE DE OPERADOR POR NOME (MULTI-PC & MULTI-NAVEGADOR)
-  ═══════════════════════════════════════════ */
   window.OPERADOR_UUID_ATUAL = null;
-
   function obterOuCriarOperadorPorNome(nome, callback) {
     if (!nome || typeof nome !== 'string' || !nome.trim()) {
       if (typeof callback === 'function') callback(null);
@@ -756,12 +666,10 @@ document.addEventListener('DOMContentLoaded', function () {
     var nomeNorm = nome.trim();
     var dbUrl = (DBService && DBService.url) ? DBService.url.replace(/\/+$/, '') : '';
     var dbKey = (DBService && DBService.key) ? DBService.key : '';
-
     if (!dbUrl || !dbKey) {
       if (typeof callback === 'function') callback(null);
       return;
     }
-
     var endpoint = dbUrl + '/rest/v1/operadores?nome=eq.' + encodeURIComponent(nomeNorm) + '&select=id,nome,ativo';
     fetch(endpoint, {
       headers: {
@@ -775,7 +683,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (Array.isArray(ops) && ops.length > 0) {
         var op = ops[0];
         window.OPERADOR_UUID_ATUAL = op.id;
-        console.log('[Operador DB] ✅ Operador reconhecido por nome no Supabase:', op.nome, op.id);
         if (typeof callback === 'function') callback(op.id);
         if (typeof sincronizarChecklistNuvem === 'function') sincronizarChecklistNuvem();
       } else {
@@ -798,7 +705,6 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(function() {
           window.OPERADOR_UUID_ATUAL = novoId;
-          console.log('[Operador DB] ✅ Novo operador cadastrado no Supabase:', nomeNorm, novoId);
           if (typeof callback === 'function') callback(novoId);
           if (typeof sincronizarChecklistNuvem === 'function') sincronizarChecklistNuvem();
         })
@@ -814,33 +720,22 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   window.obterOuCriarOperadorPorNome = obterOuCriarOperadorPorNome;
-
-  /* ── Gerenciador Inteligente de Reconexão com Backoff Progressivo ── */
   var _cloudConnected = true;
   var _reconnectTimer = null;
   var _reconnectAttempt = 0;
   var _isReconnecting = false;
-
   function iniciarReconexaoAutomatica() {
-    // Só tenta reconectar se estiver desconectado e não houver tentativa já agendada ou em curso
     if (_cloudConnected || _reconnectTimer || _isReconnecting) return;
-
     _reconnectAttempt++;
-    // Intervalos com backoff progressivo: 10s, 15s, 22s, 33s... até teto de 60s
-    // Garante que não bombardeia nem incha o banco de dados com requisições repetidas
     var delayMs = Math.min(10000 * Math.pow(1.5, _reconnectAttempt - 1), 60000);
-    console.log('[DBService] Banco desconectado. Tentativa de reconexão #' + _reconnectAttempt + ' agendada em ' + (Math.round(delayMs / 1000)) + 's...');
-
     _reconnectTimer = setTimeout(async function() {
       _reconnectTimer = null;
       if (_cloudConnected) return;
-
       _isReconnecting = true;
       try {
         if (typeof DBService !== 'undefined' && DBService && typeof DBService.syncRemote === 'function') {
           var ok = await DBService.syncRemote(true);
           if (ok !== false) {
-            console.log('[DBService] ✅ Conexão com o banco restabelecida com sucesso!');
             _cloudConnected = true;
             _reconnectAttempt = 0;
             _isReconnecting = false;
@@ -855,13 +750,11 @@ document.addEventListener('DOMContentLoaded', function () {
         console.warn('[DBService] Tentativa de reconexão falhou:', err);
       }
       _isReconnecting = false;
-      // Se ainda estiver desconectado, agenda a próxima com backoff
       if (!_cloudConnected) {
         iniciarReconexaoAutomatica();
       }
     }, delayMs);
   }
-
   function tentarReconectarImediato() {
     if (_cloudConnected) return;
     if (_reconnectTimer) {
@@ -872,7 +765,6 @@ document.addEventListener('DOMContentLoaded', function () {
     iniciarReconexaoAutomatica();
   }
   window.tentarReconectarImediato = tentarReconectarImediato;
-
   function updateCloudStatus(isOnline, customText) {
     var indicator = document.getElementById('cloud-status-indicator');
     var btnTopbar = document.getElementById('btn-conectar-nuvem-topbar');
@@ -909,7 +801,6 @@ document.addEventListener('DOMContentLoaded', function () {
         iniciarReconexaoAutomatica();
       }
     }
-
     try {
       if (typeof window.atualizarUIStatusBancoConfig === 'function') {
         window.atualizarUIStatusBancoConfig();
@@ -919,15 +810,12 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.updateCloudStatus = updateCloudStatus;
   window._isCloudConnected = function() { return _cloudConnected; };
-
   window.addEventListener('online', function() {
-    console.log('[DBService] Rede online detectada. Verificando conexão com o banco...');
     tentarReconectarImediato();
   });
   window.addEventListener('offline', function() {
     updateCloudStatus(false, 'Modo Local');
   });
-
   function sanitizeOcorrencia(o) {
     if (!o || typeof o !== 'object') return null;
     var userAtual = getUsuarioAtual();
@@ -939,12 +827,10 @@ document.addEventListener('DOMContentLoaded', function () {
     var anx = (o.anexos && Array.isArray(o.anexos) && o.anexos.length > 0)
       ? o.anexos
       : ((res && Array.isArray(res.anexos) && res.anexos.length > 0) ? res.anexos : []);
-
     if (anx.length > 0) {
       if (!res) res = { statusRes: (o.status === 'aberta' ? 'Aberta' : 'Resolvido'), anexos: anx };
       else if (!res.anexos || res.anexos.length === 0) res.anexos = anx;
     }
-
     return {
       id: o.id || ('oc_' + Date.now()),
       titulo: o.titulo || 'Ocorrência sem título',
@@ -974,13 +860,10 @@ document.addEventListener('DOMContentLoaded', function () {
       _pendingSync: !!o._pendingSync
     };
   }
-
   function mesclarOcorrencias(locais, remotas, idsNaLixeira) {
     var lixeiraArr = idsNaLixeira || [];
     var mapa = {};
     var now = Date.now();
-
-    // 1. Indexa itens remotos saneados
     (remotas || []).forEach(function(rRaw) {
       var r = sanitizeOcorrencia(rRaw);
       if (!r || !r.id || r.status === 'lixeira' || lixeiraArr.indexOf(r.id) !== -1 || r.id === 'oc_1787932348110') return;
@@ -988,19 +871,13 @@ document.addEventListener('DOMContentLoaded', function () {
       delete r._pendingSync;
       mapa[r.id] = r;
     });
-
-    // 2. Mescla com itens locais para concorrência segura (multi-operador)
     (locais || []).forEach(function(l) {
       if (!l || !l.id || l.status === 'lixeira' || lixeiraArr.indexOf(l.id) !== -1 || l.id === 'oc_1787932348110') return;
       var r = mapa[l.id];
       if (!r) {
-        // Se o item já havia sido sincronizado anteriormente com o Supabase e agora não veio no select remoto, foi excluído
         if (l._synced) return;
-        // Se o item é legado/antigo (mais de 1 hora) e não está no banco remoto nem marcado como pendente, foi excluído
         var idadeLocal = now - (l.criado || 0);
         if (idadeLocal > 3600000 && !l._pendingSync) return;
-
-        // Ocorrência nova/recente ou pendente de sincronização: preserva e tenta enviar
         mapa[l.id] = l;
         try {
           if (typeof DBService !== 'undefined' && DBService && typeof DBService.upsertOcorrenciaRemota === 'function') {
@@ -1008,7 +885,6 @@ document.addEventListener('DOMContentLoaded', function () {
           }
         } catch (eSync) {}
       } else {
-        // Ambas existem: se status ou resolução mudou recentemente no local, preserva o local
         var localResolvida = (l.status === 'resolvida' && r.status !== 'resolvida');
         var editLocalRecente = (l.ultimaEdicaoEm && (!r.ultimaEdicaoEm || l.ultimaEdicaoEm > r.ultimaEdicaoEm));
         if (localResolvida || editLocalRecente) {
@@ -1016,8 +892,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       }
     });
-
-    // 3. Converte para lista ordenada decrescente por criado
     var ids = Object.keys(mapa);
     var resultado = [];
     for (var i = 0; i < ids.length; i++) {
@@ -1029,7 +903,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return resultado;
   }
   window.mesclarOcorrencias = mesclarOcorrencias;
-
   function load() {
     if (!ocorrencias || ocorrencias.length === 0) {
       try {
@@ -1046,7 +919,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return ocorrencias || [];
   }
-
   function save(list, itemModificado, isNovo) {
     ocorrencias = (list || []).filter(function(o){ return o && o.id !== 'oc_1787932348110'; });
     window.ocorrencias = ocorrencias;
@@ -1062,9 +934,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.save = save;
-
   var INITIAL_OCORRENCIAS_SEED = [];
-
   var ocorrencias = (function() {
     try {
       var rawCache = localStorage.getItem(OCORRENCIAS_CACHE_KEY);
@@ -1083,7 +953,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return [];
   })();
   window.ocorrencias = ocorrencias;
-
   function pertenceAPracaAtiva(item) {
     if (!item) return false;
     var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
@@ -1092,19 +961,12 @@ document.addEventListener('DOMContentLoaded', function () {
     return isUberlandia ? (itemPraca === 'Uberlândia') : (itemPraca === 'Juiz de Fora');
   }
   window.pertenceAPracaAtiva = pertenceAPracaAtiva;
-
   function getAbertas()    { return ocorrencias.filter(function(o){ return o && o.status === 'aberta' && pertenceAPracaAtiva(o); }); }
   function getArquivadas() { return ocorrencias.filter(function(o){ return o && o.status === 'arquivada' && pertenceAPracaAtiva(o); }); }
   function getResolvidas() { return ocorrencias.filter(function(o){ return o && o.status === 'resolvida' && pertenceAPracaAtiva(o); }); }
   window.getAbertas = getAbertas;
   window.getArquivadas = getArquivadas;
   window.getResolvidas = getResolvidas;
-
-
-
-  /* ═══════════════════════════════════════════
-     HELPERS DE RENDER
-  ═══════════════════════════════════════════ */
 
   function formatDataHoraLocal(dateInput) {
     var d;
@@ -1118,7 +980,6 @@ document.addEventListener('DOMContentLoaded', function () {
       d = new Date();
     }
     if (isNaN(d.getTime())) d = new Date();
-
     var ano = d.getFullYear();
     var mes = String(d.getMonth() + 1);
     if (mes.length < 2) mes = '0' + mes;
@@ -1128,14 +989,11 @@ document.addEventListener('DOMContentLoaded', function () {
     if (hora.length < 2) hora = '0' + hora;
     var min = String(d.getMinutes());
     if (min.length < 2) min = '0' + min;
-
     return ano + '-' + mes + '-' + dia + ' ' + hora + ':' + min;
   }
   window.formatDataHoraLocal = formatDataHoraLocal;
-
   function prioLine(prio) { return prio==='Alta'?'pl-r':prio==='Média'?'pl-y':'pl-g'; }
   function tagClass(prio) { return prio==='Alta'?'tag-r':prio==='Média'?'tag-y':'tag-g'; }
-
   function isOcorrenciaVencida(oc) {
     if (!oc || oc.status !== 'aberta') return false;
     if (oc.tags && Array.isArray(oc.tags) && oc.tags.indexOf('Atrasada') !== -1) return true;
@@ -1151,7 +1009,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return false;
   }
   window.isOcorrenciaVencida = isOcorrenciaVencida;
-
   function isOcorrenciaDiaAnterior(oc) {
     if (!oc || !oc.criado) return false;
     var dataOc = new Date(Number(oc.criado) || oc.criado);
@@ -1162,7 +1019,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return diaOc < diaHoje;
   }
   window.isOcorrenciaDiaAnterior = isOcorrenciaDiaAnterior;
-
   function isOcorrenciaNova(oc) {
     if (!oc || !oc.criado) return false;
     var timestampCriacao = Number(oc.criado) || oc.criado;
@@ -1171,7 +1027,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return diffHoras >= 0 && diffHoras < 24;
   }
   window.isOcorrenciaNova = isOcorrenciaNova;
-
   function formatDataRelativa(timestampOrStr) {
     if (!timestampOrStr) return '';
     var dateObj = null;
@@ -1185,14 +1040,11 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
     if (!dateObj || isNaN(dateObj.getTime())) return '';
-
     var now = new Date();
     var hojeZero = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     var itemZero = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()).getTime();
     var diffDays = Math.round((hojeZero - itemZero) / (1000 * 60 * 60 * 24));
-
     var horaStr = ('0' + dateObj.getHours()).slice(-2) + ':' + ('0' + dateObj.getMinutes()).slice(-2);
-
     if (diffDays === 0) {
       return 'Criada hoje às ' + horaStr;
     } else if (diffDays === 1) {
@@ -1206,16 +1058,11 @@ document.addEventListener('DOMContentLoaded', function () {
       return dia + '/' + mes + ' às ' + horaStr;
     }
   }
-
   var filtroOcorrenciasAtivo = 'todas';
-
-  /* ─── Render: lista principal de ocorrências ativas ─── */
   function renderCards() {
     var container = document.getElementById('oc-list');
     if (!container) return;
-
     var lista = getAbertas();
-
     if (filtroOcorrenciasAtivo === 'alta') {
       lista = lista.filter(function(o) { return (o.prio || '').toLowerCase() === 'alta'; });
     } else if (filtroOcorrenciasAtivo === 'media') {
@@ -1225,7 +1072,6 @@ document.addEventListener('DOMContentLoaded', function () {
     } else if (filtroOcorrenciasAtivo === 'atrasadas') {
       lista = lista.filter(function(o) { return isOcorrenciaVencida(o); });
     }
-
     if (lista.length === 0) {
       container.innerHTML =
         '<p style="color:var(--muted);font-size:13px;text-align:center;padding:28px 0;">' +
@@ -1233,17 +1079,12 @@ document.addEventListener('DOMContentLoaded', function () {
       if (typeof lucide !== 'undefined') lucide.createIcons();
       return;
     }
-
-    /* Agrupamento temporal (Hoje, Ontem, Dias Anteriores) */
     var secoes = agruparPorDias(lista, function(oc){ return oc.criado || oc.dataCriacao; });
-
     function renderCardHTML(oc) {
       var isVencida = isOcorrenciaVencida(oc);
       var isParcial = (oc.resolucao && oc.resolucao.statusRes === 'Parcialmente resolvido') || (oc.tags || []).indexOf('Parcialmente Resolvida') !== -1;
       var isNova = isOcorrenciaNova(oc);
-
       var tagsHTML = '<span class="tag ' + tagClass(oc.prio) + '">' + (oc.prio || 'Média') + '</span>';
-      
       if (oc.mine) {
         tagsHTML += '<span class="tag" style="background:#EEF2FF;color:#4F46E5;border:1px solid #C7D2FE;font-weight:600;"><i data-lucide="user-check" style="width:11px;height:11px;stroke-width:2.5;margin-right:3px;"></i>Atribuída a você</span>';
       }
@@ -1256,17 +1097,14 @@ document.addEventListener('DOMContentLoaded', function () {
       if (isNova) {
         tagsHTML += '<span class="tag" style="background:#F8FAFC;color:#475569;border:1px solid #E2E8F0;font-weight:600;">Nova</span>';
       }
-
       (oc.tags || []).forEach(function(t) {
         if (t !== 'Nova' && t !== 'Atrasada' && t !== 'Turno anterior' && t !== 'Parcialmente Resolvida' && t !== 'Só para você' && t !== 'Dia Anterior') {
           tagsHTML += '<span class="tag tag-y">' + escapeHTML(t) + '</span>';
         }
       });
-
       var respIco  = (oc.resp === 'Todos do turno') ? 'users' : 'user';
       var timeRel  = formatDataRelativa(oc.criado || oc.dataCriacao);
       var timeH    = timeRel ? '<span class="oc-meta-item" style="color:var(--muted);"><i data-lucide="clock" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + timeRel + '</span>' : '';
-      
       var prazoH   = '';
       if (oc.prazo) {
         if (isVencida) {
@@ -1275,14 +1113,11 @@ document.addEventListener('DOMContentLoaded', function () {
           prazoH = '<span class="oc-meta-item"><i data-lucide="timer" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i>Prazo: ' + escapeHTML(oc.prazo) + '</span>';
         }
       }
-
       var localH   = oc.local ? '<span class="oc-meta-item"><i data-lucide="map-pin" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + escapeHTML(oc.local) + '</span>' : '';
-
       var cardClasses = 'oc-card';
       if (isVencida) cardClasses += ' vencida';
       else if (isParcial) cardClasses += ' parcialmente-resolvida';
       else if (oc.mine) cardClasses += ' mine';
-
       return (
         '<article class="' + cardClasses + '" data-id="' + oc.id + '" onclick="verDetalhesOcorrencia(\'' + oc.id + '\')" style="margin-bottom:10px;" title="Clique para ver detalhes">' +
           '<div class="prio-line ' + prioLine(oc.prio) + '"></div>' +
@@ -1305,23 +1140,18 @@ document.addEventListener('DOMContentLoaded', function () {
         '</article>'
       );
     }
-
     container.innerHTML = renderSecoesComCards(secoes, renderCardHTML);
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.renderCards = renderCards;
-
-  /* ── Helper Global: Agrupamento temporal (Hoje, Ontem, Dias Anteriores) ── */
   function agruparPorDias(itens, fnData) {
     var now = new Date();
     var hojeZero = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-
     var grupos = {
       hoje: [],
       ontem: [],
       anteriores: []
     };
-
     (itens || []).forEach(function(item) {
       var valData = fnData ? fnData(item) : (item.criado || item.dataCriacao || item.dataExclusao);
       var ts;
@@ -1335,11 +1165,9 @@ document.addEventListener('DOMContentLoaded', function () {
         ts = Date.now();
       }
       if (!ts || isNaN(ts)) ts = Date.now();
-
       var d = new Date(ts);
       var itemZero = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
       var diffDays = Math.round((hojeZero - itemZero) / (1000 * 60 * 60 * 24));
-
       if (diffDays <= 0) {
         grupos.hoje.push(item);
       } else if (diffDays === 1) {
@@ -1348,14 +1176,12 @@ document.addEventListener('DOMContentLoaded', function () {
         grupos.anteriores.push(item);
       }
     });
-
     return [
       { key: 'hoje', titulo: 'Hoje', icone: 'calendar', items: grupos.hoje },
       { key: 'ontem', titulo: 'Ontem', icone: 'history', items: grupos.ontem },
       { key: 'anteriores', titulo: 'Dias Anteriores', icone: 'archive', items: grupos.anteriores }
     ];
   }
-
   function renderSecoesComCards(secoes, fnRenderCard) {
     var html = '';
     (secoes || []).forEach(function(sec) {
@@ -1371,17 +1197,11 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     return html;
   }
-
-  /* ─── Render: painéis aside (CTRS + Falhas) ─── */
-  /* Ambos usam o mesmo nome "Ocorrências" e os mesmos dados */
   function renderAside(containerId) {
     var container = document.getElementById(containerId);
     if (!container) return;
-
     var abertas    = getAbertas();
     var resolvidas = getResolvidas();
-
-    /* ── Mini cards das abertas ── */
     var abertasHTML = '';
     if (abertas.length === 0) {
       abertasHTML = '<p style="font-size:11.5px;color:var(--muted);padding:8px 0;">Nenhuma ocorrência ativa.</p>';
@@ -1396,11 +1216,9 @@ document.addEventListener('DOMContentLoaded', function () {
           }
         });
         if (oc.mine) tagsPrio += '<span class="tag" style="background:#EEF2FF;color:#4F46E5;border:1px solid #C7D2FE;font-weight:600;">Atribuída a você</span>';
-
         var meta = escapeHTML(oc.resp || 'Todos do turno');
         if (oc.prazo) meta += ' · ' + escapeHTML(oc.prazo);
         if (oc.local) meta += ' · ' + escapeHTML(oc.local);
-
         return (
           '<div class="mini-oc' + (oc.mine ? ' mine' : '') + '" onclick="abrirResolver(\'' + oc.id + '\')">' +
             '<div class="mini-top"><div class="mini-dot ' + dotClass + '"></div>' +
@@ -1411,8 +1229,6 @@ document.addEventListener('DOMContentLoaded', function () {
         );
       }).join('');
     }
-
-    /* ── Lista de resolvidas ── */
     var resolvidasHTML = '';
     if (resolvidas.length > 0) {
       resolvidasHTML =
@@ -1428,21 +1244,14 @@ document.addEventListener('DOMContentLoaded', function () {
           );
         }).join('');
     }
-
     container.innerHTML =
       '<div class="aside-lbl">Ocorrências (' + abertas.length + ')</div>' +
       abertasHTML +
       resolvidasHTML;
   }
 
-
-  /* ═══════════════════════════════════════════
-     HISTÓRICO GERAL — ESTRUTURA DE DADOS
-  ═══════════════════════════════════════════ */
-
   var HISTORICO_LOCAL_STORAGE_KEY = 'tv_historico_seed_v2';
   var historicoSeedData = [];
-
   try {
     var rawHist = localStorage.getItem(HISTORICO_LOCAL_STORAGE_KEY);
     if (rawHist) {
@@ -1451,7 +1260,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   } catch(e) {}
   window.historicoSeedData = historicoSeedData;
-
   function saveHistorico(list, itemAdicionado) {
     historicoSeedData = list || [];
     window.historicoSeedData = historicoSeedData;
@@ -1466,13 +1274,10 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
   }
-
   function getHistoricoCompleto() {
     var mapa = {};
     var lista = [];
     var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
-
-    // 1. Itens manuais ou relatórios vindos de historicoSeedData
     (historicoSeedData || []).forEach(function(item) {
       if (item && item.id) {
         if (item.status === 'lixeira' || idsNaLixeira.includes(item.id)) return;
@@ -1481,8 +1286,6 @@ document.addEventListener('DOMContentLoaded', function () {
         lista.push(item);
       }
     });
-
-    // 2. Ocorrências resolvidas ou arquivadas vindas de ocorrencias (do dashboard/banco)
     (ocorrencias || []).forEach(function(oc) {
       if (!oc || !oc.id) return;
       if (oc.status === 'lixeira' || idsNaLixeira.includes(oc.id)) return;
@@ -1499,7 +1302,6 @@ document.addEventListener('DOMContentLoaded', function () {
           var anexosLista = (oc.anexos && Array.isArray(oc.anexos) && oc.anexos.length > 0)
             ? oc.anexos
             : ((oc.resolucao && Array.isArray(oc.resolucao.anexos)) ? oc.resolucao.anexos : []);
-
           var itemOcHist = {
             id:            oc.id,
             tipo:          'ocorrencia',
@@ -1527,36 +1329,28 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       }
     });
-
-    // Ordena pelo mais recente
     lista.sort(function(a, b) {
       var tA = a.dataResolucao || a.dataCriacao || '';
       var tB = b.dataResolucao || b.dataCriacao || '';
       return tB.localeCompare(tA);
     });
-
     return lista;
   }
   window.getHistoricoCompleto = getHistoricoCompleto;
-
   function loadHistorico() {
     return getHistoricoCompleto();
   }
-
   var historicoFiltroCategoria = 'todos';
   var itemHistoricoSelecionado = null;
-
   function getNomeUsuarioAtual() {
     return getUsuarioAtual().toLowerCase();
   }
-
   function isItemDoUsuario(item) {
     var usuarioAtual = getNomeUsuarioAtual();
     var criado = (item.criadoPor || '').toLowerCase();
     var resolvido = (item.resolvidoPor || '').toLowerCase();
     return criado.includes(usuarioAtual) || resolvido.includes(usuarioAtual);
   }
-
   function getTagTipoBadge(item) {
     if (item.tipo === 'ocorrencia') {
       return '<span class="tag tag-blue-soft">Ocorrência</span>';
@@ -1568,10 +1362,7 @@ document.addEventListener('DOMContentLoaded', function () {
     return '<span class="tag tag-blue-soft">Registro</span>';
   }
 
-
-  /* ─── Render: Dashboard Resolvidas & Power BI ─── */
   var resolvidasFiltro = 'todas';
-
   function filtrarResolvidas(filtro, el) {
     resolvidasFiltro = filtro;
     document.querySelectorAll('#page-resolvidas .pill').forEach(function(p) { p.classList.remove('on'); });
@@ -1579,45 +1370,33 @@ document.addEventListener('DOMContentLoaded', function () {
     renderResolvidas();
   }
   window.filtrarResolvidas = filtrarResolvidas;
-
   function renderResolvidas() {
     var listEl = document.getElementById('resolvidas-list');
     if (!listEl) return;
-
     var resolvidas = getResolvidas();
     var abertas = getAbertas();
     var vencidas = abertas.filter(function(o){ return isOcorrenciaVencida(o); });
     var abertasNoPrazo = abertas.filter(function(o){ return !isOcorrenciaVencida(o); });
-
     var totRes = resolvidas.length;
     var totAb  = abertasNoPrazo.length;
     var totVen = vencidas.length;
     var totalGeral = totRes + totAb + totVen;
-
-    /* Atualiza KPIs em Resolvidas */
     var elG = document.querySelector('.sn-resolvidas-g');
     var elB = document.querySelector('.sn-resolvidas-b');
     var elR = document.querySelector('.sn-resolvidas-r');
     if (elG) elG.textContent = totRes;
     if (elB) elB.textContent = totAb;
     if (elR) elR.textContent = totVen;
-
-    /* Taxas em % */
     var pctRes = totalGeral > 0 ? Math.round((totRes / totalGeral) * 100) : 0;
     var pctAb  = totalGeral > 0 ? Math.round((totAb / totalGeral) * 100) : 0;
     var pctVen = totalGeral > 0 ? (100 - pctRes - pctAb) : 0;
     if (pctVen < 0) pctVen = 0;
-
     var badgePct = document.getElementById('pct-resolucao-badge');
     if (badgePct) badgePct.textContent = 'Taxa de Resolução: ' + pctRes + '%';
-
     var txtTot = document.getElementById('txt-total-ocorrencias');
     if (txtTot) txtTot.textContent = totalGeral + ' ocorrências registradas';
-
     var pieTot = document.getElementById('pie-resolvidas-tot');
     if (pieTot) pieTot.textContent = totalGeral;
-
-    /* Render Gráfico de Pizza Donut (Conic-Gradient vibrante com alta definição) */
     var pieEl = document.getElementById('pie-chart-circle');
     if (pieEl) {
       if (totalGeral === 0) {
@@ -1628,15 +1407,12 @@ document.addEventListener('DOMContentLoaded', function () {
         pieEl.style.background = 'conic-gradient(#10B981 0% ' + p1 + '%, #0071E3 ' + p1 + '% ' + p2 + '%, #EF4444 ' + p2 + '% 100%)';
       }
     }
-
     var lblG = document.getElementById('lbl-pct-g');
     var lblB = document.getElementById('lbl-pct-b');
     var lblR = document.getElementById('lbl-pct-r');
     if (lblG) lblG.textContent = pctRes + '% (' + totRes + ' resolvidas)';
     if (lblB) lblB.textContent = pctAb + '% (' + totAb + ' no prazo)';
     if (lblR) lblR.textContent = pctVen + '% (' + totVen + ' expiradas)';
-
-    /* Lista filtrada */
     var itensExibir = [];
     if (resolvidasFiltro === 'todas') {
       itensExibir = resolvidas.map(function(o){ return { item: o, isVencida: false }; })
@@ -1646,16 +1422,13 @@ document.addEventListener('DOMContentLoaded', function () {
     } else if (resolvidasFiltro === 'vencidas') {
       itensExibir = vencidas.map(function(o){ return { item: o, isVencida: true }; });
     }
-
     if (itensExibir.length === 0) {
       listEl.innerHTML = '<p style="color:var(--muted);font-size:13px;text-align:center;padding:24px 0;">Nenhum registro nesta categoria.</p>';
       return;
     }
-
     listEl.innerHTML = itensExibir.map(function(obj) {
       var oc = obj.item;
       var isV = obj.isVencida;
-
       if (isV) {
         return (
           '<article class="oc-card vencida" style="cursor:pointer;" onclick="verDetalhesOcorrenciaResolvida(\'' + oc.id + '\')">' +
@@ -1688,7 +1461,6 @@ document.addEventListener('DOMContentLoaded', function () {
         var cardStyle = isParcial ? 'cursor:pointer;' : 'background:var(--bg); border:1px solid #A8E6BB; cursor:pointer;';
         var prioLineClass = isParcial ? 'pl-y' : 'pl-g';
         var tagStatusClass = isParcial ? 'tag-y' : 'tag-g';
-
         return (
           '<article class="' + cardClass + '" style="' + cardStyle + '" onclick="verDetalhesOcorrenciaResolvida(\'' + oc.id + '\')">' +
             '<div class="prio-line ' + prioLineClass + '"></div>' +
@@ -1708,11 +1480,8 @@ document.addEventListener('DOMContentLoaded', function () {
         );
       }
     }).join('');
-
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
-
-  /* ─── Stats ─── */
   function updateStats() {
     try {
       var ab  = getAbertas().length;
@@ -1723,7 +1492,6 @@ document.addEventListener('DOMContentLoaded', function () {
       var diaAnt = ocorrencias.filter(function(o){
         return o && o.status==='aberta' && isOcorrenciaDiaAnterior(o) && (typeof pertenceAPracaAtiva !== 'function' || pertenceAPracaAtiva(o));
       }).length;
-
       var els = {
         r: document.querySelector('.sn-r'),
         y: document.querySelector('.sn-y'),
@@ -1734,8 +1502,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (els.y) els.y.textContent = atrasadas;
       if (els.g) els.g.textContent = res;
       if (els.b) els.b.textContent = diaAnt;
-
-      /* Badge sidebar - atualiza badge de notificações */
       var notifBadge = document.querySelector('.notif-badge');
       if (notifBadge) {
         var numNotifs = (typeof notificacoesStore !== 'undefined' && Array.isArray(notificacoesStore)) ? notificacoesStore.filter(function(n){ return !n.lida; }).length : 0;
@@ -1745,22 +1511,18 @@ document.addEventListener('DOMContentLoaded', function () {
       console.warn('Erro ao atualizar estatísticas:', err);
     }
   }
-
   function renderPopupEntrada() {
     var container = document.getElementById('popup-entrada-pendencias');
     if (!container) return;
-
     var abertas = getAbertas();
     if (abertas.length === 0) {
       container.innerHTML = '<div class="info-item blue"><div class="ii-dot blue"></div><div><strong>Sem Pendências</strong>Nenhuma ocorrência pendente no momento.</div></div>';
       return;
     }
-
     container.innerHTML = abertas.slice(0, 4).map(function(oc) {
       var isVencida = isOcorrenciaVencida(oc);
       var corClass = (oc.prio === 'Alta' || isVencida) ? 'red' : 'blue';
       var tagTexto = isVencida ? 'Prazo Expirado' : ((oc.prio || 'Média') + ' Prioridade');
-
       return (
         '<div class="info-item ' + corClass + '">' +
           '<div class="ii-dot ' + corClass + '"></div>' +
@@ -1772,17 +1534,14 @@ document.addEventListener('DOMContentLoaded', function () {
       );
     }).join('');
   }
-
   function renderPopupLogout() {
     var container = document.getElementById('popup-logout-checklist');
     if (!container) return;
-
     var abertas = getAbertas();
     if (abertas.length === 0) {
       container.innerHTML = '<p style="font-size:12px;color:var(--muted);padding:6px 0;">Todas as ocorrências do turno foram concluídas!</p>';
       return;
     }
-
     container.innerHTML = abertas.map(function(oc) {
       var cid = 'chk_out_' + oc.id;
       var isVencida = isOcorrenciaVencida(oc);
@@ -1795,8 +1554,6 @@ document.addEventListener('DOMContentLoaded', function () {
       );
     }).join('');
   }
-
-  /* ─── renderAll: atualiza TUDO de uma vez com isolamento de falhas e diffing de performance ─── */
   var lastRenderSignature = '';
   function calcularAssinaturaEstado() {
     var pracaSig = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'JF';
@@ -1807,7 +1564,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var horaMinuto = new Date().getMinutes();
     return pracaSig + '#' + ocSig + '#' + lixSig + '#' + notifSig + '#' + histCount + '#' + horaMinuto;
   }
-
   function renderAll(forcar) {
     var novaSig = calcularAssinaturaEstado();
     if (forcar !== true && novaSig === lastRenderSignature) {
@@ -1815,7 +1571,6 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
     lastRenderSignature = novaSig;
-
     try { renderCards(); } catch(e) { console.error('Erro em renderCards:', e); }
     try { renderArquivados(); } catch(e) { console.error('Erro em renderArquivados:', e); }
     try { renderLixeira(); } catch(e) { console.error('Erro em renderLixeira:', e); }
@@ -1835,8 +1590,6 @@ document.addEventListener('DOMContentLoaded', function () {
     try { updateStats(); } catch(e) { console.error('Erro em updateStats:', e); }
   }
   window.renderAll = renderAll;
-
-  // Autosave contínuo em segundo plano para formulários (proteção contra queda de energia/fechamento)
   var debounceTimers = {};
   function registrarAutosaveListener(pageId, salvarFn) {
     var page = document.getElementById(pageId);
@@ -1852,44 +1605,26 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.registrarAutosaveListener = registrarAutosaveListener;
 
-
-  /* ═══════════════════════════════════════════
-     POPUP ENTRADA
-  /* ═══════════════════════════════════════════
-     CHECKLIST LOGOUT
-  ═══════════════════════════════════════════ */
-
-  function markDone(id, el) { 
+  function markDone(id, el) {
     var item = document.getElementById(id);
-    if (item && el) item.classList.toggle('done', el.checked); 
+    if (item && el) item.classList.toggle('done', el.checked);
   }
   window.markDone = markDone;
-
   function confirmarLogout() {
     var obs = document.getElementById('obs-logout');
     fecharPopup('popup-logout');
     if (obs) obs.value = '';
     loginTime = Date.now();
-
-    // Remove apenas o usuário logado para solicitar nova identificação
-    // mantendo credenciais da estação (banco de dados / Supabase)
     try {
       localStorage.removeItem(USER_NAME_STORAGE_KEY);
     } catch(e) {}
-
-    // Reseta visualmente a interface sem salvar 'Operador' no localStorage
     if (typeof atualizarNomeOperadorUI === 'function') {
       atualizarNomeOperadorUI('Operador', false);
     }
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Sessão Encerrada', 'Turno finalizado com sucesso. Identifique o próximo operador.', 'info');
     }
-
-    // Fecha popup de entrada se estiver aberto
     fecharPopup('popup-entrada');
-
-    // Prepara e abre o popup de identificação do operador
     var identEmail = document.getElementById('ident-operador-email');
     if (identEmail) identEmail.value = '';
     var identInput = document.getElementById('ident-operador-nome');
@@ -1900,14 +1635,12 @@ document.addEventListener('DOMContentLoaded', function () {
     if (chaveInput) {
       chaveInput.value = '';
     }
-
     if (typeof resetarFluxoEmailIdentificacao === 'function') {
       resetarFluxoEmailIdentificacao();
     }
     if (typeof atualizarUIIdentificacaoOperador === 'function') {
       atualizarUIIdentificacaoOperador();
     }
-
     abrirPopup('popup-identificacao-operador');
     setTimeout(function() {
       if (identEmail && identEmail.offsetParent !== null) identEmail.focus();
@@ -1915,14 +1648,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 150);
   }
   window.confirmarLogout = confirmarLogout;
-
-  /* ═══════════════════════════════════════════
-     TIMER DE SESSÃO / TEMPO LOGADO
-  ═══════════════════════════════════════════ */
   var loginTime = Date.now();
-
   function pad(n) { return n < 10 ? '0' + n : n; }
-
   function getTempoLogadoStr() {
     var diff = Math.floor((Date.now() - loginTime) / 1000);
     if (diff < 0) diff = 0;
@@ -1931,14 +1658,11 @@ document.addEventListener('DOMContentLoaded', function () {
     var s = diff % 60;
     return pad(h) + 'h ' + pad(m) + 'm ' + pad(s) + 's';
   }
-
   function atualizarTimerLogin() {
     try {
       var timeStr = getTempoLogadoStr();
-
       var upTimer = document.getElementById('up-timer');
       if (upTimer) upTimer.textContent = timeStr;
-
       var pageChip = document.getElementById('page-chip');
       var activePage = document.querySelector('.page.active');
       if (pageChip && activePage && activePage.id === 'page-dashboard') {
@@ -1948,13 +1672,8 @@ document.addEventListener('DOMContentLoaded', function () {
       console.warn('Erro ao atualizar timer de login:', err);
     }
   }
-
   setInterval(atualizarTimerLogin, 1000);
   atualizarTimerLogin();
-
-  /* ═══════════════════════════════════════════
-     USER POPOVER (popup sobre o nome)
-  ═══════════════════════════════════════════ */
   function toggleUserPopover(e) {
     if (e) e.stopPropagation();
     var popover = document.getElementById('user-popover');
@@ -1968,7 +1687,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.toggleUserPopover = toggleUserPopover;
-
   document.addEventListener('click', function(e) {
     var popover = document.getElementById('user-popover');
     var userBlock = document.getElementById('s-user-block');
@@ -1978,11 +1696,6 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
   });
-
-  /* ═══════════════════════════════════════════
-     NAVEGAÇÃO
-  ═══════════════════════════════════════════ */
-
   var pageMap = {
     recebimento:  { page:'page-recebimento',  title:'Recebimento de Materiais',                 chip:'Registro patrimonial e anexo de fotos/vídeos' },
     recebimento1: { page:'page-recebimento',  title:'Recebimento de Materiais',                 chip:'Registro patrimonial e anexo de fotos/vídeos' },
@@ -2002,7 +1715,6 @@ document.addEventListener('DOMContentLoaded', function () {
     ronda:         { page:'page-ronda',          title:'Relatório Diário — Tecnologia UDI',        chip:'Ronda técnica de plantão e infraestrutura' },
     config:        { page:'page-config',         title:'Configurações',                            chip:'Perfil e preferências'      }
   };
-
   function irPara(name, el) {
     document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
     document.querySelectorAll('.s-btn').forEach(function(b) { b.classList.remove('active'); });
@@ -2045,11 +1757,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.irPara = irPara;
-
-  /* ═══════════════════════════════════════════
-     ACCORDION
-  ═══════════════════════════════════════════ */
-
   function togAcc(head) {
     var isOpen = head.classList.contains('open');
     head.classList.toggle('open', !isOpen);
@@ -2057,11 +1764,6 @@ document.addEventListener('DOMContentLoaded', function () {
     head.nextElementSibling.classList.toggle('open', !isOpen);
   }
   window.togAcc = togAcc;
-
-  /* ═══════════════════════════════════════════
-     FILTROS
-  ═══════════════════════════════════════════ */
-
   function filtrar(elOrTipo, tipo) {
     var el = (elOrTipo && typeof elOrTipo === 'object' && elOrTipo.nodeType) ? elOrTipo : null;
     var tipoFinal = typeof elOrTipo === 'string' ? elOrTipo : tipo;
@@ -2085,12 +1787,7 @@ document.addEventListener('DOMContentLoaded', function () {
     renderCards();
   }
   window.filtrar = filtrar;
-
-  /* ═══════════════════════════════════════════
-     GESTÃO DE PRAÇA ATIVA (MULTI-PRAÇA)
-  ═══════════════════════════════════════════ */
   var CHAVE_PRACA = 'tv_praca_ativa';
-
   function getPracaAtual() {
     try {
       var salval = localStorage.getItem(CHAVE_PRACA);
@@ -2101,7 +1798,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return 'Juiz de Fora';
   }
   window.getPracaAtual = getPracaAtual;
-
   function setPracaAtual(praca) {
     if (!praca) return;
     var norm = praca.indexOf('Uber') !== -1 ? 'Uberlândia' : 'Juiz de Fora';
@@ -2111,51 +1807,34 @@ document.addEventListener('DOMContentLoaded', function () {
     aplicarModoPraca(norm);
   }
   window.setPracaAtual = setPracaAtual;
-
   function aplicarModoPraca(praca) {
     var p = praca || getPracaAtual();
     var isUberlandia = p.indexOf('Uber') !== -1;
-
-    // 1. Atualizar topbar badge
     var nomeEl = document.getElementById('topbar-praca-nome');
     if (nomeEl) {
       nomeEl.textContent = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
     }
-
-    // 2. Atualizar menu lateral: Relatório Transmissões
     var ctrsLabel = document.getElementById('sidebar-label-ctrs');
     if (ctrsLabel) {
       ctrsLabel.textContent = 'Relatório Transmissões';
     }
-
-    // 3. Atualizar pageMap para título dinâmico de Transmissões
     if (pageMap && pageMap.ctrs) {
       pageMap.ctrs.title = isUberlandia ? 'Relatório de Transmissões' : 'Relatório de Transmissões (CTRS)';
       pageMap.ctrs.chip  = isUberlandia ? 'Preencher após cada transmissão / jornal' : 'Preencher após cada jornal';
     }
-
-    // 4. Se a página CTRS estiver aberta ou tiver cabeçalho no HTML, atualizar
     var ctrsPageHeader = document.querySelector('#page-ctrs .sec-header h2');
     if (ctrsPageHeader) {
       ctrsPageHeader.textContent = isUberlandia ? 'Relatório de Transmissões' : 'Relatório de Transmissões (CTRS)';
     }
-
-    // 5. Esconder / Exibir Recebimento de Materiais (somente Juiz de Fora)
     var btnRec = document.getElementById('sidebar-btn-recebimento');
     if (btnRec) btnRec.style.display = isUberlandia ? 'none' : '';
-
-    // 5b. Esconder / Exibir Relatório Diário de Tecnologia / Ronda (somente Uberlândia)
     var btnRonda = document.getElementById('sidebar-btn-ronda');
     if (btnRonda) btnRonda.style.display = isUberlandia ? '' : 'none';
-
-    // Manter o cabeçalho de seção "Suprimentos & Compras" visível para compras/orçamento terem seu próprio bloco
     var secCompras = document.getElementById('sidebar-section-compras') || document.getElementById('sidebar-section-recebimento');
     if (secCompras) {
       secCompras.style.display = '';
       secCompras.textContent = isUberlandia ? 'Compras & Orçamento' : 'Suprimentos & Compras';
     }
-
-    // Esconder / Exibir pílula de Recebimento no Histórico
     var histPillRec = document.getElementById('hist-pill-recebimento');
     if (histPillRec) histPillRec.style.display = isUberlandia ? 'none' : '';
     if (isUberlandia && typeof historicoFiltroCategoria !== 'undefined' && historicoFiltroCategoria === 'recebimento') {
@@ -2164,58 +1843,39 @@ document.addEventListener('DOMContentLoaded', function () {
         filtrarCategoriaHistorico('todos', pillTodos);
       }
     }
-
-    // Se estiver atualmente na página de recebimento e mudar para Uberlândia, redirecionar para dashboard
     var activePage = document.querySelector('.page.active');
     if (isUberlandia && activePage && activePage.id === 'page-recebimento') {
       irPara('dashboard');
     }
-    // Se estiver atualmente na página de ronda e mudar para Juiz de Fora, redirecionar para dashboard
     if (!isUberlandia && activePage && activePage.id === 'page-ronda') {
       irPara('dashboard');
     }
-
-    // 6. Atualizar selects nas páginas de formulários para a praça ativa
     var cfgPraca = document.getElementById('cfg-praca');
     if (cfgPraca) cfgPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
-
     var identPraca = document.getElementById('ident-operador-praca');
     if (identPraca) identPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
-
     var ctrsPraca = document.getElementById('ctrs-praca');
     if (ctrsPraca) ctrsPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
-
     var reqPraca = document.getElementById('req-praca');
     if (reqPraca) reqPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
-
     var orcPraca = document.getElementById('orc-modal-praca');
     if (orcPraca) orcPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
-
-    // 7. Atualizar subtítulos dos dashboards com a praça ativa
     var dashTransPraca = document.getElementById('dash-trans-praca');
     if (dashTransPraca) dashTransPraca.textContent = p;
-
     var dashResolvidasPraca = document.getElementById('dash-resolvidas-praca');
     if (dashResolvidasPraca) dashResolvidasPraca.textContent = p;
-
     var upPraca = document.getElementById('up-praca');
     if (upPraca) upPraca.textContent = p;
-
-    // 8. Atualizar equipamentos do Relatório (CTRS) dinamicamente para a praça ativa
     try {
       if (typeof window.atualizarSelectsEquipamentosCTRS === 'function') {
         window.atualizarSelectsEquipamentosCTRS();
       }
     } catch(eEq) {}
-
-    // 9. Re-sanitizar ocorrências em memória para consistência estrita de praça
     try {
       if (Array.isArray(window.ocorrencias) && typeof sanitizeOcorrencia === 'function') {
         window.ocorrencias = window.ocorrencias.map(sanitizeOcorrencia).filter(Boolean);
       }
     } catch(eSan) {}
-
-    // 10. Notificar e re-renderizar módulos com dados da praça selecionada
     try {
       if (typeof window.carregarDashboardMetricsStore === 'function') {
         window.carregarDashboardMetricsStore();
@@ -2247,7 +1907,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.aplicarModoPraca = aplicarModoPraca;
-
   function trocarPracaConfig(novaPraca) {
     setPracaAtual(novaPraca);
     if (typeof mostrarToast === 'function') {
@@ -2256,14 +1915,8 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.trocarPracaConfig = trocarPracaConfig;
 
-
-
-  /* ═══════════════════════════════════════════
-     INDEXEDDB LOCAL MEDIA CACHE (Para vídeos e fotos de qualquer tamanho)
-  ═══════════════════════════════════════════ */
   var IDB_NAME = 'SistemaTV_MediaDB';
   var IDB_STORE = 'midias';
-
   function openMediaDB() {
     return new Promise(function(resolve) {
       if (!window.indexedDB) { resolve(null); return; }
@@ -2278,7 +1931,6 @@ document.addEventListener('DOMContentLoaded', function () {
       req.onerror = function() { resolve(null); };
     });
   }
-
   function salvarMidiaIDB(id, dataUrl, meta) {
     return openMediaDB().then(function(db) {
       if (!db) return false;
@@ -2293,7 +1945,6 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     });
   }
-
   function carregarMidiaIDB(id) {
     return openMediaDB().then(function(db) {
       if (!db) return null;
@@ -2309,23 +1960,15 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   window.carregarMidiaIDB = carregarMidiaIDB;
-
-  /* ═══════════════════════════════════════════
-     PREVIEW E GERENCIAMENTO DE ARQUIVOS (PDF, FOTOS, VÍDEOS)
-  ═══════════════════════════════════════════ */
-
   var uploadedFilesStore = {};
-
   function uploadArquivoParaStorage(anexo) {
     if (!anexo) return Promise.resolve(null);
     if (anexo.url && anexo.url.startsWith('http')) return Promise.resolve(anexo);
     if (!anexo.fileObj) return Promise.resolve(anexo);
-
     var timestamp = Date.now();
     var cleanName = (anexo.name || 'arquivo').replace(/[^a-zA-Z0-9._-]/g, '_');
     var filePath = timestamp + '_' + cleanName;
     var uploadUrl = SUPABASE_URL.replace(/\/$/, '') + '/storage/v1/object/anexos/' + filePath;
-
     return fetch(uploadUrl, {
       method: 'POST',
       headers: {
@@ -2356,7 +1999,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   window.uploadArquivoParaStorage = uploadArquivoParaStorage;
-
   function comprimirImagemSeNecessario(file, callback) {
     if (!file || !file.type || !file.type.startsWith('image/') || file.type === 'image/svg+xml') {
       if (file && file.type && file.type.startsWith('video/')) {
@@ -2371,7 +2013,6 @@ document.addEventListener('DOMContentLoaded', function () {
       reader.readAsDataURL(file);
       return;
     }
-
     var reader = new FileReader();
     reader.onload = function(e) {
       var img = new Image();
@@ -2394,7 +2035,6 @@ document.addEventListener('DOMContentLoaded', function () {
         var ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
         var compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
-
         if (typeof canvas.toBlob === 'function') {
           canvas.toBlob(function(blob) {
             var compressedBlob = blob || file;
@@ -2412,14 +2052,11 @@ document.addEventListener('DOMContentLoaded', function () {
     reader.readAsDataURL(file);
   }
   window.comprimirImagemSeNecessario = comprimirImagemSeNecessario;
-
   function handleFileSelect(input, containerId) {
     if (!input || !input.files || input.files.length === 0) return;
     if (!uploadedFilesStore[containerId]) uploadedFilesStore[containerId] = [];
-
     var fileList = Array.from(input.files);
     var pending = fileList.length;
-
     fileList.forEach(function(file) {
       var mediaId = 'med_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
       comprimirImagemSeNecessario(file, function(dataUrl, blobOuFile) {
@@ -2440,11 +2077,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       });
     });
-
     input.value = ''; // reseta input para permitir re-selecionar o mesmo arquivo se necessário
   }
   window.handleFileSelect = handleFileSelect;
-
   function removerArquivoPreview(containerId, index, event) {
     if (event) {
       event.stopPropagation();
@@ -2456,18 +2091,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.removerArquivoPreview = removerArquivoPreview;
-
   function renderPreviewsForContainer(containerId) {
     var container = document.getElementById(containerId);
     if (!container) return;
     container.innerHTML = '';
-
     var files = uploadedFilesStore[containerId] || [];
     files.forEach(function(file, idx) {
       var item = document.createElement('div');
       item.className = 'prev-item';
       item.style.position = 'relative';
-
       var removeBtn = document.createElement('button');
       removeBtn.className = 'prev-remove-btn';
       removeBtn.type = 'button';
@@ -2477,13 +2109,11 @@ document.addEventListener('DOMContentLoaded', function () {
         removerArquivoPreview(containerId, idx, e);
       };
       item.appendChild(removeBtn);
-
       var fType = (file.type || '').toLowerCase();
       var fName = (file.name || '').toLowerCase();
       var isImg = fType.startsWith('image/') || fName.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i);
       var isPdf = fType === 'application/pdf' || fName.endsWith('.pdf');
       var isVid = fType.startsWith('video/') || fName.match(/\.(mp4|webm|mov|mkv|avi)$/i);
-
       if (isImg && file.dataUrl) {
         var img = document.createElement('img');
         img.src = file.dataUrl;
@@ -2531,8 +2161,6 @@ document.addEventListener('DOMContentLoaded', function () {
         docBox.innerHTML = '<i data-lucide="file" style="width:24px;height:24px;stroke-width:1.5;color:var(--muted);"></i>';
         item.appendChild(docBox);
       }
-
-      // Não exibe o nome do arquivo embaixo das fotos (mantém apenas para arquivos/vídeos/docs)
       if (!isImg) {
         var nome = document.createElement('div');
         nome.className = 'prev-name';
@@ -2540,15 +2168,11 @@ document.addEventListener('DOMContentLoaded', function () {
         nome.textContent = displayName.length > 12 ? displayName.substring(0, 9) + '…' : displayName;
         item.appendChild(nome);
       }
-
       container.appendChild(item);
     });
-
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.renderPreviewsForContainer = renderPreviewsForContainer;
-
-  /* Listeners para áreas de upload (Requisições, Recebimentos e Ocorrências) */
   ['req', 'rec', 'rec1', 'rec2', 'nova', 'edit-oc', 'resolver'].forEach(function(prefix) {
     var area  = document.getElementById(prefix + '-upload-area');
     var file  = document.getElementById(prefix + '-arquivos');
@@ -2561,11 +2185,6 @@ document.addEventListener('DOMContentLoaded', function () {
       };
     }
   });
-
-
-  /* ═══════════════════════════════════════════
-     RECEBIMENTOS DE EQUIPAMENTOS
-  ═══════════════════════════════════════════ */
 
   function adicionarLinhaMaterial(tabelaId) {
     var tbody = document.querySelector('#' + (tabelaId || 'tb-rec') + ' tbody');
@@ -2586,14 +2205,12 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.adicionarLinhaMaterial = adicionarLinhaMaterial;
-
   function removerLinhaMaterial(btn) {
     var tr = btn.closest('tr');
     if (tr) tr.remove();
     try { salvarRascunhoRecebimento(true); } catch(e) {}
   }
   window.removerLinhaMaterial = removerLinhaMaterial;
-
   function selecionarFormaPagamento(labelEl) {
     var group = labelEl.closest('.rec-payment-group');
     if (!group) return;
@@ -2607,14 +2224,12 @@ document.addEventListener('DOMContentLoaded', function () {
     if (currentRadio) currentRadio.checked = true;
   }
   window.selecionarFormaPagamento = selecionarFormaPagamento;
-
   function salvarRascunhoRecebimento(silencioso) {
     try {
       var remEl = document.getElementById('rec-remetente');
       var nfEl  = document.getElementById('rec-nf');
       var recEl = document.getElementById('rec-recebedor');
       var obsEl = document.getElementById('rec-obs');
-
       var materiais = [];
       var tbody = document.querySelector('#rec-materiais-tbody') || document.querySelector('#tb-rec tbody');
       if (tbody) {
@@ -2635,7 +2250,6 @@ document.addEventListener('DOMContentLoaded', function () {
           }
         });
       }
-
       var dados = {
         remetente: remEl ? remEl.value : '',
         nf:        nfEl ? nfEl.value : '',
@@ -2650,24 +2264,20 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch (e) {}
   }
   window.salvarRascunhoRecebimento = salvarRascunhoRecebimento;
-
   function carregarRascunhoRecebimento() {
     try {
       var raw = localStorage.getItem('tv_recebimento_rascunho_v1');
       if (!raw) return;
       var dados = JSON.parse(raw);
       if (!dados) return;
-
       var remEl = document.getElementById('rec-remetente');
       var nfEl  = document.getElementById('rec-nf');
       var recEl = document.getElementById('rec-recebedor');
       var obsEl = document.getElementById('rec-obs');
-
       if (remEl && dados.remetente !== undefined) remEl.value = dados.remetente;
       if (nfEl && dados.nf !== undefined)        nfEl.value = dados.nf;
       if (recEl && dados.recebedor !== undefined) recEl.value = dados.recebedor;
       if (obsEl && dados.obs !== undefined)      obsEl.value = dados.obs;
-
       if (Array.isArray(dados.materiais) && dados.materiais.length > 0) {
         var tbody = document.querySelector('#rec-materiais-tbody') || document.querySelector('#tb-rec tbody');
         if (tbody) {
@@ -2693,7 +2303,6 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch (e) {}
   }
   window.carregarRascunhoRecebimento = carregarRascunhoRecebimento;
-
   function limparFormularioRecebimento(confirmar) {
     if (confirmar && !confirm('Deseja realmente limpar todos os campos do recebimento?')) {
       return;
@@ -2720,27 +2329,21 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch (e) {}
   }
   window.limparFormularioRecebimento = limparFormularioRecebimento;
-
   function enviarRecebimento(modelo) {
     var nowStr = formatDataHoraLocal();
     var m = (modelo !== undefined && modelo !== null) ? modelo : '';
-
     var remEl = document.getElementById('rec' + m + '-remetente') || document.getElementById('rec-remetente');
     var nfEl  = document.getElementById('rec' + m + '-nf') || document.getElementById('rec-nf');
     var recEl = document.getElementById('rec' + m + '-recebedor') || document.getElementById('rec-recebedor');
     var obsEl = document.getElementById('rec' + m + '-obs') || document.getElementById('rec-obs');
-
     var remetente = remEl ? remEl.value.trim() : '';
     var nf        = nfEl ? nfEl.value.trim() : '';
     var recebedor = (recEl && recEl.value.trim()) ? recEl.value.trim() : getUsuarioAtual();
     var obs       = obsEl ? obsEl.value.trim() : '';
-
-    /* Validação e coleta de itens de recebimento */
     var tbody = document.querySelector('#rec-materiais-tbody') || document.querySelector('#tb-rec tbody');
     var linhas = tbody ? tbody.querySelectorAll('tr') : [];
     var itensResumo = [];
     var erroValidacao = false;
-
     linhas.forEach(function(tr) {
       var qInput = tr.querySelector('.item-quant');
       var dInput = tr.querySelector('.item-desc');
@@ -2749,7 +2352,6 @@ document.addEventListener('DOMContentLoaded', function () {
       var p = tr.querySelector('.item-plaq') ? tr.querySelector('.item-plaq').value.trim() : '';
       var s = tr.querySelector('.item-serie') ? tr.querySelector('.item-serie').value.trim() : '';
       var loc = tr.querySelector('.item-local') ? tr.querySelector('.item-local').value.trim() : '';
-
       if (d || p || s || loc || q) {
         if (!q || parseInt(q, 10) <= 0 || isNaN(parseInt(q, 10))) {
           erroValidacao = true;
@@ -2763,7 +2365,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       }
     });
-
     if (erroValidacao) {
       if (typeof mostrarToast === 'function') {
         mostrarToast('Quantidade Obrigatória', 'Por favor, informe uma quantidade válida (número maior que 0) para o material recebido.', 'warning');
@@ -2772,9 +2373,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       return;
     }
-
     var titulo = 'Recebimento N.F ' + (nf || 'S/N') + (remetente ? (' — ' + remetente) : '');
-
     var novoHist = {
       id:            'h_rec_' + Date.now(),
       tipo:          'recebimento',
@@ -2791,13 +2390,9 @@ document.addEventListener('DOMContentLoaded', function () {
       resolvidoPor:  recebedor,
       descResolucao: 'Conferido e integrado automaticamente ao sistema patrimonial e relatórios.'
     };
-
     historicoSeedData = [novoHist].concat(historicoSeedData);
     saveHistorico(historicoSeedData, novoHist);
-
-    // Limpa o rascunho e o formulário para o próximo recebimento
     limparFormularioRecebimento(false);
-
     renderAll();
     if (typeof mostrarToast === 'function') {
       mostrarToast('Recebimento Registrado', 'Salvo no Histórico. O envio por e-mail ainda não está disponível.', 'info');
@@ -2805,15 +2400,9 @@ document.addEventListener('DOMContentLoaded', function () {
     alert('Recebimento de Equipamentos registrado com sucesso no Histórico!\n\nNota: A função de envio por e-mail ainda não está disponível.');
   }
   window.enviarRecebimento = enviarRecebimento;
-
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-recebimento', salvarRascunhoRecebimento);
   }
-
-
-  /* ═══════════════════════════════════════════
-     REQUISIÇÃO DE COMPRAS E VENDAS
-  ═══════════════════════════════════════════ */
 
   function adicionarLinhaItemCompra() {
     var tbody = document.getElementById('req-itens-tbody');
@@ -2834,14 +2423,12 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.adicionarLinhaItemCompra = adicionarLinhaItemCompra;
-
   function removerLinhaItemCompra(btn) {
     var tr = btn.closest('tr');
     if (tr) tr.remove();
     try { salvarRascunhoCompra(true); } catch(e) {}
   }
   window.removerLinhaItemCompra = removerLinhaItemCompra;
-
   function salvarRascunhoCompra(silencioso) {
     try {
       var pracaEl       = document.getElementById('req-praca');
@@ -2851,7 +2438,6 @@ document.addEventListener('DOMContentLoaded', function () {
       var destinoEl     = document.getElementById('req-destino');
       var centroEl      = document.getElementById('req-centrocusto');
       var projetoEl     = document.getElementById('req-projeto');
-
       var itens = [];
       var tbody = document.getElementById('req-itens-tbody');
       if (tbody) {
@@ -2872,7 +2458,6 @@ document.addEventListener('DOMContentLoaded', function () {
           }
         });
       }
-
       var dados = {
         praca:       pracaEl ? pracaEl.value : '',
         carater:     caraterEl ? caraterEl.value : '',
@@ -2890,14 +2475,12 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch (e) {}
   }
   window.salvarRascunhoCompra = salvarRascunhoCompra;
-
   function carregarRascunhoCompra() {
     try {
       var raw = localStorage.getItem('tv_compras_rascunho_v1');
       if (!raw) return;
       var dados = JSON.parse(raw);
       if (!dados) return;
-
       var pracaEl       = document.getElementById('req-praca');
       var caraterEl     = document.getElementById('req-carater');
       var solicitanteEl = document.getElementById('req-solicitante');
@@ -2905,7 +2488,6 @@ document.addEventListener('DOMContentLoaded', function () {
       var destinoEl     = document.getElementById('req-destino');
       var centroEl      = document.getElementById('req-centrocusto');
       var projetoEl     = document.getElementById('req-projeto');
-
       if (pracaEl && dados.praca !== undefined)             pracaEl.value = dados.praca;
       if (caraterEl && dados.carater !== undefined)         caraterEl.value = dados.carater;
       if (solicitanteEl && dados.solicitante !== undefined) solicitanteEl.value = dados.solicitante;
@@ -2913,7 +2495,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (destinoEl && dados.destino !== undefined)         destinoEl.value = dados.destino;
       if (centroEl && dados.centro !== undefined)           centroEl.value = dados.centro;
       if (projetoEl && dados.projeto !== undefined)         projetoEl.value = dados.projeto;
-
       if (Array.isArray(dados.itens) && dados.itens.length > 0) {
         var tbody = document.getElementById('req-itens-tbody');
         if (tbody) {
@@ -2939,7 +2520,6 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch (e) {}
   }
   window.carregarRascunhoCompra = carregarRascunhoCompra;
-
   function limparFormularioCompras(confirmar) {
     if (confirmar && !confirm('Deseja realmente limpar a requisição de compras?')) {
       return;
@@ -2970,7 +2550,6 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch (e) {}
   }
   window.limparFormularioCompras = limparFormularioCompras;
-
   function enviarRequisicaoCompra() {
     var nowStr = formatDataHoraLocal();
     var pracaEl       = document.getElementById('req-praca');
@@ -2980,7 +2559,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var destinoEl     = document.getElementById('req-destino');
     var centroEl      = document.getElementById('req-centrocusto');
     var projetoEl     = document.getElementById('req-projeto');
-
     var praca       = pracaEl ? pracaEl.value : 'Juiz de Fora';
     var carater     = caraterEl ? caraterEl.value : 'Normal';
     var solicitante = (solicitanteEl && solicitanteEl.value.trim()) ? solicitanteEl.value.trim() : getUsuarioAtual();
@@ -2988,18 +2566,14 @@ document.addEventListener('DOMContentLoaded', function () {
     var destino     = destinoEl ? destinoEl.value.trim() : '';
     var centro      = centroEl ? centroEl.value : 'Manutenção Técnica - JF';
     var projeto     = projetoEl ? projetoEl.value.trim() : 'Padrão';
-
     if (!motivo || !destino) {
       alert('Por favor, preencha a Justificativa/Motivo e o Uso a que se destina antes de enviar.');
       return;
     }
-
-    /* Coleta itens com validação estrita de quantidade */
     var tbody = document.getElementById('req-itens-tbody');
     var linhas = tbody ? tbody.querySelectorAll('tr') : [];
     var itensResumo = [];
     var erroValidacao = false;
-
     linhas.forEach(function(tr) {
       var qInput = tr.querySelector('.item-quant');
       var dInput = tr.querySelector('.item-desc');
@@ -3008,7 +2582,6 @@ document.addEventListener('DOMContentLoaded', function () {
       var c = tr.querySelector('.item-cod') ? tr.querySelector('.item-cod').value.trim() : '';
       var f = tr.querySelector('.item-fab') ? tr.querySelector('.item-fab').value.trim() : '';
       var l = tr.querySelector('.item-link') ? tr.querySelector('.item-link').value.trim() : '';
-
       if (d || c || f || l || q) {
         if (!q || parseInt(q, 10) <= 0 || isNaN(parseInt(q, 10))) {
           erroValidacao = true;
@@ -3022,7 +2595,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       }
     });
-
     if (erroValidacao) {
       if (typeof mostrarToast === 'function') {
         mostrarToast('Quantidade Obrigatória', 'Por favor, informe uma quantidade válida (número maior que 0) para o material solicitado.', 'warning');
@@ -3031,12 +2603,10 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       return;
     }
-
     var titulo = 'Requisição de Compra — ' + praca + ' (' + carater + ')';
     var descCompleta = 'Justificativa: ' + motivo + '\n' +
                        'Itens: ' + (itensResumo.length > 0 ? itensResumo.join('; ') : 'Material/Equipamento solicitado') + '\n' +
                        'Aplicação: ' + destino + ' | Centro de Custo: ' + centro + ' | Projeto: ' + projeto;
-
     var novoHist = {
       id:            'h_req_' + Date.now(),
       tipo:          'compra',
@@ -3054,31 +2624,19 @@ document.addEventListener('DOMContentLoaded', function () {
       descResolucao: 'Solicitação registrada no sistema. Aguardando validação do chefe imediato para envio à gerência e compras.',
       praca:         praca
     };
-
     historicoSeedData = [novoHist].concat(historicoSeedData);
     saveHistorico(historicoSeedData, novoHist);
-
-    // Limpa o rascunho e o formulário para a próxima requisição
     limparFormularioCompras(false);
-
     renderAll();
-
     if (typeof adicionarNotificacao === 'function') {
       adicionarNotificacao('Requisição de Compra Enviada', titulo + ' cadastrada para aprovação.', 'success');
     }
-
     alert('Requisição de Compra cadastrada com sucesso no Histórico!\n\nNota: A função de envio por e-mail ainda não está disponível.');
   }
   window.enviarRequisicaoCompra = enviarRequisicaoCompra;
-
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-compras', salvarRascunhoCompra);
   }
-
-
-  /* ═══════════════════════════════════════════
-     ENVIO DE RELATÓRIO TV (CTRS) E GERADOR AUTOMÁTICO DE OCORRÊNCIAS
-  ═══════════════════════════════════════════ */
 
   function salvarRascunhoRelatorioTV(silencioso) {
     try {
@@ -3086,7 +2644,6 @@ document.addEventListener('DOMContentLoaded', function () {
       var pracaEl = document.getElementById('ctrs-praca');
       var tipoEl  = document.getElementById('ctrs-tipo');
       var obsEl   = document.getElementById('ctrs-obs');
-
       var dados = {
         data:  dataEl  ? dataEl.value  : '',
         praca: pracaEl ? pracaEl.value : '',
@@ -3094,7 +2651,6 @@ document.addEventListener('DOMContentLoaded', function () {
         obs:   obsEl   ? obsEl.value   : '',
         transmissoes: []
       };
-
       var accBlocks = document.querySelectorAll('#page-ctrs .acc-block');
       accBlocks.forEach(function(acc) {
         var inputs = acc.querySelectorAll('input, select, textarea');
@@ -3112,7 +2668,6 @@ document.addEventListener('DOMContentLoaded', function () {
           falhas:      inputs[10] ? inputs[10].value : ''
         });
       });
-
       localStorage.setItem('tv_ctrs_rascunho_v2', JSON.stringify(dados));
       if (!silencioso) {
         alert('Rascunho do Relatório CTRS salvo com sucesso no navegador!');
@@ -3122,43 +2677,27 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.salvarRascunhoRelatorioTV = salvarRascunhoRelatorioTV;
-
   function obterOpcoesEquipamentosHTML(selectedVal) {
     var praca = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var isUberlandia = praca.indexOf('Uber') !== -1;
     var equips = [];
-
     if (typeof obterListaNomesEquipamentosOrdenados === 'function') {
       equips = obterListaNomesEquipamentosOrdenados(praca);
     } else if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
       equips = Object.keys(dashboardMetrics.equipamento);
     }
-
-    if (isUberlandia) {
-      // Em Uberlândia: usa estritamente os equipamentos cadastrados pelos operadores de UDI
-      var html = '<option value="">Selecione o equipamento...</option>';
-      equips.forEach(function(eq) {
-        var isSel = (eq === selectedVal) ? ' selected' : '';
-        html += '<option value="' + escapeHTML(eq) + '"' + isSel + '>' + escapeHTML(eq) + '</option>';
-      });
-      html += '<option value="__novo__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo Equipamento...</option>';
-      return html;
-    } else {
-      // Juiz de Fora: usa os equipamentos do catálogo ou fallback dos 13 de JF
-      if (equips.length === 0) {
-        equips = ['LIVE U1', 'LIVE U2', 'LIVE U3', 'LIVE U4', 'LIVE U SMART', 'REDAÇÃO', 'KMJ', 'NET PRAÇA', 'NET PORTARIA', 'FORMATOS NET', 'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR'];
-      }
-      var html = '<option value="">Selecione o equipamento...</option>';
-      equips.forEach(function(eq) {
-        var isSel = (eq === selectedVal) ? ' selected' : '';
-        html += '<option value="' + escapeHTML(eq) + '"' + isSel + '>' + escapeHTML(eq) + '</option>';
-      });
-      html += '<option value="__novo__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo Equipamento...</option>';
-      return html;
+    if (!isUberlandia && equips.length === 0) {
+      equips = ['LIVE U1', 'LIVE U2', 'LIVE U3', 'LIVE U4', 'LIVE U SMART', 'REDAÇÃO', 'KMJ', 'NET PRAÇA', 'NET PORTARIA', 'FORMATOS NET', 'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR'];
     }
+    var html = '<option value="">Selecione o equipamento...</option>';
+    equips.forEach(function(eq) {
+      var isSel = (eq === selectedVal) ? ' selected' : '';
+      html += '<option value="' + escapeHTML(eq) + '"' + isSel + '>' + escapeHTML(eq) + '</option>';
+    });
+    html += '<option value="__novo__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo Equipamento...</option>';
+    return html;
   }
   window.obterOpcoesEquipamentosHTML = obterOpcoesEquipamentosHTML;
-
   function atualizarSelectsEquipamentosCTRS() {
     var selects = document.querySelectorAll('.ctrs-infra-select');
     selects.forEach(function(sel) {
@@ -3181,14 +2720,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   window.atualizarSelectsEquipamentosCTRS = atualizarSelectsEquipamentosCTRS;
-
-  /* ═══════════════════════════════════════════
-     EQUIPE DE JORNALISMO (REPÓRTERES E RCs)
-     Separado estritamente por Praça (Juiz de Fora e Uberlândia)
-     Sincronizado na Nuvem (Supabase checklist_itens) com Fallback Local
-  ═══════════════════════════════════════════ */
   var EQUIPE_STORAGE_KEY = 'tv_equipe_jornalismo_v3';
-
   var EQUIPE_PADRAO_JF = {
     reporteres: [
       'Ana Paula Cruzeiro',
@@ -3220,7 +2752,6 @@ document.addEventListener('DOMContentLoaded', function () {
       '- (Sem Cinegrafista)'
     ]
   };
-
   function normalizarNomeProfissional(nome) {
     var n = (nome || '').trim();
     if (n.toLowerCase() === 'letícia nary' || n.toLowerCase() === 'leticia nary') {
@@ -3228,7 +2759,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return n;
   }
-
   function ordenarListaProfissionais(lista, opSem) {
     var semItem = null;
     var normais = [];
@@ -3262,7 +2792,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return normais;
   }
-
   function normalizarPracaEquipe(praca) {
     var p = (praca || '').toLowerCase();
     if (p.indexOf('uber') !== -1 || p.indexOf('udi') !== -1) {
@@ -3271,7 +2800,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return 'Juiz de Fora';
   }
   window.normalizarPracaEquipe = normalizarPracaEquipe;
-
   function carregarEquipeLocal() {
     var padrao = {
       'Juiz de Fora': {
@@ -3296,18 +2824,14 @@ document.addEventListener('DOMContentLoaded', function () {
               return n && low.indexOf('exclusivo') === -1 && low.indexOf('teste') === -1 && n.indexOf('Ã') === -1;
             });
           };
-
           if (parsed['Juiz de Fora']) {
             var jfRep = filtrarValidos(parsed['Juiz de Fora'].reporteres);
             var jfRC  = filtrarValidos(parsed['Juiz de Fora'].rcs);
-
             var repCombined = EQUIPE_PADRAO_JF.reporteres.concat(jfRep);
             padrao['Juiz de Fora'].reporteres = ordenarListaProfissionais(repCombined, '- (Sem Repórter)');
-
             var rcCombined = EQUIPE_PADRAO_JF.rcs.concat(jfRC);
             padrao['Juiz de Fora'].rcs = ordenarListaProfissionais(rcCombined, '- (Sem Cinegrafista)');
           }
-
           if (parsed['Uberlândia']) {
             padrao['Uberlândia'].reporteres = ordenarListaProfissionais(filtrarValidos(parsed['Uberlândia'].reporteres), '- (Sem Repórter)');
             padrao['Uberlândia'].rcs = ordenarListaProfissionais(filtrarValidos(parsed['Uberlândia'].rcs), '- (Sem Cinegrafista)');
@@ -3319,7 +2843,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return padrao;
   }
   window.carregarEquipeLocal = carregarEquipeLocal;
-
   function salvarEquipeLocal(dados) {
     try {
       localStorage.setItem(EQUIPE_STORAGE_KEY, JSON.stringify(dados));
@@ -3328,13 +2851,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.salvarEquipeLocal = salvarEquipeLocal;
-
   function obterOpcoesReporteresHTML(selectedVal) {
     var praca = normalizarPracaEquipe(typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora');
     var equipe = carregarEquipeLocal();
     var lista = (equipe[praca] && Array.isArray(equipe[praca].reporteres)) ? equipe[praca].reporteres : [];
     var html = '<option value="">Selecione o repórter...</option>';
-    
     var jaSelecionado = false;
     lista.forEach(function(rep) {
       var nome = typeof rep === 'string' ? rep : (rep.nome || rep.titulo || '');
@@ -3343,27 +2864,22 @@ document.addEventListener('DOMContentLoaded', function () {
       if (isSel) jaSelecionado = true;
       html += '<option value="' + escapeHTML(nome) + '"' + (isSel ? ' selected' : '') + '>' + escapeHTML(nome) + '</option>';
     });
-
     var outraPraca = (praca === 'Juiz de Fora') ? 'Uberlândia' : 'Juiz de Fora';
     var pertenceOutraPraca = equipe[outraPraca] && (
       (equipe[outraPraca].reporteres || []).some(function(r){ return (r.nome || r.titulo || r) === selectedVal; })
     );
-
     if (!pertenceOutraPraca && selectedVal && !jaSelecionado && selectedVal !== '__novo_reporter__') {
       html += '<option value="' + escapeHTML(selectedVal) + '" selected>' + escapeHTML(selectedVal) + '</option>';
     }
-
     html += '<option value="__novo_reporter__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo Repórter...</option>';
     return html;
   }
   window.obterOpcoesReporteresHTML = obterOpcoesReporteresHTML;
-
   function obterOpcoesRCsHTML(selectedVal) {
     var praca = normalizarPracaEquipe(typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora');
     var equipe = carregarEquipeLocal();
     var lista = (equipe[praca] && Array.isArray(equipe[praca].rcs)) ? equipe[praca].rcs : [];
     var html = '<option value="">Selecione o RC...</option>';
-
     var jaSelecionado = false;
     lista.forEach(function(rc) {
       var nome = typeof rc === 'string' ? rc : (rc.nome || rc.titulo || '');
@@ -3372,21 +2888,17 @@ document.addEventListener('DOMContentLoaded', function () {
       if (isSel) jaSelecionado = true;
       html += '<option value="' + escapeHTML(nome) + '"' + (isSel ? ' selected' : '') + '>' + escapeHTML(nome) + '</option>';
     });
-
     var outraPraca = (praca === 'Juiz de Fora') ? 'Uberlândia' : 'Juiz de Fora';
     var pertenceOutraPraca = equipe[outraPraca] && (
       (equipe[outraPraca].rcs || []).some(function(r){ return (r.nome || r.titulo || r) === selectedVal; })
     );
-
     if (!pertenceOutraPraca && selectedVal && !jaSelecionado && selectedVal !== '__novo_rc__') {
       html += '<option value="' + escapeHTML(selectedVal) + '" selected>' + escapeHTML(selectedVal) + '</option>';
     }
-
     html += '<option value="__novo_rc__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo RC...</option>';
     return html;
   }
   window.obterOpcoesRCsHTML = obterOpcoesRCsHTML;
-
   function atualizarSelectsProfissionaisCTRS() {
     var repSelects = document.querySelectorAll('.ctrs-reporter-select');
     repSelects.forEach(function(sel) {
@@ -3406,7 +2918,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
       }
     });
-
     var rcSelects = document.querySelectorAll('.ctrs-rc-select');
     rcSelects.forEach(function(sel) {
       var currentVal = sel.value;
@@ -3427,25 +2938,21 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   window.atualizarSelectsProfissionaisCTRS = atualizarSelectsProfissionaisCTRS;
-
   function abrirModalNovoProfissional(tipo, triggeringSelect) {
     tipo = (tipo === 'rc') ? 'rc' : 'reporter';
     window._profTriggeringSelect = triggeringSelect || null;
     var pracaAtiva = normalizarPracaEquipe(typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora');
-
     var tipoEl = document.getElementById('novo-prof-tipo');
     var catEl  = document.getElementById('novo-prof-categoria');
     var nomeEl = document.getElementById('novo-prof-nome');
     var titEl  = document.getElementById('novo-prof-title');
     var subEl  = document.getElementById('novo-prof-subtitle');
-
     if (tipoEl) tipoEl.value = tipo;
     if (catEl)  catEl.value = tipo;
     if (nomeEl) {
       nomeEl.value = '';
       setTimeout(function() { nomeEl.focus(); }, 150);
     }
-
     if (titEl) {
       titEl.textContent = (tipo === 'rc') ? 'Cadastrar Novo RC (' + pracaAtiva + ')' : 'Cadastrar Novo Repórter (' + pracaAtiva + ')';
     }
@@ -3454,11 +2961,9 @@ document.addEventListener('DOMContentLoaded', function () {
         ? 'Cadastre o Repórter Cinematográfico para a praça ' + pracaAtiva
         : 'Cadastre o Repórter para a praça ' + pracaAtiva;
     }
-
     abrirPopup('popup-novo-profissional');
   }
   window.abrirModalNovoProfissional = abrirModalNovoProfissional;
-
   function obterCredenciaisDB() {
     if (typeof getDBCredentials === 'function') return getDBCredentials();
     if (typeof window !== 'undefined' && typeof window.getDBCredentials === 'function') return window.getDBCredentials();
@@ -3472,56 +2977,43 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return { url: url ? url.replace(/\/+$/, '') : '', key: key };
   }
-
   async function salvarNovoProfissionalEquipe() {
     var tipoEl = document.getElementById('novo-prof-tipo');
     var nomeEl = document.getElementById('novo-prof-nome');
     var nome = (nomeEl ? nomeEl.value : '').trim();
     var tipo = (tipoEl ? tipoEl.value : 'reporter').toLowerCase();
     var pracaAtiva = normalizarPracaEquipe(typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora');
-
     if (!nome) {
       alert('Por favor, informe o nome do profissional.');
       if (nomeEl) nomeEl.focus();
       return;
     }
-
     var equipe = carregarEquipeLocal();
     var chaveLista = (tipo === 'rc') ? 'rcs' : 'reporteres';
     if (!equipe[pracaAtiva]) equipe[pracaAtiva] = { reporteres: [], rcs: [] };
-
     var existe = equipe[pracaAtiva][chaveLista].some(function(item) {
       var n = typeof item === 'string' ? item : (item.nome || item.titulo || '');
       return n.toLowerCase() === nome.toLowerCase();
     });
-
     if (existe) {
       alert('Este profissional já está cadastrado em ' + pracaAtiva + '.');
       return;
     }
-
     var profId = 'prof_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
     var novoItem = { id: profId, nome: nome, categoria: tipo, praca: pracaAtiva };
     equipe[pracaAtiva][chaveLista].push(novoItem);
     salvarEquipeLocal(equipe);
-
     var targetSelect = window._profTriggeringSelect;
-
     fecharPopup('popup-novo-profissional');
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Profissional Cadastrado', nome + ' adicionado a ' + pracaAtiva + '.', 'success');
     }
-
     atualizarSelectsProfissionaisCTRS();
-
     if (targetSelect) {
       try {
         targetSelect.value = nome;
       } catch(e) {}
     }
-
-    // Sincroniza diretamente no Supabase em checklist_itens
     var db = obterCredenciaisDB();
     if (db && db.url && db.key) {
       try {
@@ -3547,7 +3039,6 @@ document.addEventListener('DOMContentLoaded', function () {
           var errText = await res.text();
           console.error('[Equipe Nuvem] Erro ao salvar profissional no banco:', res.status, errText);
         } else {
-          console.log('[Equipe Nuvem] ✅ Profissional sincronizado na nuvem com sucesso:', nome, '(' + pracaAtiva + ')');
         }
       } catch(eNuvem) {
         console.warn('[Equipe Nuvem] Falha de conexão ao enviar para nuvem:', eNuvem);
@@ -3555,13 +3046,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.salvarNovoProfissionalEquipe = salvarNovoProfissionalEquipe;
-
   function removerProfissionalEquipe(id, tipo, nome, praca) {
     praca = normalizarPracaEquipe(praca || (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora'));
     if (!confirm('Deseja realmente remover "' + nome + '" de ' + praca + '?')) {
       return;
     }
-
     var equipe = carregarEquipeLocal();
     var chaveLista = (tipo === 'rc') ? 'rcs' : 'reporteres';
     if (equipe[praca]) {
@@ -3570,14 +3059,11 @@ document.addEventListener('DOMContentLoaded', function () {
         return itemId !== id && item.nome !== nome;
       });
     }
-
     salvarEquipeLocal(equipe);
     atualizarSelectsProfissionaisCTRS();
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Profissional Removido', nome + ' foi removido da equipe.', 'info');
     }
-
     var db = obterCredenciaisDB();
     if (db && db.url && db.key && id) {
       try {
@@ -3594,11 +3080,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.removerProfissionalEquipe = removerProfissionalEquipe;
-
   async function sincronizarEquipeNuvem() {
     var db = obterCredenciaisDB();
     if (!db || !db.url || !db.key) return;
-
     try {
       var url = db.url.replace(/\/$/, '') + '/rest/v1/checklist_itens?select=id,titulo,categoria,operador_nome&categoria=in.(reporter,rc)&order=titulo.asc&limit=1000';
       var res = await fetch(url, {
@@ -3612,19 +3096,15 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!res.ok) return;
       var data = await res.json();
       if (!Array.isArray(data)) return;
-
       var repMap = {
         'Juiz de Fora': { reporteres: [], rcs: [] },
         'Uberlândia': { reporteres: [], rcs: [] }
       };
-
       data.forEach(function(item) {
         if (!item || !item.titulo) return;
         var titulo = item.titulo.trim();
         var low = titulo.toLowerCase();
-        // Filtrar qualquer resquício de itens de teste antigos
         if (low.indexOf('exclusivo') !== -1 || low.indexOf('teste') !== -1 || titulo.indexOf('Ã') !== -1) return;
-        
         var pNorm = normalizarPracaEquipe(item.operador_nome);
         var p = { id: item.id, nome: titulo, categoria: item.categoria, praca: pNorm };
         if (item.categoria === 'rc') {
@@ -3633,7 +3113,6 @@ document.addEventListener('DOMContentLoaded', function () {
           repMap[pNorm].reporteres.push(p);
         }
       });
-
       salvarEquipeLocal(repMap);
       atualizarSelectsProfissionaisCTRS();
     } catch(err) {
@@ -3641,14 +3120,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.sincronizarEquipeNuvem = sincronizarEquipeNuvem;
-
   function adicionarTransmissaoCTRS(silencioso) {
     var container = document.getElementById('ctrs-acc-container');
     if (!container) return;
-
     var currentCount = container.querySelectorAll('.acc-block').length;
     var newNum = currentCount + 1;
-
     var div = document.createElement('div');
     div.className = 'acc-block';
     div.innerHTML =
@@ -3667,14 +3143,14 @@ document.addEventListener('DOMContentLoaded', function () {
           '</div>' +
           '<div class="frow"><label>Hora Abertura Sinal</label><input type="time"/></div>' +
           '<div class="frow"><label>Hora Final (Teste OK)</label><input type="time"/></div>' +
-          '<div class="frow"><label>Qualidade do Áudio</label><select><option value="" selected>Selecione...</option><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
-          '<div class="frow"><label>Qualidade do Vídeo</label><select><option value="" selected>Selecione...</option><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
+          '<div class="frow"><label>Qualidade do Áudio</label><select><option value="" selected>Selecione...</option><option>C — Conforme</option><option>NC — Não Conforme</option><option>CA — Cancelado</option></select></div>' +
+          '<div class="frow"><label>Qualidade do Vídeo</label><select><option value="" selected>Selecione...</option><option>C — Conforme</option><option>NC — Não Conforme</option><option>CA — Cancelado</option></select></div>' +
           '<div class="frow"><label>Repórter</label><select class="ctrs-reporter-select">' + obterOpcoesReporteresHTML() + '</select></div>' +
           '<div class="frow"><label>Entradas</label><input type="text" placeholder="Ex: 2 entradas conformes — externo"/></div>' +
           '<div class="frow"><label>Repórter Cinematográfico</label><select class="ctrs-rc-select">' + obterOpcoesRCsHTML() + '</select></div>' +
-          '<div class="frow"><label>Status da Transmissão</label><select><option value="" selected>Selecione...</option><option>C — Conforme</option><option>NC — Não Conforme</option><option>NA — Não se Aplica</option></select></div>' +
+          '<div class="frow"><label>Status da Transmissão</label><select><option value="" selected>Selecione...</option><option>C — Conforme</option><option>NC — Não Conforme</option><option>CA — Cancelado</option></select></div>' +
         '</div>' +
-        '<div class="frow"><label>Observações</label><textarea placeholder="Descreva as falhas. Se nenhuma, deixe em branco."></textarea></div>' +
+        '<div class="frow"><label>Observações</label><textarea placeholder="Digite observações sobre a transmissão (opcional)."></textarea></div>' +
         '<div style="display:flex;justify-content:flex-end;padding-top:10px;border-top:1px solid var(--border-lt);margin-top:10px;">' +
           '<button type="button" class="btn btn-ghost btn-xs" onclick="removerTransmissaoCTRS(this);" style="color:var(--red);border-color:var(--red-border);display:inline-flex;align-items:center;gap:5px;padding:4px 10px;" title="Remover esta transmissão">' +
             '<i data-lucide="trash-2" style="width:13px;height:13px;stroke-width:2;"></i>' +
@@ -3682,7 +3158,6 @@ document.addEventListener('DOMContentLoaded', function () {
           '</button>' +
         '</div>' +
       '</div>';
-
     container.appendChild(div);
     atualizarSelectsProfissionaisCTRS();
     atualizarSelectsEquipamentosCTRS();
@@ -3691,12 +3166,10 @@ document.addEventListener('DOMContentLoaded', function () {
       salvarRascunhoRelatorioTV(true);
     }
   }
-
   function removerTransmissaoCTRS(btn) {
     var block = btn.closest('.acc-block');
     if (!block) return;
     block.remove();
-
     var remaining = document.querySelectorAll('#page-ctrs .acc-block');
     remaining.forEach(function(b, idx) {
       var num = idx + 1;
@@ -3715,14 +3188,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       }
     });
-
     if (typeof lucide !== 'undefined') lucide.createIcons();
     salvarRascunhoRelatorioTV(true);
   }
-
   window.adicionarTransmissaoCTRS = adicionarTransmissaoCTRS;
   window.removerTransmissaoCTRS   = removerTransmissaoCTRS;
-
   function obterDataHojeISO() {
     var d = new Date();
     var ano = d.getFullYear();
@@ -3730,7 +3200,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var dia = String(d.getDate()).padStart(2, '0');
     return ano + '-' + mes + '-' + dia;
   }
-
   function carregarRascunhoRelatorioTV() {
     try {
       var dataEl  = document.getElementById('ctrs-data');
@@ -3740,15 +3209,12 @@ document.addEventListener('DOMContentLoaded', function () {
       var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
       if (pracaEl) pracaEl.value = pracaAtiva;
       if (dataEl)  dataEl.value = obterDataHojeISO();
-
       var raw = localStorage.getItem('tv_ctrs_rascunho_v2');
       if (!raw) return;
       var dados = JSON.parse(raw);
       if (!dados) return;
-
       if (tipoEl && dados.tipo)   tipoEl.value = dados.tipo;
       if (obsEl && dados.obs)     obsEl.value = dados.obs;
-
       if (Array.isArray(dados.transmissoes)) {
         var container = document.getElementById('ctrs-acc-container');
         var accBlocks = document.querySelectorAll('#page-ctrs .acc-block');
@@ -3756,7 +3222,6 @@ document.addEventListener('DOMContentLoaded', function () {
           adicionarTransmissaoCTRS(true);
           accBlocks = document.querySelectorAll('#page-ctrs .acc-block');
         }
-
         dados.transmissoes.forEach(function(tx, idx) {
           if (accBlocks[idx]) {
             var inputs = accBlocks[idx].querySelectorAll('input, select, textarea');
@@ -3785,10 +3250,8 @@ document.addEventListener('DOMContentLoaded', function () {
       console.warn('Erro ao carregar rascunho CTRS:', e);
     }
   }
-
   var LOGO_TV_INTEGRACAO_B64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIIAAABbCAIAAAAwUMpNAAArn0lEQVR42u19eZgc13FfVb3unnPvA4tdXMRFAARJUQIIXiJFUQd1UNbl0FLoW7KdyEro5HNsxXYiW3HiI4mvyIfkWJZsWRItkaJEUrzEC7zBAwRB3Fhg73vnnunu96oqf/TsYgmCMu0YIAhrPnwfZntmerrf71W9qt+vXg2qKpyND0n+UxAAQCAAVFUARcQl70JQBAJQhcXjCoACGIMyaArUAwBFUFREh4CgXvP0BIBnxd3i2QyDKoECIiiAqhIhgKiqqgACAgKQKoIqoAIiAqGCLtwZooBKMtICCGiSMyEs/E9ny92+7jAs/XZ85XHRZLhPHCU89VkUQEAQkAB14QQIAmixaSCGwCw5OZ4ttgDgvd4X8GowYOKRFBwAEvrJW50TFQ0jjULH4iJnrVgCMIZ8n/zAz6RSvu8ZQ5T4KiBQX8Elf4ICQNMYBJiAzhKLeN2tQZY8p1OhJAoU2bhaCxv1uFYL2amoR+gb44EHDAoCKqCqzE449jzyfC+bzeSyXj6XyfrJtwiI1wSdQFEVBIHw7DCIswMGVQVEbMKgmkxZsKyVmpTKlUYjREQizOayQSoVpIzvESiot7AwO2AHzKCitbAehmG90XAWSdOtLbCsJ9OSyygjNpfl5sKDZ4tPOhtgUADE5EpUARARwVquVOvFcmhdQJ6XTnm5bCqVbfpzUUjezGoBlSQgQAJABPQACFghijmOXVynWrU6OzVywflruztyIKCIhKqKqooGzxIkvLNgJiAAsighEoEVqJTrlUpNAdLpbD6VzmSM54FjsA4cA4syAyuLKCKCGhQlRERFEjBsfIOGvMCwM0eHZh5/dHc+3bpjR14JYo09JARPBQAVVAHphzCAAiloEm0KQCO01XoYN6yfzmYyGc9H9NHGEkXqnDoHrKQKiCTggYCiIiACCIiyFY7VAXJaxBw6Ur7tm0/cf9eRsOatXNkV2uCjN56/oS9jIRZWzxgAFgXzwyU6iVxYAREQoFKNqo2GId9PZYKAiEABIquhdcwCSiIASIAoSs2MTBUUEBVAQVlRCVNjE/Kd21669VvPzM7Gmy/Y1NHeNjw8PDo8vHpVy8/+1PabbtrcmUUFRiY0+C9wbdClX5p4ZRZAAidarTasY+N5qSBtAiQE58BaiK06UCeoCqBCiA6FlVDRU2RiRkcOffXAp+ka3LNz6Bt/+/De/eVsy+rVazesWJ3P5cEjLM81juwbnp44vu3i9ps/denbr1whYeRs3NHekkQFCICIS1KKcxOGJMECVUU0iweUIIy5HkYA6PuB7xkyoAgiYC0Iswg5QFYQBVBAZQesaETJF4zAoWcD50fsPTNY/Jt7d9/z7BBLe7a1hwEsOxTOpDWfxs72tjSmKpPz4y/tu/rC3v/5uQ8GXrFWLuWyudUreowCAJAqUBMGATx1BH1uwJAAkdwgAliWUqVhDGXSGfSACFRBGFhAVRVUBFRJuRlSKakygyoThUQKSozT5fD25w999bnDx0rgd/b76VwjjhQNMpBYteopYaMeNErb+lt+5p0XvO2CvpRAFEdKbn6+2JrLrFjeaRAQFJsJeDPBxnPUKWkScooIETFLuRr6ge95PhEQgQhwMtwLXAapgpAqsoIgOObAI2FxIibwS6E+NTx72/7D35+YreXb/JYOdSZmYN8wMAATIqhSpb7Rwb/euOzHtq/oafWLkXPMKfLihgPRYmE+n0utXt6VhLwvnzR07sGw4JMQAIBF67WYDHm+B4DGA1WwVhfJBgVAFSAlIRVwBALgK1qr4KN4MDZdv+v4+K0jw4dEbEeXegEzk+8zoCzAjXGjs1Z7T1/PT25Zf1G7jxE0QqcBgQqKElBklZRL83PtLbmBZW3aHPhzHAZQVVEgxFo9QqQg8JnF80kBnFNpjl/CgqIgCAIm1oECLMhkjKkgvDBTu3v/vrsK5ZHWPLWlHIFBT8FzRpy4FBmN2dTjzR78+Po1H+jvbndx6DQ2BsHzYvAVECUWFTSgIjYuFeaX9bR3t2cBALWZaZ8xGM543oBICFHEAOT7ngKgIQVgBpGEzlNFQKGEihYEC+CLplTUijOm4uCpkcJtRw493JiN2np78q3o29hzDhgcGPGEAnANL2xcs2z5p9avPC/lxZE2AATYZyOsqCgCCIQIiMCCxk/n29qmZorZTCoTGE2oXVCic9EakqlunTbCOEgFRCgCiKAKLCCiiz5LEBNySRh8AUWx6sj4xUi/Pzz698cP7xfOdS/rSWeyhoDIEcdqQ1arKWelpVa9YV3/B9b09UYah+B5gA6QVYkiAiYgBZ9BAdSACACAIahVSsB2zcpuSvyhKHnmXIFBTwQciXpTb8SAJgg85uaws4IKsJ54d+KbDUPgIESJCcCnmbq7d/DId8ePDae99q7e/lRbqzCBi9GBYkyGKdWoRsvFu2F9/6XdGSyysWRSGDKQgg/ACo5APAAQXxUFgUgVEl4EQcrzs50d2b7OvLISQjOxPPecknOsAEHgMQOLIqAoqIKDxSyqGTIqAImIaOSDDcxUPb5n/4F7p0Znst7K3mXL/CAjVUQSkMAwCwQqXA3X+pkPbVyzlozOiRpyRmMLajBWsAAGAETJghpkRAQgBiBohg1ImVx+dq7Q2ZZLEaqcOcLpjFqDgNbrsfE8QCPcZDIUAQFUQRVEABKKAgAFGEWQUxgMVqvfPPzS/eNDmm1b1dPXZshQhF7E5Ds2Rj0RhkZjY0vruzdu7owNhkIIjOqIlcGIr0JAQKhGHSIyeUJAACSCCMl4qwqINGqlfBpX9HXCEnn7DW8NCg7BJM7HxiJqfDKOm2KwS3RNFRKHgAgGgESREMgBKbmcGZ8qf+fArruLR6Ku/IYcdmORWAQcxsyoZAy6wKvEb+peed3a81vrpLGwwQhBFJENiLIiYYI6QqJXs4JiQpGAiCYKhCiK+F5QKpV6OttSgTljTuJMOKVkBVAF69gYT3TxOAQMoMCIqp6nCqQ1iJwPgVLgU8ozx+dmv3z4sQcmDqTac+dlUzmqsVZF1Tgwos6AEYPF4sV9G6/deH5Qw9gKoDoBAUqMDAEBUZpWB5yI2QgkCpiodiogmMwZTkpBqFgs9/V26JkyiDMAQ7MKxTkRkcBDVk2iUhVBEFRC9RgwRnDKZNRDFkROpfZND9/ywn23F/YH/V3nZYJlrhGDOhIfABUZFMVAmXf0bb56w0VYdVZQCBWAmIwgAiiKJqHYCW5RAZviapKTiKhoclGIAmoZkYqlWk9PuzlTjMaZgCFZdh0LkQFEZRZI9GOODCKCYVXAkACV8i7lsa1k4dDs2Nd23Xlv+fl8d2t3Dg1FDY49Zl/UIDFAROTV6C29m644b1Oq3GA24hlGRUFUXCCwTjC7mhRqNE0EBICS4hoVURFREEAFFEWkKHKVaqO9JXsi738jw5CQZQiKsbWeH4iACAGhCoMaAx4KKIBDSDEYAUCUwB8c2feXu25/tHygpb9tbVt7wOBB6ImkVJUUkEg9dbS5c8PV67al2Xesaogte4aIm+J24mgSKJJ4dPGykuolUQVRFlVhFQVN2BNAJFasVMP2luyZkUlPOwwKAkDWKQIhEgsIoDpQMKDgMzBJbFgBQDDtecz28YMv3LLn7oN2aMOKnr5Ma8CURi8N5CUnIFLja0g91PGutZdmG6lYQcigIgF5VgDAIUsyB1ATp68iCklyAAiIKCqqgiqgwqoCogAmWUhACZCqtVBUCU8Ek6cPktMOQ2L9zIzYTE4VAAgIVBhYxaFYEqMQpEy5Ov/k3mceGX7Wtbo3d23oDPysonqGyPgAihYAESlmP+21XLfmii7XUrMeG3KAnmggCiqMIgigagSFQAFBZcm8EABAVBURBhAV4aQSEEGT1EIVELxGI7JWUoHR078+nIG1ARFQRDRRMRNvIMqqAgoExvieQCoNYyODj+5+8LgdCfrp/HQqUAWJFZkYWSkiIbC+KEAKQ9zQt74nszyskhhSRU/BCIIKo1qjqhoIGkHFEzJHMp1FJflDWFQUEo8EDKqqqAgEpCDombjmojBMBTk8zaZw2mFYVLOcSBKvK4qqgBHPAKKCpKQR2eLci8f2PDeyqxTMBB3Op1isCFCAKQfGeZ4l9FjzThSogdm2bM+mFefXSz4bI+h8IWRAAEZmowKKoEnxcEIY6YIRNLNEBQBQYeEknGYFxmY0ISIKIOSRINTq9dbW3OnG4AxYAyIYBBDWdMZHgyIUudhJo16r1mrFQnl4bPzw+MwRF1T9PugJnIeSQeMZT1BEnGc8Nj4ipgUCQsWgGrmNK1cQeyH7ihY18h0hozPIKCJKACQoigya8IXQZExBlQEUFBIDlSR1UMHmmp2E0skbBQGiKDwX0rckGhGFWr06PjXUCGdq4US1Nt2IKk6dUAN1RrHWuwokYAPORwjEGAFSYuNpAEasQzRiArCGrAOvNVi5un1lpQqEatmiOmEDAKyoqiCAgqoqagUQxDWZwgSGxWApkVgXH03dTbGpNiiLAqC1i/X9yVKPp2Zp3ghkhhJhd1dHOt14af/e2eKT6XQ9l0E1CF6UUvTUMHqiBsEYEQIxaIVEwQErIlggJfA0CrDimEx2E3A7xinQENkCUqSSRGSKCIqc5MVJ9i66qICflNgvrtgJCgtj2vxskvHENuF6EZQX+b8loQf+c+lCpx0GAgSFlOenO7q6Ww2KS6ciAqPgOSAgQ6BGY1UQNAweKnkgKBYhRhAgsugEPcMQYKqhLkNtGGbAKXOsyoywMKEBgBBpYWQhyTFeKcAuwUBfHSFUFWY9F5wSAKgIIiGASsNImDVx2kRGPWTDgoIWyCGoIgmwAAsSKRIBqpIm2likEBlNGUn5win1NWKRmCVmUJGlJLECCuiS8VV4FSPQhehJmrFU8hImNVQLdiGLoOAr3C2+YZySKiCaZO1DY1RF2IE4UkU0xgMCVUZFo8qgMYJx5DtMCxpUJVEjaMQKCWqKJB2QiK06WxJuZYpZCMWcPJ8X/tZXIfGXgAFL1P+lU2dBjSVcQka9sYnuhMpRUoNeD5rVqrWIRVhF6z6mAgUDUcZzBtQBWEgZkxHwRNVD8sCosogD9JA8IIntlMikSDYmoKWx0MIkPfHnEjd/ShhOMC5LiqhgoaY2EcVPEINv4EgJRVFj4XKp7hOtWPOugK5S61wE9Ua1Gk4WazO2PtEms7Y6Gwr72QyoBBIZVKa0U1+FAJSadXtOAUSmouqRILuu4Twn4quKyGJcf9IQo75y0Bci02TGg2BSnbxAWphmigfM4nl+kwRM3vsy34RvIGtABUTSehQDeNlMi6UcsAHje21Re2d3l0bCYoXnJg5Vh57zx4fb0ppJp4U1pSzAERpUQgABayHyAQmr9eqB7pVXRZB3nicSvzzsObEIIyKI/sNOSQUxYZsAFbjJwioz+77fhO0UeuIbCgZSIPSM8RqR+oKsiOKpEgs4J54NFHNlpUz/iq7lF9cO75zafX8rT3e15pVRQIwBFCU2DmIPq+AMQgPdkdA+uey8KydCFN+AngiWFlcFWDLSrw6DLqzKTfYbFESZiBRAhFOp1CIni6fe/PhG4ZQUEMEnv86RQTEoAo4dshjBdCSBs2BQqmFYhlzfunef3zJw8K4vN8ZHVnR1KTtUSxKj8406ohJJwHGDqTw/e3t7S3tr75ZpJlRJaj6SrQ9LRxn1FOvBkjgVEUFFsVkp2EwzRCQ5VS6X1SYGSQZHp81pnNYFKCm4I6xU7fTcfC7vG7LKPsdp65Q1ZAFhZWUFVgDnXGc+lY/nX/rmn5tDj23sbqk7BFdF5xGoUhmZSCA04RQ413nFwHtvnsn0xo4VqTmjNUmDT4QHqskgYlNgAMWFne7JQSQBRGpuEkUEZWFUUIkv3bY5SFGzZlCRFmvR8Q0HA4AiWCujY+NB2vc9T5ViC9YCc6yMFtWRGCe+Q0YqQexnZYtnD3/p/9afemxVX44bcxpHARKIIwyESSlWj2eqLr7k+lUf+KlpDorUIuijMmoIGpMigK/gIUgiOyVXwgvZ9UIyoMnIozYrzAlUQIzRKAzzudS2t5yPsDRmPV1u6TQX4mBS8AK+h6mULyKqhgVZmNWxKIiIOHaWWZVBIkmBX2/wYNlddNOnOne898ihgu+60nFOio5rxtY8qPleKeMV0z0cRA8/NHPHrT0mVldXAXREQqpgDTApKKuICC/+S0QGFUlEH9HkiaqoqLKIqqgwO2vjsLOrvemrTuRrp+thPvvZz5721QGVEFmkWqt5ng+AjoWdiAgkVWMqkPDfajDiLKai2E7GtU3bt5saHN99eFmm0wOv7lTFBM43zlgHsTMdzp/afzzyTP+WLfNhw6OAHDBhTKSq6BhAmwMNKioizefNf6pLnScmbwAGZVU+77yV2bSvcCa06NMNw8t6U9SqNUUkJBVlVmnOQkFRAHAArEoOjANBv+h7I1F945t2cE2PvnCgNdchjLaBbD21AYW+iz1y1A7B5N5joWrfxnVVtgooAMiEoiIKlMg5Ccogi/lcIkApJvWBCoIiqCDgPIONRj2bS29Yt5JQzw0tunnTqppOBZlMul4LTTpZ6FjZOQBVMAICEhNakkzgB5GAapr8OsGuUvmCj/+o5PL7b7tzU8caxNBW64xGfTCJoq+63IPR23emOFj+nreNGlFLnvoCxKjiOBnmJRGtQLIXXprKEAKRNPeAISiLOBsPLF9lCM6lOqUTyVRrS0utWhfhpJcFAjpxCISiiiDAjFpHEQKPKYiEDDXAvFicP//97xjws4dufXBzfqXJukpYIwJSMeI5YeH4PJ9G73zaVqT/huum0hTGNjCGRYBUWBBBZGHTKAs18/tmcoyIiyu2czFYTqf95X09yT6MM8Ownu4aVn15fIcjo2PWchCk4shFURw6UEZUYQVLbEFUxBcwDlFIWNQnC2KB1+W7ZOfB4Vu+v6alk0mqtXJaxEigCiIxsQ0cjkehffPGro++bSYHDQkJBMUQkoA65uZyq0AJ/d7cGA+olOwwUmVErtfKmzat27hxjWMxhvCcgOEkthXq9fr4+EQ2m4/COIpia5UdSlOHVBabqPOsKIqg4IGyU6RArKxq68U9owe+fs+ASeWDlJ0viRIA+kJqnWU1XnrO1mprOzp/dEd5uRdGoa8pFhFQReRkLxECKBhEVCCT7LIWbJbTKNswSNNVV2wPUj6AnrFeDmdujzyiqnI2m21taQnrdd8zhgDAATpQQQFkJEEjTcnAIkSkobAQqbUB4LHZsdpFfWt/7obRwNUrsZ/vjAPfCgIbwZz18g3w24L21qHK9F9/P//CbAfkJLRoxVOU2DbL9puitKqqsIhjcEnMKsquETY2rFufSvunJMDfyNaw1CepKig7NzY2btCLXVyyEVugiMSRQ3TIIBZFVTFWBCKyjgEAxIh6BHVxbbm27oo58OX7OkYb3W0tUa2hNSbwhIiRDXOOqGyjmQylrtzoX76i4Ukcx2CMIHBSQaZKSZi0mJQhEEi9Vunv792x46KkmhVBkTw4x5xSk1hGQYBqpTo1Oe0H/nzYcFYpRGawQE5ZVIwICTglZfUUY2RnFNl5IohQAclm2tdo28Rtj0fPH13R0hlHYquhB6jMPqLEceCnIyczKZndmh+4dLPpys9ryAYAiYUNIagFYFQPwANQRIjj0Pfg6qu3t7ZlVUBUCAHpDHXjex12gibzcWZmplKpAphaLbSxYwFmEAVuivsiSQGRNoMcVSWkZHO7MBqEVT398b17Ju95piPfkVGfi6GxQAQCjCiAGouUAcvtlL90fWpLfzULoTpWIQSBhiKD8wKTjW2YCqhSK1x+xfaVK/pEkqZ+p4U7OrtgAABmnpqarldDFomiOGxYFlBAYXGKTRlYZMGTYbOIZaGcRRRUZF1bnzdS3nvbA+3TdmVbT6NUQwcGoAFWEY2IIMfgyshmbW+wbbVdmQ9Jopit54vx0caexL5Pler81q2bLrxw45mp3379YUho5ERmsc5Ojk2GYRxbG0U2jtgJiKiwNnX9pNZdF6tcmgPknENAVagz97V299vUkbseqz97ZF1umWGvWm344AF5Ii5wsSLZwJvVhm2n7Jae7IUD1bagLhALETqfbKk0v2Hjuh07Lj6TodHrD8NSs7DWjo+ONhqxiNZqDeeUBdhp4odElRFFmraBYJidiBIlmxPFIlqWFj+9oWN5/dnBI3c90VYP+rM9tmyjhgu8wGfXEGfTKeepINf90K1Ipy7o8Va0lSlUDxqN+rr1a3fsuCRpHYrNzRi41HDP5bVhsWuOjcOJ8alyuQpAYRjbmK0TScxC1EHyXBJkRBjBWOuasqWCCAOiWl69bKCjFgx9b1fhqWPLW/tTnIqKdTYghAiovhdlAsh4dVecN4W1H95a7bZzteKWDRds334JNcU3XUyoF8pl8By3hoVgVgDQOTc1OTU3W2AGYYli5yyzgLWcDL9zjkUQgEWFm1IbsyAhqBokJ8Kha0+3re5Z0zg8e/S7Twdzrj3bbRueWGZPMB0ISRlC7Q+2f/ySDe9YV4+LlbDR29VvqNlKZUkr5HO5g8wpgZBkB7SqzM7MTYxPRZFV0Th0kbWOJXacbD8QEWZOfJUoCIuqxqgMGjjxGVG0blkpvXZg/TLTNvTwntGnjmW4P5vKR2G5HleoQ9dfu/4tN74ld17KiSNiAk8TwQeTag3BRAlaGP9/OTAAoAozEiKaWqU2NDw8N1sAxTi2kXPWKjtx7EQEAZkT6SbZJSV1UlZNO0lZBYEIwBmvHtqOlq4LVq335/DAI0PzU/P5bLBmfffF793SeXErBMDMQmrAqIoxZsEUmq0idEm2eca6tL7+PboX4/RkFJxzMzNzxwaH5ubmmVXUOOdEJI7jJFJKpBthFlWLAIrGCSbYIFoQowQhRyjdywfO79wYFsqs0XUf3AZpUKfiAyKQogoAnegDsIDBqZWSfwkwQNLJZaGUEREhjt3I8NjQ0Mj0TKFWqxM1I5gkv1VJUNCUAxGNUR1q0hQRkypuAkSNImfZdHa19/a2XnPNZa1tLUoISKBKKCQCaCBpfbmkndVSYvh1s4Z/EBP8p7idxR3JSyjvxS9DPembVRIWAeLITs7MDQ4eHx0dLZVKcRgTeYaImnut0ROAhJcAEREQVeeEXRiH7Gw6nWrp7Fi+ov/ii7euWdUvomia5AQlG4KRQOkHyJz6Wu99oZPgyz53ctk9ng0w6Ct53aXFLKcObSnRK8MwHhufmBwdHx+fLBWK1WrdWsuJRag0q1gVEdHzTEtLbllv78oV/X0DvQMrBlLpYKn09I+99td876eEAf+JMJw+hvUUt/QaSJumaLYgg6lAtVKtlKuNRlQql8ModM6KqB8EuWw+l8vmW9Jtra3ZXOYEmSiS6G6LFZJn4eOs/RmNUxiH6mtv95VUs5694/5GhWEpHq9BYsI31k298WA4Jx/0wyH4/7bOH8LQ3HD+ehr0P4v/O7VTesXBl+20OMnzntTZY7F3TtLKavGDP+BTpx7HhY2Ar+b3TyKiXxmS6qt/9hXTWU95/lde4SvvglmSX1r5wV/9gxesM1kgc1ro+0q1Ya3L59JB4P8zfsvSWPqELLqU9lAFgFvv3Ll77+H21vzqlcs+/L6rEemfph15rxypeiM8eGTEGGKWMIyz2XQ6HTjrHHOl2qhU69de9eZ0ym/+Fhvinn2DjTB88NHnP3HT+7s726ZmCoePjc7Nla/asTWM4mPDkwDQ19O5fu1AMu8QsVyp79p9oFSqXXLh+p7u9t17j0SxTQWBiBiDiBTH9oJNa1T1+ReP+MYEKd/3DIu05rNbN69NrvPg0ZF9B4d830vmcy6bHujv2bh2RfLq1Gzh6Wf353KZ1ny2EUZB4K/q712+rFOXzMrkndOzhWd3H0ql/TCM167p37R+VUL2HR+ZPDw41ggjVfUMpVLB2tX9a1cvX/w8Ira35lcs702nfVFwLIFPAOgcHxocPXp8zLFEkQXVDetWbN6wOptJvdosOQkGQIRduw8++Ojza1b2dXW0qurx3ZOiqqIDy7t939v1/MELNp23aqBXRYhobGJ2dHz6iV375ovlllxGVffuH5ycKYxPzi3r7azXGxPT8yKy79BQe3uuu7OdWY3Biam5sfGZSq2eORLMzBfve+jZjo788t5OZomdq1RqQ6PTAIpIR4+NZTKpmblSLpu21mbS6Qs2nQcAt9/9eBTFxtDe/YPlar29Nd/V2To7XyoUyjvesgUA9h08XmuECnDfQ8/U6+GKgd4V/d2bN6x+09b1S6WnKLaP73oJAOqNcHa+ZB1vWr+KiHY+uefY8EQ+lymWaqPj062tub6eznK59twLB6+58k3dnW2IuO/g8eGxyYHlXdZxsVStVOtdHa1TM4V7H9yVz2cQ8cjgWGs+k89ljx4bO3h4+Pq3X9rZ0XrKnPVUv/ElUq+HUWRb8tnjI5M7n3xxZraYTgUAkE4FQWBEOJkLYWSffHZfvREPDo3/wec+lUoFABjHDhRUBRGIqFKp57LpTDq46/6nS+Xawlxo1ui2teZVdXJmXkWrtTCbTR8+Onro6Ggc257ujkwmlc9n641oZq5Yb4RzhfJFW9ch4s4n94xPzAyNTt770K6DR4ZTgT8+MfvcnsOVauPvvnX//Y88CwAGSQXm5ku9Pe1bN59nCKPI3vvgrsODY5gIqwoi8szug6MTs0ePj2Wz6Si2yQgcHhx96pl9CLhn3+Cel45Wa41DR0cfePT5x5/Z+/2dz1VrISIWS9UXXjo6X6weH51mlkKpyizWuvse2sUis3OlF/cNIsLhwbF7Htr10OMvINLXb3tgfHIOT7VyvMwaEg/4tisveduVlxw9Pr7zqT1Do1PXvfXNv/BTH7COv/z1u48NT84XqulU07juuPfx+WLlq9+6/z/8wkeDwE9suViqzMwV5wsVEJgvVqr1RmmwksvlbGzvfuDpGz94bfLZcqU2NjkbBP4nb3r/jjdviaL4y7fce2RwLJNJ/fZ//kRyPX//nYcLxUqhVPnpj71ny8bVycGZueLTzx9QhRf2HvlPn/7YRVvWJcfve/iZ+x5+5pKLNl60eZ2IFsrVkfEpEfmJG6/vX9b10sFj9z/8bD2Mnn3h4Ia1A8zs+95LB4aef/HQ+OTc4cExIgrDuK0lVyxXv/HtB7s72556bt87rtn2wfdclZx/55N77n7g6U//7EdWr1zmHN/z4K7Dx8aKperg0Nj1115aKFY8Y/YeGHzxwLHWfM73vJ/5+HsHlncDwFyh/Dt/9NXnXjzU3dn2nbsf+6mPXZ8K/B8EQ/JgFiKcmJp7af+xufny2tWsqsVS9cixMRYulCqOGREfemz3M7sPPvfiocvfsuVHrr/KOfY8AwAjEzPDY9O1eqioR4+Pz8wVB4+PK2hvd8fg0Hh3Z9t1V795aGRq38Hj2Uy62U5BtVaPDh8dcU6MoaSS0RiaK5QPHh3xPTM1M2+IGmG4cmDZ4aOjM3OlY0Pj73vHZRdtWccsSRXmO6/Z9s5rti3ehXNuaHSqVmtMTc+35rPTM8XjI1MjY1Pr1/QDABkqlWt33v/ko0/tueTCDb92801f+eY91Wq4dk1/oViZnJo7eHTkgvPXfPA9Vy3O3LdedtFbL7soef79nc8++Njzo+MzP/8TN1xy4fp7Htzl+97MbOH7jzznLI9Pzv7yL/7YwPLupAalq6P19z/7b/73n/39waNDseWLt66/fNuWxct+VRgSp1yrh4cHR+PYeZ6XqDGHBkdENIziVOCPTc5+4SvfnS9WCsXqzT//UWZZZHumpoujYzOiwswzs4UDR4bDKP74h9/xnbsfQ4A//stvbdqwKpNJDQ5NtOSz569fmZRWR3E8MjZTLFVWDPQiJp054fDRkUNHRvp6O/7wL75Zr0czc8Vf+6WbPGNe2Hs4l8tcf92OBK09+47ece8TK5b3FCu1bDo4Njz5I++5cmqmcOjo6LLu9i/+7R0qUCpX54tlFn3X27arqiH6yi333PfwM0T4kzde7xnaf3BIVIulaqFYGRyZjCP7cz9+Q7IlNBmv5DkRDY9OfuErd8wVKtvetPH6t1/6+S99e2JqLhX4M3OlI8fGpmYKa1b1LV/WlVSQAACLIOCPfuCa//hf/7RQqoyMTV2+bctJ3Ty8V2N3C6XK6Pgsmeb+VmaZmy9bJ20tWc/Qr/+Pr4yMz0zPFb/xhf/S19spIosh3XyxXKrU4tgya7lSLxar1rqrdlyUy6Z/7/98PZUKPvt7X1q/diC2bnB4wl9oCR/Ftlytlar1nsRBa/NUtXp4bGQqiuLO9tZU4Le35XfvPVJvRI0wrjeihIL97j2P/7f//bcDy7uXL+t0LCNj01s3r42tq9UbcwXa+dSLa1b0GY8621s/95mf6e3pAIDb7tx5y3ceCsP4Dz/3i2tXL3/2hUPFUk1E0qlgZq40OTUf+N70bAERWZiaW96bkvV//8OvHjo6umXT6t/5jZ/3DM3MFiuVes0YVimWarPzpYH+Ht/zADTpwJ7oGnHs5grlQrHimP+BSGkpDjZ2xXI1CLzFAMtaV67U2luzX/ybO3c9f2B6pvC+d1128QXrF91R8ihVavOFclJgN1coFUpVx1yu1D5ywzV3P/j0/Q8/y45fOnQcAZ11tUa4+KXVWqNYqsYL6yQAxI7L1Vo2k/r9//pvdrxlUxy79rb88eHJmdliKhXcdd8Tn/rZDwHAO9+2va+3a3B44t4HnjYeeZ7ZsHbF3v2DxVIVFC7fdsHBIyMK+o6rt23esBoAnttz6Hf/5Gui2pLL3P3Q0089v3/v/kFRnZopzBXKG9auqFTr2Uzq29979CPvv9r3mkNkDALAb/2vLz/0+O6O9hbf837/818PPPPSwWOxdY1Kvb0139Ge37P/6BO79r247+jFW9c3h9hDAPjeA0+NT85Z67o7W18bDAtY1OoN5sDapJs8FEpV61yhVP3yN+52rG1t+d/59Z8DVDIvC7fi2JbKNVGNrbWOC6VKPp8xBgnxf/3mv/1Xn/jNA4eHWvNZ45np2WIYNgfdOlerh9V6oxHGJ04V2UY98jzT3pYPAh8BY+s+cP2V//NPv2Gd+4u/uaOvt/OybRds2rByw3kDt9z+kGOeLZSX9XSuWdk3MT0fRXZyZv5Pf/fmv/jKd2+9a+dffvXOZT3t/+pHrv3Vz31hcnoeEY43okefftGGcUdX++oVy2qNsFAor165LJ/PlCu1p5878Muf/bOf/LHrB/q6M+lUPQzvuu/Jv/q77xmiw0dH9+479tVv3uf73orlPS35bLFU6elqv/LSC2+9c2dvD938G5//k//x6VUDfZl0MDY5+6d/dfud9z9RrtS2nL/60ks2J17xNcEgwmFsiWhpcOV73vRMIZ0ORsen/uqPfqWjvYVFTjqjiCICO3ZOwsgSYhjGcewAoL01/3//4Jff/uFfKpZr7W35pOZlMS6w1lnrWE50fak3Qstcq0ef+e0vtLXmCoXqNVdc/Gu/dNOnP/HhT3/mj9etWf6Z3/5iT1dbEAQj49PMbGNXqtS/+me/3t3ZWq+HzBJGcWtL7pM/fsPXbnsgk059/q++feudO48cHyuWq+++dvvFW9erai6bfuzpvc/sPkhE1XpjoK/7V37xYz/97363t7v9b791/613PTrQ19XT1VGqVI8eHy+Vqhs3rPzkTe8nQy0t2Xo9/NLXvlerh55nSuXqh9731r/86h27dh8Mw/hHfuLXz1+3KptJHTo6UihVG2HUks/85i//dHtby0ItyGtYG+qNqDg0WcxnxiZmktk6ODTu+74xWC5U3vWOHTd+8FoReeXusPHJmaGxaW1E1Vp9bHx6ZGIGAMMoTgxl5UDv//mdm2/85G/OFyuNSm1obGpxxEcnZgtTc6M9HYunGh6bGpuYyeeyg8dHCQ2XK4D6n2/+17/4sx8qV+q/9ft/nZgUInrGzM4X+3o7//pPfvWK7Rc0wuj48MTY5KyrhxPT81deuvVjH377n3/x1rn2lr0Hjtl6dP27r/jSH/9qNtNsiXHZm7dc/u5faDYRULjxg9eOT87+8RdvLZaqRLj3wLEoPgQK9Vpj/boVX/rDX9ly/prFi7zvoWfufWiXxrYehrls+st/8pmfufn3nn7uABFOz+5RFgFwLFs2rvqD3/rUFZdufeXEPTWnlCwsB48M33bHI/Uoftfbtr31sosq1fpXbrl3eHQqm013d7Ref92OtauXq8LLyRZAhK9/+4Hn9xxua83d+MG3P/b03uf2HFq3uv/HPvz27s625tYzwgceff6RJ14Iw/j977r8qh0Xqurk9Pwttz94bHhy25vOv+mj70xonK/d9sDTzx9IBz4gGENxZK+7+i3vvnZ7Mpseenz3Hfc+8cgTL4yOz6xdM/Ch9151w7su37hupXNMhr57z+OPPrW3oy33iZve19PV7lj+6C++OT1bUNWe7o6Pf+S6Fct7Fosw5wrlP//r24vl6juv2fae63YkI3X42NiX/u6ub333Yc/3oshecenWrZvWvPe6y7ZuPs9al/zOroh+53uPPfLknoHlXT/34zd0tLckS+m37njkmd0H7n/kORHZfsmmq3Zc9O5rt/d0tZ0Up76eso/8c/xS8+L91OphFMXZTDqdDpKw8jUKpT+YBIytC3zv2PDEf/iNz7fks2EU//tPfuTKHRf+g9e/lOit1UNVzS8I4ydRhK8JBhEVbfqcZIVgYUJKmmMaolc7Y9IHWlWQSJOITYWIlt4zsywy2cmoJTMroXoW50vCIZ90jye9ungZzjERLmKQvKqqCQWdVHAkr4oIIp1EmjZ/9njJr1u9ElHHTIgnHUyy3WSIm1Q/AC+5GFVgZmPoB6D+hhdBT2sfc1VdDBmI6B9rxK+9KueHWvQPtegfPn4Iw1n1+H/6OTAeA/ev9QAAAABJRU5ErkJggg==';
   var EMAIL_RELAY_CIPHER_HEX = '90d7f09b56eea3cd099a98646d1576fb4cc53ef067f078b353286e09af3bc966dbaba361ffb80be843ca1dc3aede807b762f4d959b78643bbf3277e160f3f0016d1368183e4d9056e91c30939ba1a76c5655a044a74d51df70e27cc51cf2915f95f2d92b557ac03aec0b589163afebeb5ae7';
-
   function obterEndpointRelayEmailCTRS() {
     var k = atob('QEludGVncmEyNjIw') + '_CTRS_Relay_Key_2026';
     var hex = EMAIL_RELAY_CIPHER_HEX;
@@ -3807,7 +3270,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return out;
   }
-
   function getEstiloCelulaQualidadeEmail(codigo) {
     if (codigo === 'NC') {
       return {
@@ -3826,344 +3288,25 @@ document.addEventListener('DOMContentLoaded', function () {
       texto: '<strong style="color:#15803D;">&#10003; C</strong> <span style="color:#166534; font-size:11px;">(Conforme)</span>'
     };
   }
-
-  function gerarHTMLTemplateCTRS(destinatarioInformado) {
-    var dataEl  = document.getElementById('ctrs-data');
-    var pracaEl = document.getElementById('ctrs-praca');
-    var tipoEl  = document.getElementById('ctrs-tipo');
-    var obsEl   = document.getElementById('ctrs-obs');
-
-    var praca = pracaEl ? pracaEl.value : 'Juiz de Fora';
-    var dataRaw = dataEl && dataEl.value ? dataEl.value : '';
-    var dataFmt = '';
-    if (dataRaw) {
-      var p = dataRaw.split('-');
-      dataFmt = (p.length === 3) ? (p[2] + '/' + p[1] + '/' + p[0]) : dataRaw;
-    } else {
-      var dNow = new Date();
-      var dia = String(dNow.getDate()).padStart(2, '0');
-      var mes = String(dNow.getMonth() + 1).padStart(2, '0');
-      dataFmt = dia + '/' + mes + '/' + dNow.getFullYear();
-    }
-
-    var tipo = tipoEl ? tipoEl.value : 'INTEGRAÇÃO NOTÍCIA';
-    var inCheck = '', mg1Check = '', mg2Check = '', outrosCheck = '';
-    var tipoUpper = tipo.toUpperCase();
-    if (tipoUpper.includes('NOTÍCIA') || tipoUpper.includes('IN')) {
-      inCheck = 'X';
-    } else if (tipoUpper === 'MG1') {
-      mg1Check = 'X';
-    } else if (tipoUpper === 'MG2') {
-      mg2Check = 'X';
-    } else {
-      outrosCheck = 'X';
-    }
-
-    var obs = obsEl ? obsEl.value.trim() : '';
-    var operadorAtual = (typeof getUsuarioAtual === 'function' && getUsuarioAtual()) ? getUsuarioAtual() : 'Equipe Operacional';
-
-    var formatTimeVal = function(val) {
-      if (!val) return '&mdash;';
-      var parts = val.trim().split(':');
-      if (parts.length === 2) return parts[0] + 'h' + parts[1] + "\'";
-      return val.trim();
-    };
-
-    var formatQualidade = function(val, defaultVal) {
-      if (!val) return defaultVal || '';
-      var v = val.trim();
-      if (v.startsWith('NC') || v.startsWith('Não Conforme')) return 'NC';
-      if (v.startsWith('NA') || v.startsWith('Não se Aplica')) return 'NA';
-      if (v.startsWith('C') || v.startsWith('Conforme')) return 'C';
-      return defaultVal || '';
-    };
-
-    var accBlocks = document.querySelectorAll('#page-ctrs .acc-block');
-    var transmissoesHTML = '';
-    var totalTransmissoesIncluidas = 0;
-
-    accBlocks.forEach(function(acc, idx) {
-      var inputs = acc.querySelectorAll('input, select, textarea');
-      var cidade    = (inputs[0] && inputs[0].value.trim()) || '';
-      var infra     = (inputs[1] && inputs[1].value.trim()) || '';
-      var rawHoraAb = inputs[2] ? inputs[2].value.trim() : '';
-      var rawHoraFm = inputs[3] ? inputs[3].value.trim() : '';
-      var horaAbert = formatTimeVal(rawHoraAb);
-      var horaFim   = formatTimeVal(rawHoraFm);
-      var rawAudio  = inputs[4] ? inputs[4].value.trim() : '';
-      var rawVideo  = inputs[5] ? inputs[5].value.trim() : '';
-      var reporter  = (inputs[6] && inputs[6].value.trim()) || '';
-      var entradas  = (inputs[7] && inputs[7].value.trim()) || '';
-      var rc        = (inputs[8] && inputs[8].value.trim()) || '';
-      var rawStatus = inputs[9] ? inputs[9].value.trim() : '';
-      var falhas    = (inputs[10] && inputs[10].value.trim()) || '';
-
-      var foiUtilizada = !!(cidade || infra || rawHoraAb || rawHoraFm || reporter || entradas || rc || falhas || rawAudio || rawVideo || rawStatus);
-      if (idx > 0 && !foiUtilizada) {
-        return;
-      }
-
-      totalTransmissoesIncluidas++;
-      var num = totalTransmissoesIncluidas;
-
-      var audioQ   = formatQualidade(rawAudio, 'C');
-      var videoQ   = formatQualidade(rawVideo, 'C');
-      var statusTx = formatQualidade(rawStatus, 'C');
-
-      var estAudio  = getEstiloCelulaQualidadeEmail(audioQ);
-      var estVideo  = getEstiloCelulaQualidadeEmail(videoQ);
-      var estStatus = getEstiloCelulaQualidadeEmail(statusTx);
-
-      var temNaoConformidade = (audioQ === 'NC' || videoQ === 'NC' || statusTx === 'NC');
-
-      var reporterCompleto = reporter || '&mdash;';
-      if (entradas) {
-        reporterCompleto = (reporter ? reporter + ' <strong style="color:#15803D;">(' + entradas + ')</strong>' : '<strong style="color:#15803D;">(' + entradas + ')</strong>');
-      }
-
-      var cidadeCompleta = cidade || '&mdash;';
-
-      var headerBg    = temNaoConformidade ? '#FEE2E2' : '#DBEAFE';
-      var headerColor = temNaoConformidade ? '#991B1B' : '#1E3A8A';
-      var borderTable = temNaoConformidade ? '#FCA5A5' : '#94A3B8';
-
-      var obsCellBg = (falhas && !falhas.toLowerCase().includes('sem ocorrência') && !falhas.toLowerCase().includes('sem ocorrencia'))
-        ? (temNaoConformidade ? '#FEF2F2' : '#FFFBEB')
-        : '#FFFFFF';
-
-      transmissoesHTML +=
-        '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, Helvetica, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid ' + borderTable + '; margin-bottom:12px;">' +
-          '<tr bgcolor="' + headerBg + '" style="background-color:' + headerBg + ';">' +
-            '<td colspan="3" bgcolor="' + headerBg + '" style="background-color:' + headerBg + '; text-align:center; font-weight:bold; font-size:12.5px; color:' + headerColor + '; border:1px solid ' + borderTable + '; padding:8px 12px;">' +
-              '<strong style="color:' + headerColor + ';">Informa&ccedil;&otilde;es da Transmiss&atilde;o ao Vivo ' + num +
-              (temNaoConformidade ? ' &mdash; ATEN&Ccedil;&Atilde;O: N&Atilde;O CONFORMIDADE' : '') + '</strong>' +
-            '</td>' +
-          '</tr>' +
-          '<tr bgcolor="#F8FAFC" style="background-color:#F8FAFC;">' +
-            '<td colspan="3" bgcolor="#F8FAFC" style="background-color:#F8FAFC; border:1px solid #94A3B8; padding:8px 12px;">' +
-              '<strong>Cidade:</strong> <strong style="color:#0F2C59;">' + cidadeCompleta + '</strong>' +
-            '</td>' +
-          '</tr>' +
-          '<tr>' +
-            '<td bgcolor="#FFFFFF" style="width:38%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
-              '<strong>Infraestrutura de Transmiss&atilde;o Utilizada:</strong> <strong style="color:#1E3A8A;">' + (infra || '&mdash;') + '</strong>' +
-            '</td>' +
-            '<td bgcolor="#FFFFFF" style="width:31%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
-              '<strong>Hora Abertura Sinal:</strong> <strong>' + horaAbert + '</strong>' +
-            '</td>' +
-            '<td bgcolor="' + estAudio.bg + '" style="width:31%; background-color:' + estAudio.bg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
-              '<strong>Qualidade &Aacute;udio:</strong> ' + estAudio.texto +
-            '</td>' +
-          '</tr>' +
-          '<tr>' +
-            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
-              '<strong>Rep&oacute;rter:</strong> ' + reporterCompleto +
-            '</td>' +
-            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
-              '<strong>Hora final (Teste OK):</strong> <strong>' + horaFim + '</strong>' +
-            '</td>' +
-            '<td bgcolor="' + estVideo.bg + '" style="background-color:' + estVideo.bg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
-              '<strong>Qualidade V&iacute;deo:</strong> ' + estVideo.texto +
-            '</td>' +
-          '</tr>' +
-          '<tr>' +
-            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
-              '<strong>Rep&oacute;rter Cinematogr&aacute;fico:</strong> ' + (rc || '&mdash;') +
-            '</td>' +
-            '<td colspan="2" bgcolor="' + estStatus.bg + '" style="background-color:' + estStatus.bg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
-              '<strong>Status da Transmiss&atilde;o:</strong> ' + estStatus.texto +
-            '</td>' +
-          '</tr>' +
-          '<tr>' +
-            '<td colspan="3" bgcolor="' + obsCellBg + '" style="background-color:' + obsCellBg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
-              '<strong>Falhas ocorridas:</strong> ' +
-              (falhas ? '<span style="color:#0F172A;">' + falhas + '</span>' : '<span style="color:#64748B;">Sem ocorr&ecirc;ncias.</span>') +
-            '</td>' +
-          '</tr>' +
-        '</table>';
-    });
-
+  function montarTabelaHTMLRelatorioCTRS(d) {
+    var praca = escapeHTML(d.praca || 'Juiz de Fora');
     var isUberlandia = praca.indexOf('Uber') !== -1;
-
-    var renderCelulaJornal = function(sigla, marcado) {
-      if (marcado) {
-        return '<td bgcolor="#DBEAFE" style="width:25%; border:1px solid #94A3B8; background-color:#DBEAFE; color:#1E3A8A; padding:8px 12px; text-align:center; font-weight:bold;">' +
-          '&#10004; <strong>' + sigla + ': X</strong>' +
-        '</td>';
-      }
-      return '<td bgcolor="#FFFFFF" style="width:25%; border:1px solid #94A3B8; background-color:#FFFFFF; color:#64748B; padding:8px 12px; text-align:center;">' +
-        '<strong>' + sigla + ':</strong> &ndash;' +
-      '</td>';
-    };
-
-    var destLimpo = (destinatarioInformado || '').trim();
-
-    var htmlCompleto =
-      '<div style="font-family:Segoe UI, Arial, Helvetica, sans-serif; color:#0F172A; max-width:800px; margin:0 auto; padding:10px; background-color:#FFFFFF;">' +
-        '<!-- CABEÇALHO OFICIAL ENGENHARIA (COM LOGO E SEM DATAS DE REVISÃO) -->' +
-        '<table cellpadding="6" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid #475569; margin-bottom:12px;">' +
-          '<tr>' +
-            '<td bgcolor="#FFFFFF" style="width:150px; background-color:#FFFFFF; text-align:center; vertical-align:middle; border:1px solid #94A3B8; padding:8px;">' +
-              '<img src="' + LOGO_TV_INTEGRACAO_B64 + '" width="105" height="73" alt="TV Integração" style="display:block; margin:0 auto; width:105px; height:73px; border:0;" />' +
-            '</td>' +
-            '<td bgcolor="#F8FAFC" style="background-color:#F8FAFC; text-align:center; vertical-align:middle; border:1px solid #94A3B8; padding:10px 14px; line-height:1.45;">' +
-              '<div style="font-size:11px; color:#334155; font-weight:bold; text-transform:uppercase; letter-spacing:0.4px;"><strong style="color:#334155;">Processo Engenharia 1.1.1 &ndash; P02 &ndash; F02</strong></div>' +
-              '<div style="font-size:15px; font-weight:bold; color:#0F172A; margin-top:4px;"><strong style="color:#0F172A;">' +
-                (isUberlandia ? 'Relat&oacute;rio de Transmiss&atilde;o ao Vivo' : 'Checklist de Transmiss&atilde;o ao Vivo CTRS') +
-              '</strong></div>' +
-            '</td>' +
-          '</tr>' +
-        '</table>' +
-
-        '<!-- INFORMAÇÕES PRINCIPAIS -->' +
-        '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid #94A3B8; margin-bottom:12px;">' +
-          '<tr bgcolor="#DBEAFE" style="background-color:#DBEAFE;">' +
-            '<td colspan="4" bgcolor="#DBEAFE" style="background-color:#DBEAFE; text-align:center; font-weight:bold; color:#1E3A8A; border:1px solid #94A3B8; padding:8px 12px; font-size:12.5px;">' +
-              '<strong style="color:#0F2C59;">Informa&ccedil;&otilde;es Principais</strong>' +
-            '</td>' +
-          '</tr>' +
-          '<tr>' +
-            '<td colspan="2" bgcolor="#FFFFFF" style="width:50%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
-              '<strong>Data:</strong> <strong style="color:#0F2C59;">' + dataFmt + '</strong>' +
-            '</td>' +
-            '<td colspan="2" bgcolor="#FFFFFF" style="width:50%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
-              '<strong>Pra&ccedil;a:</strong> <strong style="color:#0F2C59;">' + praca + '</strong>' +
-            '</td>' +
-          '</tr>' +
-          '<tr>' +
-            renderCelulaJornal('IN', !!inCheck) +
-            renderCelulaJornal('MG1', !!mg1Check) +
-            renderCelulaJornal('MG2', !!mg2Check) +
-            renderCelulaJornal('OUTROS', !!outrosCheck) +
-          '</tr>' +
-        '</table>' +
-
-        '<!-- TRANSMISSÕES AO VIVO -->' +
-        transmissoesHTML +
-
-        '<!-- LEGENDA -->' +
-        '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:11.5px; color:#0F172A; border:1.5px solid #94A3B8; margin-bottom:12px;">' +
-          '<tr bgcolor="#F1F5F9" style="background-color:#F1F5F9;">' +
-            '<td colspan="3" bgcolor="#F1F5F9" style="background-color:#F1F5F9; text-align:center; font-weight:bold; color:#0F172A; border:1px solid #94A3B8; padding:5px;">' +
-              '<strong style="color:#0F172A;">Legenda</strong>' +
-            '</td>' +
-          '</tr>' +
-          '<tr style="text-align:center;">' +
-            '<td bgcolor="#F0FDF4" style="width:33.3%; background-color:#F0FDF4; border:1px solid #94A3B8; padding:6px 8px; color:#15803D; font-weight:bold;">&#10003; C &ndash; Conforme</td>' +
-            '<td bgcolor="#FEF2F2" style="width:33.3%; background-color:#FEF2F2; border:1px solid #94A3B8; padding:6px 8px; color:#B91C1C; font-weight:bold;">&#9888; NC &ndash; N&atilde;o Conforme</td>' +
-            '<td bgcolor="#F8FAFC" style="width:33.3%; background-color:#F8FAFC; border:1px solid #94A3B8; padding:6px 8px; color:#475569; font-weight:bold;">NA &ndash; N&atilde;o se Aplica</td>' +
-          '</tr>' +
-        '</table>' +
-
-        '<!-- OBSERVAÇÕES -->' +
-        '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid #94A3B8; margin-bottom:8px;">' +
-          '<tr bgcolor="#F1F5F9" style="background-color:#F1F5F9;">' +
-            '<td bgcolor="#F1F5F9" style="background-color:#F1F5F9; text-align:center; font-weight:bold; color:#0F172A; border:1px solid #94A3B8; padding:5px;">' +
-              '<strong style="color:#0F172A;">Observa&ccedil;&otilde;es</strong>' +
-            '</td>' +
-          '</tr>' +
-          '<tr>' +
-            '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 10px; min-height:36px; white-space:pre-wrap;">' +
-              (obs ? obs : '<span style="color:#64748B;">Sem observa&ccedil;&otilde;es.</span>') +
-            '</td>' +
-          '</tr>' +
-        '</table>' +
-
-        '<div style="font-size:10.5px; color:#64748B; text-align:right; padding-top:2px;">' +
-          'Emitido por: <strong>' + operadorAtual + '</strong>' +
-        '</div>' +
-      '</div>';
-
-    return {
-      html: htmlCompleto,
-      dataFmt: dataFmt,
-      assunto: (isUberlandia ? 'Transmissão ao Vivo - ' : 'Transmissão ao Vivo - CTRS - ') + (inCheck ? 'IN' : (mg1Check ? 'MG1' : (mg2Check ? 'MG2' : 'OUTROS'))) + ' - ' + praca + ' - ' + dataFmt
-    };
-  }
-
-  function gerarHTMLPreviewCTRSDados(dadosOuItem) {
-    if (!dadosOuItem) return '';
-    if (dadosOuItem.htmlRelatorio && typeof dadosOuItem.htmlRelatorio === 'string') {
-      return dadosOuItem.htmlRelatorio;
-    }
-
-    var d = dadosOuItem.dadosCTRS || null;
-    var rawJsonSource = (dadosOuItem.descResolucao && dadosOuItem.descResolucao.indexOf('<!--CTRS_JSON:') !== -1)
-      ? dadosOuItem.descResolucao
-      : ((dadosOuItem.descCriacao && dadosOuItem.descCriacao.indexOf('<!--CTRS_JSON:') !== -1)
-          ? dadosOuItem.descCriacao
-          : ((dadosOuItem.desc && dadosOuItem.desc.indexOf('<!--CTRS_JSON:') !== -1) ? dadosOuItem.desc : ''));
-    if (!d && rawJsonSource) {
-      try {
-        var mJson = rawJsonSource.match(/<!--CTRS_JSON:([^>]+)-->/);
-        if (mJson && mJson[1]) {
-          d = JSON.parse(decodeURIComponent(mJson[1]));
-        }
-      } catch (e) {}
-    }
-
-    // Se for um registro antigo do histórico que ainda não tinha dadosCTRS estruturados, reconstrói a partir dos metadados do item
-    if (!d) {
-      var tit = dadosOuItem.titulo || '';
-      var tipoExtraido = 'INTEGRAÇÃO NOTÍCIA';
-      if (tit.indexOf('MG1') !== -1) tipoExtraido = 'MG1';
-      else if (tit.indexOf('MG2') !== -1) tipoExtraido = 'MG2';
-      else if (tit.toUpperCase().indexOf('GIRO') !== -1) tipoExtraido = 'GIRO';
-
-      var dataBase = (dadosOuItem.dataCriacao || '').split(' ')[0] || '';
-      var eqBase = (dadosOuItem.equipamento && dadosOuItem.equipamento !== 'Equipamentos de Transmissão / CTRS')
-        ? dadosOuItem.equipamento
-        : 'LIVE U1';
-
-      d = {
-        dataFmt: dataBase || '—',
-        praca: dadosOuItem.local || dadosOuItem.praca || 'Juiz de Fora',
-        tipo: tipoExtraido,
-        obs: dadosOuItem.descCriacao || '',
-        operador: dadosOuItem.criadoPor || 'Operador',
-        transmissoes: [
-          {
-            cidade: dadosOuItem.local || 'Juiz de Fora',
-            infra: eqBase,
-            horaAbert: '—',
-            horaFim: '—',
-            audioQ: 'C',
-            videoQ: 'C',
-            reporter: '—',
-            entradas: '',
-            rc: '—',
-            statusTx: 'C',
-            falhas: ''
-          }
-        ]
-      };
-    }
-
-    var praca = d.praca || 'Juiz de Fora';
-    var isUberlandia = praca.indexOf('Uber') !== -1;
-    var dataFmt = d.dataFmt || '—';
-    var tipo = (d.tipo || 'INTEGRAÇÃO NOTÍCIA').toUpperCase();
+    var dataFmt = escapeHTML(d.dataFmt || '—');
+    var tipo = String(d.tipo || 'INTEGRAÇÃO NOTÍCIA').toUpperCase();
     var inCheck = (tipo.indexOf('NOTÍCIA') !== -1 || tipo.indexOf('NOTICIA') !== -1 || tipo === 'IN') ? 'X' : '';
     var mg1Check = (tipo === 'MG1') ? 'X' : '';
     var mg2Check = (tipo === 'MG2') ? 'X' : '';
     var outrosCheck = (!inCheck && !mg1Check && !mg2Check) ? 'X' : '';
-    var obs = d.obs || '';
-    var operadorAtual = d.operador || 'Operador';
-
+    var obs = escapeHTML(d.obs || '');
+    var operadorAtual = escapeHTML(d.operador || 'Operador');
     var renderCelulaJornal = function(sigla, marcado) {
       if (marcado) {
-        return '<td bgcolor="#DBEAFE" style="width:25%; border:1px solid #94A3B8; background-color:#DBEAFE; color:#1E3A8A; padding:8px 12px; text-align:center; font-weight:bold;">' +
-          '&#10004; <strong>' + sigla + ': X</strong>' +
-        '</td>';
+        return '<td bgcolor="#DBEAFE" style="width:25%; border:1px solid #94A3B8; background-color:#DBEAFE; color:#1E3A8A; padding:8px 12px; text-align:center; font-weight:bold;">&#10004; <strong>' + sigla + ': X</strong></td>';
       }
-      return '<td bgcolor="#FFFFFF" style="width:25%; border:1px solid #94A3B8; background-color:#FFFFFF; color:#64748B; padding:8px 12px; text-align:center;">' +
-        '<strong>' + sigla + ':</strong> &ndash;' +
-      '</td>';
+      return '<td bgcolor="#FFFFFF" style="width:25%; border:1px solid #94A3B8; background-color:#FFFFFF; color:#64748B; padding:8px 12px; text-align:center;"><strong>' + sigla + ':</strong> &ndash;</td>';
     };
-
-    var listaTx = Array.isArray(d.transmissoes) && d.transmissoes.length > 0 ? d.transmissoes : [];
+    var listaTx = Array.isArray(d.transmissoes) ? d.transmissoes : [];
     var transmissoesHTML = '';
-
     listaTx.forEach(function(tx, idx) {
       var num = idx + 1;
       var audioQ = tx.audioQ || 'C';
@@ -4173,20 +3316,24 @@ document.addEventListener('DOMContentLoaded', function () {
       var estVideo  = getEstiloCelulaQualidadeEmail(videoQ);
       var estStatus = getEstiloCelulaQualidadeEmail(statusTx);
       var temNaoConformidade = (audioQ === 'NC' || videoQ === 'NC' || statusTx === 'NC');
-
-      var reporterCompleto = tx.reporter || '&mdash;';
-      if (tx.entradas) {
-        reporterCompleto = (tx.reporter ? tx.reporter + ' <strong style="color:#15803D;">(' + tx.entradas + ')</strong>' : '<strong style="color:#15803D;">(' + tx.entradas + ')</strong>');
+      var repSafe = escapeHTML(tx.reporter || '');
+      var entSafe = escapeHTML(tx.entradas || '');
+      var reporterCompleto = repSafe || '&mdash;';
+      if (entSafe) {
+        reporterCompleto = repSafe ? (repSafe + ' <strong style="color:#15803D;">(' + entSafe + ')</strong>') : ('<strong style="color:#15803D;">(' + entSafe + ')</strong>');
       }
-      var cidadeCompleta = tx.cidade || '&mdash;';
+      var cidadeCompleta = escapeHTML(tx.cidade || '') || '&mdash;';
+      var infraSafe = escapeHTML(tx.infra || '') || '&mdash;';
+      var rcSafe = escapeHTML(tx.rc || '') || '&mdash;';
+      var horaAbSafe = escapeHTML(tx.horaAbert || '') || '&mdash;';
+      var horaFmSafe = escapeHTML(tx.horaFim || '') || '&mdash;';
+      var falhas = escapeHTML(tx.falhas || '');
       var headerBg    = temNaoConformidade ? '#FEE2E2' : '#DBEAFE';
       var headerColor = temNaoConformidade ? '#991B1B' : '#1E3A8A';
       var borderTable = temNaoConformidade ? '#FCA5A5' : '#94A3B8';
-      var falhas = tx.falhas || '';
-      var obsCellBg = (falhas && !falhas.toLowerCase().includes('sem ocorrência') && !falhas.toLowerCase().includes('sem ocorrencia'))
+      var obsCellBg = (falhas && !falhas.toLowerCase().includes('sem ocorrência') && !falhas.toLowerCase().includes('sem ocorrencia') && !falhas.toLowerCase().includes('sem observação') && !falhas.toLowerCase().includes('sem observacao'))
         ? (temNaoConformidade ? '#FEF2F2' : '#FFFBEB')
         : '#FFFFFF';
-
       transmissoesHTML +=
         '<table cellpadding="5" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, Helvetica, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid ' + borderTable + '; margin-bottom:12px;">' +
           '<tr bgcolor="' + headerBg + '" style="background-color:' + headerBg + ';">' +
@@ -4202,10 +3349,10 @@ document.addEventListener('DOMContentLoaded', function () {
           '</tr>' +
           '<tr>' +
             '<td bgcolor="#FFFFFF" style="width:38%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
-              '<strong>Infraestrutura de Transmiss&atilde;o Utilizada:</strong> <strong style="color:#1E3A8A;">' + (tx.infra || '&mdash;') + '</strong>' +
+              '<strong>Infraestrutura de Transmiss&atilde;o Utilizada:</strong> <strong style="color:#1E3A8A;">' + infraSafe + '</strong>' +
             '</td>' +
             '<td bgcolor="#FFFFFF" style="width:31%; background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
-              '<strong>Hora Abertura Sinal:</strong> <strong>' + (tx.horaAbert || '&mdash;') + '</strong>' +
+              '<strong>Hora Abertura Sinal:</strong> <strong>' + horaAbSafe + '</strong>' +
             '</td>' +
             '<td bgcolor="' + estAudio.bg + '" style="width:31%; background-color:' + estAudio.bg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Qualidade &Aacute;udio:</strong> ' + estAudio.texto +
@@ -4216,7 +3363,7 @@ document.addEventListener('DOMContentLoaded', function () {
               '<strong>Rep&oacute;rter:</strong> ' + reporterCompleto +
             '</td>' +
             '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
-              '<strong>Hora final (Teste OK):</strong> <strong>' + (tx.horaFim || '&mdash;') + '</strong>' +
+              '<strong>Hora final (Teste OK):</strong> <strong>' + horaFmSafe + '</strong>' +
             '</td>' +
             '<td bgcolor="' + estVideo.bg + '" style="background-color:' + estVideo.bg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Qualidade V&iacute;deo:</strong> ' + estVideo.texto +
@@ -4224,7 +3371,7 @@ document.addEventListener('DOMContentLoaded', function () {
           '</tr>' +
           '<tr>' +
             '<td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:1px solid #94A3B8; padding:8px 12px;">' +
-              '<strong>Rep&oacute;rter Cinematogr&aacute;fico:</strong> ' + (tx.rc || '&mdash;') +
+              '<strong>Rep&oacute;rter Cinematogr&aacute;fico:</strong> ' + rcSafe +
             '</td>' +
             '<td colspan="2" bgcolor="' + estStatus.bg + '" style="background-color:' + estStatus.bg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
               '<strong>Status da Transmiss&atilde;o:</strong> ' + estStatus.texto +
@@ -4232,13 +3379,12 @@ document.addEventListener('DOMContentLoaded', function () {
           '</tr>' +
           '<tr>' +
             '<td colspan="3" bgcolor="' + obsCellBg + '" style="background-color:' + obsCellBg + '; border:1px solid #94A3B8; padding:8px 12px;">' +
-              '<strong>Falhas ocorridas:</strong> ' +
-              (falhas ? '<span style="color:#0F172A;">' + falhas + '</span>' : '<span style="color:#64748B;">Sem ocorr&ecirc;ncias.</span>') +
+              '<strong>Observa&ccedil;&otilde;es:</strong> ' +
+              (falhas ? '<span style="color:#0F172A;">' + falhas + '</span>' : '<span style="color:#64748B;">Sem observa&ccedil;&otilde;es.</span>') +
             '</td>' +
           '</tr>' +
         '</table>';
     });
-
     return (
       '<div style="font-family:Segoe UI, Arial, Helvetica, sans-serif; color:#0F172A; max-width:800px; margin:0 auto; padding:10px; background-color:#FFFFFF;">' +
         '<table cellpadding="6" cellspacing="0" style="width:100%; max-width:800px; border-collapse:collapse; font-family:Segoe UI, Arial, sans-serif; font-size:12px; color:#0F172A; border:1.5px solid #475569; margin-bottom:12px;">' +
@@ -4306,20 +3452,149 @@ document.addEventListener('DOMContentLoaded', function () {
       '</div>'
     );
   }
+  function gerarHTMLTemplateCTRS(destinatarioInformado) {
+    var dataEl  = document.getElementById('ctrs-data');
+    var pracaEl = document.getElementById('ctrs-praca');
+    var tipoEl  = document.getElementById('ctrs-tipo');
+    var obsEl   = document.getElementById('ctrs-obs');
+    var praca = pracaEl ? pracaEl.value : 'Juiz de Fora';
+    var dataRaw = dataEl && dataEl.value ? dataEl.value : '';
+    var dataFmt = '';
+    if (dataRaw) {
+      var p = dataRaw.split('-');
+      dataFmt = (p.length === 3) ? (p[2] + '/' + p[1] + '/' + p[0]) : dataRaw;
+    } else {
+      var dNow = new Date();
+      dataFmt = String(dNow.getDate()).padStart(2, '0') + '/' + String(dNow.getMonth() + 1).padStart(2, '0') + '/' + dNow.getFullYear();
+    }
+    var tipo = tipoEl ? tipoEl.value : 'INTEGRAÇÃO NOTÍCIA';
+    var tipoUpper = tipo.toUpperCase();
+    var siglaAssunto = (tipoUpper.includes('NOTÍCIA') || tipoUpper.includes('IN')) ? 'IN' : (tipoUpper === 'MG1' ? 'MG1' : (tipoUpper === 'MG2' ? 'MG2' : 'OUTROS'));
+    var obs = obsEl ? obsEl.value.trim() : '';
+    var operadorAtual = (typeof getUsuarioAtual === 'function' && getUsuarioAtual()) ? getUsuarioAtual() : 'Equipe Operacional';
+    var formatTimeVal = function(val) {
+      if (!val) return '—';
+      var parts = val.trim().split(':');
+      return (parts.length === 2) ? (parts[0] + 'h' + parts[1] + "'") : val.trim();
+    };
+    var formatQualidade = function(val, defaultVal) {
+      if (!val) return defaultVal || '';
+      var v = val.trim();
+      if (v.startsWith('NC') || v.startsWith('Não Conforme')) return 'NC';
+      if (v.startsWith('CA') || v.startsWith('Cancelado')) return 'NA';
+      if (v.startsWith('C') || v.startsWith('Conforme')) return 'C';
+      return defaultVal || '';
+    };
+    var listaTx = [];
+    var accBlocks = document.querySelectorAll('#page-ctrs .acc-block');
+    accBlocks.forEach(function(acc, idx) {
+      var inputs = acc.querySelectorAll('input, select, textarea');
+      var cidade    = (inputs[0] && inputs[0].value.trim()) || '';
+      var infra     = (inputs[1] && inputs[1].value.trim()) || '';
+      if (infra === '__novo__') infra = '';
+      var rawHoraAb = inputs[2] ? inputs[2].value.trim() : '';
+      var rawHoraFm = inputs[3] ? inputs[3].value.trim() : '';
+      var rawAudio  = inputs[4] ? inputs[4].value.trim() : '';
+      var rawVideo  = inputs[5] ? inputs[5].value.trim() : '';
+      var reporter  = (inputs[6] && inputs[6].value.trim()) || '';
+      var entradas  = (inputs[7] && inputs[7].value.trim()) || '';
+      var rc        = (inputs[8] && inputs[8].value.trim()) || '';
+      var rawStatus = inputs[9] ? inputs[9].value.trim() : '';
+      var falhas    = (inputs[10] && inputs[10].value.trim()) || '';
+      var foiUtilizada = !!(cidade || infra || rawHoraAb || rawHoraFm || reporter || entradas || rc || falhas || rawAudio || rawVideo || rawStatus);
+      if (idx > 0 && !foiUtilizada) return;
+      listaTx.push({
+        cidade: cidade,
+        infra: infra,
+        horaAbert: formatTimeVal(rawHoraAb),
+        horaFim: formatTimeVal(rawHoraFm),
+        audioQ: formatQualidade(rawAudio, 'C'),
+        videoQ: formatQualidade(rawVideo, 'C'),
+        reporter: reporter,
+        entradas: entradas,
+        rc: rc,
+        statusTx: formatQualidade(rawStatus, 'C'),
+        falhas: falhas
+      });
+    });
+    var isUberlandia = praca.indexOf('Uber') !== -1;
+    var htmlCompleto = montarTabelaHTMLRelatorioCTRS({
+      praca: praca,
+      dataFmt: dataFmt,
+      tipo: tipo,
+      obs: obs,
+      operador: operadorAtual,
+      transmissoes: listaTx
+    });
+    return {
+      html: htmlCompleto,
+      dataFmt: dataFmt,
+      assunto: (isUberlandia ? 'Transmissão ao Vivo - ' : 'Transmissão ao Vivo - CTRS - ') + siglaAssunto + ' - ' + praca + ' - ' + dataFmt
+    };
+  }
+  function gerarHTMLPreviewCTRSDados(dadosOuItem) {
+    if (!dadosOuItem) return '';
+    if (dadosOuItem.htmlRelatorio && typeof dadosOuItem.htmlRelatorio === 'string') {
+      return dadosOuItem.htmlRelatorio
+        .replace(/<strong>Falhas ocorridas:<\/strong>/g, '<strong>Observa&ccedil;&otilde;es:</strong>')
+        .replace(/Sem ocorr&ecirc;ncias\./g, 'Sem observa&ccedil;&otilde;es.');
+    }
+    var d = dadosOuItem.dadosCTRS || null;
+    var rawJsonSource = (dadosOuItem.descResolucao && dadosOuItem.descResolucao.indexOf('<!--CTRS_JSON:') !== -1)
+      ? dadosOuItem.descResolucao
+      : ((dadosOuItem.descCriacao && dadosOuItem.descCriacao.indexOf('<!--CTRS_JSON:') !== -1)
+          ? dadosOuItem.descCriacao
+          : ((dadosOuItem.desc && dadosOuItem.desc.indexOf('<!--CTRS_JSON:') !== -1) ? dadosOuItem.desc : ''));
+    if (!d && rawJsonSource) {
+      try {
+        var mJson = rawJsonSource.match(/<!--CTRS_JSON:([^>]+)-->/);
+        if (mJson && mJson[1]) d = JSON.parse(decodeURIComponent(mJson[1]));
+      } catch (e) {}
+    }
+    if (!d) {
+      var tit = dadosOuItem.titulo || '';
+      var tipoExtraido = 'INTEGRAÇÃO NOTÍCIA';
+      if (tit.indexOf('MG1') !== -1) tipoExtraido = 'MG1';
+      else if (tit.indexOf('MG2') !== -1) tipoExtraido = 'MG2';
+      else if (tit.toUpperCase().indexOf('GIRO') !== -1) tipoExtraido = 'GIRO';
+      var dataBase = (dadosOuItem.dataCriacao || '').split(' ')[0] || '';
+      var eqBase = (dadosOuItem.equipamento && dadosOuItem.equipamento !== 'Equipamentos de Transmissão / CTRS')
+        ? dadosOuItem.equipamento
+        : 'LIVE U1';
+      d = {
+        dataFmt: dataBase || '—',
+        praca: dadosOuItem.local || dadosOuItem.praca || 'Juiz de Fora',
+        tipo: tipoExtraido,
+        obs: dadosOuItem.descCriacao || '',
+        operador: dadosOuItem.criadoPor || 'Operador',
+        transmissoes: [{
+          cidade: dadosOuItem.local || 'Juiz de Fora',
+          infra: eqBase,
+          horaAbert: '—',
+          horaFim: '—',
+          audioQ: 'C',
+          videoQ: 'C',
+          reporter: '—',
+          entradas: '',
+          rc: '—',
+          statusTx: 'C',
+          falhas: ''
+        }]
+      };
+    }
+    return montarTabelaHTMLRelatorioCTRS(d);
+  }
   window.gerarHTMLPreviewCTRSDados = gerarHTMLPreviewCTRSDados;
-
   function limparFormularioCTRS(confirmar) {
     if (confirmar && !confirm('Deseja realmente limpar todos os campos preenchidos do relatório CTRS?')) {
       return;
     }
     try {
       localStorage.removeItem('tv_ctrs_rascunho_v2');
-
       var dataEl = document.getElementById('ctrs-data');
       var obsEl  = document.getElementById('ctrs-obs');
       if (dataEl) dataEl.value = obterDataHojeISO();
       if (obsEl)  obsEl.value = '';
-
       var accBlocks = document.querySelectorAll('#page-ctrs .acc-block');
       accBlocks.forEach(function(acc) {
         var inputs = acc.querySelectorAll('input, select, textarea');
@@ -4328,7 +3603,6 @@ document.addEventListener('DOMContentLoaded', function () {
           else inp.value = '';
         });
       });
-
       var container = document.getElementById('ctrs-acc-container');
       if (container) {
         var blocks = container.querySelectorAll('.acc-block');
@@ -4336,7 +3610,6 @@ document.addEventListener('DOMContentLoaded', function () {
           blocks[i].remove();
         }
       }
-
       if (confirmar && typeof mostrarToast === 'function') {
         mostrarToast('Formulário Limpo', 'Os campos do CTRS foram zerados para o próximo preenchimento.', 'info');
       }
@@ -4345,83 +3618,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.limparFormularioCTRS = limparFormularioCTRS;
-
-  function copiarRelatorioOutlook() {
-    var resultado = gerarHTMLTemplateCTRS();
-    var html = resultado.html;
-    var assunto = resultado.assunto;
-
-    var previewEl = document.getElementById('ctrs-outlook-preview');
-    if (previewEl) {
-      previewEl.innerHTML = html;
-    }
-
-    var pracaAtual = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
-    var isUdi = pracaAtual.indexOf('Uber') !== -1 || (assunto && assunto.indexOf('Uberlândia') !== -1);
-    var descEl = document.getElementById('popup-ctrs-outlook-desc');
-    if (descEl) {
-      descEl.innerHTML = isUdi
-        ? 'O relatório oficial de transmissão foi formatado e copiado. Confira o visual abaixo ou cole no Outlook com <strong>CTRL + V</strong>.'
-        : 'O checklist oficial do CTRS foi formatado e copiado. Confira o visual abaixo ou cole no Outlook com <strong>CTRL + V</strong>.';
-    }
-
-    var copiado = false;
-    if (navigator.clipboard && window.ClipboardItem) {
-      try {
-        var blobHtml = new Blob([html], { type: 'text/html' });
-        var blobText = new Blob([assunto + '\n\n' + html.replace(/<[^>]+>/g, ' ')], { type: 'text/plain' });
-        var item = new ClipboardItem({
-          'text/html': blobHtml,
-          'text/plain': blobText
-        });
-        navigator.clipboard.write([item]).then(function() {
-          abrirPopup('popup-ctrs-outlook');
-        }).catch(function(err) {
-          fallbackCopiarAreaTransferencia(html);
-        });
-        copiado = true;
-      } catch (e) {
-        copiado = false;
-      }
-    }
-
-    if (!copiado) {
-      fallbackCopiarAreaTransferencia(html);
-    }
-  }
-  window.copiarRelatorioOutlook = copiarRelatorioOutlook;
-
-  function fallbackCopiarAreaTransferencia(html) {
-    var container = document.createElement('div');
-    container.innerHTML = html;
-    container.style.position = 'fixed';
-    container.style.pointerEvents = 'none';
-    container.style.opacity = '0';
-    document.body.appendChild(container);
-
-    var range = document.createRange();
-    range.selectNode(container);
-    window.getSelection().removeAllRanges();
-    window.getSelection().addRange(range);
-
-    try {
-      document.execCommand('copy');
-      abrirPopup('popup-ctrs-outlook');
-    } catch (e) {
-      alert('Não foi possível copiar automaticamente. Por favor selecione e copie os dados.');
-    }
-
-    window.getSelection().removeAllRanges();
-    document.body.removeChild(container);
-  }
-
-  /* Abre o Pop-up de Envio do Relatório CTRS (com campo de destinatário vazio + prévia do relatório embaixo) */
   function enviarRelatorioTV() {
     var resultado = gerarHTMLTemplateCTRS('');
     var destInput = document.getElementById('enviar-ctrs-destinatario');
     var assuntoInput = document.getElementById('enviar-ctrs-assunto');
     var previewEl = document.getElementById('enviar-ctrs-preview');
-
     if (destInput) {
       destInput.value = '';
       destInput.oninput = function() {
@@ -4436,7 +3637,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (previewEl) {
       previewEl.innerHTML = resultado.html;
     }
-
     abrirPopup('popup-enviar-relatorio-ctrs');
     if (typeof lucide !== 'undefined' && lucide.createIcons) {
       try { lucide.createIcons(); } catch (e) {}
@@ -4446,24 +3646,18 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 80);
   }
   window.enviarRelatorioTV = enviarRelatorioTV;
-
-  /* Confirma o envio do relatório para o destinatário digitado, dispara via HTTP sem abrir pop-up do Windows, salva no banco e limpa o formulário */
   async function confirmarEnvioRelatorioCTRS() {
     var destInput = document.getElementById('enviar-ctrs-destinatario');
     var assuntoInput = document.getElementById('enviar-ctrs-assunto');
     var destinatario = destInput ? destInput.value.trim() : '';
-
     if (!destinatario || destinatario.indexOf('@') === -1) {
       alert('Por favor, informe um e-mail de destinatário válido antes de enviar o relatório.');
       if (destInput) destInput.focus();
       return;
     }
-
     var resultado = gerarHTMLTemplateCTRS(destinatario);
     var assuntoFinal = (assuntoInput && assuntoInput.value.trim()) ? assuntoInput.value.trim() : resultado.assunto;
     var htmlFinal = resultado.html;
-
-    /* Copia silenciosamente o relatório formatado para a área de transferência sem abrir nenhum pop-up */
     if (navigator.clipboard && window.ClipboardItem) {
       try {
         var blobHtml = new Blob([htmlFinal], { type: 'text/html' });
@@ -4471,17 +3665,13 @@ document.addEventListener('DOMContentLoaded', function () {
         navigator.clipboard.write([new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })]).catch(function() {});
       } catch (e) {}
     }
-
     var nowStr = formatDataHoraLocal();
     var pracaEl = document.getElementById('ctrs-praca');
     var tipoEl  = document.getElementById('ctrs-tipo');
     var obsEl   = document.getElementById('ctrs-obs');
-
     var praca = pracaEl ? pracaEl.value : 'Juiz de Fora';
     var tipo  = tipoEl ? tipoEl.value : 'INTEGRAÇÃO NOTÍCIA';
     var obs   = obsEl ? obsEl.value.trim() : '';
-
-    /* Dispara o e-mail HTML completo em segundo plano via Relay Criptografado (Google Apps Script) */
     var relayUrl = obterEndpointRelayEmailCTRS();
     try {
       fetch(relayUrl, {
@@ -4499,8 +3689,6 @@ document.addEventListener('DOMContentLoaded', function () {
         console.warn('Aviso no disparo de e-mail CTRS:', err);
       });
     } catch (e) {}
-
-    /* Atualiza métricas do Dashboard de Transmissões (Telejornal + Equipamentos) e coleta falhas */
     var tipoUp = (tipo || 'INTEGRAÇÃO NOTÍCIA').trim().toUpperCase();
     var chaveJornal = 'INTEGRAÇÃO NOTÍCIA';
     if (tipoUp.indexOf('NOTÍCIA') !== -1 || tipoUp.indexOf('NOTICIA') !== -1 || tipoUp === 'IN') {
@@ -4514,7 +3702,6 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
       chaveJornal = tipoUp;
     }
-
     if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics) {
       if (!dashboardMetrics.telejornal) dashboardMetrics.telejornal = {};
       if (!dashboardMetrics.equipamento) dashboardMetrics.equipamento = {};
@@ -4522,29 +3709,17 @@ document.addEventListener('DOMContentLoaded', function () {
         dashboardMetrics.telejornal[chaveJornal] = { conf: 0, nc: 0, canc: 0 };
       }
     }
-
     var ehCampoNC = function(val) {
       if (!val) return false;
       var v = String(val).trim().toUpperCase();
       return v.indexOf('NC') === 0 || v.indexOf('NÃO CONFORME') !== -1 || v.indexOf('NAO CONFORME') !== -1;
     };
-
     var falhasEstruturadas = [];
-    if (obs && !obs.toLowerCase().includes('sem ocorrência') && !obs.toLowerCase().includes('sem ocorrencia')) {
-      falhasEstruturadas.push({
-        equipamento: '',
-        titulo: 'Falha em Relatório TV (' + chaveJornal + ')',
-        desc: obs,
-        tags: ['Relatório TV', chaveJornal, 'Automática']
-      });
-    }
-
     var accBlocksEnvio = document.querySelectorAll('#page-ctrs .acc-block');
     var contabilizouAlgumaTransmissao = false;
     var transmissoesSalvasHist = [];
     var equipamentosUsadosHist = [];
     var metricasContabilizadasHist = [];
-
     var fmtHoraCurta = function(val) {
       if (!val) return '—';
       var parts = val.trim().split(':');
@@ -4555,10 +3730,9 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!val) return 'C';
       var v = val.trim().toUpperCase();
       if (v.indexOf('NC') === 0 || v.indexOf('NÃO CONFORME') !== -1) return 'NC';
-      if (v.indexOf('NA') === 0 || v.indexOf('NÃO SE APLICA') !== -1) return 'NA';
+      if (v.indexOf('CA') === 0 || v.indexOf('CANCELADO') !== -1) return 'NA';
       return 'C';
     };
-
     accBlocksEnvio.forEach(function(acc, idx) {
       var inputs = acc.querySelectorAll('input, select, textarea');
       var cidadeTx   = (inputs[0] && inputs[0].value.trim()) || '';
@@ -4573,13 +3747,11 @@ document.addEventListener('DOMContentLoaded', function () {
       var rcTx       = (inputs[8] && inputs[8].value.trim()) || '';
       var statusVal  = (inputs[9] && inputs[9].value.trim()) || '';
       var obsTx      = (inputs[10] && inputs[10].value.trim()) || '';
-
       var audioNC  = ehCampoNC(audioVal);
       var videoNC  = ehCampoNC(videoVal);
       var statusNC = ehCampoNC(statusVal);
       var temNCTx  = audioNC || videoNC || statusNC;
       var temObsFalha = !!(obsTx && !obsTx.toLowerCase().includes('sem ocorrência') && !obsTx.toLowerCase().includes('sem ocorrencia'));
-
       var blocoAtivo = !!(infraTx || cidadeTx || horaAbTx || horaFmTx || reporterTx || entradasTx || rcTx || obsTx || temNCTx);
       if (idx > 0 && !blocoAtivo) return;
       if (idx === 0 && !blocoAtivo) {
@@ -4598,7 +3770,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         return;
       }
-
       contabilizouAlgumaTransmissao = true;
       if (infraTx && equipamentosUsadosHist.indexOf(infraTx) === -1) {
         equipamentosUsadosHist.push(infraTx);
@@ -4616,14 +3787,11 @@ document.addEventListener('DOMContentLoaded', function () {
         statusTx: fmtCodQual(statusVal),
         falhas: obsTx
       });
-
       metricasContabilizadasHist.push({
         telejornal: chaveJornal,
         equipamento: infraTx || '',
         status: temNCTx ? 'nc' : 'conf'
       });
-
-      // 1. Contabiliza no Dashboard de Transmissões -> Telejornal
       if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.telejornal && dashboardMetrics.telejornal[chaveJornal]) {
         if (temNCTx) {
           dashboardMetrics.telejornal[chaveJornal].nc = (dashboardMetrics.telejornal[chaveJornal].nc || 0) + 1;
@@ -4631,8 +3799,6 @@ document.addEventListener('DOMContentLoaded', function () {
           dashboardMetrics.telejornal[chaveJornal].conf = (dashboardMetrics.telejornal[chaveJornal].conf || 0) + 1;
         }
       }
-
-      // 2. Contabiliza no Dashboard de Transmissões -> Equipamento (se equipamento selecionado)
       if (infraTx && typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
         if (!dashboardMetrics.equipamento[infraTx]) {
           dashboardMetrics.equipamento[infraTx] = { conf: 0, nc: 0, canc: 0 };
@@ -4643,23 +3809,18 @@ document.addEventListener('DOMContentLoaded', function () {
           dashboardMetrics.equipamento[infraTx].conf = (dashboardMetrics.equipamento[infraTx].conf || 0) + 1;
         }
       }
-
-      // 3. Se houve Não Conforme (Áudio, Vídeo ou Status) ou falha descrita nas observações, gera ocorrência
-      if (temNCTx || temObsFalha) {
+      if (temNCTx) {
         var itensNC = [];
         if (audioNC)  itensNC.push('Qualidade do Áudio: NC');
         if (videoNC)  itensNC.push('Qualidade do Vídeo: NC');
         if (statusNC) itensNC.push('Status da Transmissão: NC');
-
         var partesDesc = ['Transmissão Vivo ' + (idx + 1) + ' (' + chaveJornal + ')'];
         if (infraTx) partesDesc.push('Equipamento: ' + infraTx);
         if (cidadeTx) partesDesc.push('Local: ' + cidadeTx);
         if (itensNC.length > 0) partesDesc.push('Não Conformidade(s): ' + itensNC.join(' | '));
         if (obsTx) partesDesc.push('Observações: ' + obsTx);
-
         var tagsOc = ['Relatório TV', chaveJornal, 'Automática'];
         if (infraTx) tagsOc.push(infraTx);
-
         falhasEstruturadas.push({
           equipamento: infraTx || '',
           titulo: infraTx
@@ -4670,8 +3831,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
       }
     });
-
-    // Se nenhuma transmissão individual foi preenchida mas o relatório do jornal foi enviado, contabiliza 1 conforme para o jornal
     if (!contabilizouAlgumaTransmissao && typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.telejornal && dashboardMetrics.telejornal[chaveJornal]) {
       dashboardMetrics.telejornal[chaveJornal].conf = (dashboardMetrics.telejornal[chaveJornal].conf || 0) + 1;
       metricasContabilizadasHist.push({
@@ -4680,14 +3839,12 @@ document.addEventListener('DOMContentLoaded', function () {
         status: 'conf'
       });
     }
-
     if (typeof salvarDashboardMetricsStore === 'function') {
       salvarDashboardMetricsStore();
     }
     if (typeof renderDashboards === 'function') {
       renderDashboards();
     }
-
     var falhasEncontradas = falhasEstruturadas.map(function(f) { return f.desc; });
     var novasOcorrenciasCriadas = 0;
     var isUberlandia = praca.indexOf('Uber') !== -1;
@@ -4695,7 +3852,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var idsOcorrenciasGeradasHist = falhasEstruturadas.map(function(_, idx) {
       return 'oc_auto_' + Date.now() + '_' + idx;
     });
-
     var dadosCTRSHist = {
       dataFmt: resultado.dataFmt || '',
       praca: praca,
@@ -4713,8 +3869,6 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
       marcadorJsonHist = '<!--CTRS_JSON:' + encodeURIComponent(JSON.stringify(dadosCTRSHist)) + '-->';
     } catch (e) {}
-
-    /* Para cada falha relatada ou NC marcada, cria automaticamente uma Ocorrência no Dashboard com o Preview do Relatório CTRS na descrição */
     falhasEstruturadas.forEach(function(fObj, idx) {
       novasOcorrenciasCriadas++;
       var eqIdVinc = '';
@@ -4724,9 +3878,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         if (eqMatch) eqIdVinc = eqMatch.id;
       }
-
       var ocIdNovo = idsOcorrenciasGeradasHist[idx] || ('oc_auto_' + Date.now() + '_' + idx);
-
       var novaOc = {
         id:             ocIdNovo,
         titulo:         fObj.titulo,
@@ -4751,20 +3903,15 @@ document.addEventListener('DOMContentLoaded', function () {
       };
       ocorrencias = [novaOc].concat(ocorrencias);
     });
-
     if (novasOcorrenciasCriadas > 0) {
       save(ocorrencias, null, true);
     }
     if (typeof renderCatalogoEquipamentos === 'function') {
       renderCatalogoEquipamentos();
     }
-
-    /* Registra o Relatório no Histórico com Preview Visual Completo */
-
     var eqResumoHist = equipamentosUsadosHist.length > 0
       ? equipamentosUsadosHist.join(', ')
       : 'Equipamentos de Transmissão / CTRS';
-
     var novoHist = {
       id:            'h_ctrs_' + Date.now(),
       tipo:          'relatorio',
@@ -4784,14 +3931,11 @@ document.addEventListener('DOMContentLoaded', function () {
       htmlRelatorio: htmlFinal,
       dadosCTRS:     dadosCTRSHist
     };
-
     historicoSeedData = [novoHist].concat(historicoSeedData);
     saveHistorico(historicoSeedData, novoHist);
-
     fecharPopup('popup-enviar-relatorio-ctrs');
     limparFormularioCTRS(false);
     renderAll();
-
     if (novasOcorrenciasCriadas > 0) {
       if (typeof adicionarNotificacao === 'function') {
         adicionarNotificacao('Relatório Enviado (Ocorrência Criada)', 'Relatório enviado para ' + destinatario + ' e ' + novasOcorrenciasCriadas + ' ocorrência(s) gerada(s) no Dashboard.', 'warning');
@@ -4803,34 +3947,23 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.confirmarEnvioRelatorioCTRS = confirmarEnvioRelatorioCTRS;
-
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-ctrs', salvarRascunhoRelatorioTV);
   }
 
-
-  /* ═══════════════════════════════════════════
-     CHECKLIST DIÁRIO & MONITORAMENTO DE ROTINAS OPERACIONAIS — SUPABASE
-  ═══════════════════════════════════════════ */
-
   var checklistFiltroAtual = 'todos';
   var checklistItems = [];
   var checklistUltimaDataVerificada = new Date().toISOString().slice(0, 10);
-
-  /* ── Verificação e Resete Automático da Meia-Noite ── */
   function verificarReseteMeiaNoite() {
     try {
       var hojeStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
       if (checklistUltimaDataVerificada !== hojeStr) {
-        console.log('[Checklist] 🕛 Meia-noite detectada: Novo dia (' + hojeStr + '). Verificando ciclo de tarefas...');
         checklistUltimaDataVerificada = hojeStr;
         if (Array.isArray(checklistItems) && checklistItems.length > 0) {
           checklistItems.forEach(function(it) {
-            // Itens com recorrência ativa são geridos estritamente pelo motor verificarRecorrenciasChecklist
             if (it.recorrencia && it.recorrencia.tipo && it.recorrencia.tipo !== 'nenhuma') {
               return;
             }
-            // Apenas tarefas sem recorrência programada resetam na virada comum de dia
             it.concluido = false;
             it.concluidoEm = null;
             if (it.padrao) salvarRotinaPadraoNuvem(it);
@@ -4846,9 +3979,7 @@ document.addEventListener('DOMContentLoaded', function () {
       console.warn('Erro ao verificar resete da meia-noite:', e);
     }
   }
-
   var CHECKLIST_STORAGE_KEY = 'tv_checklist_itens_cache_v2';
-
   function carregarChecklistCacheLocal() {
     try {
       var raw = localStorage.getItem(CHECKLIST_STORAGE_KEY);
@@ -4861,9 +3992,7 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch(e) {}
     return [];
   }
-
   function carregarChecklistStore() {
-    // 1. Carrega imediatamente o cache local para que NADA suma ao atualizar a página (F5)
     var cacheLocal = carregarChecklistCacheLocal();
     if (cacheLocal && cacheLocal.length > 0) {
       checklistItems = cacheLocal;
@@ -4876,14 +4005,12 @@ document.addEventListener('DOMContentLoaded', function () {
     carregarOperadoresSugeridos();
   }
   window.carregarChecklistStore = carregarChecklistStore;
-
   function salvarChecklistStore() {
     window.checklistItems = checklistItems;
     try {
       localStorage.setItem(CHECKLIST_STORAGE_KEY, JSON.stringify(checklistItems));
     } catch(e) {}
   }
-
   function atualizarDataChecklistUI() {
     var elDate = document.getElementById('reminders-current-date');
     if (!elDate) return;
@@ -4891,58 +4018,41 @@ document.addEventListener('DOMContentLoaded', function () {
       var hoje = new Date();
       var opcoes = { weekday: 'long', day: 'numeric', month: 'long' };
       var dataFmt = hoje.toLocaleDateString('pt-BR', opcoes);
-      // Capitalizar primeira letra
       dataFmt = dataFmt.charAt(0).toUpperCase() + dataFmt.slice(1);
       elDate.textContent = dataFmt;
     } catch(e) {
       elDate.textContent = 'Hoje';
     }
   }
-
   function renderChecklist() {
     var listPadraoEl = document.getElementById('reminders-list-padrao');
     var listPessoalEl = document.getElementById('reminders-list-pessoal');
     if (!listPadraoEl && !listPessoalEl) return;
-
-    // Calcular estatísticas
     var total = checklistItems.length;
     var concluidos = checklistItems.filter(function(it) { return it.concluido; }).length;
     var pendentes = total - concluidos;
     var rotinas = checklistItems.filter(function(it) { return it.categoria === 'rotina' || it.padrao; }).length;
     var pct = total > 0 ? Math.round((concluidos / total) * 100) : 0;
-
-    // Atualizar UI de resumo (Hero)
     var fill = document.getElementById('reminders-progress-fill');
     if (fill) fill.style.width = pct + '%';
-
     var pctEl = document.getElementById('reminders-pct');
     if (pctEl) pctEl.textContent = pct + '%';
-
     var lblEl = document.getElementById('reminders-count-lbl');
     if (lblEl) lblEl.textContent = concluidos + ' de ' + total + ' checados';
-
-    // Atualizar Contadores dos Cards
     var cTodos = document.getElementById('fc-count-todos');
     if (cTodos) cTodos.textContent = total;
-
     var cPend = document.getElementById('fc-count-pendentes');
     if (cPend) cPend.textContent = pendentes;
-
     var cRot = document.getElementById('fc-count-rotina');
     if (cRot) cRot.textContent = rotinas;
-
     var cConc = document.getElementById('fc-count-concluidos');
     if (cConc) cConc.textContent = concluidos;
-
-    // Separar itens entre Padrão TV (oficiais/recorrentes para toda a equipe) e Pessoais (privados do operador)
     var padraoItems = checklistItems.filter(function(it) {
       return !!it.padrao;
     });
     var pessoalItems = checklistItems.filter(function(it) {
       return !it.padrao;
     });
-
-    // Atualizar badges das colunas
     var bPadrao = document.getElementById('badge-rotinas-padrao');
     if (bPadrao) {
       var concP = padraoItems.filter(function(i){ return i.concluido; }).length;
@@ -4953,10 +4063,8 @@ document.addEventListener('DOMContentLoaded', function () {
       var concU = pessoalItems.filter(function(i){ return i.concluido; }).length;
       bPessoal.textContent = concU + '/' + pessoalItems.length;
     }
-
     var listPadraoEl = document.getElementById('reminders-list-padrao');
     var listPessoalEl = document.getElementById('reminders-list-pessoal');
-
     function renderizarLista(itens, targetEl, emptyMsg) {
       if (!targetEl) return;
       var filtrados = itens.filter(function(it) {
@@ -4965,7 +4073,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (checklistFiltroAtual === 'rotina') return it.categoria === 'rotina' || it.padrao;
         return true; // 'todos'
       });
-
       if (filtrados.length === 0) {
         var textoVazio = emptyMsg;
         if (itens.length > 0) {
@@ -4980,7 +4087,6 @@ document.addEventListener('DOMContentLoaded', function () {
           '</li>';
         return;
       }
-
       var html = '';
       filtrados.forEach(function(item) {
         var completedClass = item.concluido ? ' completed' : '';
@@ -4988,7 +4094,6 @@ document.addEventListener('DOMContentLoaded', function () {
         var tagClass = 'tag-' + (item.categoria || 'avulso');
         var metaHorario = item.horario ? '<span>·</span><span>' + escapeHTML(item.horario) + '</span>' : '';
         var recBadgeHTML = getRecorrenciaBadgeHTML(item);
-
         html += '<li class="reminder-item' + completedClass + '" id="chk-item-' + item.id + '">' +
           '<button class="reminder-checkbox" onclick="toggleChecklistItem(\'' + item.id + '\')" title="' + (item.concluido ? 'Desmarcar' : 'Concluir') + '">' +
             '<i data-lucide="check" style="width:13px;height:13px;stroke-width:3;"></i>' +
@@ -5014,17 +4119,13 @@ document.addEventListener('DOMContentLoaded', function () {
           '</div>' +
         '</li>';
       });
-
       targetEl.innerHTML = html;
     }
-
     renderizarLista(padraoItems, listPadraoEl, 'Nenhuma rotina padrão cadastrada. Adicione acima para toda a equipe.');
     renderizarLista(pessoalItems, listPessoalEl, 'Nenhum lembrete pessoal cadastrado.');
-
     if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
   }
   window.renderChecklist = renderChecklist;
-
   function getCategoriaLabel(cat) {
     switch(cat) {
       case 'rotina': return 'Rotina TV';
@@ -5034,7 +4135,6 @@ document.addEventListener('DOMContentLoaded', function () {
       default: return 'Lembrete';
     }
   }
-
   function getRecorrenciaBadgeHTML(item) {
     if (!item || !item.recorrencia || !item.recorrencia.tipo || item.recorrencia.tipo === 'nenhuma') {
       return '';
@@ -5055,44 +4155,34 @@ document.addEventListener('DOMContentLoaded', function () {
     return '<span>·</span><span class="reminder-rec-badge" onclick="event.stopPropagation(); abrirModalRecorrencia(\'' + item.id + '\')" title="Clique para editar agendamento">' + escapeHTML(label) + '</span>';
   }
   window.getRecorrenciaBadgeHTML = getRecorrenciaBadgeHTML;
-
   function toggleChecklistItem(id) {
     var item = checklistItems.find(function(it) { return it.id === id; });
     if (!item) return;
     item.concluido = !item.concluido;
     item.concluidoEm = item.concluido ? new Date().toISOString() : null;
-
-    // Regra estrita de ciclo:
-    // Ao ser concluída, fixa a próxima data/hora em ciclo futuro para NUNCA voltar antes do tempo!
     if (item.concluido && item.recorrencia && item.recorrencia.tipo && item.recorrencia.tipo !== 'nenhuma') {
       item.recorrencia.ultimoCicloConcluido = new Date().toISOString();
       item.recorrencia.proximaExecucao = calcularProximaExecucao(item.recorrencia, new Date(), true);
       salvarRecorrenciaLocal(item.id, item.recorrencia);
     }
-
     salvarChecklistStore();
     renderChecklist();
-
-    // Sincroniza estado de conclusão com a nuvem
     if (item.padrao) {
       salvarRotinaPadraoNuvem(item);
     } else {
       salvarLembretePessoalNuvem(item);
     }
-
     if (item.concluido && typeof tocarSomNotificacao === 'function') {
       try { tocarSomNotificacao(); } catch(e) {}
     }
   }
   window.toggleChecklistItem = toggleChecklistItem;
-
   function filtrarChecklist(tipo, el) {
     checklistFiltroAtual = tipo;
     document.querySelectorAll('.reminders-filter-card').forEach(function(c) {
       c.classList.remove('active');
     });
     if (el) el.classList.add('active');
-
     var titleEl = document.getElementById('reminders-current-view-title');
     if (titleEl) {
       var mapTitles = {
@@ -5103,16 +4193,13 @@ document.addEventListener('DOMContentLoaded', function () {
       };
       titleEl.innerHTML = '<i data-lucide="list-checks" style="width:15px;height:15px;stroke-width:2;"></i> ' + (mapTitles[tipo] || 'Itens');
     }
-
     renderChecklist();
   }
   window.filtrarChecklist = filtrarChecklist;
-
   function adicionarRotinaPadrao() {
     var input = document.getElementById('reminders-new-padrao-input');
     var catSelect = document.getElementById('reminders-new-padrao-cat');
     if (!input || !input.value.trim()) return;
-
     var titulo = input.value.trim();
     var categoria = catSelect ? catSelect.value : 'rotina';
     var novoItem = {
@@ -5123,26 +4210,20 @@ document.addEventListener('DOMContentLoaded', function () {
       concluido: false,
       horario: 'Criado às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     };
-
     checklistItems.unshift(novoItem);
     salvarChecklistStore();
     input.value = '';
     renderChecklist();
-
-    // Envia para o Supabase com padrao: true para toda a equipe
     salvarRotinaPadraoNuvem(novoItem);
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Rotina Padrão TV Adicionada', 'Procedimento oficial adicionado e compartilhado para toda a equipe.', 'success');
     }
   }
   window.adicionarRotinaPadrao = adicionarRotinaPadrao;
-
   function adicionarLembreteRapido() {
     var input = document.getElementById('reminders-new-input');
     var catSelect = document.getElementById('reminders-new-cat');
     if (!input || !input.value.trim()) return;
-
     var titulo = input.value.trim();
     var categoria = catSelect ? catSelect.value : 'avulso';
     var novoItem = {
@@ -5153,35 +4234,27 @@ document.addEventListener('DOMContentLoaded', function () {
       concluido: false,
       horario: 'Criado às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     };
-
     checklistItems.unshift(novoItem);
     salvarChecklistStore();
     input.value = '';
     renderChecklist();
-
-    // Envia direto para o Supabase atrelado ao UUID do operador
     salvarLembretePessoalNuvem(novoItem);
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Lembrete Adicionado', 'Item incluído na rotina de hoje e sincronizado na nuvem.', 'success');
     }
   }
   window.adicionarLembreteRapido = adicionarLembreteRapido;
-
   function removerItemChecklist(id) {
     var item = checklistItems.find(function(it) { return it.id === id; });
     if (!item) return;
-
     if (item.padrao) {
       if (!confirm('Esta é uma Rotina Padrão da emissora. Deseja realmente excluí-la para toda a equipe?')) {
         return;
       }
     }
-
     checklistItems = checklistItems.filter(function(it) { return it.id !== id; });
     salvarChecklistStore();
     renderChecklist();
-
     if (item.padrao) {
       excluirRotinaPadraoNuvem(id);
       if (typeof mostrarToast === 'function') {
@@ -5195,12 +4268,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.removerItemChecklist = removerItemChecklist;
-
   function reiniciarRotinaDiaria() {
     if (!confirm('Deseja reiniciar a rotina diária para o início de um novo turno? Os itens padrão serão desmarcados.')) {
       return;
     }
-    // Desmarcar todos os itens e reter tarefas
     checklistItems.forEach(function(it) {
       it.concluido = false;
       it.concluidoEm = null;
@@ -5212,21 +4283,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.reiniciarRotinaDiaria = reiniciarRotinaDiaria;
-
   function criarOcorrenciaDoChecklist(id) {
     var item = checklistItems.find(function(it) { return it.id === id; });
     if (!item) return;
-
     if (typeof abrirPopup === 'function') {
       abrirPopup('popup-nova-oc');
-
-      // 1. Preenche o Título diretamente com o nome da rotina
       var tituloEl = document.getElementById('nova-titulo');
       if (tituloEl) {
         tituloEl.value = 'Falha na Rotina: ' + item.titulo;
       }
-
-      // 2. Preenche a Categoria correta de acordo com a rotina
       var catEl = document.getElementById('nova-cat');
       if (catEl) {
         if (item.categoria === 'ctrs') {
@@ -5241,14 +4306,10 @@ document.addEventListener('DOMContentLoaded', function () {
           catEl.value = 'Outro';
         }
       }
-
-      // 3. Preenche a Descrição Detalhada com formato completo (atinge os 50 caracteres mínimos)
       var descEl = document.getElementById('nova-desc');
       if (descEl) {
         var agoraStr = new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         descEl.value = 'Inconformidade detectada durante a verificação de rotina em ' + agoraStr + '.\nProcedimento checado: ' + item.titulo + '.\nDetalhes da falha observada: ';
-        
-        // Atualiza o contador de caracteres e botão de criar
         var counter = document.getElementById('nova-counter');
         if (counter) {
           var len = descEl.value.length;
@@ -5263,7 +4324,6 @@ document.addEventListener('DOMContentLoaded', function () {
           btnCriar.style.cursor = 'pointer';
           btnCriar._valido = true;
         }
-
         setTimeout(function() {
           descEl.focus();
           descEl.setSelectionRange(descEl.value.length, descEl.value.length);
@@ -5272,15 +4332,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.criarOcorrenciaDoChecklist = criarOcorrenciaDoChecklist;
-
-
-
-  /* ═══════════════════════════════════════════
-     INTEGRAÇÃO SUPABASE: LISTA DE OPERADORES & RESOLUÇÃO DE UUID
-  ═══════════════════════════════════════════ */
-
   var operadoresMap = {}; // nome -> id (UUID)
-
   function getDBCredentials() {
     var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
     var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
@@ -5293,12 +4345,10 @@ document.addEventListener('DOMContentLoaded', function () {
     return { url: url ? url.replace(/\/+$/, '') : '', key: key };
   }
   window.getDBCredentials = getDBCredentials;
-
   function carregarOperadoresSugeridos() {
     var datalist = document.getElementById('lista-operadores-sugeridos');
     var db = getDBCredentials();
     if (!db.url || !db.key) return;
-
     var endpoint = db.url + '/rest/v1/operadores?select=id,nome&ativo=eq.true&order=nome.asc';
     fetch(endpoint, {
       headers: {
@@ -5313,19 +4363,13 @@ document.addEventListener('DOMContentLoaded', function () {
         operadores.forEach(function(op) {
           operadoresMap[op.nome.trim()] = op.id;
         });
-
-        // Define o UUID do operador atual se o nome corresponder
         var usuarioAtual = getUsuarioAtual();
         if (operadoresMap[usuarioAtual]) {
           window.OPERADOR_UUID_ATUAL = operadoresMap[usuarioAtual];
         }
-
         if (datalist) {
           datalist.innerHTML = '';
         }
-        console.log('[Operadores] ' + operadores.length + ' operadores carregados internamente para sincronização.');
-
-        // Sincroniza as rotinas com o banco agora que temos o UUID
         sincronizarChecklistNuvem();
       }
     })
@@ -5334,11 +4378,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   window.carregarOperadoresSugeridos = carregarOperadoresSugeridos;
-
-  /* ═══════════════════════════════════════════
-     SINCRONIZAÇÃO EM NUVEM: ROTINAS DIRETAMENTE NO BANCO DE DADOS
-  ═══════════════════════════════════════════ */
-
   function getOperadorUUID() {
     if (window.OPERADOR_UUID_ATUAL) return window.OPERADOR_UUID_ATUAL;
     var usuarioAtual = getUsuarioAtual();
@@ -5349,14 +4388,11 @@ document.addEventListener('DOMContentLoaded', function () {
     return null;
   }
   window.getOperadorUUID = getOperadorUUID;
-
   function sincronizarChecklistNuvem() {
     var db = getDBCredentials();
     if (!db.url || !db.key) return;
     var opUUID = getOperadorUUID();
     var usuarioAtual = getUsuarioAtual();
-
-    // Sempre busca todas as rotinas padrão (padrao=true) + as rotinas pessoais do operador atual
     var queryFilter = '';
     if (opUUID) {
       queryFilter = 'or=(padrao.eq.true,operador_id.eq.' + encodeURIComponent(opUUID) + ')';
@@ -5365,9 +4401,7 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
       queryFilter = 'padrao=eq.true';
     }
-
     var endpoint = db.url + '/rest/v1/checklist_itens?select=*&categoria=not.in.(reporter,rc)&' + queryFilter + '&order=criado_em.asc';
-
     fetch(endpoint, {
       headers: {
         'apikey': db.key,
@@ -5399,20 +4433,15 @@ document.addEventListener('DOMContentLoaded', function () {
             recorrencia: rec
           };
         });
-
-        // Preservar itens locais recém-criados que ainda não estejam na nuvem
         var idNuvemMap = {};
         itensProcessados.forEach(function(item) { idNuvemMap[item.id] = true; });
-
         var pendentesLocais = checklistItems.filter(function(it) {
           return it && !idNuvemMap[it.id] && (!it.id || !it.id.toString().startsWith('rot-'));
         });
-
         checklistItems = itensProcessados.concat(pendentesLocais);
         salvarChecklistStore();
         renderChecklist();
         verificarRecorrenciasChecklist();
-        console.log('[Checklist DB] ✅ ' + itensProcessados.length + ' rotinas carregadas diretamente do banco de dados (Supabase checklist_itens).');
       }
     })
     .catch(function(err) {
@@ -5421,14 +4450,12 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.sincronizarChecklistNuvem = sincronizarChecklistNuvem;
   window.sincronizarLembretesPessoaisNuvem = sincronizarChecklistNuvem;
-
   function salvarRotinaPadraoNuvem(item) {
     var db = getDBCredentials();
     if (!db.url || !db.key) {
       console.warn('[Checklist DB] Supabase não configurado. Salvo apenas localmente.');
       return;
     }
-
     var payload = {
       id: item.id,
       operador_id: null,
@@ -5439,7 +4466,6 @@ document.addEventListener('DOMContentLoaded', function () {
       concluido: !!item.concluido,
       concluido_em: item.concluidoEm || null
     };
-
     var endpoint = db.url + '/rest/v1/checklist_itens';
     fetch(endpoint, {
       method: 'POST',
@@ -5457,14 +4483,12 @@ document.addEventListener('DOMContentLoaded', function () {
           console.error('[Checklist DB] Erro ao salvar rotina padrão no banco:', res.status, errText);
         });
       }
-      console.log('[Checklist DB] ✅ Rotina padrão salva com sucesso no banco de dados (checklist_itens):', item.titulo);
     })
     .catch(function(err) {
       console.error('[Checklist DB] Falha ao enviar rotina padrão para o banco:', err);
     });
   }
   window.salvarRotinaPadraoNuvem = salvarRotinaPadraoNuvem;
-
   function excluirRotinaPadraoNuvem(id) {
     var db = getDBCredentials();
     if (!db.url || !db.key || !id) return;
@@ -5478,7 +4502,6 @@ document.addEventListener('DOMContentLoaded', function () {
     })
     .then(function(res) {
       if (res.ok) {
-        console.log('[Checklist DB] ✅ Rotina padrão excluída do banco de dados:', id);
       }
     })
     .catch(function(err) {
@@ -5486,13 +4509,11 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   window.excluirRotinaPadraoNuvem = excluirRotinaPadraoNuvem;
-
   function salvarLembretePessoalNuvem(item) {
     var db = getDBCredentials();
     if (!db.url || !db.key) return;
     var opUUID = getOperadorUUID();
     var usuarioAtual = getUsuarioAtual();
-
     var payload = {
       id: item.id,
       operador_id: opUUID || null,
@@ -5503,7 +4524,6 @@ document.addEventListener('DOMContentLoaded', function () {
       concluido: !!item.concluido,
       concluido_em: item.concluidoEm || null
     };
-
     var endpoint = db.url + '/rest/v1/checklist_itens';
     fetch(endpoint, {
       method: 'POST',
@@ -5521,14 +4541,12 @@ document.addEventListener('DOMContentLoaded', function () {
           console.error('[Checklist DB] Erro ao salvar lembrete pessoal no banco:', res.status, errText);
         });
       }
-      console.log('[Checklist DB] ✅ Lembrete pessoal salvo diretamente no banco de dados:', item.titulo);
     })
     .catch(function(err) {
       console.error('[Checklist DB] Falha ao enviar lembrete pessoal para o banco:', err);
     });
   }
   window.salvarLembretePessoalNuvem = salvarLembretePessoalNuvem;
-
   function excluirLembretePessoalNuvem(id) {
     var db = getDBCredentials();
     if (!db.url || !db.key || !id) return;
@@ -5542,7 +4560,6 @@ document.addEventListener('DOMContentLoaded', function () {
     })
     .then(function(res) {
       if (res.ok) {
-        console.log('[Checklist DB] ✅ Lembrete pessoal excluído do banco de dados:', id);
       }
     })
     .catch(function(err) {
@@ -5550,14 +4567,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   window.excluirLembretePessoalNuvem = excluirLembretePessoalNuvem;
-
-  /* ═══════════════════════════════════════════
-     MOTOR DE RECORRÊNCIA INTELIGENTE
-  ═══════════════════════════════════════════ */
-
   var itemRecorrenciaAtual = null;
   var recorrenciaFrequenciaAtiva = 'nenhuma';
-
   function carregarRecorrenciasLocais() {
     try {
       var raw = localStorage.getItem('tv_checklist_recorrencias_v1');
@@ -5567,7 +4578,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.carregarRecorrenciasLocais = carregarRecorrenciasLocais;
-
   function salvarRecorrenciaLocal(id, rec) {
     try {
       var map = carregarRecorrenciasLocais();
@@ -5580,11 +4590,9 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch(e) {}
   }
   window.salvarRecorrenciaLocal = salvarRecorrenciaLocal;
-
   function abrirModalRecorrencia(id) {
     var item = checklistItems.find(function(it){ return it.id === id; });
     if (!item) return;
-
     itemRecorrenciaAtual = item;
     var idInput = document.getElementById('rec-item-id');
     if (idInput) idInput.value = item.id;
@@ -5592,20 +4600,14 @@ document.addEventListener('DOMContentLoaded', function () {
     if (titleDisplay) titleDisplay.textContent = item.titulo;
     var titleInput = document.getElementById('rec-item-title-input');
     if (titleInput) titleInput.value = item.titulo || '';
-
     var rec = item.recorrencia || { tipo: 'nenhuma', intervaloHoras: 1, horario: '08:00', diasSemana: [1, 3, 5] };
     selecionarFrequenciaRecorrencia(rec.tipo || 'nenhuma');
-
     var intEl = document.getElementById('rec-intervalo-horas');
     if (intEl) intEl.value = rec.intervaloHoras || 1;
-
     var hDiaria = document.getElementById('rec-hora-diaria');
     if (hDiaria) hDiaria.value = rec.horario || '08:00';
-
     var hSemanal = document.getElementById('rec-hora-semanal');
     if (hSemanal) hSemanal.value = rec.horario || '09:00';
-
-    // Configurar pills de dias da semana (D S T Q Q S S)
     var diasAtivos = Array.isArray(rec.diasSemana) && rec.diasSemana.length > 0 ? rec.diasSemana : [1, 3, 5];
     var pills = document.querySelectorAll('#rec-dias-semana-wrap .rec-day-pill');
     pills.forEach(function(btn) {
@@ -5616,7 +4618,6 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.classList.remove('active');
       }
     });
-
     atualizarPreviaProximaExecucao();
     if (typeof abrirPopup === 'function') {
       abrirPopup('popup-recorrencia-checklist');
@@ -5624,7 +4625,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
   }
   window.abrirModalRecorrencia = abrirModalRecorrencia;
-
   function selecionarFrequenciaRecorrencia(freq) {
     recorrenciaFrequenciaAtiva = freq;
     var botoes = ['nenhuma', 'horaria', 'diaria', 'semanal'];
@@ -5642,7 +4642,6 @@ document.addEventListener('DOMContentLoaded', function () {
     atualizarPreviaProximaExecucao();
   }
   window.selecionarFrequenciaRecorrencia = selecionarFrequenciaRecorrencia;
-
   function toggleDiaSemanaRecorrencia(btn) {
     btn.classList.toggle('active');
     var ativos = document.querySelectorAll('#rec-dias-semana-wrap .rec-day-pill.active');
@@ -5652,13 +4651,10 @@ document.addEventListener('DOMContentLoaded', function () {
     atualizarPreviaProximaExecucao();
   }
   window.toggleDiaSemanaRecorrencia = toggleDiaSemanaRecorrencia;
-
   function calcularProximaExecucao(rec, baseDate, jaConcluidoNesteCiclo) {
     if (!rec || !rec.tipo || rec.tipo === 'nenhuma') return null;
-
     var base = baseDate ? new Date(baseDate) : new Date();
     if (isNaN(base.getTime())) base = new Date();
-
     if (rec.tipo === 'horaria') {
       var intervalo = parseInt(rec.intervaloHoras, 10) || 1;
       var next = new Date(base.getTime());
@@ -5669,36 +4665,25 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       return next.toISOString();
     }
-
     if (rec.tipo === 'diaria') {
       var parts = (rec.horario || '08:00').split(':');
       var targetH = parseInt(parts[0], 10) || 0;
       var targetM = parseInt(parts[1], 10) || 0;
-
       var candidate = new Date(base.getFullYear(), base.getMonth(), base.getDate(), targetH, targetM, 0, 0);
-
-      // Se já foi concluída neste ciclo diário (mesmo adiantada ou pontual),
-      // ela NUNCA volta hoje: só volta amanhã no horário programado!
       if (jaConcluidoNesteCiclo || candidate.getTime() <= base.getTime()) {
         candidate.setDate(candidate.getDate() + 1);
       }
       return candidate.toISOString();
     }
-
     if (rec.tipo === 'semanal') {
       var partsSem = (rec.horario || '09:00').split(':');
       var sH = parseInt(partsSem[0], 10) || 0;
       var sM = parseInt(partsSem[1], 10) || 0;
       var dias = Array.isArray(rec.diasSemana) && rec.diasSemana.length > 0 ? rec.diasSemana : [1, 3, 5];
-
       var cDate = new Date(base.getFullYear(), base.getMonth(), base.getDate(), sH, sM, 0, 0);
-
-      // Se concluída hoje, pula o dia de hoje imediatamente
       if (jaConcluidoNesteCiclo || cDate.getTime() <= base.getTime()) {
         cDate.setDate(cDate.getDate() + 1);
       }
-
-      // Procura o próximo dia da semana programado (até 7 dias)
       for (var i = 0; i < 7; i++) {
         var dayOfWeek = cDate.getDay();
         if (dias.indexOf(dayOfWeek) !== -1) {
@@ -5708,11 +4693,9 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       return cDate.toISOString();
     }
-
     return null;
   }
   window.calcularProximaExecucao = calcularProximaExecucao;
-
   function obterConfigRecorrenciaDoModal() {
     var freq = recorrenciaFrequenciaAtiva;
     var rec = {
@@ -5723,7 +4706,6 @@ document.addEventListener('DOMContentLoaded', function () {
       proximaExecucao: null,
       ultimoCicloConcluido: null
     };
-
     if (freq === 'horaria') {
       var intEl = document.getElementById('rec-intervalo-horas');
       rec.intervaloHoras = intEl ? parseInt(intEl.value, 10) : 1;
@@ -5741,19 +4723,16 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return rec;
   }
-
   function atualizarPreviaProximaExecucao() {
     var textoEl = document.getElementById('rec-previa-texto');
     var subEl = document.getElementById('rec-previa-sub');
     if (!textoEl || !subEl) return;
-
     var freq = recorrenciaFrequenciaAtiva;
     if (freq === 'nenhuma') {
       textoEl.textContent = 'Sem repetição programada.';
       subEl.textContent = 'Esta rotina só será concluída uma única vez.';
       return;
     }
-
     var tempRec = obterConfigRecorrenciaDoModal();
     var proxISO = calcularProximaExecucao(tempRec, new Date(), true);
     if (!proxISO) {
@@ -5761,43 +4740,35 @@ document.addEventListener('DOMContentLoaded', function () {
       subEl.textContent = '';
       return;
     }
-
     var d = new Date(proxISO);
     var diasNomes = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
     var diaSemana = diasNomes[d.getDay()];
     var horaFmt = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
     var dataFmt = ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2);
-
     textoEl.textContent = 'Próxima execução: ' + diaSemana + ' (' + dataFmt + ') às ' + horaFmt;
     subEl.textContent = 'Ao ser marcada como concluída, permanecerá concluída até esta data/hora, quando voltará automaticamente para a lista alertando o plantão.';
   }
   window.atualizarPreviaProximaExecucao = atualizarPreviaProximaExecucao;
-
   function salvarRecorrenciaItem() {
     var itemId = document.getElementById('rec-item-id').value;
     var item = checklistItems.find(function(it){ return it.id === itemId; });
     if (!item) return;
-
     var novaRec = obterConfigRecorrenciaDoModal();
     if (novaRec.tipo !== 'nenhuma') {
       novaRec.proximaExecucao = calcularProximaExecucao(novaRec, new Date(), !!item.concluido);
     } else {
       novaRec.proximaExecucao = null;
     }
-
     var titleInput = document.getElementById('rec-item-title-input');
     if (titleInput && titleInput.value.trim()) {
       item.titulo = titleInput.value.trim();
     }
-
     item.recorrencia = novaRec;
     salvarRecorrenciaLocal(item.id, novaRec);
     salvarChecklistStore();
     renderChecklist();
-
     if (item.padrao) salvarRotinaPadraoNuvem(item);
     else salvarLembretePessoalNuvem(item);
-
     if (typeof fecharPopup === 'function') {
       fecharPopup('popup-recorrencia-checklist');
     }
@@ -5807,37 +4778,26 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.salvarRecorrenciaItem = salvarRecorrenciaItem;
-
   function removerRecorrenciaItem() {
     selecionarFrequenciaRecorrencia('nenhuma');
     salvarRecorrenciaItem();
   }
   window.removerRecorrenciaItem = removerRecorrenciaItem;
-
   function verificarRecorrenciasChecklist() {
     if (!Array.isArray(checklistItems) || checklistItems.length === 0) return;
-
     var agora = Date.now();
     var houveMudanca = false;
-
     checklistItems.forEach(function(it) {
       if (!it || !it.concluido) return;
       if (!it.recorrencia || !it.recorrencia.tipo || it.recorrencia.tipo === 'nenhuma') return;
-
       var proxISO = it.recorrencia.proximaExecucao;
       if (!proxISO) return;
-
       var proxTime = new Date(proxISO).getTime();
       if (!isNaN(proxTime) && agora >= proxTime) {
-        console.log('[Checklist] ⏰ Ciclo expirado para: "' + it.titulo + '". Desmarcando dos concluídos e alertando...');
-        
-        // Período expirado: rotina sai dos concluídos e volta para os pendentes!
         it.concluido = false;
         it.concluidoEm = null;
         it.recorrencia.proximaExecucao = calcularProximaExecucao(it.recorrencia, new Date(), false);
         houveMudanca = true;
-
-        // Dispara Notificação Sonora e Toast
         if (typeof mostrarToast === 'function') {
           mostrarToast('⏰ Hora da Rotina!', 'Procedimento pendente de checagem: ' + it.titulo, 'warning');
         }
@@ -5847,101 +4807,66 @@ document.addEventListener('DOMContentLoaded', function () {
         if (typeof window.adicionarNotificacao === 'function') {
           window.adicionarNotificacao('Rotina Agendada', 'Procedimento pendente de checagem: ' + it.titulo, 'alerta');
         }
-
-        // Persiste o novo ciclo
         if (it.padrao) salvarRotinaPadraoNuvem(it);
         else salvarLembretePessoalNuvem(it);
         salvarRecorrenciaLocal(it.id, it.recorrencia);
       }
     });
-
     if (houveMudanca) {
       salvarChecklistStore();
       renderChecklist();
     }
   }
   window.verificarRecorrenciasChecklist = verificarRecorrenciasChecklist;
-
-  // Intervalo periódico a cada 30 segundos para checagem ativa de ciclos
   setInterval(function() {
     verificarReseteMeiaNoite();
     verificarRecorrenciasChecklist();
   }, 30000);
-
-  // Verificação ao retornar foco à página
   window.addEventListener('focus', function() {
     verificarReseteMeiaNoite();
     verificarRecorrenciasChecklist();
   });
 
-
-
-/* ═══════════════════════════════════════════
-   RELATÓRIO DIÁRIO — TECNOLOGIA UDI (RONDA TÉCNICA)
-   Módulo exclusivo da praça de Uberlândia para acompanhamento de
-   Centro Exibidor, Transmissores, Recepção Satélite, CPA, Central e Energia.
-═══════════════════════════════════════════ */
-
 (function () {
   var RONDA_DRAFT_KEY = 'tv_rascunho_ronda_udi_v1';
-
   var RONDA_ITEMS = [
-    // Centro Exibidor
     { id: 'exib_signa',      secao: 'exibidor',     nome: 'SIGNA (Automação / Exibição)' },
     { id: 'exib_smartware',  secao: 'exibidor',     nome: 'SMARTWARE' },
     { id: 'exib_multiview',  secao: 'exibidor',     nome: 'MULTIVIEW' },
     { id: 'exib_clearcom',   secao: 'exibidor',     nome: 'CLEARCOM (Intercomunicação)' },
     { id: 'exib_globoplay',  secao: 'exibidor',     nome: 'GLOBOPLAY (Sinal OTT)' },
-
-    // Transmissor & RF
     { id: 'trans_temp',      secao: 'transmissor',  nome: 'TEMPERATURA DO TRANSMISSOR' },
-
-    // Receptores de Satélite
     { id: 'sat_rede_tit',    secao: 'satelite',     nome: 'SAT REDE TIT' },
     { id: 'sat_sp_tit',      secao: 'satelite',     nome: 'SAT SP TIT' },
     { id: 'sat_bh_tit',      secao: 'satelite',     nome: 'SAT BH TIT' },
     { id: 'sat_eventos',     secao: 'satelite',     nome: 'SAT EVENTOS' },
-
-    // Rotas de Contribuição e Recepção
     { id: 'rota_makito',     secao: 'rotas',        nome: 'SRT (MAKITO)' },
     { id: 'rota_mpls',       secao: 'rotas',        nome: 'SINAIS VIA MPLS' },
     { id: 'rota_l2l',        secao: 'rotas',        nome: 'SINAIS VIA L2L' },
-
-    // Central Técnica
     { id: 'ct_frames',       secao: 'central',      nome: 'FRAMES' },
     { id: 'ct_multiview',    secao: 'central',      nome: 'MULTIVIEW' },
     { id: 'ct_clearcom',     secao: 'central',      nome: 'CLEARCOM' },
     { id: 'ct_temp',         secao: 'central',      nome: 'TEMPERATURA CENTRAL' },
-
-    // CPA (Controle de Produção e Áudio)
     { id: 'cpa_frames',      secao: 'cpa',          nome: 'FRAMES CPA' },
     { id: 'cpa_multiview',   secao: 'cpa',          nome: 'MULTIVIEW CPA' },
     { id: 'cpa_retorno',     secao: 'cpa',          nome: 'RETORNO VIVOS' },
     { id: 'cpa_mochilinks',  secao: 'cpa',          nome: 'MOCHILINKS (LiveU / Links)' },
-
-    // Cadeia Satélite (Uplink)
     { id: 'sat_mux',         secao: 'cadeia_sat',   nome: 'MUX' },
     { id: 'sat_modulador',   secao: 'cadeia_sat',   nome: 'MODULADOR' },
     { id: 'sat_encoder',     secao: 'cadeia_sat',   nome: 'ENCODER' },
     { id: 'sat_buc',         secao: 'cadeia_sat',   nome: 'BUC (Block Upconverter)' },
-
-    // Infraestrutura e Energia
     { id: 'eng_gerador',     secao: 'energia',      nome: 'GERADOR' },
     { id: 'eng_nobreak',     secao: 'energia',      nome: 'NO-BREAK' }
   ];
-
   window.RONDA_ITEMS_UDI = RONDA_ITEMS;
-
   function setRondaStatus(btn, status) {
     if (!btn) return;
     var group = btn.closest('.ronda-toggle-group');
     if (!group) return;
     var parentItem = btn.closest('.ronda-item');
-
     var buttons = group.querySelectorAll('.ronda-btn-pill');
     buttons.forEach(function (b) { b.classList.remove('active'); });
     btn.classList.add('active');
-
     if (parentItem) {
       if (status === 'nc') {
         parentItem.classList.add('has-nc');
@@ -5949,16 +4874,13 @@ document.addEventListener('DOMContentLoaded', function () {
         parentItem.classList.remove('has-nc');
       }
     }
-
     verificarNaoConformidadesRonda();
     salvarRascunhoRondaDebounced();
   }
   window.setRondaStatus = setRondaStatus;
-
   function marcarTudoConformeRonda() {
     var container = document.getElementById('page-ronda');
     if (!container) return;
-
     var confButtons = container.querySelectorAll('.ronda-btn-pill.conf');
     confButtons.forEach(function (btn) {
       var group = btn.closest('.ronda-toggle-group');
@@ -5969,45 +4891,35 @@ document.addEventListener('DOMContentLoaded', function () {
       var parentItem = btn.closest('.ronda-item');
       if (parentItem) parentItem.classList.remove('has-nc');
     });
-
     verificarNaoConformidadesRonda();
     salvarRascunhoRondaDebounced();
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Ronda Técnica', 'Todos os sistemas marcados como Conforme.', 'success');
     }
   }
   window.marcarTudoConformeRonda = marcarTudoConformeRonda;
-
   function limparFormularioRonda() {
     var container = document.getElementById('page-ronda');
     if (!container) return;
-
     if (!confirm('Deseja limpar todos os campos do Relatório Diário de Tecnologia?')) return;
-
     container.querySelectorAll('.ronda-btn-pill').forEach(function (btn) {
       btn.classList.remove('active');
     });
     container.querySelectorAll('.ronda-item').forEach(function (it) {
       it.classList.remove('has-nc');
     });
-
     var numInputs = container.querySelectorAll('input[type="number"], textarea');
     numInputs.forEach(function (inp) { inp.value = ''; });
-
     try { localStorage.removeItem(RONDA_DRAFT_KEY); } catch(e) {}
     verificarNaoConformidadesRonda();
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Formulário Limpo', 'Os campos foram reiniciados.', 'info');
     }
   }
   window.limparFormularioRonda = limparFormularioRonda;
-
   function obterNaoConformidadesRonda() {
     var container = document.getElementById('page-ronda');
     if (!container) return [];
-
     var ncs = [];
     var ncButtons = container.querySelectorAll('.ronda-btn-pill.nc.active');
     ncButtons.forEach(function (btn) {
@@ -6021,15 +4933,12 @@ document.addEventListener('DOMContentLoaded', function () {
     return ncs;
   }
   window.obterNaoConformidadesRonda = obterNaoConformidadesRonda;
-
   function verificarNaoConformidadesRonda() {
     var ncs = obterNaoConformidadesRonda();
     var banner = document.getElementById('ronda-nc-alert');
     var badge = document.getElementById('ronda-nc-count-badge');
     var listTxt = document.getElementById('ronda-nc-list-txt');
-
     if (!banner) return;
-
     if (ncs.length > 0) {
       banner.style.display = 'flex';
       if (badge) badge.textContent = ncs.length + (ncs.length === 1 ? ' não conformidade' : ' não conformidades');
@@ -6041,7 +4950,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.verificarNaoConformidadesRonda = verificarNaoConformidadesRonda;
-
   function gerarOcorrenciaNaoConformidadesRonda() {
     var ncs = obterNaoConformidadesRonda();
     if (ncs.length === 0) {
@@ -6050,13 +4958,11 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       return;
     }
-
     var nomesStr = ncs.map(function (n) { return n.nome; }).join(', ');
     var descAuto = 'Não conformidade técnica registrada na Ronda Diária de Tecnologia (Uberlândia) pelo operador ' +
       getUsuarioAtual() + ' em ' + formatDataHoraLocal() + '.\n\nSistemas afetados:\n- ' +
       ncs.map(function (n) { return n.nome; }).join('\n- ') +
       '\n\nFavor verificar parâmetros e atuar na normalização dos equipamentos.';
-
     var popNova = document.getElementById('popup-nova-oc');
     if (popNova && typeof abrirPopup === 'function') {
       abrirPopup('popup-nova-oc');
@@ -6065,7 +4971,6 @@ document.addEventListener('DOMContentLoaded', function () {
       var locEl = document.getElementById('nova-local');
       var descEl = document.getElementById('nova-desc');
       var prioEl = document.getElementById('nova-prio');
-
       if (titEl) titEl.value = 'Falha / Anomalia na Ronda UDI: ' + (ncs[0] ? ncs[0].nome : 'Sistemas');
       if (catEl) catEl.value = 'Equipamento';
       if (locEl) locEl.value = 'Uberlândia — Central / Transmissor';
@@ -6075,7 +4980,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.gerarOcorrenciaNaoConformidadesRonda = gerarOcorrenciaNaoConformidadesRonda;
-
   function salvarRelatorioRonda() {
     var dataEl = document.getElementById('ronda-data');
     var obsEl  = document.getElementById('ronda-obs');
@@ -6084,7 +4988,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var satRedeDb = document.getElementById('ronda-sat-rede-db');
     var satBhDb   = document.getElementById('ronda-sat-bh-db');
     var satSpDb   = document.getElementById('ronda-sat-sp-db');
-
     var dataVal = (dataEl && dataEl.value) ? dataEl.value : (new Date().toISOString().split('T')[0]);
     var obsVal  = obsEl ? obsEl.value.trim() : '';
     var potVal  = potEl ? potEl.value.trim() : '';
@@ -6092,8 +4995,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var ncs     = obterNaoConformidadesRonda();
     var usuario = getUsuarioAtual();
     var nowFmt  = formatDataHoraLocal();
-
-    // Mapeamento dos status de todos os itens
     var statusMap = {};
     RONDA_ITEMS.forEach(function (item) {
       var group = document.querySelector('.ronda-toggle-group[data-item-id="' + item.id + '"]');
@@ -6106,7 +5007,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       }
     });
-
     var resumoItens = [];
     if (potVal) resumoItens.push('Potência: ' + potVal + ' W (Refletida: ' + (refVal || '0') + ' W)');
     if (satRedeDb && satRedeDb.value) resumoItens.push('SAT Rede C/N: ' + satRedeDb.value + ' dB');
@@ -6115,11 +5015,9 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
       resumoItens.push('✅ Todos os 26 sistemas avaliados em conformidade operacional.');
     }
-
     var descFinal = 'Relatório diário de tecnologia e ronda de infraestrutura executado em Uberlândia.\n\n' +
       resumoItens.join('\n') +
       (obsVal ? ('\n\nObservações do plantão:\n' + obsVal) : '');
-
     var novoRelatorio = {
       id:            'rel_udi_' + Date.now(),
       tipo:          'relatorio',
@@ -6148,26 +5046,17 @@ document.addEventListener('DOMContentLoaded', function () {
         obs: obsVal
       }
     };
-
-    // 1. Salvar no histórico de Uberlândia
     if (Array.isArray(window.historicoSeedData)) {
       window.historicoSeedData = [novoRelatorio].concat(window.historicoSeedData);
       if (typeof saveHistorico === 'function') {
         saveHistorico(window.historicoSeedData, novoRelatorio);
       }
     }
-
-    // 2. Limpar rascunho
     try { localStorage.removeItem(RONDA_DRAFT_KEY); } catch(e) {}
-
-    // 3. Notificar sucesso e re-renderizar histórico
     if (typeof renderAll === 'function') renderAll(true);
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Relatório Registrado', 'Relatório Diário de Tecnologia UDI gravado no Histórico com sucesso!', 'success');
     }
-
-    // 4. Se houver NC, sugerir abrir ocorrência
     if (ncs.length > 0) {
       setTimeout(function () {
         if (confirm('O relatório foi salvo contendo ' + ncs.length + ' não conformidade(s).\n\nDeseja registrar uma ocorrência no Dashboard agora?')) {
@@ -6177,18 +5066,14 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.salvarRelatorioRonda = salvarRelatorioRonda;
-
-  /* ── Rascunho Automático Local (Autosave para não perder nada ao fechar ou atualizar) ── */
   var saveDraftTimeout = null;
   function salvarRascunhoRondaDebounced() {
     clearTimeout(saveDraftTimeout);
     saveDraftTimeout = setTimeout(salvarRascunhoRonda, 400);
   }
-
   function salvarRascunhoRonda() {
     var container = document.getElementById('page-ronda');
     if (!container) return;
-
     var statusMap = {};
     RONDA_ITEMS.forEach(function (item) {
       var group = container.querySelector('.ronda-toggle-group[data-item-id="' + item.id + '"]');
@@ -6197,7 +5082,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (active) statusMap[item.id] = active.classList.contains('nc') ? 'nc' : 'conf';
       }
     });
-
     var draft = {
       data: document.getElementById('ronda-data') ? document.getElementById('ronda-data').value : '',
       obs: document.getElementById('ronda-obs') ? document.getElementById('ronda-obs').value : '',
@@ -6208,34 +5092,26 @@ document.addEventListener('DOMContentLoaded', function () {
       satSp: document.getElementById('ronda-sat-sp-db') ? document.getElementById('ronda-sat-sp-db').value : '',
       status: statusMap
     };
-
     try {
       localStorage.setItem(RONDA_DRAFT_KEY, JSON.stringify(draft));
     } catch(e) {}
   }
-
   function carregarRascunhoRonda() {
     var container = document.getElementById('page-ronda');
     if (!container) return;
-
-    // Atualiza data atual se vazia
     var dataEl = document.getElementById('ronda-data');
     if (dataEl && !dataEl.value) {
       dataEl.value = new Date().toISOString().split('T')[0];
     }
-
-    // Atualiza nome do operador se vazio
     var opEl = document.getElementById('ronda-operador-badge');
     if (opEl) {
       opEl.textContent = getUsuarioAtual();
     }
-
     try {
       var raw = localStorage.getItem(RONDA_DRAFT_KEY);
       if (!raw) return;
       var draft = JSON.parse(raw);
       if (!draft) return;
-
       if (draft.data && dataEl) dataEl.value = draft.data;
       if (draft.obs && document.getElementById('ronda-obs')) document.getElementById('ronda-obs').value = draft.obs;
       if (draft.pot && document.getElementById('ronda-pot-direta')) document.getElementById('ronda-pot-direta').value = draft.pot;
@@ -6243,7 +5119,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (draft.satRede && document.getElementById('ronda-sat-rede-db')) document.getElementById('ronda-sat-rede-db').value = draft.satRede;
       if (draft.satBh && document.getElementById('ronda-sat-bh-db')) document.getElementById('ronda-sat-bh-db').value = draft.satBh;
       if (draft.satSp && document.getElementById('ronda-sat-sp-db')) document.getElementById('ronda-sat-sp-db').value = draft.satSp;
-
       if (draft.status && typeof draft.status === 'object') {
         Object.keys(draft.status).forEach(function (id) {
           var val = draft.status[id];
@@ -6266,19 +5141,12 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch(e) {}
   }
   window.carregarRascunhoRonda = carregarRascunhoRonda;
-
-  // Registrar listeners de input para autosave nos campos numéricos
   document.addEventListener('DOMContentLoaded', function () {
     var container = document.getElementById('page-ronda');
     if (container) {
       container.addEventListener('input', salvarRascunhoRondaDebounced);
     }
   });
-
-  /* ═══════════════════════════════════════════════════════════
-     VISÃO GERAL ANALÍTICA & MÉTRICAS COM GRÁFICOS (ESTILO FORMS)
-  ═══════════════════════════════════════════════════════════ */
-
   function calcularMetricasRondaUdi() {
     var relatorios = [];
     if (Array.isArray(window.historicoSeedData)) {
@@ -6286,9 +5154,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return h && (h.subtipo === 'Tecnologia UDI' || (h.detalhesRonda && h.praca === 'Uberlândia'));
       });
     }
-
     var totalGeral = relatorios.length;
-
     var turnos = [
       { id: 't1', label: '00h00 - 06h00', count: 0, cor: '#6366F1' },
       { id: 't2', label: '06h00 - 12h00', count: 0, cor: '#EC4899' },
@@ -6296,12 +5162,10 @@ document.addEventListener('DOMContentLoaded', function () {
       { id: 't4', label: '18h00 - 00h00', count: 0, cor: '#10B981' },
       { id: 't5', label: 'Outra',          count: 0, cor: '#F59E0B' }
     ];
-
     var statusStats = {};
     RONDA_ITEMS.forEach(function(item) {
       statusStats[item.id] = { conf: 0, nc: 0, total: 0 };
     });
-
     var datasRecentes = [];
     var naoConformidades = [];
     var potencias = [];
@@ -6309,15 +5173,12 @@ document.addEventListener('DOMContentLoaded', function () {
     var satRedeVals = [];
     var satBhVals = [];
     var satSpVals = [];
-
     relatorios.forEach(function(r) {
       var d = r.detalhesRonda || {};
-
       var dataR = d.data || (r.dataCriacao ? r.dataCriacao.split(' ')[0] : '');
       if (dataR && datasRecentes.indexOf(dataR) === -1) {
         datasRecentes.push(dataR);
       }
-
       if (r.dataCriacao) {
         var parts = r.dataCriacao.split(' ');
         var hora = parseInt(parts[1] || '12', 10);
@@ -6327,7 +5188,6 @@ document.addEventListener('DOMContentLoaded', function () {
         else if (hora >= 18) turnos[3].count++;
         else turnos[4].count++;
       }
-
       if (d.statusSistemas && typeof d.statusSistemas === 'object') {
         Object.keys(d.statusSistemas).forEach(function(id) {
           if (!statusStats[id]) statusStats[id] = { conf: 0, nc: 0, total: 0 };
@@ -6337,7 +5197,6 @@ document.addEventListener('DOMContentLoaded', function () {
           else statusStats[id].conf++;
         });
       }
-
       if (d.potenciaW) {
         var pNum = parseFloat(d.potenciaW);
         if (!isNaN(pNum)) potencias.push(pNum);
@@ -6346,7 +5205,6 @@ document.addEventListener('DOMContentLoaded', function () {
         var rNum = parseFloat(d.refletidaW);
         if (!isNaN(rNum)) refletidas.push(rNum);
       }
-
       if (d.satRedeDb) {
         var sNum = parseFloat(d.satRedeDb);
         if (!isNaN(sNum)) satRedeVals.push(sNum);
@@ -6359,7 +5217,6 @@ document.addEventListener('DOMContentLoaded', function () {
         var spNum = parseFloat(d.satSpDb);
         if (!isNaN(spNum)) satSpVals.push(spNum);
       }
-
       if (d.naoConformidades && Array.isArray(d.naoConformidades)) {
         d.naoConformidades.forEach(function(nc) {
           naoConformidades.push('DATA: ' + (dataR || 'Recente') + ' - ' + nc);
@@ -6369,7 +5226,6 @@ document.addEventListener('DOMContentLoaded', function () {
         naoConformidades.push('DATA: ' + (dataR || 'Recente') + ' - Obs: ' + d.obs);
       }
     });
-
     var statusMap = {};
     RONDA_ITEMS.forEach(function(item) {
       var s = statusStats[item.id] || { conf: 0, nc: 0, total: 0 };
@@ -6383,20 +5239,17 @@ document.addEventListener('DOMContentLoaded', function () {
         statusMap[item.id] = { conf: 0, nc: 0, total: 0 };
       }
     });
-
     function calcMedia(arr) {
       if (!arr || arr.length === 0) return null;
       var sum = 0;
       arr.forEach(function(v){ sum += v; });
       return sum / arr.length;
     }
-
     var potMedia = calcMedia(potencias);
     var refMedia = calcMedia(refletidas);
     var satRedeMedia = calcMedia(satRedeVals);
     var satBhMedia = calcMedia(satBhVals);
     var satSpMedia = calcMedia(satSpVals);
-
     return {
       total: totalGeral,
       tempoMedio: totalGeral > 0 ? '12:00' : '--',
@@ -6417,17 +5270,14 @@ document.addEventListener('DOMContentLoaded', function () {
       satSpRecentes: satSpVals.slice(-3).reverse().map(function(v){ return String(v); })
     };
   }
-
   function gerarDonutSvg(turnos, total) {
     var size = 150;
     var center = size / 2;
     var radius = 50;
     var stroke = 22;
     var circ = 2 * Math.PI * radius;
-
     var sum = 0;
     turnos.forEach(function(t){ sum += t.count; });
-
     if (sum === 0) {
       return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '" style="overflow:visible;flex-shrink:0;">\n' +
         '<circle cx="' + center + '" cy="' + center + '" r="' + radius + '" fill="transparent" stroke="#E2E8F0" stroke-width="' + stroke + '" />\n' +
@@ -6435,7 +5285,6 @@ document.addEventListener('DOMContentLoaded', function () {
         '<text x="' + center + '" y="' + (center + 4) + '" text-anchor="middle" font-size="10" font-weight="800" fill="#94A3B8">0 RESPOSTAS</text>\n' +
         '</svg>';
     }
-
     var offset = 0;
     var circlesHtml = '';
     turnos.forEach(function(t) {
@@ -6449,14 +5298,12 @@ document.addEventListener('DOMContentLoaded', function () {
         'transform="rotate(-90 ' + center + ' ' + center + ')" />\n';
       offset += dash;
     });
-
     return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '" style="overflow:visible;flex-shrink:0;">\n' +
       circlesHtml +
       '<circle cx="' + center + '" cy="' + center + '" r="' + (radius - stroke/2 - 2) + '" fill="#FFFFFF" />\n' +
       '<text x="' + center + '" y="' + (center + 4) + '" text-anchor="middle" font-size="10" font-weight="800" fill="#0F172A">TURNOS</text>\n' +
       '</svg>';
   }
-
   function gerarLinhasBarrasConformidade(itens, statusStats) {
     var html = '<div class="vg-bar-list">';
     itens.forEach(function(item) {
@@ -6478,14 +5325,10 @@ document.addEventListener('DOMContentLoaded', function () {
     html += '</div>';
     return html;
   }
-
   function abrirVisaoGeralRondaUdi() {
     var contEl = document.getElementById('popup-visao-geral-ronda-content');
     if (!contEl) return;
-
     var m = calcularMetricasRondaUdi();
-
-    // Filtra itens por seção
     var exibItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'exibidor'; });
     var transItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'transmissor'; });
     var satItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'satelite'; });
@@ -6494,13 +5337,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var cpaItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'cpa'; });
     var satCadItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'cadeia_sat'; });
     var engItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'energia'; });
-
     var totalTurnos = 0;
     m.turnos.forEach(function(t){ totalTurnos += t.count; });
-
     var html = '';
-
-    // 1. CARDS DO TOPO
     html += '<div class="vg-top-cards">' +
       '<div class="vg-stat-box">' +
         '<div class="vg-stat-lbl"><span>Total de Respostas</span><i data-lucide="users" style="width:16px;height:16px;color:#3B82F6;"></i></div>' +
@@ -6515,12 +5354,9 @@ document.addEventListener('DOMContentLoaded', function () {
         '<div class="vg-stat-num">' + m.duracao + '</div>' +
       '</div>' +
     '</div>';
-
-    // 2. DIA TRABALHADO
     var recentesHtml = m.datasRecentes.length > 0
       ? m.datasRecentes.map(function(d){ return '<div class="vg-recent-item">📅 &quot;' + d + '&quot;</div>'; }).join('')
       : '<div class="vg-recent-item" style="color:#94A3B8;font-style:italic;">Nenhuma resposta registrada ainda</div>';
-
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">1. DIA TRABALHADO:</div>' +
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;">' +
@@ -6534,8 +5370,6 @@ document.addEventListener('DOMContentLoaded', function () {
         '</div>' +
       '</div>' +
     '</div>';
-
-    // 3. TURNO TRABALHADO (DONUT)
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">2. TURNO TRABALHADO:</div>' +
       '<div style="display:flex;align-items:center;justify-content:space-around;flex-wrap:wrap;gap:20px;">' +
@@ -6554,36 +5388,26 @@ document.addEventListener('DOMContentLoaded', function () {
         '</div>' +
       '</div>' +
     '</div>';
-
-    // Legenda global de conformidade
     var legendaHtml = '<div class="vg-legend">' +
       '<span><span class="vg-legend-dot" style="background:#E06A3B;"></span> CONFORME</span>' +
       '<span><span class="vg-legend-dot" style="background:#3B82F6;"></span> NÃO CONFORME</span>' +
     '</div>';
-
-    // 4. CENTRO EXIBIDOR
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">3. CENTRO EXIBIDOR:</div>' +
       legendaHtml +
       gerarLinhasBarrasConformidade(exibItens, m.statusMap) +
     '</div>';
-
-    // 5. TRANSMISSOR
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">4. TRANSMISSOR:</div>' +
       legendaHtml +
       gerarLinhasBarrasConformidade(transItens, m.statusMap) +
     '</div>';
-
-    // 6 & 7. POTÊNCIAS DO TRANSMISSOR
     var potRecentesHtml = m.potenciasRecentes.length > 0
       ? m.potenciasRecentes.map(function(v){ return '<div class="vg-recent-item">&quot;' + v + '&quot;</div>'; }).join('')
       : '<div class="vg-recent-item" style="color:#94A3B8;font-style:italic;">Sem respostas</div>';
-
     var refRecentesHtml = m.refletidasRecentes.length > 0
       ? m.refletidasRecentes.map(function(v){ return '<div class="vg-recent-item">&quot;' + v + '&quot;</div>'; }).join('')
       : '<div class="vg-recent-item" style="color:#94A3B8;font-style:italic;">Sem respostas</div>';
-
     html += '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:16px;">' +
       '<div class="vg-q-card">' +
         '<div class="vg-q-title">5. Potência do Transmissor (W):</div>' +
@@ -6600,15 +5424,11 @@ document.addEventListener('DOMContentLoaded', function () {
         '<div class="vg-recent-list">' + refRecentesHtml + '</div>' +
       '</div>' +
     '</div>';
-
-    // 8. RECEPTORES DE SATÉLITE
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">7. RECEPTORES DE SATÉLITE (VÍDEO E CANAL DE VOZ):</div>' +
       legendaHtml +
       gerarLinhasBarrasConformidade(satItens, m.statusMap) +
     '</div>';
-
-    // 9, 10 & 11. C/N DOS SATÉLITES
     html += '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:16px;">' +
       '<div class="vg-q-card">' +
         '<div class="vg-q-title">8. SAT REDE TIT C/N (dB):</div>' +
@@ -6626,62 +5446,46 @@ document.addEventListener('DOMContentLoaded', function () {
         '<div style="font-size:12px;color:#64748B;margin-top:2px;">' + (m.total > 0 ? 'Margem operacional calculada' : 'Sem leituras registradas') + '</div>' +
       '</div>' +
     '</div>';
-
-    // 12. ROTAS DE CONTRIBUIÇÃO
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">11. ROTA DE CONTRIBUIÇÃO E RECEPÇÃO DE SINAIS DAS PRAÇAS:</div>' +
       legendaHtml +
       gerarLinhasBarrasConformidade(rotasItens, m.statusMap) +
     '</div>';
-
-    // 13. CENTRAL TÉCNICA
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">12. CENTRAL TÉCNICA:</div>' +
       legendaHtml +
       gerarLinhasBarrasConformidade(ctItens, m.statusMap) +
     '</div>';
-
-    // 14. CPA
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">13. CPA:</div>' +
       legendaHtml +
       gerarLinhasBarrasConformidade(cpaItens, m.statusMap) +
     '</div>';
-
-    // 15. CADEIA SATÉLITE
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">14. CADEIA SATÉLITE:</div>' +
       legendaHtml +
       gerarLinhasBarrasConformidade(satCadItens, m.statusMap) +
     '</div>';
-
-    // 16. ENERGIA
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">15. ENERGIA:</div>' +
       legendaHtml +
       gerarLinhasBarrasConformidade(engItens, m.statusMap) +
     '</div>';
-
-    // 17. RELATE AQUI TODAS AS NÃO CONFORMIDADES
     var ncHtml = m.naoConformidades.length > 0
       ? m.naoConformidades.map(function(nc){ return '<div class="vg-recent-item">⚠️ ' + escapeHTML(nc) + '</div>'; }).join('')
       : '<div class="vg-recent-item" style="color:#94A3B8;font-style:italic;">Nenhuma não conformidade registrada</div>';
-
     html += '<div class="vg-q-card">' +
       '<div class="vg-q-title">16. RELATE AQUI TODAS AS NÃO CONFORMIDADES DO HORÁRIO:</div>' +
       '<div style="font-size:26px;font-weight:800;color:#0F172A;margin-bottom:4px;">' + m.naoConformidades.length.toLocaleString('pt-BR') + '</div>' +
       '<div style="font-size:12px;color:#64748B;margin-bottom:12px;">' + (m.total > 0 ? 'Registros no período' : 'Nenhum registro') + '</div>' +
       '<div class="vg-recent-list">' + ncHtml + '</div>' +
     '</div>';
-
     contEl.innerHTML = html;
     if (typeof abrirPopup === 'function') abrirPopup('popup-visao-geral-ronda');
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.abrirVisaoGeralRondaUdi = abrirVisaoGeralRondaUdi;
   window.calcularMetricasRondaUdi = calcularMetricasRondaUdi;
-
-  /* ── Exportação Idêntica ao Microsoft Forms (Impressão / PDF) ── */
   function exportarVisaoGeralFormsPdf() {
     var m = calcularMetricasRondaUdi();
     var exibItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'exibidor'; });
@@ -6692,12 +5496,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var cpaItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'cpa'; });
     var satCadItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'cadeia_sat'; });
     var engItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'energia'; });
-
     var totalTurnos = 0;
     m.turnos.forEach(function(t){ totalTurnos += t.count; });
-
     var dataHoraEmissao = new Date().toLocaleDateString('pt-BR') + ', ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
-
     var htmlDoc = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</title>' +
       '<style>' +
       '@page { size: A4 portrait; margin: 10mm 15mm; }' +
@@ -6730,12 +5531,9 @@ document.addEventListener('DOMContentLoaded', function () {
         '<button onclick="window.print()" style="padding:9px 18px;background:#2563EB;color:#fff;font-weight:700;border:none;border-radius:6px;cursor:pointer;box-shadow:0 3px 10px rgba(37,99,235,0.3);font-size:13px;">🖨️ Imprimir / Salvar em PDF</button>' +
         '<button onclick="window.close()" style="padding:9px 14px;background:#64748B;color:#fff;font-weight:600;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Fechar</button>' +
       '</div>';
-
-    // ═══ PÁGINA 1 ═══
     var datasPdfHtml = m.datasRecentes.length > 0
       ? m.datasRecentes.map(function(d){ return '&quot;' + d + '&quot;'; }).join('<br/>')
       : 'Nenhuma resposta registrada ainda';
-
     htmlDoc += '<div class="page-container">' +
       '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
       '<div class="main-title">Visão Geral das Respostas <span class="badge-ativo">Ativo</span></div>' +
@@ -6781,20 +5579,15 @@ document.addEventListener('DOMContentLoaded', function () {
       '</div>' +
       '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>1/5</span></div>' +
     '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 2 ═══
     var potPdfRecentes = m.potenciasRecentes.length > 0
       ? m.potenciasRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
       : 'Sem leituras registradas';
-
     var refPdfRecentes = m.refletidasRecentes.length > 0
       ? m.refletidasRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
       : 'Sem leituras registradas';
-
     var satRedePdfRecentes = m.satRedeRecentes.length > 0
       ? m.satRedeRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
       : 'Sem leituras registradas';
-
     htmlDoc += '<div class="page-container">' +
       '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
       '<div class="q-block">' +
@@ -6831,16 +5624,12 @@ document.addEventListener('DOMContentLoaded', function () {
       '</div>' +
       '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>2/5</span></div>' +
     '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 3 ═══
     var satBhPdfRecentes = m.satBhRecentes.length > 0
       ? m.satBhRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
       : 'Sem leituras registradas';
-
     var satSpPdfRecentes = m.satSpRecentes.length > 0
       ? m.satSpRecentes.map(function(v){ return '&quot;' + v + '&quot;'; }).join('<br/>')
       : 'Sem leituras registradas';
-
     htmlDoc += '<div class="page-container">' +
       '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
       '<div class="q-block">' +
@@ -6869,8 +5658,6 @@ document.addEventListener('DOMContentLoaded', function () {
       '</div>' +
       '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>3/5</span></div>' +
     '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 4 ═══
     htmlDoc += '<div class="page-container">' +
       '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
       '<div class="q-block">' +
@@ -6895,12 +5682,9 @@ document.addEventListener('DOMContentLoaded', function () {
       '</div>' +
       '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>4/5</span></div>' +
     '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 5 ═══
     var ncPdfHtml = m.naoConformidades.length > 0
       ? m.naoConformidades.map(function(nc){ return '<div>' + escapeHTML(nc) + '</div>'; }).join('')
       : '<div>Nenhuma não conformidade registrada.</div>';
-
     htmlDoc += '<div class="page-container">' +
       '<div class="page-header-top"><span>' + dataHoraEmissao + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
       '<div class="q-block">' +
@@ -6918,9 +5702,7 @@ document.addEventListener('DOMContentLoaded', function () {
       '</div>' +
       '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>5/5</span></div>' +
     '</div>';
-
     htmlDoc += '<script>setTimeout(function(){ window.print(); }, 500);<\/script></body></html>';
-
     var printWin = window.open('', '_blank');
     if (printWin) {
       printWin.document.open();
@@ -6933,8 +5715,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.exportarVisaoGeralFormsPdf = exportarVisaoGeralFormsPdf;
-
-  /* ── Exportação do Formulário Individual do Turno (4 páginas — estilo questionário Forms) ── */
   function exportarFormularioTurnoIndividual() {
     var dataEl = document.getElementById('ronda-data');
     var potEl  = document.getElementById('ronda-pot-direta');
@@ -6943,12 +5723,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var satBhDb   = document.getElementById('ronda-sat-bh-db');
     var satSpDb   = document.getElementById('ronda-sat-sp-db');
     var obsEl  = document.getElementById('ronda-obs');
-
     var dataVal = (dataEl && dataEl.value) ? dataEl.value : new Date().toISOString().split('T')[0];
     var usuario = getUsuarioAtual();
     var dataHora = new Date().toLocaleDateString('pt-BR') + ', ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
-
-    // Determina turno pelo horário atual
     var h = new Date().getHours();
     var turnoCheck = [false, false, false, false, false];
     if (h >= 0 && h < 6) turnoCheck[0] = true;
@@ -6956,7 +5733,6 @@ document.addEventListener('DOMContentLoaded', function () {
     else if (h >= 12 && h < 18) turnoCheck[2] = true;
     else if (h >= 18) turnoCheck[3] = true;
     else turnoCheck[4] = true;
-
     function renderTabelaForms(itens) {
       var h = '<table style="width:100%;border-collapse:collapse;margin-top:8px;">';
       h += '<thead><tr style="font-size:10.5px;color:#64748B;border-bottom:1px solid #E2E8F0;"><th style="text-align:left;padding:6px 4px;font-weight:600;">SISTEMA / EQUIPAMENTO</th><th style="width:110px;text-align:center;padding:6px 4px;font-weight:700;color:#059669;">CONFORME</th><th style="width:110px;text-align:center;padding:6px 4px;font-weight:700;color:#DC2626;">NÃO CONFORME</th></tr></thead>';
@@ -6974,7 +5750,6 @@ document.addEventListener('DOMContentLoaded', function () {
       h += '</tbody></table>';
       return h;
     }
-
     var exibItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'exibidor'; });
     var transItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'transmissor'; });
     var satItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'satelite'; });
@@ -6983,7 +5758,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var cpaItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'cpa'; });
     var satCadItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'cadeia_sat'; });
     var engItens = RONDA_ITEMS.filter(function(i){ return i.secao === 'energia'; });
-
     var htmlDoc = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</title>' +
       '<style>' +
       '@page { size: A4 portrait; margin: 12mm 15mm; }' +
@@ -7002,8 +5776,6 @@ document.addEventListener('DOMContentLoaded', function () {
         '<button onclick="window.print()" style="padding:9px 18px;background:#2563EB;color:#fff;font-weight:700;border:none;border-radius:6px;cursor:pointer;box-shadow:0 3px 10px rgba(37,99,235,0.3);font-size:13px;">🖨️ Imprimir / Salvar em PDF</button>' +
         '<button onclick="window.close()" style="padding:9px 14px;background:#64748B;color:#fff;font-weight:600;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Fechar</button>' +
       '</div>';
-
-    // ═══ PÁGINA 1 ═══
     htmlDoc += '<div class="page-container">' +
       '<div class="page-header-top"><span>' + dataHora + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
       '<div class="form-title">RELATÓRIO DIÁRIO - TECNOLOGIA UDI</div>' +
@@ -7022,8 +5794,6 @@ document.addEventListener('DOMContentLoaded', function () {
       renderTabelaForms(transItens) +
       '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>1/4</span></div>' +
     '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 2 ═══
     htmlDoc += '<div class="page-container">' +
       '<div class="page-header-top"><span>' + dataHora + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
       '<div class="q-num">5. Potência do Transmissor (W): *</div>' +
@@ -7042,8 +5812,6 @@ document.addEventListener('DOMContentLoaded', function () {
       renderTabelaForms(rotasItens) +
       '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>2/4</span></div>' +
     '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 3 ═══
     htmlDoc += '<div class="page-container">' +
       '<div class="page-header-top"><span>' + dataHora + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
       '<div class="q-num">12. CENTRAL TÉCNICA:</div>' +
@@ -7058,8 +5826,6 @@ document.addEventListener('DOMContentLoaded', function () {
       '<div class="input-line" style="min-height:70px;white-space:pre-wrap;">' + ((obsEl && obsEl.value) ? escapeHTML(obsEl.value) : 'Tudo operando dentro dos parâmetros de conformidade técnica.') + '</div>' +
       '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>3/4</span></div>' +
     '</div><div class="page-break"></div>';
-
-    // ═══ PÁGINA 4 ═══
     htmlDoc += '<div class="page-container">' +
       '<div class="page-header-top"><span>' + dataHora + '</span><span>RELATÓRIO DIÁRIO - TECNOLOGIA UDI</span></div>' +
       '<div style="text-align:center;margin-top:120px;padding:30px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;">' +
@@ -7074,9 +5840,7 @@ document.addEventListener('DOMContentLoaded', function () {
       '</div>' +
       '<div class="page-footer-bot"><span>https://forms.cloud.microsoft/...</span><span>4/4</span></div>' +
     '</div>';
-
     htmlDoc += '<script>setTimeout(function(){ window.print(); }, 500);<\/script></body></html>';
-
     var printWin = window.open('', '_blank');
     if (printWin) {
       printWin.document.open();
@@ -7090,13 +5854,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.exportarFormularioTurnoIndividual = exportarFormularioTurnoIndividual;
   window.exportarVisaoGeralFormsPdf = exportarVisaoGeralFormsPdf;
-
 })();
-
-
-  /* ═══════════════════════════════════════════
-     POPUP: NOVA OCORRÊNCIA
-  ═══════════════════════════════════════════ */
 
   var novaTitulo  = document.getElementById('nova-titulo');
   var novaDesc    = document.getElementById('nova-desc');
@@ -7104,7 +5862,6 @@ document.addEventListener('DOMContentLoaded', function () {
   var btnCriar    = document.getElementById('btn-criar');
   var novaFile    = document.getElementById('nova-arquivos');
   var novaPrevs   = document.getElementById('nova-previews');
-
   function validarNova() {
     var tituloVal = novaTitulo ? novaTitulo.value.trim() : '';
     var descVal   = novaDesc ? novaDesc.value.trim() : '';
@@ -7116,10 +5873,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.validarNova = validarNova;
-
   if (btnCriar) { btnCriar.style.opacity = '0.38'; btnCriar.style.cursor = 'not-allowed'; btnCriar._valido = false; }
   if (novaTitulo) novaTitulo.addEventListener('input', validarNova);
-
   if (novaDesc && novaCounter) {
     novaDesc.addEventListener('input', function() {
       var len = this.value.trim().length;
@@ -7136,7 +5891,6 @@ document.addEventListener('DOMContentLoaded', function () {
       validarNova();
     });
   }
-
   function atualizarSelectEquipamentosNovaOc() {
     var praca = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var isUberlandia = praca.indexOf('Uber') !== -1;
@@ -7146,21 +5900,17 @@ document.addEventListener('DOMContentLoaded', function () {
     } else if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
       equips = Object.keys(dashboardMetrics.equipamento);
     }
-
     var selNova = document.getElementById('nova-equipamento');
     var selEdit = document.getElementById('edit-oc-equipamento');
-
     [selNova, selEdit].forEach(function(sel) {
       if (!sel) return;
       var curVal = sel.value;
       var html = '<option value="">Sem equipamento específico</option>';
-
       if (isUberlandia) {
         equips.forEach(function(eq) {
           html += '<option value="' + escapeHTML(eq) + '">' + escapeHTML(eq) + '</option>';
         });
       } else {
-        // Juiz de Fora: equipamentos do dashboard ou os 13 padrão de JF
         if (equips.length === 0) {
           equips = ['LIVE U1', 'LIVE U2', 'LIVE U3', 'LIVE U4', 'LIVE U SMART', 'REDAÇÃO', 'KMJ', 'NET PRAÇA', 'NET PORTARIA', 'FORMATOS NET', 'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR'];
         }
@@ -7171,7 +5921,6 @@ document.addEventListener('DOMContentLoaded', function () {
       html += '<option value="__novo__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo Equipamento...</option>';
       sel.innerHTML = html;
       if (curVal && curVal !== '__novo__') sel.value = curVal;
-
       if (!sel._hasNovoEqListener) {
         sel._hasNovoEqListener = true;
         sel.addEventListener('change', function() {
@@ -7185,11 +5934,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   window.atualizarSelectEquipamentosNovaOc = atualizarSelectEquipamentosNovaOc;
-
   function criarNovaOcorrencia() {
     var tituloVal = novaTitulo ? novaTitulo.value.trim() : '';
     var descVal = novaDesc ? novaDesc.value.trim() : '';
-
     if (!tituloVal) {
       if (typeof mostrarToast === 'function') {
         mostrarToast('Título Necessário', 'Por favor, informe o título da ocorrência.', 'warning');
@@ -7197,7 +5944,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (novaTitulo) novaTitulo.focus();
       return;
     }
-
     if (descVal.length < 10) {
       if (typeof mostrarToast === 'function') {
         mostrarToast('Descrição Curta', 'A descrição deve ter pelo menos 10 caracteres (' + descVal.length + '/10).', 'warning');
@@ -7205,18 +5951,14 @@ document.addEventListener('DOMContentLoaded', function () {
       if (novaDesc) novaDesc.focus();
       return;
     }
-
     var respVal = document.getElementById('nova-resp') ? document.getElementById('nova-resp').value : '';
     var userAtual = getUsuarioAtual();
     var isMine = (respVal === userAtual || respVal === 'Operador' || respVal.indexOf(userAtual) !== -1 || respVal.indexOf('Você') !== -1);
-
     var telVal = document.getElementById('nova-telejornal') ? document.getElementById('nova-telejornal').value : '';
     var eqVal  = document.getElementById('nova-equipamento') ? document.getElementById('nova-equipamento').value : '';
-
     var tagsArr = ['Nova'];
     if (telVal) tagsArr.push(telVal);
     if (eqVal)  tagsArr.push(eqVal);
-
     var anexosFinais = (uploadedFilesStore['nova-previews'] || []).slice();
     var novo = {
       id:          'oc_' + Date.now(),
@@ -7239,8 +5981,6 @@ document.addEventListener('DOMContentLoaded', function () {
       praca:       (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora'),
       _pendingSync: true
     };
-
-    // Atualizar métricas dos Dashboards correspondentes em tempo real
     var atualizouDash = false;
     if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics) {
       if (telVal && dashboardMetrics.telejornal && dashboardMetrics.telejornal[telVal]) {
@@ -7256,7 +5996,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (typeof renderDashboards === 'function') renderDashboards();
       }
     }
-
     ocorrencias = [novo].concat(ocorrencias);
     window.ocorrencias = ocorrencias;
     save(ocorrencias, novo, true);
@@ -7264,8 +6003,6 @@ document.addEventListener('DOMContentLoaded', function () {
     fecharPopup('popup-nova-oc');
     adicionarNotificacao('Nova Ocorrência Criada', novo.titulo + ' (' + novo.prio + ' Prioridade)', novo.prio === 'Alta' ? 'warning' : 'info');
     renderAll();
-
-    /* reset */
     if (novaTitulo) novaTitulo.value = '';
     if (novaDesc)   novaDesc.value   = '';
     if (novaFile)   novaFile.value   = '';
@@ -7281,22 +6018,15 @@ document.addEventListener('DOMContentLoaded', function () {
     validarNova();
   }
   window.criarNovaOcorrencia = criarNovaOcorrencia;
-
   if (btnCriar) {
     btnCriar.addEventListener('click', criarNovaOcorrencia);
   }
-
-  /* ═══════════════════════════════════════════
-     POPUP: RESOLVER OCORRÊNCIA
-  ═══════════════════════════════════════════ */
-
   var resolverAtualId = null;
   var resolverDesc    = document.getElementById('resolver-desc');
   var resolverCounter = document.getElementById('resolver-counter');
   var btnConfirmar    = document.getElementById('btn-confirmar-resolver');
   var resolverFile    = document.getElementById('resolver-arquivos');
   var resolverPrevs   = document.getElementById('resolver-previews');
-
   function validarResolver() {
     var ok = resolverDesc && resolverDesc.value.trim().length >= 10;
     if (btnConfirmar) {
@@ -7305,9 +6035,7 @@ document.addEventListener('DOMContentLoaded', function () {
       btnConfirmar._valido = ok;
     }
   }
-
   if (btnConfirmar) { btnConfirmar.style.opacity = '0.38'; btnConfirmar.style.cursor = 'not-allowed'; btnConfirmar._valido = false; }
-
   if (resolverDesc && resolverCounter) {
     resolverDesc.addEventListener('input', function() {
       var len = this.value.trim().length;
@@ -7321,31 +6049,23 @@ document.addEventListener('DOMContentLoaded', function () {
       validarResolver();
     });
   }
-
   function abrirResolver(id) {
     var oc = ocorrencias.find(function(o){ return o.id === id; });
     if (!oc) return;
     resolverAtualId = id;
     var tituloEl = document.getElementById('resolver-titulo-oc');
     if (tituloEl) tituloEl.textContent = oc.titulo;
-
-    /* reset */
     if (resolverDesc)    resolverDesc.value = '';
     if (resolverFile)    resolverFile.value = '';
     if (resolverPrevs)   resolverPrevs.innerHTML = '';
     uploadedFilesStore['resolver-previews'] = [];
     if (resolverCounter) { resolverCounter.textContent = 'Mínimo 10 caracteres'; resolverCounter.className = 'char-count'; }
     document.getElementById('resolver-status').value = 'Resolvido';
-    /* reset pills visuais */
     if (typeof selecionarStatus === 'function') selecionarStatus('Resolvido');
     validarResolver();
     abrirPopup('popup-resolver');
   }
   window.abrirResolver = abrirResolver;
-
-  /* ═══════════════════════════════════════════
-     EDIÇÃO DE OCORRÊNCIAS
-  ═══════════════════════════════════════════ */
   function abrirEditarOcorrencia(id) {
     var oc = ocorrencias.find(function(o){ return o && o.id === id; });
     if (!oc) return;
@@ -7357,7 +6077,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('edit-oc-local').value = oc.local || '';
     document.getElementById('edit-oc-prazo').value = oc.prazo || '';
     document.getElementById('edit-oc-desc').value = String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
-
     atualizarSelectEquipamentosNovaOc();
     if (document.getElementById('edit-oc-telejornal')) {
       document.getElementById('edit-oc-telejornal').value = oc.telejornal || '';
@@ -7365,19 +6084,14 @@ document.addEventListener('DOMContentLoaded', function () {
     if (document.getElementById('edit-oc-equipamento')) {
       document.getElementById('edit-oc-equipamento').value = oc.equipamento || '';
     }
-
     var subEl = document.getElementById('edit-oc-subtitle');
     if (subEl) subEl.textContent = 'Editando ocorrência: ' + (oc.titulo || oc.id) + ' — aberto para toda a equipe.';
-
-    /* Carrega anexos existentes */
     var anexosExistentes = oc.anexos || (oc.resolucao && oc.resolucao.anexos) || [];
     uploadedFilesStore['edit-oc-previews'] = anexosExistentes.slice();
     renderPreviewsForContainer('edit-oc-previews');
-
     abrirPopup('popup-editar-oc');
   }
   window.abrirEditarOcorrencia = abrirEditarOcorrencia;
-
   function salvarEdicaoOcorrencia() {
     var id = document.getElementById('edit-oc-id').value;
     var titulo = document.getElementById('edit-oc-titulo').value.trim();
@@ -7389,7 +6103,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var telVal = document.getElementById('edit-oc-telejornal') ? document.getElementById('edit-oc-telejornal').value : '';
     var eqVal  = document.getElementById('edit-oc-equipamento') ? document.getElementById('edit-oc-equipamento').value : '';
     var desc = document.getElementById('edit-oc-desc').value.trim();
-
     if (!titulo) {
       alert('Por favor, informe o título da ocorrência.');
       return;
@@ -7398,20 +6111,16 @@ document.addEventListener('DOMContentLoaded', function () {
       alert('Por favor, informe a descrição detalhada da ocorrência.');
       return;
     }
-
     var idx = ocorrencias.findIndex(function(o){ return o && o.id === id; });
     if (idx === -1) {
       alert('Ocorrência não encontrada.');
       return;
     }
-
     var usuarioLogado = getUsuarioAtual();
     var isMine = (resp === usuarioLogado || resp === 'Operador' || resp.indexOf(usuarioLogado) !== -1 || resp.indexOf('Você') !== -1);
     var anexosAtualizados = (uploadedFilesStore['edit-oc-previews'] || []).slice();
-
     var anterior = ocorrencias[idx];
     var mudancas = [];
-
     function regMudanca(campo, valAntes, valDepois, textoPadraoVazio) {
       var vA = (valAntes !== undefined && valAntes !== null && String(valAntes).trim() !== '') ? String(valAntes).trim() : (textoPadraoVazio || 'Não informado');
       var vD = (valDepois !== undefined && valDepois !== null && String(valDepois).trim() !== '') ? String(valDepois).trim() : (textoPadraoVazio || 'Não informado');
@@ -7424,7 +6133,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
       }
     }
-
     regMudanca('Título', anterior.titulo || '', titulo, 'Sem título');
     regMudanca('Prioridade', anterior.prio || 'Média', prio, 'Média');
     regMudanca('Categoria', anterior.cat || 'Equipamento', cat, 'Equipamento');
@@ -7433,7 +6141,6 @@ document.addEventListener('DOMContentLoaded', function () {
     regMudanca('Telejornal', anterior.telejornal || '', telVal || '', 'Sem telejornal');
     regMudanca('Equipamento', anterior.equipamento || '', eqVal || '', 'Sem equipamento');
     regMudanca('Prazo Estimado', anterior.prazo || '', prazo || '', 'Sem prazo');
-
     var ctrsMarkerExistente = '';
     if (anterior.desc && String(anterior.desc).indexOf('<!--CTRS_JSON:') !== -1) {
       var mCtrs = String(anterior.desc).match(/(<!--CTRS_JSON:[^>]+-->)/);
@@ -7444,7 +6151,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (ctrsMarkerExistente && desc.indexOf('<!--CTRS_JSON:') === -1) {
       desc = desc + ctrsMarkerExistente;
     }
-
     var qtdAnxAntes = (anterior.anexos || []).length;
     var qtdAnxDepois = anexosAtualizados.length;
     if (qtdAnxAntes !== qtdAnxDepois) {
@@ -7455,7 +6161,6 @@ document.addEventListener('DOMContentLoaded', function () {
         resumo: 'Anexos: de "' + qtdAnxAntes + ' arquivo(s)" para "' + qtdAnxDepois + ' arquivo(s)"'
       });
     }
-
     var historicoEdicoes = (anterior.historicoEdicoes && Array.isArray(anterior.historicoEdicoes))
       ? anterior.historicoEdicoes.slice()
       : ((anterior.resolucao && Array.isArray(anterior.resolucao.historicoEdicoes)) ? anterior.resolucao.historicoEdicoes.slice() : []);
@@ -7466,7 +6171,6 @@ document.addEventListener('DOMContentLoaded', function () {
         mudancas: mudancas
       });
     }
-
     var resolucaoAtual = Object.assign({}, ocorrencias[idx].resolucao || {});
     if (anexosAtualizados.length > 0) {
       resolucaoAtual.anexos = anexosAtualizados;
@@ -7476,7 +6180,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (historicoEdicoes.length > 0) {
       resolucaoAtual.historicoEdicoes = historicoEdicoes;
     }
-
     ocorrencias[idx] = Object.assign({}, ocorrencias[idx], {
       titulo:           titulo,
       prio:             prio,
@@ -7494,7 +6197,6 @@ document.addEventListener('DOMContentLoaded', function () {
       ultimaEdicaoPor:  usuarioLogado,
       ultimaEdicaoEm:   formatDataHoraLocal()
     });
-
     save(ocorrencias, ocorrencias[idx], false);
     fecharPopup('popup-editar-oc');
     renderAll();
@@ -7503,15 +6205,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.salvarEdicaoOcorrencia = salvarEdicaoOcorrencia;
-
   var itemDetalhesAtual = null;
 
-
-  /* ═══════════════════════════════════════════
-     SISTEMA DE LIXEIRA (Retenção 7 dias / Notificação 24h) — BANCO DE DADOS SUPABASE
-  ═══════════════════════════════════════════ */
   var lixeiraData = [];
-
   function getLixeiraDBCredentials() {
     var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
     var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
@@ -7523,24 +6219,20 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return { url: url ? url.replace(/\/+$/, '') : '', key: key };
   }
-
   function loadLixeira() {
     sincronizarLixeiraNuvem();
     return lixeiraData;
   }
   loadLixeira();
-
   function saveLixeira(list) {
     lixeiraData = list || [];
     window.lixeiraData = lixeiraData;
     atualizarBadgesLixeira();
   }
   window.saveLixeira = saveLixeira;
-
   function sincronizarLixeiraNuvem() {
     var db = getLixeiraDBCredentials();
     if (!db.url || !db.key) return;
-
     fetch(db.url + '/rest/v1/lixeira?select=*&order=dataExclusao.desc&limit=50', {
       headers: {
         'apikey': db.key,
@@ -7562,11 +6254,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   window.sincronizarLixeiraNuvem = sincronizarLixeiraNuvem;
-
   function salvarItemLixeiraNuvem(item) {
     var db = getLixeiraDBCredentials();
     if (!db.url || !db.key || !item) return;
-
     fetch(db.url + '/rest/v1/lixeira', {
       method: 'POST',
       headers: {
@@ -7579,7 +6269,6 @@ document.addEventListener('DOMContentLoaded', function () {
     })
     .then(function(res) {
       if (res.ok) {
-        console.log('[Lixeira DB] ✅ Item gravado na lixeira do banco:', item.id);
       }
     })
     .catch(function(err) {
@@ -7587,11 +6276,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   window.salvarItemLixeiraNuvem = salvarItemLixeiraNuvem;
-
   function excluirItemLixeiraNuvem(id) {
     var db = getLixeiraDBCredentials();
     if (!db.url || !db.key || !id) return;
-
     fetch(db.url + '/rest/v1/lixeira?id=eq.' + encodeURIComponent(id), {
       method: 'DELETE',
       headers: {
@@ -7601,7 +6288,6 @@ document.addEventListener('DOMContentLoaded', function () {
     })
     .then(function(res) {
       if (res.ok) {
-        console.log('[Lixeira DB] ✅ Item removido da lixeira do banco:', id);
       }
     })
     .catch(function(err) {
@@ -7609,7 +6295,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   window.excluirItemLixeiraNuvem = excluirItemLixeiraNuvem;
-
   function pertenceAPracaAtivaLixeira(item) {
     if (!item) return false;
     if (typeof pertenceAPracaAtiva === 'function') {
@@ -7620,7 +6305,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return true;
   }
   window.pertenceAPracaAtivaLixeira = pertenceAPracaAtivaLixeira;
-
   function atualizarBadgesLixeira() {
     var badge = document.querySelector('.lixeira-badge');
     if (badge) {
@@ -7633,17 +6317,13 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
   }
-
   function verificarExpiracaoLixeira() {
     if (!Array.isArray(lixeiraData) || lixeiraData.length === 0) return;
     var agora = Date.now();
     var alterou = false;
     var novosItens = [];
-
     lixeiraData.forEach(function(item) {
       var tempoRestanteMs = item.expiraEm - agora;
-
-      // 1. Já expirou os 7 dias -> Exclui permanentemente inclusive da nuvem
       if (tempoRestanteMs <= 0) {
         alterou = true;
         excluirItemLixeiraNuvem(item.id);
@@ -7653,8 +6333,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         return;
       }
-
-      // 2. Faltam 24h ou menos (86400000 ms) e ainda não notificou
       if (tempoRestanteMs <= 24 * 60 * 60 * 1000 && !item.notificado24h) {
         item.notificado24h = true;
         alterou = true;
@@ -7667,16 +6345,13 @@ document.addEventListener('DOMContentLoaded', function () {
           );
         }
       }
-
       novosItens.push(item);
     });
-
     if (alterou) {
       saveLixeira(novosItens);
     }
   }
   window.verificarExpiracaoLixeira = verificarExpiracaoLixeira;
-
   function extrairDadosCTRSDeItemHistorico(hist) {
     if (!hist) return null;
     if (hist.dadosCTRS && typeof hist.dadosCTRS === 'object') return hist.dadosCTRS;
@@ -7688,16 +6363,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return null;
   }
-
   function ajustarMetricasDashboardPorRelatorioCTRS(hist, direcao) {
     if (!hist || typeof dashboardMetrics === 'undefined' || !dashboardMetrics) return;
     var d = extrairDadosCTRSDeItemHistorico(hist);
     if (!d) return;
-
     var delta = direcao < 0 ? -1 : 1;
     var listaMet = Array.isArray(d.metricasContabilizadas) ? d.metricasContabilizadas : [];
-
-    // Caso não tenha metricasContabilizadas explícito mas tenha transmissoes
     if (listaMet.length === 0 && Array.isArray(d.transmissoes)) {
       var tipoUp = (d.chaveJornal || d.tipo || 'INTEGRAÇÃO NOTÍCIA').toUpperCase();
       var cj = 'INTEGRAÇÃO NOTÍCIA';
@@ -7706,7 +6377,6 @@ document.addEventListener('DOMContentLoaded', function () {
       else if (tipoUp === 'MG2') cj = 'MG2';
       else if (tipoUp.indexOf('GIRO') !== -1) cj = 'GIRO MG2';
       else cj = tipoUp;
-
       d.transmissoes.forEach(function(tx) {
         if (!tx) return;
         var temNC = (tx.audioQ === 'NC' || tx.videoQ === 'NC' || tx.statusTx === 'NC');
@@ -7717,9 +6387,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
       });
     }
-
     if (listaMet.length === 0) return;
-
     listaMet.forEach(function(m) {
       var campo = (m.status === 'nc') ? 'nc' : 'conf';
       if (m.telejornal && dashboardMetrics.telejornal && dashboardMetrics.telejornal[m.telejornal]) {
@@ -7731,7 +6399,6 @@ document.addEventListener('DOMContentLoaded', function () {
         dashboardMetrics.equipamento[m.equipamento][campo] = Math.max(0, atualEq + delta);
       }
     });
-
     if (typeof salvarDashboardMetricsStore === 'function') {
       salvarDashboardMetricsStore();
     }
@@ -7739,25 +6406,19 @@ document.addEventListener('DOMContentLoaded', function () {
       renderDashboards();
     }
   }
-
   function excluirOcorrencia(id) {
     var targetId = id;
     var oc = ocorrencias.find(function(o){ return o && o.id === targetId; });
     var hist = historicoSeedData.find(function(h){ return h && h.id === targetId; });
     var titulo = oc ? (oc.titulo || 'esta ocorrência') : (hist ? hist.titulo : 'esta ocorrência');
-
     if (confirm('Mover a ocorrência "' + titulo + '" para a Lixeira?\n\nEla ficará retida por 7 dias na Lixeira como backup antes da exclusão permanente.')) {
       var idParaSalvar = oc ? oc.id : (hist ? hist.id : targetId);
-
-      // 1. Envia comando DELETE direto para a nuvem (Supabase) para que a sincronização remota não restaure na tela
       if (typeof DBService !== 'undefined' && DBService && typeof DBService.deleteRemote === 'function') {
         if (idParaSalvar) {
           DBService.deleteRemote('ocorrencias', idParaSalvar);
           DBService.deleteRemote('historico', idParaSalvar);
         }
       }
-
-      // 2. Adiciona à Lixeira com retenção de 7 dias
       var itemPraca = (oc && oc.praca) || (hist && hist.praca) || (typeof normalizarPracaOcorrencia === 'function' ? normalizarPracaOcorrencia(null, (oc && oc.local) || (hist && hist.local), titulo) : 'Juiz de Fora');
       var itemLixeira = {
         id: idParaSalvar,
@@ -7770,12 +6431,9 @@ document.addEventListener('DOMContentLoaded', function () {
         notificado24h: false,
         praca: itemPraca
       };
-
       lixeiraData = [itemLixeira].concat(lixeiraData.filter(function(i){ return i.id !== idParaSalvar; }));
       saveLixeira(lixeiraData);
       salvarItemLixeiraNuvem(itemLixeira);
-
-      // Se for um Relatório CTRS sendo movido para a Lixeira, reverte os contadores de Conforme/Não Conforme no Dashboard de Transmissões
       var idsOcsVinculadasRelatorio = [];
       if (hist) {
         ajustarMetricasDashboardPorRelatorioCTRS(hist, -1);
@@ -7789,37 +6447,29 @@ document.addEventListener('DOMContentLoaded', function () {
           });
         }
       }
-
-      // 3. Remove do array de ocorrências ativas e arquivadas imediatamente (estritamente por ID ou vinculadas ao relatório!)
       ocorrencias = ocorrencias.filter(function(o){
         if (!o) return false;
         if (o.id === idParaSalvar || o.id === targetId) return false;
         if (idsOcsVinculadasRelatorio.indexOf(o.id) !== -1) return false;
         return true;
       });
-
-      // 4. Remove do histórico geral (estritamente por ID!)
       historicoSeedData = historicoSeedData.filter(function(h){
         if (!h) return false;
         if (h.id === idParaSalvar || h.id === targetId) return false;
         return true;
       });
-
       save(ocorrencias);
       saveHistorico(historicoSeedData);
       renderAll();
-
       if (typeof mostrarToast === 'function') {
         mostrarToast('Movida para a Lixeira', '"' + titulo + '" ficará disponível na Lixeira por 7 dias.', 'info');
       }
     }
   }
   window.excluirOcorrencia = excluirOcorrencia;
-
   function restaurarOcorrenciaLixeira(id) {
     var item = lixeiraData.find(function(i){ return i.id === id; });
     if (!item) return;
-
     if (item.histOriginal && item.histOriginal.tipo === 'equipamento') {
       if (Array.isArray(window.catalogoEquipamentos)) {
         var jaNoCat = false;
@@ -7849,25 +6499,20 @@ document.addEventListener('DOMContentLoaded', function () {
         saveHistorico(historicoSeedData, item.histOriginal);
       }
     }
-
     lixeiraData = lixeiraData.filter(function(i){ return i.id !== id; });
     saveLixeira(lixeiraData);
     excluirItemLixeiraNuvem(id);
     renderAll();
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Item Restaurado', '"' + (item.titulo || 'Item') + '" foi restaurado com sucesso.', 'success');
     }
   }
   window.restaurarOcorrenciaLixeira = restaurarOcorrenciaLixeira;
-
   function renderLixeira() {
     var container = document.getElementById('lixeira-list');
     atualizarBadgesLixeira();
     if (!container) return;
-
     var listaDaPraca = (lixeiraData || []).filter(pertenceAPracaAtivaLixeira);
-
     if (listaDaPraca.length === 0) {
       container.innerHTML =
         '<div style="text-align:center;padding:48px 16px;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);">' +
@@ -7878,26 +6523,21 @@ document.addEventListener('DOMContentLoaded', function () {
       if (typeof lucide !== 'undefined') lucide.createIcons();
       return;
     }
-
     var agora = Date.now();
-
     function renderCardLixeiraHTML(item) {
       var msRestante = item.expiraEm - agora;
       var diasRestantes = Math.ceil(msRestante / (1000 * 60 * 60 * 24));
       var horasRestantes = Math.ceil(msRestante / (1000 * 60 * 60));
-
       var expiraBadge = '';
       if (horasRestantes <= 24) {
         expiraBadge = '<span class="tag tag-r" style="font-weight:600;"><i data-lucide="alert-triangle" style="width:11px;height:11px;stroke-width:2.2;margin-right:3px;"></i>Expira em ' + Math.max(1, horasRestantes) + 'h</span>';
       } else {
         expiraBadge = '<span class="tag tag-yellow-soft" style="font-weight:600;"><i data-lucide="clock" style="width:11px;height:11px;stroke-width:2;margin-right:3px;"></i>Expira em ' + diasRestantes + ' dias</span>';
       }
-
       var oc = item.ocOriginal || {};
       var desc = String(oc.desc || (item.histOriginal ? item.histOriginal.descCriacao : 'Sem descrição.')).replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
       var local = oc.local || (item.histOriginal ? item.histOriginal.local : 'Central Técnica');
       var excluidoEmStr = formatDataHoraLocal(item.dataExclusao);
-
       return (
         '<article class="oc-card" style="background:#FFFFFF;border:1px solid #E2E8F0;margin-bottom:10px;">' +
           '<div class="prio-line pl-r"></div>' +
@@ -7922,18 +6562,12 @@ document.addEventListener('DOMContentLoaded', function () {
         '</article>'
       );
     }
-
     var secoes = agruparPorDias(listaDaPraca, function(item){ return item.dataExclusao; });
     container.innerHTML = renderSecoesComCards(secoes, renderCardLixeiraHTML);
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.renderLixeira = renderLixeira;
-
-  /* ═══════════════════════════════════════════
-     SISTEMA DE OCORRÊNCIAS ARQUIVADAS (Turno)
-  ═══════════════════════════════════════════ */
   var filtroArquivadosAtivo = 'todas';
-
   function filtrarArquivados(elOrTipo, tipo) {
     var el = (elOrTipo && typeof elOrTipo === 'object' && elOrTipo.nodeType) ? elOrTipo : null;
     var tipoFinal = typeof elOrTipo === 'string' ? elOrTipo : tipo;
@@ -7957,21 +6591,17 @@ document.addEventListener('DOMContentLoaded', function () {
     renderArquivados();
   }
   window.filtrarArquivados = filtrarArquivados;
-
   function concluirVerificacaoArquivado(id) {
     var idx = ocorrencias.findIndex(function(o){ return o && o.id === id; });
     if (idx === -1) return;
     var oc = ocorrencias[idx];
     var tagsAtuais = (oc.tags || []).slice();
     if (!tagsAtuais.includes('Arquivada')) tagsAtuais.push('Arquivada');
-
     ocorrencias[idx] = Object.assign({}, oc, {
       status: 'resolvida',
       tags: tagsAtuais
     });
     save(ocorrencias);
-
-    // Garante que no histórico o item mantenha a tag de Arquivada e status final
     var histIdx = historicoSeedData.findIndex(function(h){ return h && (h.id === id || h.id === ('h_oc_' + id)); });
     if (histIdx !== -1) {
       var histTags = (historicoSeedData[histIdx].tags || []).slice();
@@ -7982,14 +6612,12 @@ document.addEventListener('DOMContentLoaded', function () {
       });
       saveHistorico(historicoSeedData);
     }
-
     renderAll();
     if (typeof mostrarToast === 'function') {
       mostrarToast('Verificação Concluída', '"' + (oc.titulo || 'Ocorrência') + '" foi verificada e arquivada no histórico.', 'success');
     }
   }
   window.concluirVerificacaoArquivado = concluirVerificacaoArquivado;
-
   function restaurarArquivadoParaAbertas(id) {
     var idx = ocorrencias.findIndex(function(o){ return o && o.id === id; });
     if (idx === -1) return;
@@ -8005,12 +6633,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.restaurarArquivadoParaAbertas = restaurarArquivadoParaAbertas;
-
   function renderArquivados() {
     var container = document.getElementById('arquivados-list');
     var badge = document.querySelector('.arquivados-badge');
     var lista = getArquivadas();
-
     if (badge) {
       if (lista.length > 0) {
         badge.textContent = lista.length;
@@ -8019,9 +6645,7 @@ document.addEventListener('DOMContentLoaded', function () {
         badge.style.display = 'none';
       }
     }
-
     if (!container) return;
-
     if (filtroArquivadosAtivo === 'alta') {
       lista = lista.filter(function(o) { return (o.prio || '').toLowerCase() === 'alta'; });
     } else if (filtroArquivadosAtivo === 'media') {
@@ -8029,7 +6653,6 @@ document.addEventListener('DOMContentLoaded', function () {
     } else if (filtroArquivadosAtivo === 'baixa') {
       lista = lista.filter(function(o) { return (o.prio || '').toLowerCase() === 'baixa'; });
     }
-
     if (lista.length === 0) {
       container.innerHTML =
         '<div style="text-align:center;padding:48px 16px;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);">' +
@@ -8040,7 +6663,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (typeof lucide !== 'undefined') lucide.createIcons();
       return;
     }
-
     function renderCardArquivadoHTML(oc) {
       var plClass = prioLine(oc.prio);
       var timeRel = formatDataRelativa(oc.criado || oc.dataCriacao);
@@ -8048,7 +6670,6 @@ document.addEventListener('DOMContentLoaded', function () {
       var localH = oc.local ? '<span class="oc-meta-item"><i data-lucide="map-pin" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + oc.local + '</span>' : '';
       var respH = oc.resp ? '<span class="oc-meta-item"><i data-lucide="user" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + oc.resp + '</span>' : '';
       var resolucaoH = (oc.resolucao && oc.resolucao.descRes) ? ('<p style="font-size:12px;color:var(--green-dk);background:#F0FDF4;padding:6px 10px;border-radius:6px;border:1px solid #BBF7D0;margin-top:6px;"><strong>Resolução:</strong> ' + oc.resolucao.descRes + '</p>') : '';
-
       return (
         '<article class="oc-card" style="background:#FFFFFF;cursor:pointer;margin-bottom:10px;" onclick="verDetalhesHistoricoDirect(\'' + oc.id + '\')">' +
           '<div class="prio-line ' + plClass + '"></div>' +
@@ -8077,19 +6698,16 @@ document.addEventListener('DOMContentLoaded', function () {
         '</article>'
       );
     }
-
     var secoes = agruparPorDias(lista, function(oc){ return oc.criado || oc.dataCriacao; });
     container.innerHTML = renderSecoesComCards(secoes, renderCardArquivadoHTML);
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.renderArquivados = renderArquivados;
-
   function editarOcorrenciaDoModalDetalhes() {
     if (!itemDetalhesAtual) return;
     var targetId = itemDetalhesAtual.id;
     var targetTitulo = itemDetalhesAtual.titulo;
     fecharPopup('popup-detalhes-historico');
-
     var oc = ocorrencias.find(function(o){ return o && (o.id === targetId || o.titulo === targetTitulo); });
     if (oc) {
       abrirEditarOcorrencia(oc.id);
@@ -8098,7 +6716,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.editarOcorrenciaDoModalDetalhes = editarOcorrenciaDoModalDetalhes;
-
   function excluirOcorrenciaDoModalDetalhes() {
     if (!itemDetalhesAtual) return;
     var targetId = itemDetalhesAtual.id;
@@ -8106,7 +6723,6 @@ document.addEventListener('DOMContentLoaded', function () {
     excluirOcorrencia(targetId);
   }
   window.excluirOcorrenciaDoModalDetalhes = excluirOcorrenciaDoModalDetalhes;
-
   function confirmarResolucao() {
     if (!resolverAtualId) {
       fecharPopup('popup-resolver');
@@ -8120,37 +6736,30 @@ document.addEventListener('DOMContentLoaded', function () {
       if (resolverDesc) resolverDesc.focus();
       return;
     }
-
     var idx = ocorrencias.findIndex(function(o){ return o.id === resolverAtualId; });
     if (idx === -1) {
       fecharPopup('popup-resolver');
       return;
     }
-
     var statusEl = document.getElementById('resolver-status');
     var statusEscolhido = statusEl ? statusEl.value : 'Resolvido';
     var oc = ocorrencias[idx];
     var nowStr = formatDataHoraLocal();
     var usuarioLogado = getUsuarioAtual();
-
     var isParcial = (statusEscolhido === 'Parcialmente resolvido');
     var isArquivada = (statusEscolhido === 'Resolvida e Arquivada');
-
     var updatedTags = (oc.tags || []).filter(function(t){ return t !== 'Parcialmente Resolvida' && t !== 'Arquivada'; });
     if (isParcial) {
       updatedTags.push('Parcialmente Resolvida');
     } else if (isArquivada) {
       updatedTags.push('Arquivada');
     }
-
     var novoStatus = 'resolvida';
     if (isParcial) novoStatus = 'aberta';
     else if (isArquivada) novoStatus = 'arquivada';
-
     var anexosNovos = (uploadedFilesStore['resolver-previews'] || []).slice();
     var anexosAntigos = (oc.anexos && Array.isArray(oc.anexos)) ? oc.anexos : ((oc.resolucao && Array.isArray(oc.resolucao.anexos)) ? oc.resolucao.anexos : []);
     var anexosCombinados = anexosAntigos.concat(anexosNovos);
-
     ocorrencias[idx] = Object.assign({}, oc, {
       status: novoStatus,
       tags: updatedTags,
@@ -8165,8 +6774,6 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
     window.ocorrencias = ocorrencias;
-
-    // ADICIONA AUTOMATICAMENTE AO HISTÓRICO GERAL!
     var tagsHist = isArquivada ? ['Arquivada'] : [];
     var novoItemHist = {
       id:            'h_oc_' + Date.now(),
@@ -8192,16 +6799,13 @@ document.addEventListener('DOMContentLoaded', function () {
         ? normalizarPracaOcorrencia(oc.praca, oc.local, oc.titulo, oc.equipamento || (oc.tags && oc.tags[1]))
         : (oc.praca || (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora'))
     };
-
     historicoSeedData = [novoItemHist].concat(historicoSeedData);
     window.historicoSeedData = historicoSeedData;
     saveHistorico(historicoSeedData, novoItemHist);
-
     save(ocorrencias, ocorrencias[idx], false);
     fecharPopup('popup-resolver');
     renderAll();
     resolverAtualId = null;
-
     if (typeof mostrarToast === 'function') {
       if (isParcial) {
         mostrarToast('Parcialmente Resolvida', 'A ocorrência foi registrada no histórico e continua ativa para acompanhamento.', 'warning');
@@ -8213,15 +6817,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.confirmarResolucao = confirmarResolucao;
-
   if (btnConfirmar) {
     btnConfirmar.addEventListener('click', confirmarResolucao);
   }
-
-
-  /* ═══════════════════════════════════════════
-     CONFIGURAÇÕES
-  ═══════════════════════════════════════════ */
 
   function iniciais(nome) {
     var partes = nome.trim().split(/\s+/);
@@ -8229,13 +6827,11 @@ document.addEventListener('DOMContentLoaded', function () {
     if (partes.length > 1) ini += partes[partes.length - 1][0];
     return ini.toUpperCase();
   }
-
   function syncUserPopover() {
     var nomeEl = document.getElementById('cfg-nome');
     var nome = (nomeEl && nomeEl.value.trim()) ? nomeEl.value.trim() : getUsuarioAtual();
     var upName = document.getElementById('up-name');
     if (upName) upName.textContent = nome || 'Operador';
-
     var sAvatar = document.querySelector('.s-avatar');
     var upAvatar = document.getElementById('up-avatar');
     if (upAvatar && sAvatar) {
@@ -8248,24 +6844,19 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
   }
-
   function aplicarFotoPerfil(url) {
     if (!url) return;
     var cfgAvatar = document.getElementById('cfg-avatar');
     if (cfgAvatar) { cfgAvatar.style.backgroundImage = url; cfgAvatar.textContent = ''; }
-
     var sAvatar = document.querySelector('.s-avatar');
     if (sAvatar) { sAvatar.style.backgroundImage = url; sAvatar.textContent = ''; }
-
     var upAvatar = document.getElementById('up-avatar');
     if (upAvatar) { upAvatar.style.backgroundImage = url; upAvatar.textContent = ''; }
   }
-
   function carregarFotoPerfilSalva() {
     var url = DBService.getFotoPerfil();
     if (url) aplicarFotoPerfil(url);
   }
-
   function alterarFotoPerfil(input) {
     var file = input.files && input.files[0];
     if (!file) return;
@@ -8279,7 +6870,6 @@ document.addEventListener('DOMContentLoaded', function () {
     reader.readAsDataURL(file);
   }
   window.alterarFotoPerfil = alterarFotoPerfil;
-
   function removerFotoPerfil() {
     DBService.removeFotoPerfil();
     var nome = getUsuarioAtual();
@@ -8295,7 +6885,6 @@ document.addEventListener('DOMContentLoaded', function () {
     syncUserPopover();
   }
   window.removerFotoPerfil = removerFotoPerfil;
-
   function atualizarNomeOperadorUI(nome, salvarStorage) {
     var nomeExibido = (nome && nome.trim()) ? nome.trim() : 'Operador';
     if (salvarStorage !== false && nomeExibido !== 'Operador') {
@@ -8304,22 +6893,17 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof obterOuCriarOperadorPorNome === 'function' && nomeExibido !== 'Operador') {
       obterOuCriarOperadorPorNome(nomeExibido);
     }
-
     var upName = document.getElementById('up-name');
     if (upName) upName.textContent = nomeExibido;
-
     var sUserName = document.querySelector('.s-user-name');
     if (sUserName) sUserName.textContent = nomeExibido;
-
     var cfgNome = document.getElementById('cfg-nome');
     if (cfgNome && cfgNome.value !== nomeExibido) cfgNome.value = nomeExibido;
-
     var optUser = document.getElementById('opt-user-name');
     if (optUser) {
       optUser.value = nomeExibido;
       optUser.textContent = nomeExibido + ' (Você)';
     }
-
     var sAvatar = document.querySelector('.s-avatar');
     var cfgAvatar = document.getElementById('cfg-avatar');
     var upAvatar = document.getElementById('up-avatar');
@@ -8334,7 +6918,6 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.atualizarNomeUsuario = atualizarNomeOperadorUI;
   window.atualizarNomeOperadorUI = atualizarNomeOperadorUI;
-
   async function hashSenhaSHA256(texto) {
     if (!window.crypto || !window.crypto.subtle) {
       return btoa(unescape(encodeURIComponent(texto)));
@@ -8346,7 +6929,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }).join('');
   }
   window.hashSenhaSHA256 = hashSenhaSHA256;
-
   function aplicarPerfilOperadorAutenticado(op) {
     if (!op) return;
     var nome  = (op.nome || 'Operador').trim();
@@ -8354,25 +6936,21 @@ document.addEventListener('DOMContentLoaded', function () {
     var cargo = (op.cargo || 'Técnico de Operações').trim();
     var tag   = (op.tag_perfil || 'Tecnico').trim();
     var praca = (op.praca && op.praca.indexOf('Uber') !== -1) ? 'Uberlândia' : 'Juiz de Fora';
-
     try {
       localStorage.setItem(USER_NAME_STORAGE_KEY, nome);
       localStorage.setItem('tv_user_email_v1', email);
       localStorage.setItem('tv_user_tag_v1', tag);
       localStorage.setItem('tv_user_cargo_v1', cargo);
     } catch (e) {}
-
     if (typeof setPracaAtual === 'function') {
       setPracaAtual(praca);
     }
     atualizarNomeOperadorUI(nome, true);
-
     var labelCargo = cargo + ' [' + tag + ']';
     var upEmail = document.getElementById('up-email');
     if (upEmail && email) upEmail.textContent = email;
     var cfgEmail = document.getElementById('cfg-email');
     if (cfgEmail && email) cfgEmail.value = email;
-
     var upRole = document.getElementById('up-role');
     if (upRole) upRole.textContent = labelCargo;
     var sRole = document.querySelector('.s-user-role');
@@ -8381,7 +6959,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (cfgCargo) cfgCargo.value = labelCargo;
   }
   window.aplicarPerfilOperadorAutenticado = aplicarPerfilOperadorAutenticado;
-
   function resetarFluxoEmailIdentificacao() {
     window._operadorLoginPendente = null;
     var emailInput = document.getElementById('ident-operador-email');
@@ -8390,7 +6967,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var boxDigitar = document.getElementById('ident-box-digitar-senha');
     var msgEl      = document.getElementById('ident-chave-msg');
     var btn        = document.getElementById('btn-confirmar-identificacao');
-
     if (emailInput) {
       emailInput.disabled = false;
       emailInput.style.background = 'var(--surface)';
@@ -8406,7 +6982,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.resetarFluxoEmailIdentificacao = resetarFluxoEmailIdentificacao;
-
   function alternarModoLoginManual() {
     var wrapEmail  = document.getElementById('ident-step-email-wrap');
     var wrapManual = document.getElementById('ident-step-manual-wrap');
@@ -8414,12 +6989,10 @@ document.addEventListener('DOMContentLoaded', function () {
     var msgEl      = document.getElementById('ident-chave-msg');
     var btn        = document.getElementById('btn-confirmar-identificacao');
     if (!wrapEmail || !wrapManual) return;
-
     var indoParaManual = (wrapManual.style.display === 'none');
     wrapEmail.style.display  = indoParaManual ? 'none' : 'flex';
     wrapManual.style.display = indoParaManual ? 'flex' : 'none';
     if (msgEl) msgEl.style.display = 'none';
-
     if (indoParaManual) {
       if (linkEl) linkEl.textContent = 'Voltar para Login por E-mail Corporativo';
       if (btn) btn.textContent = 'Salvar e Continuar';
@@ -8431,7 +7004,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.alternarModoLoginManual = alternarModoLoginManual;
-
   function exibirMsgLogin(msgEl, texto, tipo) {
     if (!msgEl) return;
     msgEl.style.display = 'block';
@@ -8450,7 +7022,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     msgEl.innerHTML = texto;
   }
-
   async function garantirConexaoBancoParaLogin() {
     var jaConectado = (typeof isEstacaoConectadaTV === 'function') && isEstacaoConectadaTV();
     if (jaConectado) {
@@ -8469,14 +7040,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return { ok: false };
   }
-
   async function confirmarIdentificacaoOperador(entrarModoLocal) {
     var wrapManual = document.getElementById('ident-step-manual-wrap');
     var modoManualAtivo = wrapManual && wrapManual.style.display !== 'none';
     var msgEl = document.getElementById('ident-chave-msg');
     var btn   = document.getElementById('btn-confirmar-identificacao');
-
-    // Se escolheu trabalhar Offline
     if (entrarModoLocal) {
       var nomeOff = (document.getElementById('ident-operador-nome') && document.getElementById('ident-operador-nome').value.trim())
         || (document.getElementById('ident-operador-email') && document.getElementById('ident-operador-email').value.split('@')[0])
@@ -8495,31 +7063,22 @@ document.addEventListener('DOMContentLoaded', function () {
       abrirPopup('popup-entrada');
       return;
     }
-
-    // ══════════════════════════════════════════════════════════════════
-    // FLUXO 1: LOGIN POR E-MAIL CORPORATIVO + SENHA (POSTGRESQL / SUPABASE)
-    // ══════════════════════════════════════════════════════════════════
     if (!modoManualAtivo) {
       var emailInput = document.getElementById('ident-operador-email');
       var email = (emailInput ? emailInput.value : '').trim().toLowerCase();
-
       if (!email || email.indexOf('@') === -1) {
         exibirMsgLogin(msgEl, 'Por favor, digite seu <strong>e-mail corporativo</strong> válido.', 'erro');
         if (emailInput) emailInput.focus();
         return;
       }
-
       var con = await garantirConexaoBancoParaLogin();
       if (!con.ok) {
         exibirMsgLogin(msgEl, 'Não foi possível conectar ao banco. Use a opção de Chave da Estação abaixo.', 'erro');
         return;
       }
-
-      // ETAPA 1: Ainda não buscou o operador no banco para este e-mail
       if (!window._operadorLoginPendente || (window._operadorLoginPendente.email || '').toLowerCase() !== email) {
         if (btn) { btn.disabled = true; btn.textContent = 'Verificando e-mail...'; }
         exibirMsgLogin(msgEl, 'Consultando seu cadastro no banco PostgreSQL...', 'info');
-
         try {
           var resOp = await fetch(con.url + '/rest/v1/operadores?email=ilike.' + encodeURIComponent(email) + '&select=*&limit=1', {
             headers: {
@@ -8528,13 +7087,11 @@ document.addEventListener('DOMContentLoaded', function () {
               'Cache-Control': 'no-cache'
             }
           });
-
           if (!resOp.ok) {
             exibirMsgLogin(msgEl, 'Erro ao consultar tabela <code>operadores</code>. Verifique se o SQL foi executado no Supabase.', 'erro');
             if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
             return;
           }
-
           var listaOp = await resOp.json();
           if (!Array.isArray(listaOp) || listaOp.length === 0) {
             exibirMsgLogin(
@@ -8545,20 +7102,17 @@ document.addEventListener('DOMContentLoaded', function () {
             if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
             return;
           }
-
           var op = listaOp[0];
           if (op.ativo === false) {
             exibirMsgLogin(msgEl, '❌ Este perfil de operador encontra-se desativado no sistema.', 'erro');
             if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
             return;
           }
-
           window._operadorLoginPendente = op;
           if (emailInput) {
             emailInput.disabled = true;
             emailInput.style.background = '#F1F5F9';
           }
-
           var cardEl    = document.getElementById('ident-operador-card');
           var cardNome  = document.getElementById('ident-card-nome');
           var cardTag   = document.getElementById('ident-card-tag');
@@ -8567,10 +7121,7 @@ document.addEventListener('DOMContentLoaded', function () {
           if (cardTag)   cardTag.textContent   = op.tag_perfil || 'Tecnico';
           if (cardPraca) cardPraca.textContent = 'Praça: ' + (op.praca || 'Juiz de Fora') + ' · ' + (op.cargo || 'Operações');
           if (cardEl)    cardEl.style.display  = 'block';
-
           if (msgEl) msgEl.style.display = 'none';
-
-          // Verifica se é PRIMEIRO ACESSO (senha_hash nulo ou vazio)
           if (!op.senha_hash || String(op.senha_hash).trim() === '') {
             var boxCriar = document.getElementById('ident-box-criar-senha');
             var boxDig   = document.getElementById('ident-box-digitar-senha');
@@ -8597,15 +7148,11 @@ document.addEventListener('DOMContentLoaded', function () {
           return;
         }
       }
-
-      // ETAPA 2: Operador já foi identificado; agora cria a senha (1º acesso) ou valida a senha existente
       var opAtivo = window._operadorLoginPendente;
       var primeiroAcesso = !opAtivo.senha_hash || String(opAtivo.senha_hash).trim() === '';
-
       if (primeiroAcesso) {
         var sNova = (document.getElementById('ident-senha-nova') ? document.getElementById('ident-senha-nova').value : '').trim();
         var sConf = (document.getElementById('ident-senha-confirma') ? document.getElementById('ident-senha-confirma').value : '').trim();
-
         if (sNova.length < 4) {
           exibirMsgLogin(msgEl, 'A senha deve ter pelo menos <strong>4 caracteres</strong>.', 'erro');
           return;
@@ -8614,10 +7161,8 @@ document.addEventListener('DOMContentLoaded', function () {
           exibirMsgLogin(msgEl, 'As duas senhas digitadas <strong>não conferem</strong>. Digite novamente.', 'erro');
           return;
         }
-
         if (btn) { btn.disabled = true; btn.textContent = 'Salvando senha...'; }
         var novoHash = await hashSenhaSHA256(sNova);
-
         try {
           var resPatch = await fetch(con.url + '/rest/v1/operadores?id=eq.' + encodeURIComponent(opAtivo.id), {
             method: 'PATCH',
@@ -8631,7 +7176,6 @@ document.addEventListener('DOMContentLoaded', function () {
               atualizado_em: new Date().toISOString()
             })
           });
-
           if (!resPatch.ok) {
             exibirMsgLogin(msgEl, 'Não foi possível salvar a senha no banco. Verifique se a coluna <code>senha_hash</code> foi criada.', 'erro');
             if (btn) { btn.disabled = false; btn.textContent = 'Salvar Senha e Entrar'; }
@@ -8657,8 +7201,6 @@ document.addEventListener('DOMContentLoaded', function () {
           return;
         }
       }
-
-      // Login aprovado! Ativa a conexão da estação e aplica perfil completo do banco
       localStorage.setItem('tv_supabase_url', con.url);
       localStorage.setItem('tv_supabase_key', con.key);
       if (typeof DBService !== 'undefined' && DBService) {
@@ -8667,28 +7209,20 @@ document.addEventListener('DOMContentLoaded', function () {
         DBService.mode = 'supabase';
       }
       if (typeof updateCloudStatus === 'function') updateCloudStatus(true);
-
       aplicarPerfilOperadorAutenticado(opAtivo);
       window._operadorLoginPendente = null;
-
       if (typeof DBService !== 'undefined' && typeof DBService.syncRemote === 'function') {
         await DBService.syncRemote(true);
       }
       if (typeof renderAll === 'function') renderAll(true);
-
       fecharPopup('popup-identificacao-operador');
       abrirPopup('popup-entrada');
-
       if (typeof mostrarToast === 'function') {
         mostrarToast('Acesso Autorizado', 'Bem-vindo(a), ' + opAtivo.nome + ' (' + (opAtivo.tag_perfil || 'Tecnico') + ')!', 'success');
       }
       if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
       return;
     }
-
-    // ══════════════════════════════════════════════════════════════════
-    // FLUXO 2: MODO MANUAL POR NOME + CHAVE DA ESTAÇÃO (FALLBACK)
-    // ══════════════════════════════════════════════════════════════════
     var input = document.getElementById('ident-operador-nome');
     var chaveInput = document.getElementById('ident-chave-acesso');
     var nome = input ? input.value.trim() : '';
@@ -8697,16 +7231,13 @@ document.addEventListener('DOMContentLoaded', function () {
       if (input) input.focus();
       return;
     }
-
     var pracaEl = document.getElementById('ident-operador-praca');
     if (pracaEl && pracaEl.value && typeof setPracaAtual === 'function') {
       setPracaAtual(pracaEl.value);
     }
-
     var chave = chaveInput ? chaveInput.value.trim() : '';
     var pack = window.ENCRYPTED_TV_CREDENTIALS || (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS);
     var estacaoJaConectada = typeof isEstacaoConectadaTV === 'function' ? isEstacaoConectadaTV() : false;
-
     if (chave) {
       if (btn) { btn.disabled = true; btn.textContent = 'Validando...'; }
       var res = await conectarComChaveTV(chave);
@@ -8719,27 +7250,23 @@ document.addEventListener('DOMContentLoaded', function () {
       exibirMsgLogin(msgEl, 'Digite a Chave de Acesso da Estação ou clique em "Trabalhar Offline".', 'erro');
       return;
     }
-
     localStorage.setItem(USER_NAME_STORAGE_KEY, nome);
     atualizarNomeOperadorUI(nome);
     if (typeof DBService !== 'undefined' && typeof DBService.syncRemote === 'function') {
       await DBService.syncRemote(true);
     }
     if (typeof renderAll === 'function') renderAll(true);
-
     fecharPopup('popup-identificacao-operador');
     abrirPopup('popup-entrada');
     if (btn) { btn.disabled = false; btn.textContent = 'Salvar e Continuar'; }
   }
   window.confirmarIdentificacaoOperador = confirmarIdentificacaoOperador;
-
   function mutarNotificacoes(mutado) {
     var dot   = document.querySelector('.notif-dot');
     var badge = document.querySelector('.notif-badge');
     if (dot)   dot.style.display   = mutado ? 'none' : '';
     if (badge) badge.style.display = mutado ? 'none' : '';
   }
-  /* ── Gerenciamento de Conexão com o Banco de Dados (Supabase / Modo Local) ── */
   function abrirModalConectarBanco() {
     var input = document.getElementById('conectar-banco-chave');
     var msg = document.getElementById('conectar-banco-msg');
@@ -8765,7 +7292,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.abrirModalConectarBanco = abrirModalConectarBanco;
-
   function toggleMostrarChaveConectarBanco() {
     var keyInput = document.getElementById('conectar-banco-chave');
     var ico = document.getElementById('ico-toggle-conectar-chave');
@@ -8780,13 +7306,11 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.toggleMostrarChaveConectarBanco = toggleMostrarChaveConectarBanco;
-
   async function executarConexaoBanco() {
     var input = document.getElementById('conectar-banco-chave');
     var msg = document.getElementById('conectar-banco-msg');
     var btn = document.getElementById('btn-executar-conectar-banco');
     var chave = input ? input.value.trim() : '';
-
     if (!chave) {
       if (msg) {
         msg.style.display = 'block';
@@ -8796,7 +7320,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (input) input.focus();
       return;
     }
-
     if (btn) {
       btn.disabled = true;
       btn.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-right:6px;vertical-align:middle;"></span> Conectando...';
@@ -8806,7 +7329,6 @@ document.addEventListener('DOMContentLoaded', function () {
       msg.style.color = 'var(--muted)';
       msg.textContent = 'Validando chave e autenticando no banco de dados...';
     }
-
     try {
       var res = await conectarComChaveTV(chave);
       if (!res.ok) {
@@ -8826,13 +7348,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (typeof lucide !== 'undefined') lucide.createIcons();
         return;
       }
-
       fecharPopup('popup-conectar-banco');
       if (typeof updateCloudStatus === 'function') {
         updateCloudStatus(true, 'Nuvem Conectada');
       }
       atualizarUIStatusBancoConfig();
-
       if (typeof sincronizarEquipeNuvem === 'function') {
         sincronizarEquipeNuvem();
       }
@@ -8853,7 +7373,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.executarConexaoBanco = executarConexaoBanco;
-
   function desconectarBancoModoLocal(confirmar) {
     if (confirmar && !confirm('Deseja realmente desconectar e trabalhar offline?\n\nOs novos registros ficarão salvos com segurança neste computador até você reconectar.')) {
       return;
@@ -8878,23 +7397,19 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.desconectarBancoModoLocal = desconectarBancoModoLocal;
-
   function atualizarUIStatusBancoConfig() {
     var dotEl = document.getElementById('cfg-db-status-dot');
     var textEl = document.getElementById('cfg-db-status-text');
     var subEl = document.getElementById('cfg-db-status-sub');
     var actionsEl = document.getElementById('cfg-db-actions');
     if (!dotEl || !textEl || !actionsEl) return;
-
     var conectado = typeof isEstacaoConectadaTV === 'function' ? isEstacaoConectadaTV() : false;
-
     if (conectado) {
       dotEl.style.background = '#10B981';
       dotEl.style.boxShadow = '0 0 8px rgba(16,185,129,0.5)';
       textEl.textContent = 'Sistema Conectado';
       textEl.style.color = 'var(--txt)';
       if (subEl) subEl.textContent = 'Sincronização ativa em tempo real com todos os computadores da TV.';
-
       actionsEl.innerHTML =
         '<button type="button" class="btn btn-primary btn-sm" onclick="if(window.DBService&&DBService.syncRemote)DBService.syncRemote(true);" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;" title="Sincronizar todos os dados com o banco PostgreSQL agora">' +
           '<i data-lucide="refresh-cw" style="width:13px;height:13px;"></i>' +
@@ -8906,30 +7421,23 @@ document.addEventListener('DOMContentLoaded', function () {
       textEl.textContent = 'Modo Offline (Apenas este computador)';
       textEl.style.color = '#DC2626';
       if (subEl) subEl.textContent = 'Operando localmente. Seus registros ficam salvos neste computador até reconectar.';
-
       actionsEl.innerHTML =
         '<button type="button" class="btn btn-primary btn-sm" onclick="abrirModalConectarBanco()" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;" title="Ativar sincronização com a rede da emissora">' +
           '<i data-lucide="cloud" style="width:14px;height:14px;stroke-width:2.2;"></i>' +
           '<span>Ativar Sincronização</span>' +
         '</button>';
     }
-
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.atualizarUIStatusBancoConfig = atualizarUIStatusBancoConfig;
-
-  /* ── Gerenciamento de Credenciais do Supabase na Aba Configurações ── */
   function carregarCredenciaisSupabaseConfig() {
     var urlInput = document.getElementById('cfg-supabase-url');
     var keyInput = document.getElementById('cfg-supabase-key');
     var badgeEl  = document.getElementById('cfg-db-status-badge');
-
     var currentUrl = (DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
     var currentKey = (DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
-
     if (urlInput && !urlInput.value) urlInput.value = currentUrl;
     if (keyInput && !keyInput.value) keyInput.value = currentKey;
-
     if (badgeEl) {
       if (currentUrl && currentKey) {
         badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#10B981;"></span> Conectado ao Supabase';
@@ -8941,7 +7449,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.carregarCredenciaisSupabaseConfig = carregarCredenciaisSupabaseConfig;
-
   function toggleMostrarChaveSupabase() {
     var keyInput = document.getElementById('cfg-supabase-key');
     var ico = document.getElementById('ico-toggle-key');
@@ -8956,26 +7463,22 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.toggleMostrarChaveSupabase = toggleMostrarChaveSupabase;
-
   async function testarConexaoSupabaseConfig(silencioso) {
     var urlInput = document.getElementById('cfg-supabase-url');
     var keyInput = document.getElementById('cfg-supabase-key');
     var url = urlInput ? urlInput.value.trim().replace(/\/+$/, '') : '';
     var key = keyInput ? keyInput.value.trim() : '';
     var badgeEl = document.getElementById('cfg-db-status-badge');
-
     if (!url || !key) {
       if (!silencioso && typeof mostrarToast === 'function') {
         mostrarToast('Campos Vazios', 'Informe a URL e a Chave do Supabase para testar.', 'warning');
       }
       return { ok: false, status: 0, message: 'Campos vazios' };
     }
-
     if (badgeEl) {
       badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#F59E0B;"></span> Testando conexão...';
       badgeEl.style.color = '#D97706';
     }
-
     try {
       var res = await fetch(url + '/rest/v1/ocorrencias?select=id&limit=1', {
         headers: {
@@ -8984,7 +7487,6 @@ document.addEventListener('DOMContentLoaded', function () {
           'Cache-Control': 'no-cache'
         }
       });
-
       if (res.ok) {
         if (badgeEl) {
           badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#10B981;"></span> Conexão bem-sucedida!';
@@ -8995,7 +7497,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         return { ok: true, status: res.status };
       }
-
       var erroTexto = '';
       try {
         var errBody = await res.json();
@@ -9003,7 +7504,6 @@ document.addEventListener('DOMContentLoaded', function () {
       } catch(e) {
         try { erroTexto = await res.text(); } catch(e2) {}
       }
-
       if (res.status === 402) {
         var msg402 = 'Projeto Pausado no Supabase (Erro 402). Acesse supabase.com/dashboard e clique em "Restore project" para reativar o banco.';
         if (badgeEl) {
@@ -9042,7 +7542,6 @@ document.addEventListener('DOMContentLoaded', function () {
           }
         } catch(e404) {}
       }
-
       var msgGen = 'Falha na conexão (Status ' + res.status + (erroTexto ? ': ' + erroTexto : '') + ')';
       if (badgeEl) {
         badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#EF4444;"></span> ' + msgGen;
@@ -9065,24 +7564,20 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.testarConexaoSupabaseConfig = testarConexaoSupabaseConfig;
-
   async function salvarCredenciaisSupabaseConfig() {
     var urlInput = document.getElementById('cfg-supabase-url');
     var keyInput = document.getElementById('cfg-supabase-key');
     var url = urlInput ? urlInput.value.trim().replace(/\/+$/, '') : '';
     var key = keyInput ? keyInput.value.trim() : '';
-
     if (!url || !key) {
       if (typeof mostrarToast === 'function') mostrarToast('Atenção', 'Preencha a URL e a Chave do Supabase.', 'warning');
       return;
     }
-
     var badgeEl = document.getElementById('cfg-db-status-badge');
     if (badgeEl) {
       badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#F59E0B;"></span> Verificando conexão antes de salvar...';
       badgeEl.style.color = '#D97706';
     }
-
     var teste = await testarConexaoSupabaseConfig(true);
     if (!teste.ok) {
       if (teste.status === 402) {
@@ -9096,29 +7591,22 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       return;
     }
-
     localStorage.setItem('tv_supabase_url', url);
     localStorage.setItem('tv_supabase_key', key);
-
     DBService.url = url;
     DBService.key = key;
     DBService.mode = 'supabase';
-
     if (badgeEl) {
       badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#10B981;"></span> Conectado e Sincronizando...';
       badgeEl.style.color = '#059669';
     }
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Banco Conectado', 'Credenciais verificadas e ativas! Sincronizando dados com o Supabase...', 'success');
     }
-
-    /* Puxa dados da nuvem imediatamente */
     if (typeof DBService.init === 'function') DBService.init();
     if (typeof DBService.syncRemote === 'function') DBService.syncRemote();
   }
   window.salvarCredenciaisSupabaseConfig = salvarCredenciaisSupabaseConfig;
-
   function salvarConfiguracoes() {
     var btn = event && event.currentTarget;
     var urlEl = document.getElementById('cfg-supabase-url');
@@ -9136,14 +7624,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 1400);
   }
   window.salvarConfiguracoes = salvarConfiguracoes;
-
-  /* ── Gerador de Chave Criptografada Segura para Deploy no GitHub ── */
   function usarCredenciaisPreenchidasParaGerador() {
     var urlEl = document.getElementById('cfg-supabase-url');
     var keyEl = document.getElementById('cfg-supabase-key');
     var url = urlEl ? urlEl.value.trim() : '';
     var key = keyEl ? keyEl.value.trim() : '';
-
     if (!url || !key) {
       if (typeof mostrarToast === 'function') {
         mostrarToast('Atenção', 'Preencha a URL e a Publishable Key no card acima primeiro.', 'warning');
@@ -9152,15 +7637,12 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       return;
     }
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Dados Prontos', 'URL e Chave do Supabase preparadas para a criptografia.', 'info');
     }
   }
   window.usarCredenciaisPreenchidasParaGerador = usarCredenciaisPreenchidasParaGerador;
-
   var ultimoBlocoGerado = null;
-
   async function executarGeradorChaveSegura() {
     var urlEl = document.getElementById('cfg-supabase-url');
     var keyEl = document.getElementById('cfg-supabase-key');
@@ -9168,34 +7650,28 @@ document.addEventListener('DOMContentLoaded', function () {
     var btn = document.getElementById('btn-executar-gerador');
     var outArea = document.getElementById('gen-resultado-area');
     var outPre = document.getElementById('gen-codigo-output');
-
     var url = urlEl ? urlEl.value.trim() : '';
     var key = keyEl ? keyEl.value.trim() : '';
     var pass = passEl ? passEl.value.trim() : '';
-
     if (!url || !key) {
       alert('Por favor, informe a URL do Supabase e a API Key no card de Conexão com o Banco acima.');
       if (urlEl) urlEl.focus();
       return;
     }
-
     if (!pass) {
       alert('Por favor, defina uma Chave de Acesso para a equipe (ex: TvIntegracao@2026).');
       if (passEl) passEl.focus();
       return;
     }
-
     if (pass.length < 6) {
       alert('A chave de acesso deve ter pelo menos 6 caracteres para garantir segurança máxima contra ataques.');
       if (passEl) passEl.focus();
       return;
     }
-
     if (btn) {
       btn.disabled = true;
       btn.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-right:6px;vertical-align:middle;"></span> Criptografando (PBKDF2 250k)...';
     }
-
     try {
       if (!window.TVCrypto) {
         throw new Error('Módulo TVCrypto indisponível.');
@@ -9205,13 +7681,10 @@ document.addEventListener('DOMContentLoaded', function () {
       ultimoBlocoGerado = encPack;
       window.ultimoBlocoGerado = encPack;
       window.ENCRYPTED_TV_CREDENTIALS = encPack;
-
       var snippet = '// Cole no config.js ou no script.js\n' +
         'window.ENCRYPTED_TV_CREDENTIALS = ' + JSON.stringify(encPack, null, 2) + ';';
-
       if (outPre) outPre.textContent = snippet;
       if (outArea) outArea.style.display = 'block';
-
       if (typeof mostrarToast === 'function') {
         mostrarToast('Código Gerado!', 'Bloco criptografado com sucesso. Totalmente seguro para o GitHub!', 'success');
       }
@@ -9226,7 +7699,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.executarGeradorChaveSegura = executarGeradorChaveSegura;
-
   function copiarCodigoCriptografadoGerado() {
     var outPre = document.getElementById('gen-codigo-output');
     if (!outPre || !outPre.textContent) return;
@@ -9241,7 +7713,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   window.copiarCodigoCriptografadoGerado = copiarCodigoCriptografadoGerado;
-
   function aplicarCodigoCriptografadoAgora() {
     if (!ultimoBlocoGerado) {
       alert('Gere o código primeiro clicando no botão acima.');
@@ -9256,43 +7727,32 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.aplicarCodigoCriptografadoAgora = aplicarCodigoCriptografadoAgora;
 
-  /* ═══════════════════════════════════════════
-     HISTÓRICO GERAL (Funções de Renderização e Filtros)
-  ═══════════════════════════════════════════ */
-
   function renderHistorico() {
     var container = document.getElementById('hist-list');
     if (!container) return;
-
     var busca = (document.getElementById('hist-search') ? document.getElementById('hist-search').value : '').toLowerCase().trim();
     var todosItens = getHistoricoCompleto();
-
-    // Atualiza os contadores com todos os itens do histórico integrado
     var cntTodos = todosItens.length;
     var cntOc    = todosItens.filter(function(i){ return i.tipo === 'ocorrencia'; }).length;
     var cntRel   = todosItens.filter(function(i){ return i.tipo === 'relatorio'; }).length;
     var cntRec   = todosItens.filter(function(i){ return i.tipo === 'recebimento'; }).length;
     var cntMeus  = todosItens.filter(function(i){ return isItemDoUsuario(i); }).length;
-
     if (document.getElementById('cnt-hist-todos')) document.getElementById('cnt-hist-todos').textContent = cntTodos;
     if (document.getElementById('cnt-hist-oc'))    document.getElementById('cnt-hist-oc').textContent    = cntOc;
     if (document.getElementById('cnt-hist-rel'))   document.getElementById('cnt-hist-rel').textContent   = cntRel;
     if (document.getElementById('cnt-hist-rec'))   document.getElementById('cnt-hist-rec').textContent   = cntRec;
     if (document.getElementById('cnt-hist-meus'))  document.getElementById('cnt-hist-meus').textContent  = cntMeus;
-
     var filtrados = todosItens.filter(function(item) {
       if (historicoFiltroCategoria === 'ocorrencia' && item.tipo !== 'ocorrencia') return false;
       if (historicoFiltroCategoria === 'relatorio' && item.tipo !== 'relatorio') return false;
       if (historicoFiltroCategoria === 'recebimento' && item.tipo !== 'recebimento') return false;
       if (historicoFiltroCategoria === 'meus' && !isItemDoUsuario(item)) return false;
-
       if (busca) {
         var str = (item.titulo + ' ' + item.equipamento + ' ' + item.criadoPor + ' ' + item.resolvidoPor + ' ' + item.categoria + ' ' + item.local + ' ' + item.descCriacao + ' ' + (item.descResolucao || '')).toLowerCase();
         return str.includes(busca);
       }
       return true;
     });
-
     if (filtrados.length === 0) {
       container.innerHTML =
         '<div style="text-align:center;padding:36px 12px;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);">' +
@@ -9304,7 +7764,6 @@ document.addEventListener('DOMContentLoaded', function () {
       renderHistoricoRelacionados(null);
       return;
     }
-
     function renderCardHistoricoHTML(item) {
       var eMeu = isItemDoUsuario(item);
       var isParcial = (item.status === 'Parcialmente resolvido') ||
@@ -9312,11 +7771,9 @@ document.addEventListener('DOMContentLoaded', function () {
                       (item.subtipo && String(item.subtipo).toLowerCase().includes('parcial')) ||
                       (item.tags && item.tags.indexOf('Parcialmente Resolvida') !== -1) ||
                       (item.descResolucao && String(item.descResolucao).toLowerCase().includes('parcialmente resolvido'));
-
       var isArquivado = (item.status === 'Resolvida e Arquivada') ||
                         (item.status === 'arquivada') ||
                         (item.tags && item.tags.indexOf('Arquivada') !== -1);
-
       var tagMeu = eMeu ? '<span class="tag tag-ind">Seu Registro / Resolução</span>' : '';
       var tagTipo = getTagTipoBadge(item);
       if (isParcial) {
@@ -9326,7 +7783,6 @@ document.addEventListener('DOMContentLoaded', function () {
         tagTipo += ' <span class="tag tag-gray-soft" style="font-weight:600;">Arquivado</span>';
       }
       var isSel = (itemHistoricoSelecionado && itemHistoricoSelecionado.id === item.id);
-
       var cardClasses = 'oc-card';
       if (isParcial) {
         cardClasses += ' parcialmente-resolvida';
@@ -9335,20 +7791,16 @@ document.addEventListener('DOMContentLoaded', function () {
       } else if (eMeu) {
         cardClasses += ' mine';
       }
-
       var plClass = isArquivado ? 'pl-gray' : (isParcial ? 'pl-y' : (item.tipo==='ocorrencia'?'pl-r':item.tipo==='relatorio'?'pl-g':'pl-y'));
-
       var isRelatorioCTRS = (item.tipo === 'relatorio') && (
         item.subtipo === 'CTRS Transmissão' ||
         item.subtipo === 'Relatório Transmissão' ||
         item.categoria === 'Transmissão CTRS' ||
         (item.id && String(item.id).indexOf('h_ctrs_') === 0)
       );
-
       var resolucaoBox = '';
       var textoResRaw = item.descResolucao || (item.resolucao && item.resolucao.descRes) || '';
       var textoRes = String(textoResRaw).replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
-
       if (isRelatorioCTRS) {
         resolucaoBox =
           '<div style="margin-top:8px;padding:7px 11px;background:#EFF6FF;border:1px solid #BFDBFE;border-left:3px solid #0071E3;border-radius:6px;font-size:11.5px;color:#1E3A8A;display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
@@ -9367,7 +7819,6 @@ document.addEventListener('DOMContentLoaded', function () {
             '<span style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + escapeHTML(textoRes) + '</span>' +
           '</div>';
       }
-
       var metaFooterHTML = isRelatorioCTRS
         ? (
             '<span><i data-lucide="user" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Emitido por: ' + escapeHTML(item.criadoPor || 'Operador') + '</span>' +
@@ -9381,7 +7832,6 @@ document.addEventListener('DOMContentLoaded', function () {
             '<span><i data-lucide="check-circle-2" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Resolvido por: ' + escapeHTML(item.resolvidoPor || 'Pendente') + '</span>' +
             '<span><i data-lucide="calendar" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> ' + escapeHTML(item.dataResolucao || item.dataCriacao || '') + '</span>'
           );
-
       return (
         '<article class="' + cardClasses + '" onclick="verDetalhesHistorico(\'' + item.id + '\')" onmouseenter="selecionarItemHistorico(\'' + item.id + '\')" style="cursor:pointer;margin-bottom:10px;' + (isSel ? 'border-color:var(--blue);box-shadow:0 0 0 2px rgba(0,113,227,.15);' : '') + '">' +
           '<div class="prio-line ' + plClass + '"></div>' +
@@ -9396,18 +7846,14 @@ document.addEventListener('DOMContentLoaded', function () {
         '</article>'
       );
     }
-
     var secoes = agruparPorDias(filtrados, function(item){ return item.dataCriacao; });
     container.innerHTML = renderSecoesComCards(secoes, renderCardHistoricoHTML);
-
     if (typeof lucide !== 'undefined') lucide.createIcons();
-
     if (!itemHistoricoSelecionado && filtrados.length > 0) {
       selecionarItemHistorico(filtrados[0].id);
     }
   }
   window.renderHistorico = renderHistorico;
-
   function selecionarItemHistorico(id) {
     var found = getHistoricoCompleto().find(function(h){
       if (!h || !h.id) return false;
@@ -9438,7 +7884,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     if (!found) return;
     itemHistoricoSelecionado = found;
-
     document.querySelectorAll('#hist-list .oc-card').forEach(function(c) {
       c.style.borderColor = '';
       c.style.boxShadow = '';
@@ -9448,15 +7893,11 @@ document.addEventListener('DOMContentLoaded', function () {
       el.style.borderColor = 'var(--blue)';
       el.style.boxShadow = '0 0 0 2px rgba(0,113,227,.15)';
     }
-
     renderHistoricoRelacionados(found);
   }
   window.selecionarItemHistorico = selecionarItemHistorico;
-
   function identificarEquipamentoItem(item) {
     if (!item) return '';
-
-    // 1. Alvos oficiais dos dashboards (Equipamentos e Telejornais)
     var alvosDashboard = [
       'LIVE U 1', 'LIVE U 2', 'LIVE U 3', 'LIVE U 4', 'LIVE U SMART',
       'LIVE U1', 'LIVE U2', 'LIVE U3', 'LIVE U4',
@@ -9464,7 +7905,6 @@ document.addEventListener('DOMContentLoaded', function () {
       'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR', 'KMJ',
       'INTEGRAÇÃO NOTÍCIA', 'MG1', 'MG2', 'GIRO MG2'
     ];
-
     if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics) {
       if (dashboardMetrics.equipamento) {
         Object.keys(dashboardMetrics.equipamento).forEach(function(k){
@@ -9477,8 +7917,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
       }
     }
-
-    // Checa tags
     if (item.tags && Array.isArray(item.tags)) {
       for (var i = 0; i < item.tags.length; i++) {
         var t = (item.tags[i] || '').trim().toUpperCase();
@@ -9489,18 +7927,14 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       }
     }
-
-    // Checa item.equipamento explícito
     if (item.equipamento && typeof item.equipamento === 'string') {
       var eqLimpo = item.equipamento.trim().toUpperCase();
       eqLimpo = eqLimpo.replace(/^(JUIZ DE FORA|UBERLÂNDIA|UBERLANDIA|UBERABA|DIVINÓPOLIS|DIVINOPOLIS|ARAXÁ|ARAXA|CENTRAL TÉCNICA|CENTRAL TECNICA)\s*—\s*/i, '').trim();
-
       for (var a = 0; a < alvosDashboard.length; a++) {
         if (eqLimpo === alvosDashboard[a].toUpperCase() || eqLimpo.replace(/\s+/g, '') === alvosDashboard[a].replace(/\s+/g, '')) {
           return alvosDashboard[a];
         }
       }
-
       var genericList = [
         'EQUIPAMENTO', 'GERAL', 'SISTEMA', 'CENTRAL TÉCNICA', 'CENTRAL TECNICA',
         'TRANSMISSÃO', 'TRANSMISSAO', 'EQUIPAMENTOS DE TRANSMISSÃO / CTRS',
@@ -9510,8 +7944,6 @@ document.addEventListener('DOMContentLoaded', function () {
         return eqLimpo;
       }
     }
-
-    // Checa texto de título para alvos cadastrados
     var textoTitulo = (item.titulo || '').toUpperCase();
     for (var k = 0; k < alvosDashboard.length; k++) {
       var alvo = alvosDashboard[k].toUpperCase();
@@ -9521,38 +7953,27 @@ document.addEventListener('DOMContentLoaded', function () {
         return alvosDashboard[k];
       }
     }
-
-    // Não adivinha nem agrupa itens com títulos ou categorias genéricas
     return '';
   }
   window.identificarEquipamentoItem = identificarEquipamentoItem;
-
   function saoDoMesmoEquipamento(itemA, itemB) {
     if (!itemA || !itemB) return false;
     var eqA = identificarEquipamentoItem(itemA);
     var eqB = identificarEquipamentoItem(itemB);
     if (!eqA || !eqB) return false;
-
     var normA = eqA.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\s_-]+/g, ' ').trim();
     var normB = eqB.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\s_-]+/g, ' ').trim();
-
     normA = normA.replace(/live\s*u\s*(\d)/g, 'live u$1');
     normB = normB.replace(/live\s*u\s*(\d)/g, 'live u$1');
-
     if (normA.length < 2 || normB.length < 2) return false;
-
     var stopwords = ['equipamento', 'geral', 'sistema', 'central tecnica', 'transmissao', 'manutencao', 'relatorio', 'ocorrencia', 'checklist', 'ctrs', 'compras', 'recebimento'];
     if (stopwords.includes(normA) || stopwords.includes(normB)) return false;
-
-    // Regra estrita: apenas itens com o mesmo nome exato de equipamento são vinculados
     return normA === normB;
   }
   window.saoDoMesmoEquipamento = saoDoMesmoEquipamento;
-
   function renderHistoricoRelacionados(itemAtual) {
     var container = document.getElementById('aside-historico-relacionados');
     if (!container) return;
-
     if (!itemAtual) {
       container.innerHTML =
         '<div style="margin-bottom:12px;padding:10px 12px;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-md);box-shadow:0 1px 2px rgba(0,0,0,0.02);">' +
@@ -9577,14 +7998,11 @@ document.addEventListener('DOMContentLoaded', function () {
       if (typeof lucide !== 'undefined') lucide.createIcons();
       return;
     }
-
     var eqNomeIdentificado = identificarEquipamentoItem(itemAtual) || itemAtual.equipamento || itemAtual.titulo || 'Equipamento Geral';
-
     var relacionados = getHistoricoCompleto().filter(function(h) {
       if (!h || h.id === itemAtual.id) return false;
       return saoDoMesmoEquipamento(itemAtual, h);
     });
-
     var html =
       '<div style="margin-bottom:12px;padding:10px 12px;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-md);box-shadow:0 1px 2px rgba(0,0,0,0.02);">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">' +
@@ -9601,7 +8019,6 @@ document.addEventListener('DOMContentLoaded', function () {
           '<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHTML(eqNomeIdentificado) + '</span>' +
         '</div>' +
       '</div>';
-
     if (relacionados.length === 0) {
       html +=
         '<div style="text-align:center;padding:24px 12px;color:var(--muted);font-size:12px;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);">' +
@@ -9614,7 +8031,6 @@ document.addEventListener('DOMContentLoaded', function () {
         var statusTexto = rel.status || (rel.resolucao && rel.resolucao.statusRes) || 'Resolvido';
         var dataFmt = (rel.dataResolucao || rel.dataCriacao || '').substring(0, 10);
         var respFmt = rel.resolvidoPor || rel.criadoPor || 'Sistema';
-
         return (
           '<div class="mini-oc' + (eMeu ? ' mine' : '') + '" onclick="verDetalhesHistorico(\'' + rel.id + '\')" style="margin-bottom:8px;padding:10px 12px;border-radius:var(--r-md);border:1px solid var(--border-lt);background:var(--surface);cursor:pointer;transition:all 0.15s ease;" onmouseover="this.style.borderColor=\'var(--blue)\';this.style.boxShadow=\'0 2px 8px rgba(0,113,227,0.08)\';" onmouseout="this.style.borderColor=\'var(--border-lt)\';this.style.boxShadow=\'none\';">' +
             '<div class="mini-top" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px;">' +
@@ -9629,16 +8045,13 @@ document.addEventListener('DOMContentLoaded', function () {
         );
       }).join('');
     }
-
     container.innerHTML = html;
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
-
   function filtrarHistorico() {
     renderHistorico();
   }
   window.filtrarHistorico = filtrarHistorico;
-
   function filtrarCategoriaHistorico(cat, btn) {
     historicoFiltroCategoria = cat;
     if (btn && btn.closest('.pills')) {
@@ -9648,7 +8061,6 @@ document.addEventListener('DOMContentLoaded', function () {
     renderHistorico();
   }
   window.filtrarCategoriaHistorico = filtrarCategoriaHistorico;
-
   function verDetalhesHistoricoDirect(itemOrId) {
     var item = itemOrId;
     if (typeof itemOrId === 'string') {
@@ -9667,7 +8079,6 @@ document.addEventListener('DOMContentLoaded', function () {
           var anexosLista = (oc.anexos && Array.isArray(oc.anexos) && oc.anexos.length > 0)
             ? oc.anexos
             : ((oc.resolucao && Array.isArray(oc.resolucao.anexos)) ? oc.resolucao.anexos : []);
-
           item = {
             id:            oc.id,
             tipo:          'ocorrencia',
@@ -9691,36 +8102,29 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     if (!item) return;
     itemDetalhesAtual = item;
-
-    // Busca ocorrência vinculada para dados complementares
     var targetOcId = (item.id || '').replace(/^h_oc_/, '');
     var ocFound = ocorrencias.find(function(o){
       if (!o || !o.id) return false;
       return o.id === item.id || o.id === targetOcId || ('h_oc_' + o.id) === item.id;
     });
-
     var descCri = item.descCriacao || item.desc || (ocFound && ocFound.desc) || 'Sem descrição registrada.';
     var autorCri = item.criadoPor || item.resp || (ocFound && (ocFound.resp || ocFound.criadoPor)) || 'Sistema';
     var dataCri = item.dataCriacao || (item.criado ? formatDataHoraLocal(item.criado) : '') || (ocFound && (ocFound.dataCriacao || (ocFound.criado ? formatDataHoraLocal(ocFound.criado) : ''))) || 'Data não informada';
     var equip = item.equipamento || (ocFound && ocFound.local ? (ocFound.local + ' — ' + (ocFound.cat || 'Equipamento')) : '') || (ocFound && (ocFound.cat || ocFound.titulo)) || 'N/A';
     var localidade = item.local || (ocFound && ocFound.local) || 'Central Técnica';
     var categoria = item.categoria || item.subtipo || (ocFound && ocFound.cat) || 'Geral';
-
     var descRes = item.descResolucao || (item.resolucao && item.resolucao.descRes) || (ocFound && ocFound.resolucao && ocFound.resolucao.descRes) || 'Nenhuma observação de fechamento fornecida.';
     var respRes = item.resolvidoPor || (item.resolucao && item.resolucao.resolvidoPor) || (ocFound && ocFound.resolucao && ocFound.resolucao.resolvidoPor) || 'Pendente';
     var dataRes = item.dataResolucao || (item.resolucao && item.resolucao.data ? formatDataHoraLocal(item.resolucao.data) : '') || (ocFound && ocFound.resolucao && ocFound.resolucao.data ? formatDataHoraLocal(ocFound.resolucao.data) : '') || 'Em andamento';
     var statusFinal = item.status || (item.resolucao && item.resolucao.statusRes) || (ocFound && ocFound.resolucao && ocFound.resolucao.statusRes) || 'Concluído';
-
     var modalTitle = document.getElementById('hist-det-title');
     var modalTags  = document.getElementById('hist-det-tags');
     var modalBody  = document.getElementById('hist-det-body');
-
     if (modalTitle) modalTitle.textContent = item.titulo;
     if (modalTags) {
       var tagMeu = isItemDoUsuario(item) ? '<span class="tag tag-ind">Seu Registro / Resolução</span>' : '';
       modalTags.innerHTML = getTagTipoBadge(item) + ' <span class="tag tag-g">' + statusFinal + '</span> ' + tagMeu;
     }
-
     var anexos = (item.anexos && Array.isArray(item.anexos) && item.anexos.length > 0)
       ? item.anexos
       : ((item.resolucao && Array.isArray(item.resolucao.anexos) && item.resolucao.anexos.length > 0)
@@ -9728,7 +8132,6 @@ document.addEventListener('DOMContentLoaded', function () {
           : ((ocFound && ocFound.anexos && Array.isArray(ocFound.anexos) && ocFound.anexos.length > 0)
               ? ocFound.anexos
               : ((ocFound && ocFound.resolucao && Array.isArray(ocFound.resolucao.anexos)) ? ocFound.resolucao.anexos : [])));
-
     var mediaHTML = '';
     if (anexos && Array.isArray(anexos) && anexos.length > 0) {
       mediaHTML =
@@ -9738,24 +8141,20 @@ document.addEventListener('DOMContentLoaded', function () {
             'Fotos e Anexos (' + anexos.length + ')' +
           '</h4>' +
           '<div style="display:flex;flex-direction:column;gap:10px;">';
-
       anexos.forEach(function(anx) {
         if (!anx) return;
         var fName = (anx.name || anx.nome || anx.fileName || '').toLowerCase();
         var fType = (anx.type || '').toLowerCase();
         var mediaSrc = anx.url || anx.dataUrl || (typeof anx === 'string' ? anx : '');
         if (!mediaSrc && anx.caminho) mediaSrc = anx.caminho;
-
-        var isImg = fType.startsWith('image/') || 
-                    mediaSrc.startsWith('data:image/') || 
+        var isImg = fType.startsWith('image/') ||
+                    mediaSrc.startsWith('data:image/') ||
                     fName.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i) ||
                     mediaSrc.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i);
-
-        var isVid = fType.startsWith('video/') || 
-                    mediaSrc.startsWith('data:video/') || 
+        var isVid = fType.startsWith('video/') ||
+                    mediaSrc.startsWith('data:video/') ||
                     fName.match(/\.(mp4|webm|mov|mkv|avi|ogg)$/i) ||
                     mediaSrc.match(/\.(mp4|webm|mov|mkv|avi|ogg)(\?.*)?$/i);
-
         if (isImg && mediaSrc) {
           mediaHTML +=
             '<div style="text-align:center;background:var(--surface);padding:8px;border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
@@ -9779,10 +8178,8 @@ document.addEventListener('DOMContentLoaded', function () {
             '</div>';
         }
       });
-
       mediaHTML += '</div></div>';
     }
-
     var historicoEdicoes = item.historicoEdicoes ||
       (item.resolucao && item.resolucao.historicoEdicoes) ||
       (ocFound && ocFound.historicoEdicoes) ||
@@ -9832,7 +8229,6 @@ document.addEventListener('DOMContentLoaded', function () {
                   '</div>'
                 );
               }).join('');
-
               return (
                 '<div style="background:var(--surface);padding:10px 12px;border-radius:var(--r-md);border:1px solid var(--border-lt);font-size:11.5px;line-height:1.5;">' +
                   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border-lt);">' +
@@ -9848,20 +8244,16 @@ document.addEventListener('DOMContentLoaded', function () {
           '</div>' +
         '</div>';
     }
-
     var rawDescCriOriginal = String(descCri || '');
     var rawDescResOriginal = String(descRes || '');
     descCri = rawDescCriOriginal.replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
     descRes = rawDescResOriginal.replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
-
     var isRelatorioCTRSModal = (item.tipo === 'relatorio') && (
       item.subtipo === 'CTRS Transmissão' ||
       item.subtipo === 'Relatório Transmissão' ||
       item.categoria === 'Transmissão CTRS' ||
       (item.id && String(item.id).indexOf('h_ctrs_') === 0)
     );
-
-    // Verifica se a Ocorrência possui um Relatório CTRS associado (diretamente ou via histórico)
     var fonteCTRS = null;
     if (item.htmlRelatorio || item.dadosCTRS || rawDescCriOriginal.indexOf('<!--CTRS_JSON:') !== -1 || rawDescResOriginal.indexOf('<!--CTRS_JSON:') !== -1) {
       fonteCTRS = item;
@@ -9883,7 +8275,6 @@ document.addEventListener('DOMContentLoaded', function () {
       });
       if (relVinc) fonteCTRS = relVinc;
     }
-
     var btnEditarFooter = document.getElementById('btn-hist-det-editar');
     var btnExcluirFooter = document.getElementById('btn-hist-det-excluir');
     if (btnEditarFooter) {
@@ -9894,7 +8285,6 @@ document.addEventListener('DOMContentLoaded', function () {
         ? '<i data-lucide="trash-2" style="width:13px;height:13px;stroke-width:2;"></i> Excluir Relatório'
         : '<i data-lucide="trash-2" style="width:13px;height:13px;stroke-width:2;"></i> Excluir Ocorrência';
     }
-
     if (modalBody) {
       if (isRelatorioCTRSModal && typeof gerarHTMLPreviewCTRSDados === 'function') {
         var htmlPreviewCTRS = gerarHTMLPreviewCTRSDados(fonteCTRS || item);
@@ -9944,7 +8334,6 @@ document.addEventListener('DOMContentLoaded', function () {
               '</div>';
           }
         }
-
         modalBody.innerHTML =
           '<div class="form-card" style="margin-bottom:12px;background:var(--bg);border:1px solid var(--border-lt);">' +
             '<h4 style="font-size:12.5px;font-weight:700;color:var(--txt);margin-bottom:8px;display:flex;align-items:center;gap:6px;">' +
@@ -9980,21 +8369,17 @@ document.addEventListener('DOMContentLoaded', function () {
           '</div>';
       }
     }
-
     abrirPopup('popup-detalhes-historico');
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.verDetalhesHistoricoDirect = verDetalhesHistoricoDirect;
-
   function verDetalhesHistorico(id) {
     if (!id) return;
     if (typeof selecionarItemHistorico === 'function') selecionarItemHistorico(id);
-
     var item = getHistoricoCompleto().find(function(h){
       if (!h || !h.id) return false;
       return h.id === id || h.id === ('h_oc_' + id) || id === ('h_oc_' + h.id) || (h.id.replace('h_oc_','') === id.replace('h_oc_',''));
     });
-
     if (!item) {
       var oc = ocorrencias.find(function(o){ return o && (o.id === id || o.id === id.replace('h_oc_','')); });
       if (oc) {
@@ -10005,7 +8390,6 @@ document.addEventListener('DOMContentLoaded', function () {
         var anexosLista = (oc.anexos && Array.isArray(oc.anexos) && oc.anexos.length > 0)
           ? oc.anexos
           : ((oc.resolucao && Array.isArray(oc.resolucao.anexos)) ? oc.resolucao.anexos : []);
-
         item = {
           id:            oc.id,
           tipo:          'ocorrencia',
@@ -10026,26 +8410,21 @@ document.addEventListener('DOMContentLoaded', function () {
         };
       }
     }
-
     if (item) {
       verDetalhesHistoricoDirect(item);
     }
   }
   window.verDetalhesHistorico = verDetalhesHistorico;
-
   function verDetalhesOcorrenciaResolvida(id) {
     verDetalhesHistorico(id);
   }
   window.verDetalhesOcorrenciaResolvida = verDetalhesOcorrenciaResolvida;
-
   function verDetalhesOcorrencia(id) {
     var oc = ocorrencias.find(function(o){ return o && o.id === id; });
     if (!oc) return;
-
     var anexosList = (oc.anexos && Array.isArray(oc.anexos) && oc.anexos.length > 0)
       ? oc.anexos
       : ((oc.resolucao && Array.isArray(oc.resolucao.anexos)) ? oc.resolucao.anexos : []);
-
     var item = {
       id:            oc.id,
       tipo:          'ocorrencia',
@@ -10067,11 +8446,9 @@ document.addEventListener('DOMContentLoaded', function () {
       dadosCTRS:     oc.dadosCTRS || null,
       anexos:        anexosList
     };
-
     verDetalhesHistoricoDirect(item);
   }
   window.verDetalhesOcorrencia = verDetalhesOcorrencia;
-
   function copiarPreviewRelatorioHistorico() {
     var container = document.getElementById('hist-ctrs-preview-container');
     if (!container) return;
@@ -10093,7 +8470,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.copiarPreviewRelatorioHistorico = copiarPreviewRelatorioHistorico;
-
   function imprimirPreviewRelatorioHistorico() {
     var container = document.getElementById('hist-ctrs-preview-container');
     if (!container) return;
@@ -10105,18 +8481,11 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.imprimirPreviewRelatorioHistorico = imprimirPreviewRelatorioHistorico;
 
-
-  /* ═══════════════════════════════════════════
-     SISTEMA DE TOAST NOTIFICATIONS & CENTRAL DE ALERTAS
-  ═══════════════════════════════════════════ */
-
   var NOTIF_STORAGE_KEY = 'tv_notificacoes_v2';
   var NOTIF_DISMISSED_KEY = 'tv_notificacoes_dismissed_v2';
   var notificacoesStore = [];
   var notificacoesDispensadas = [];
-
   var INITIAL_NOTIFICACOES_SEED = [];
-
   function getNotifDBCredentials() {
     var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
     var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
@@ -10128,14 +8497,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return { url: url ? url.replace(/\/+$/, '') : '', key: key };
   }
-
   function salvarDispensadas() {
     window.notificacoesDispensadas = notificacoesDispensadas;
     try {
       localStorage.setItem(NOTIF_DISMISSED_KEY, JSON.stringify(notificacoesDispensadas));
     } catch(e) {}
   }
-
   function loadNotificacoes() {
     try {
       var savedDisp = localStorage.getItem(NOTIF_DISMISSED_KEY);
@@ -10144,7 +8511,6 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch(e) {
       notificacoesDispensadas = [];
     }
-
     try {
       var saved = localStorage.getItem(NOTIF_STORAGE_KEY);
       notificacoesStore = saved ? JSON.parse(saved) : [];
@@ -10152,13 +8518,11 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch(e) {
       notificacoesStore = [];
     }
-
     window.notificacoesStore = notificacoesStore;
     window.notificacoesDispensadas = notificacoesDispensadas;
     atualizarBadgesNotificacoes();
     sincronizarNotificacoesNuvem();
   }
-
   function saveNotificacoes() {
     window.notificacoesStore = notificacoesStore;
     try {
@@ -10166,11 +8530,9 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch(e) {}
     atualizarBadgesNotificacoes();
   }
-
   function sincronizarNotificacoesNuvem() {
     var db = getNotifDBCredentials();
     if (!db.url || !db.key) return;
-
     fetch(db.url + '/rest/v1/notificacoes?select=*&order=id.desc&limit=50', {
       headers: {
         'apikey': db.key,
@@ -10193,11 +8555,9 @@ document.addEventListener('DOMContentLoaded', function () {
     .catch(function() {});
   }
   window.sincronizarNotificacoesNuvem = sincronizarNotificacoesNuvem;
-
   function salvarNotificacaoNuvem(notif) {
     var db = getNotifDBCredentials();
     if (!db.url || !db.key || !notif) return;
-
     fetch(db.url + '/rest/v1/notificacoes', {
       method: 'POST',
       headers: {
@@ -10210,7 +8570,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }).catch(function() {});
   }
   window.salvarNotificacaoNuvem = salvarNotificacaoNuvem;
-
   function marcarTodasLidasNuvem() {
     var db = getNotifDBCredentials();
     if (!db.url || !db.key) return;
@@ -10226,7 +8585,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }).catch(function() {});
   }
   window.marcarTodasLidasNuvem = marcarTodasLidasNuvem;
-
   function deletarNotificacaoNuvem(id) {
     var db = getNotifDBCredentials();
     if (!db.url || !db.key || !id) return;
@@ -10240,7 +8598,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }).catch(function() {});
   }
   window.deletarNotificacaoNuvem = deletarNotificacaoNuvem;
-
   function deletarTodasNotificacoesNuvem() {
     var db = getNotifDBCredentials();
     if (!db.url || !db.key) return;
@@ -10254,14 +8611,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }).catch(function() {});
   }
   window.deletarTodasNotificacoesNuvem = deletarTodasNotificacoesNuvem;
-
   function mostrarToast(titulo, mensagem, tipo) {
     var container = document.getElementById('toast-container');
     if (!container) return;
-
     var toastType = tipo || 'info';
     var iconName = toastType === 'success' ? 'check-circle' : (toastType === 'warning' || toastType === 'warn') ? 'alert-triangle' : (toastType === 'danger' || toastType === 'error') ? 'alert-circle' : 'info';
-
     var toastEl = document.createElement('div');
     toastEl.className = 'toast toast-' + toastType;
     toastEl.innerHTML =
@@ -10271,23 +8625,18 @@ document.addEventListener('DOMContentLoaded', function () {
         '<div class="toast-msg">' + (mensagem || '') + '</div>' +
       '</div>' +
       '<button class="toast-close" type="button" aria-label="Fechar notificação">&times;</button>';
-
     function fecharComAnimacao() {
       toastEl.classList.add('toast-exit');
       setTimeout(function() {
         if (toastEl.parentNode) toastEl.remove();
       }, 380);
     }
-
     var closeBtn = toastEl.querySelector('.toast-close');
     if (closeBtn) {
       closeBtn.onclick = fecharComAnimacao;
     }
-
     container.appendChild(toastEl);
     if (typeof lucide !== 'undefined') lucide.createIcons();
-
-    /* Remove automaticamente com física de transição suave em 4.5s */
     setTimeout(function() {
       if (toastEl.parentNode) {
         fecharComAnimacao();
@@ -10295,12 +8644,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 4500);
   }
   window.mostrarToast = mostrarToast;
-
   function adicionarNotificacao(titulo, mensagem, tipo, exibirToast, chaveAutomatica) {
     if (chaveAutomatica && Array.isArray(notificacoesDispensadas) && notificacoesDispensadas.includes(chaveAutomatica)) {
       return;
     }
-
     var novaNotif = {
       id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
       titulo: titulo || 'Notificação do Sistema',
@@ -10311,11 +8658,9 @@ document.addEventListener('DOMContentLoaded', function () {
       chaveAutomatica: chaveAutomatica || null,
       praca: (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora'
     };
-
     var jaExiste = (notificacoesStore || []).some(function(n) {
       return n && ((chaveAutomatica && n.chaveAutomatica === chaveAutomatica) || (n.titulo === titulo && n.msg === mensagem));
     });
-
     if (!jaExiste) {
       notificacoesStore.unshift(novaNotif);
       saveNotificacoes();
@@ -10326,7 +8671,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.adicionarNotificacao = adicionarNotificacao;
-
   function removerNotificacao(id) {
     var notif = (notificacoesStore || []).find(function(n){ return n && n.id === id; });
     if (notif && notif.chaveAutomatica) {
@@ -10341,12 +8685,10 @@ document.addEventListener('DOMContentLoaded', function () {
     renderNotificacoes();
   }
   window.removerNotificacao = removerNotificacao;
-
   function atualizarBadgesNotificacoes() {
     var badgeSidebar = document.querySelector('.notif-badge');
     var notifDot = document.querySelector('.notif-dot');
     var naoLidas = (notificacoesStore || []).filter(function(n){ return n && !n.lida; }).length;
-
     if (badgeSidebar) {
       if (naoLidas > 0) {
         badgeSidebar.textContent = naoLidas;
@@ -10360,10 +8702,8 @@ document.addEventListener('DOMContentLoaded', function () {
       notifDot.style.display = naoLidas > 0 ? 'block' : 'none';
     }
   }
-
   function verificarNotificacoesAutomaticas() {
     var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
-    // 1. Ocorrências com prazo expirado (ignora seeds demonstrativas)
     (ocorrencias || []).forEach(function(oc) {
       if (oc && oc.status === 'aberta' && !String(oc.id).startsWith('oc_init_') && !idsNaLixeira.includes(oc.id) && isOcorrenciaVencida(oc)) {
         var chaveOc = 'vencida_' + oc.id + '_' + (oc.prazo || '');
@@ -10372,8 +8712,6 @@ document.addEventListener('DOMContentLoaded', function () {
         adicionarNotificacao(tit, msg, 'warning', false, chaveOc);
       }
     });
-
-    // 2. Ocorrências arquivadas pendentes para o turno (ignora seeds demonstrativas)
     var arquivadas = getArquivadas().filter(function(oc){ return !String(oc.id).startsWith('oc_init_') && !idsNaLixeira.includes(oc.id); });
     if (arquivadas.length > 0) {
       var chaveArq = 'arq_status_' + arquivadas.map(function(a){ return a.id; }).sort().join('_');
@@ -10383,16 +8721,13 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.verificarNotificacoesAutomaticas = verificarNotificacoesAutomaticas;
-
   function renderNotificacoes() {
     var container = document.getElementById('notif-list-body');
     atualizarBadgesNotificacoes();
     if (!container) return;
-
     var daPraca = (notificacoesStore || []).filter(function(n) {
       return n && (typeof pertenceAPracaAtiva !== 'function' || pertenceAPracaAtiva(n));
     });
-
     if (daPraca.length === 0) {
       container.innerHTML =
         '<div style="text-align:center;padding:32px 16px;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-md);">' +
@@ -10403,18 +8738,15 @@ document.addEventListener('DOMContentLoaded', function () {
       if (typeof lucide !== 'undefined') lucide.createIcons();
       return;
     }
-
     container.innerHTML = daPraca.map(function(n) {
       var isWarning = n.tipo === 'warning' || n.tipo === 'warn';
       var isDanger  = n.tipo === 'danger'  || n.tipo === 'error';
       var isSuccess = n.tipo === 'success' || n.tipo === 'ok';
-
       var bgCor     = isDanger ? '#FEF2F2' : isWarning ? '#FFFBEB' : isSuccess ? '#F0FDF4' : '#EFF6FF';
       var borderCor = isDanger ? '#FECACA' : isWarning ? '#FDE68A' : isSuccess ? '#BBF7D0' : '#BFDBFE';
       var txtCor    = isDanger ? '#DC2626' : isWarning ? '#D97706' : isSuccess ? '#16A34A' : '#2563EB';
       var icoNome   = isDanger ? 'alert-circle' : isWarning ? 'alert-triangle' : isSuccess ? 'check-circle-2' : 'info';
       var unreadBadge = !n.lida ? '<span class="tag tag-blue" style="font-size:9.5px;padding:1px 6px;margin-left:6px;font-weight:600;">Nova</span>' : '';
-
       return (
         '<div style="background:' + bgCor + ';border:1px solid ' + borderCor + ';border-radius:var(--r-md);padding:10px 12px;display:flex;gap:10px;align-items:flex-start;position:relative;">' +
           '<div style="color:' + txtCor + ';margin-top:1px;"><i data-lucide="' + icoNome + '" style="width:16px;height:16px;stroke-width:2.2;"></i></div>' +
@@ -10431,11 +8763,9 @@ document.addEventListener('DOMContentLoaded', function () {
         '</div>'
       );
     }).join('');
-
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.renderNotificacoes = renderNotificacoes;
-
   function abrirNotificacoes() {
     var teveNaoLidas = false;
     (notificacoesStore || []).forEach(function(n){
@@ -10454,9 +8784,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.abrirNotificacoes = abrirNotificacoes;
-
   function limparTodasNotificacoes() {
-    // 1. Marca todas as notificações atuais como dispensadas para que o robô não as recrie
     var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
     (ocorrencias || []).forEach(function(oc) {
       if (oc && oc.status === 'aberta' && !idsNaLixeira.includes(oc.id)) {
@@ -10466,7 +8794,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       }
     });
-
     var arquivadas = getArquivadas().filter(function(oc){ return !idsNaLixeira.includes(oc.id); });
     if (arquivadas.length > 0) {
       var chaveArq = 'arq_status_' + arquivadas.map(function(a){ return a.id; }).sort().join('_');
@@ -10474,14 +8801,12 @@ document.addEventListener('DOMContentLoaded', function () {
         notificacoesDispensadas.push(chaveArq);
       }
     }
-
     (notificacoesStore || []).forEach(function(n) {
       if (n && n.chaveAutomatica && !notificacoesDispensadas.includes(n.chaveAutomatica)) {
         notificacoesDispensadas.push(n.chaveAutomatica);
       }
     });
     salvarDispensadas();
-
     notificacoesStore = [];
     saveNotificacoes();
     deletarTodasNotificacoesNuvem();
@@ -10492,17 +8817,11 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.limparTodasNotificacoes = limparTodasNotificacoes;
 
-
-  /* ═══════════════════════════════════════════
-     SISTEMA DE EXPORTAÇÃO E CONSOLIDAÇÃO POWER BI
-  ═══════════════════════════════════════════ */
-
   function atualizarResumoPowerBI() {
     var select = document.getElementById('pbi-periodo');
     var titleEl = document.getElementById('pbi-preview-title');
     var statsEl = document.getElementById('pbi-preview-stats');
     if (!select || !titleEl || !statsEl) return;
-
     var val = select.value;
     var periodosTextos = {
       semana: 'Última Semana (7 dias)',
@@ -10510,20 +8829,16 @@ document.addEventListener('DOMContentLoaded', function () {
       semestre: 'Últimos 6 Meses',
       ano: 'Último 1 Ano'
     };
-
     var periodosStats = {
       semana:   { total: 98,  conf: 97,  nc: 1,  canc: 0 },
       mes:      { total: 419, conf: 418, nc: 1,  canc: 0 },
       semestre: { total: 2480,conf: 2470,nc: 8,  canc: 2 },
       ano:      { total: 4960,conf: 4940,nc: 15, canc: 5 }
     };
-
     var text = periodosTextos[val] || 'Período Selecionado';
     var st = periodosStats[val] || periodosStats.mes;
-
     var pctConf = ((st.conf / st.total) * 100).toFixed(1);
     var pctNc = ((st.nc / st.total) * 100).toFixed(1);
-
     titleEl.textContent = 'Consolidado: ' + text;
     statsEl.innerHTML =
       'Total Transmissões: <strong>' + st.total + '</strong> | ' +
@@ -10531,45 +8846,33 @@ document.addEventListener('DOMContentLoaded', function () {
       'Não Conformes: <strong style="color:var(--red);">' + st.nc + ' (' + pctNc + '%)</strong>';
   }
   window.atualizarResumoPowerBI = atualizarResumoPowerBI;
-
   function exportarRelatorioPowerBI() {
     var select = document.getElementById('pbi-periodo');
     var val = select ? select.value : 'mes';
     fecharPopup('popup-gerar-powerbi');
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Relatório Power BI Gerado', 'Métricas do período salvas e prontas para integração com o Power BI / Excel.', 'success');
     }
     alert('Relatório Power BI compilado com sucesso!\n\nPeríodo exportado com todas as telemetrias e históricos de transmissões.');
   }
   window.exportarRelatorioPowerBI = exportarRelatorioPowerBI;
-
-  /* ═══════════════════════════════════════════
-     MÉTRICAS E REGISTRO DE OCORRÊNCIAS DE DASHBOARD
-  ═══════════════════════════════════════════ */
-
   function abrirModalOcDashboard(tipo) {
     var tipoEl = document.getElementById('oc-dash-tipo-painel');
     var selectAlvo = document.getElementById('oc-dash-alvo');
     if (!selectAlvo || !tipoEl || !dashboardMetrics) return;
-
     tipoEl.value = tipo;
     var items = dashboardMetrics[tipo];
     if (!items) return;
     var list = (tipo === 'equipamento' && typeof obterListaNomesEquipamentosOrdenados === 'function')
       ? obterListaNomesEquipamentosOrdenados()
       : Object.keys(items);
-
     selectAlvo.innerHTML = list.map(function(item) {
       return '<option value="' + item + '">' + item + '</option>';
     }).join('');
-
     abrirPopup('popup-nova-oc-dashboard');
   }
   window.abrirModalOcDashboard = abrirModalOcDashboard;
-
   var dashAtivoAtual = 'telejornal';
-
   function alternarDashboard(tipo) {
     dashAtivoAtual = (tipo === 'equipamento' || tipo === 'equipamentos') ? 'equipamento' : 'telejornal';
     var viewTj = document.getElementById('dash-view-telejornal');
@@ -10577,7 +8880,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var btnTj = document.getElementById('btn-tab-tj');
     var btnEq = document.getElementById('btn-tab-eq');
     var titleEl = document.getElementById('dash-view-title');
-
     if (dashAtivoAtual === 'telejornal') {
       if (viewTj) {
         viewTj.style.display = 'block';
@@ -10586,7 +8888,6 @@ document.addEventListener('DOMContentLoaded', function () {
         viewTj.classList.add('dash-view-animated');
       }
       if (viewEq) viewEq.style.display = 'none';
-
       if (btnTj) {
         btnTj.style.background = '#007AFF';
         btnTj.style.color = '#ffffff';
@@ -10608,7 +8909,6 @@ document.addEventListener('DOMContentLoaded', function () {
         void viewEq.offsetWidth;
         viewEq.classList.add('dash-view-animated');
       }
-
       if (btnTj) {
         btnTj.style.background = 'transparent';
         btnTj.style.color = 'var(--muted)';
@@ -10623,24 +8923,19 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       if (titleEl) titleEl.textContent = 'Equipamentos';
     }
-
     renderDashboards();
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.alternarDashboard = alternarDashboard;
-
   function abrirModalOcDashboardContextual() {
     abrirModalOcDashboard(dashAtivoAtual);
   }
   window.abrirModalOcDashboardContextual = abrirModalOcDashboardContextual;
-
   var itemTransmissaoDetalhesAtual = { nome: '', tipo: '' };
-
   function abrirDetalhesTransmissao(nome, tipo) {
     if (!nome) return;
     tipo = (tipo === 'equipamento' || tipo === 'equipamentos') ? 'equipamento' : 'telejornal';
     itemTransmissaoDetalhesAtual = { nome: nome, tipo: tipo };
-
     var metricObj = (dashboardMetrics && dashboardMetrics[tipo]) ? dashboardMetrics[tipo][nome] : null;
     var conf = metricObj ? metricObj.conf : 100;
     var nc = metricObj ? metricObj.nc : 0;
@@ -10649,7 +8944,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var pctConf = total > 0 ? ((conf / total) * 100).toFixed(1) : '100.0';
     var pctNc = total > 0 ? ((nc / total) * 100).toFixed(1) : '0.0';
     var pctCanc = total > 0 ? ((canc / total) * 100).toFixed(1) : '0.0';
-
     var nomeEl = document.getElementById('det-trans-nome');
     var catEl = document.getElementById('det-trans-categoria');
     var icoEl = document.getElementById('det-trans-ico');
@@ -10663,23 +8957,19 @@ document.addEventListener('DOMContentLoaded', function () {
     var ultimoEl = document.getElementById('det-trans-ultimo');
     var badgeEl = document.getElementById('det-trans-status-badge');
     var histListaEl = document.getElementById('det-trans-historico-lista');
-
     if (nomeEl) nomeEl.textContent = nome;
     if (catEl) catEl.textContent = (tipo === 'telejornal' ? 'Telejornal / Programa' : 'Equipamento de Transmissão') + ' · Telemetria & Status Operacional';
     if (icoEl) icoEl.setAttribute('data-lucide', tipo === 'telejornal' ? 'tv' : 'video');
-
     if (confEl) confEl.textContent = conf + ' (' + pctConf + '%)';
     if (ncEl) ncEl.textContent = nc + ' (' + pctNc + '%)';
     if (cancEl) cancEl.textContent = canc + ' (' + pctCanc + '%)';
     if (totalEl) totalEl.textContent = total + ' transmissões';
     if (slaEl) slaEl.textContent = pctConf + '% (Disponibilidade)';
-
     var pracaAtual = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var isEquip = (tipo === 'equipamento');
     if (localEl) localEl.textContent = isEquip ? 'Unidade Móvel / Jornalismo Externo (' + pracaAtual + ')' : 'Estúdio Principal · ' + pracaAtual + ' (MG)';
     if (linkEl) linkEl.textContent = isEquip ? 'Link Celular 4K / Bonding LiveU (4x SIM 5G)' : 'Rede SDI / IP Fibra Óptica + Satélite';
     if (ultimoEl) ultimoEl.textContent = nc > 0 ? 'Última transmissão com alerta (' + nc + ' falha registrada)' : 'Última transmissão 100% Conforme (OK)';
-
     if (badgeEl) {
       if (nc > 0) {
         badgeEl.className = 'tag tag-y';
@@ -10689,7 +8979,6 @@ document.addEventListener('DOMContentLoaded', function () {
         badgeEl.textContent = '● Operacional / Excelente';
       }
     }
-
     if (histListaEl) {
       var nomeUp = String(nome || '').toUpperCase().trim();
       var histOcs = (typeof ocorrencias !== 'undefined' ? ocorrencias : []).filter(function(o) {
@@ -10700,7 +8989,6 @@ document.addEventListener('DOMContentLoaded', function () {
         var descLimpa = String(o.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '');
         return (o.titulo && String(o.titulo).toUpperCase().indexOf(nomeUp) !== -1) || (descLimpa.toUpperCase().indexOf(nomeUp) !== -1);
       });
-
       var histRels = (typeof historicoSeedData !== 'undefined' && Array.isArray(historicoSeedData) ? historicoSeedData : []).filter(function(h) {
         if (!h || h.tipo !== 'relatorio') return false;
         var isCTRS = (
@@ -10726,7 +9014,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         return false;
       });
-
       if (histOcs.length === 0 && histRels.length === 0) {
         histListaEl.innerHTML =
           '<div style="background:#FFFFFF;border:1px solid var(--border-lt);border-radius:var(--r-sm);padding:8px 10px;font-size:11.5px;color:var(--muted);">' +
@@ -10749,7 +9036,6 @@ document.addEventListener('DOMContentLoaded', function () {
               (descLimpa ? '<div style="font-size:11px;color:var(--txt2);">' + escapeHTML(descLimpa) + '</div>' : '') +
             '</div>';
         });
-
         histRels.forEach(function(r) {
           var descRelLimpa = String(r.descCriacao || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
           var isNC = r.status && String(r.status).toLowerCase().indexOf('não conform') !== -1;
@@ -10765,20 +9051,16 @@ document.addEventListener('DOMContentLoaded', function () {
               (descRelLimpa ? '<div style="font-size:11px;color:var(--txt2);">' + escapeHTML(descRelLimpa) + '</div>' : '') +
             '</div>';
         });
-
         histListaEl.innerHTML = htmlItens;
       }
     }
-
     if (typeof lucide !== 'undefined') lucide.createIcons();
     abrirPopup('popup-detalhes-transmissao');
   }
   window.abrirDetalhesTransmissao = abrirDetalhesTransmissao;
-
   function abrirModalOcItemDireto() {
     fecharPopup('popup-detalhes-transmissao');
     if (!itemTransmissaoDetalhesAtual.nome) return;
-
     var tipoEl = document.getElementById('oc-dash-tipo-painel');
     var selectAlvo = document.getElementById('oc-dash-alvo');
     if (tipoEl && selectAlvo && dashboardMetrics) {
@@ -10796,16 +9078,13 @@ document.addEventListener('DOMContentLoaded', function () {
     abrirPopup('popup-nova-oc-dashboard');
   }
   window.abrirModalOcItemDireto = abrirModalOcItemDireto;
-
   function getDashboardMetricsKey() {
     var praca = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     return (praca.indexOf('Uber') !== -1) ? 'tv_dashboard_metrics_v2_udi' : 'tv_dashboard_metrics_v2_jf';
   }
-
   function salvarDashboardMetricsStore() {
     try {
       localStorage.setItem(getDashboardMetricsKey(), JSON.stringify(dashboardMetrics));
-      // Sincroniza contadores de transmissões dos equipamentos direto na tabela equipamentos do PostgreSQL
       if (typeof catalogoEquipamentos !== 'undefined' && Array.isArray(catalogoEquipamentos) && dashboardMetrics && dashboardMetrics.equipamento) {
         var pracaAt = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
         catalogoEquipamentos.forEach(function(eq) {
@@ -10827,7 +9106,6 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     } catch (e) {}
   }
-
   function carregarDashboardMetricsStore() {
     try {
       var praca = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
@@ -10840,9 +9118,7 @@ document.addEventListener('DOMContentLoaded', function () {
           return;
         }
       }
-      // Se não houver cache para esta praça:
       if (praca.indexOf('Uber') !== -1) {
-        // Uberlândia: telejornais iguais ao padrão, equipamentos limpos
         dashboardMetrics = {
           telejornal: {
             'INTEGRAÇÃO NOTÍCIA': { conf: 0, nc: 0, canc: 0 },
@@ -10853,7 +9129,6 @@ document.addEventListener('DOMContentLoaded', function () {
           equipamento: {}
         };
       } else {
-        // Juiz de Fora: 13 equipamentos padrão
         dashboardMetrics = {
           telejornal: {
             'INTEGRAÇÃO NOTÍCIA': { conf: 0, nc: 0, canc: 0 },
@@ -10881,7 +9156,6 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch (e) {}
   }
   window.carregarDashboardMetricsStore = carregarDashboardMetricsStore;
-
   function abrirModalNovoEquipamento() {
     var nomeEl = document.getElementById('novo-eq-nome');
     var obsEl  = document.getElementById('novo-eq-obs');
@@ -10890,7 +9164,6 @@ document.addEventListener('DOMContentLoaded', function () {
     abrirPopup('popup-novo-equipamento');
   }
   window.abrirModalNovoEquipamento = abrirModalNovoEquipamento;
-
   function salvarNovoEquipamentoDashboard() {
     var nomeEl = document.getElementById('novo-eq-nome');
     var tipoEl = document.getElementById('novo-eq-tipo');
@@ -10901,16 +9174,13 @@ document.addEventListener('DOMContentLoaded', function () {
       if (nomeEl) nomeEl.focus();
       return;
     }
-
     var praca = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     if (!dashboardMetrics) dashboardMetrics = {};
     if (!dashboardMetrics.equipamento) dashboardMetrics.equipamento = {};
-
     if (dashboardMetrics.equipamento[nome]) {
       alert('Já existe um equipamento cadastrado com o nome "' + nome + '" nesta praça.');
       return;
     }
-
     dashboardMetrics.equipamento[nome] = {
       conf: 0,
       nc: 0,
@@ -10920,12 +9190,10 @@ document.addEventListener('DOMContentLoaded', function () {
     };
     window._ultimoEqAdicionado = nome;
     salvarDashboardMetricsStore();
-
     fecharPopup('popup-novo-equipamento');
     if (typeof mostrarToast === 'function') {
       mostrarToast('Equipamento Cadastrado', nome + ' adicionado com sucesso ao dashboard de ' + praca + '.', 'success');
     }
-
     renderDashboards();
     try {
       if (typeof window.atualizarSelectsEquipamentosCTRS === 'function') {
@@ -10935,18 +9203,15 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.salvarNovoEquipamentoDashboard = salvarNovoEquipamentoDashboard;
-
   function salvarOcDashboard() {
     var tipoPainel = document.getElementById('oc-dash-tipo-painel').value;
     var alvo = document.getElementById('oc-dash-alvo').value;
     var status = document.getElementById('oc-dash-status').value;
     var obs = document.getElementById('oc-dash-obs').value.trim();
-
     if (!obs) {
       alert('Por favor, informe a observação do registro.');
       return;
     }
-
     if (dashboardMetrics && dashboardMetrics[tipoPainel]) {
       var metricObj = dashboardMetrics[tipoPainel][alvo];
       if (metricObj) {
@@ -10956,8 +9221,6 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       salvarDashboardMetricsStore();
     }
-
-    // Se for Não Conforme (falha) ou Cancelado, cria a Ocorrência Real no Banco de Dados
     if (status === 'nc' || status === 'canc') {
       var statusLabel = (status === 'nc') ? 'Não Conforme (Falha)' : 'Cancelado';
       var nowStr = formatDataHoraLocal();
@@ -10982,24 +9245,19 @@ document.addEventListener('DOMContentLoaded', function () {
       ocorrencias = [novaOc].concat(ocorrencias);
       save(ocorrencias, novaOc, true);
     }
-
     fecharPopup('popup-nova-oc-dashboard');
     document.getElementById('oc-dash-obs').value = '';
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Ocorrência Registrada no Banco', 'Salvo no banco de dados e gráficos do ' + alvo + ' atualizados.', 'warning');
     }
     alert('Ocorrência salva com sucesso no Banco de Dados e Dashboard!\n\nAs métricas do ' + alvo + ' foram atualizadas e a ocorrência foi registrada no sistema.');
-
     renderDashboards();
     renderAll();
   }
   window.salvarOcDashboard = salvarOcDashboard;
-
   function renderEquipamentosCards() {
     var grid = document.getElementById('dash-equipamentos-grid');
     if (!grid) return;
-
     var equips = (dashboardMetrics && dashboardMetrics.equipamento) ? dashboardMetrics.equipamento : {};
     var eqKeys = (typeof obterListaNomesEquipamentosOrdenados === 'function')
       ? obterListaNomesEquipamentosOrdenados().filter(function(k) { return !!equips[k]; })
@@ -11008,7 +9266,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (eqKeys.indexOf(k) === -1) eqKeys.push(k);
     });
     var htmlCards = '';
-
     eqKeys.forEach(function(key) {
       var m = equips[key];
       var totalReal = (m.conf || 0) + (m.nc || 0) + (m.canc || 0);
@@ -11017,15 +9274,12 @@ document.addEventListener('DOMContentLoaded', function () {
       var pctNc   = totalReal === 0 ? 0 : Math.round((m.nc / total) * 100);
       var pctCanc = totalReal === 0 ? 0 : (100 - pctConf - pctNc);
       if (pctCanc < 0) pctCanc = 0;
-
       var endConf = pctConf;
       var endNc = pctConf + pctNc;
       var pieGradient = totalReal === 0
         ? '#E2E8F0'
         : ('conic-gradient(#10B981 0% ' + endConf + '%, #EF4444 ' + endConf + '% ' + endNc + '%, #F59E0B ' + endNc + '% 100%)');
-
       var isNew = (window._ultimoEqAdicionado === key) ? ' dash-card-new-anim' : '';
-
       htmlCards +=
         '<div class="dash-card' + isNew + '" onclick="abrirDetalhesTransmissao(\'' + escapeHTML(key) + '\', \'equipamento\')" style="padding:13px;cursor:pointer;" title="Clique para ver detalhes operacionais e telemetria">' +
           '<h5 style="font-size:12px;font-weight:700;text-align:center;margin-bottom:10px;color:#0F172A;">' + escapeHTML(key) + '</h5>' +
@@ -11043,37 +9297,30 @@ document.addEventListener('DOMContentLoaded', function () {
           '</div>' +
         '</div>';
     });
-
     if (eqKeys.length === 0) {
       htmlCards =
         '<div style="grid-column:1/-1;text-align:center;padding:28px 16px;background:var(--surface);border:1px dashed var(--border);border-radius:var(--r-lg);color:var(--muted);font-size:12.5px;">' +
           'Nenhum equipamento cadastrado nesta praça. Acesse a aba <strong>Equipamentos</strong> no menu lateral para cadastrar.' +
         '</div>';
     }
-
     grid.innerHTML = htmlCards;
     window._ultimoEqAdicionado = null;
   }
   window.renderEquipamentosCards = renderEquipamentosCards;
-
   function reconciliarMetricasComHistoricoCTRS() {
     if (typeof dashboardMetrics === 'undefined' || !dashboardMetrics) return;
     if (typeof historicoSeedData === 'undefined' || !Array.isArray(historicoSeedData)) return;
-
     var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var isUdi = pracaAtiva.indexOf('Uber') !== -1;
     var idsLixeira = (typeof lixeiraData !== 'undefined' && Array.isArray(lixeiraData))
       ? lixeiraData.map(function(i){ return i && i.id; }).filter(Boolean)
       : [];
-
     var minTj = {};
     var minEq = {};
-
     historicoSeedData.forEach(function(h) {
       if (!h || h.tipo !== 'relatorio' || h.status === 'lixeira' || idsLixeira.indexOf(h.id) !== -1) return;
       var hPraca = h.praca || h.local || 'Juiz de Fora';
       if ((hPraca.indexOf('Uber') !== -1) !== isUdi) return;
-
       var d = h.dadosCTRS || null;
       if (!d && h.descResolucao && h.descResolucao.indexOf('<!--CTRS_JSON:') !== -1) {
         try {
@@ -11082,7 +9329,6 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (e) {}
       }
       if (!d) return;
-
       var listaM = Array.isArray(d.metricasContabilizadas) ? d.metricasContabilizadas.slice() : [];
       if (listaM.length === 0 && Array.isArray(d.transmissoes)) {
         var tipoUp = (d.chaveJornal || d.tipo || 'INTEGRAÇÃO NOTÍCIA').toUpperCase();
@@ -11092,7 +9338,6 @@ document.addEventListener('DOMContentLoaded', function () {
         else if (tipoUp === 'MG2') cj = 'MG2';
         else if (tipoUp.indexOf('GIRO') !== -1) cj = 'GIRO MG2';
         else cj = tipoUp;
-
         d.transmissoes.forEach(function(tx) {
           if (!tx) return;
           var temNC = (tx.audioQ === 'NC' || tx.videoQ === 'NC' || tx.statusTx === 'NC');
@@ -11103,7 +9348,6 @@ document.addEventListener('DOMContentLoaded', function () {
           });
         });
       }
-
       listaM.forEach(function(mItem) {
         var st = (mItem.status === 'nc') ? 'nc' : 'conf';
         if (mItem.telejornal) {
@@ -11118,7 +9362,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       });
     });
-
     var alterou = false;
     if (dashboardMetrics.telejornal) {
       Object.keys(minTj).forEach(function(tjKey) {
@@ -11149,36 +9392,29 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       });
     }
-
     if (alterou && typeof salvarDashboardMetricsStore === 'function') {
       salvarDashboardMetricsStore();
     }
   }
   window.reconciliarMetricasComHistoricoCTRS = reconciliarMetricasComHistoricoCTRS;
-
   function renderDashboards() {
     if (typeof dashboardMetrics === 'undefined' || !dashboardMetrics) return;
     reconciliarMetricasComHistoricoCTRS();
-
     var pieMapping = {
       'INTEGRAÇÃO NOTÍCIA': 'pie-tj-noticia',
       'MG1': 'pie-tj-mg1',
       'MG2': 'pie-tj-mg2',
       'GIRO MG2': 'pie-tj-giro'
     };
-
-    // 1. Atualizar gráficos de Telejornais
     if (dashboardMetrics.telejornal) {
       Object.keys(dashboardMetrics.telejornal).forEach(function(key) {
         var m = dashboardMetrics.telejornal[key];
         var totalReal = m.conf + m.nc + m.canc;
         var total = totalReal === 0 ? 1 : totalReal;
-
         var pctConf = totalReal === 0 ? 0 : Math.round((m.conf / total) * 100);
         var pctNc = totalReal === 0 ? 0 : Math.round((m.nc / total) * 100);
         var pctCanc = totalReal === 0 ? 0 : (100 - pctConf - pctNc);
         if (pctCanc < 0) pctCanc = 0;
-
         var pieId = pieMapping[key];
         var el = document.getElementById(pieId);
         if (el) {
@@ -11189,16 +9425,13 @@ document.addEventListener('DOMContentLoaded', function () {
             var endNc = pctConf + pctNc;
             el.style.background = 'conic-gradient(#10B981 0% ' + endConf + '%, #EF4444 ' + endConf + '% ' + endNc + '%, #F59E0B ' + endNc + '% 100%)';
           }
-
           var countEl = el.querySelector('.pie-count');
           if (countEl) countEl.textContent = totalReal;
-
           var card = el.closest('.dash-card') || el.closest('.form-card');
           if (card) {
             var confEl = card.querySelector('.pct-conf');
             var ncEl   = card.querySelector('.pct-nc');
             var cancEl = card.querySelector('.pct-canc');
-
             if (confEl) confEl.textContent = '(' + pctConf + '%)';
             if (ncEl)   ncEl.textContent   = '(' + pctNc + '%)';
             if (cancEl) cancEl.textContent = '(' + pctCanc + '%)';
@@ -11206,18 +9439,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       });
     }
-
-    // 2. Renderizar dinamicamente os cartões de Equipamentos
     renderEquipamentosCards();
-
-    // 3. Atualizar Resumos Gerais
     renderResumoTransmissoesGerais();
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.renderDashboards = renderDashboards;
-
   function renderResumoTransmissoesGerais() {
-    // 1. Resumo Geral de Telejornais
     var tjTotConf = 0, tjTotNc = 0, tjTotCanc = 0;
     if (dashboardMetrics && dashboardMetrics.telejornal) {
       Object.keys(dashboardMetrics.telejornal).forEach(function(k) {
@@ -11232,7 +9459,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var tjPctNc = tjTotal > 0 ? Math.round((tjTotNc / tjTotal) * 100) : 0;
     var tjPctCanc = tjTotal > 0 ? (100 - tjPctConf - tjPctNc) : 0;
     if (tjPctCanc < 0) tjPctCanc = 0;
-
     var badgeTj = document.getElementById('trans-geral-total-badge');
     var txtConfTj = document.getElementById('trans-geral-conf-txt');
     var txtNcTj = document.getElementById('trans-geral-nc-txt');
@@ -11240,17 +9466,13 @@ document.addEventListener('DOMContentLoaded', function () {
     var barConfTj = document.getElementById('trans-geral-conf-bar');
     var barNcTj = document.getElementById('trans-geral-nc-bar');
     var barCancTj = document.getElementById('trans-geral-canc-bar');
-
     if (badgeTj) badgeTj.textContent = 'Total: ' + tjTotal + ' transmissões';
     if (txtConfTj) txtConfTj.textContent = tjPctConf + '% · ' + tjTotConf;
     if (txtNcTj) txtNcTj.textContent = tjPctNc + '% · ' + tjTotNc;
     if (txtCancTj) txtCancTj.textContent = tjPctCanc + '% · ' + tjTotCanc;
-
     if (barConfTj) barConfTj.style.height = tjTotal > 0 ? Math.max(tjPctConf * 0.85, 4) + '%' : '4px';
     if (barNcTj) barNcTj.style.height = tjTotal > 0 ? Math.max(tjPctNc * 0.85, 4) + '%' : '4px';
     if (barCancTj) barCancTj.style.height = tjTotal > 0 ? Math.max(tjPctCanc * 0.85, 4) + '%' : '4px';
-
-    // 2. Resumo Geral de Equipamentos
     var eqTotConf = 0, eqTotNc = 0, eqTotCanc = 0;
     if (dashboardMetrics && dashboardMetrics.equipamento) {
       Object.keys(dashboardMetrics.equipamento).forEach(function(k) {
@@ -11265,7 +9487,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var eqPctNc = eqTotal > 0 ? Math.round((eqTotNc / eqTotal) * 100) : 0;
     var eqPctCanc = eqTotal > 0 ? (100 - eqPctConf - eqPctNc) : 0;
     if (eqPctCanc < 0) eqPctCanc = 0;
-
     var badgeEq = document.getElementById('trans-eq-geral-total-badge');
     var txtConfEq = document.getElementById('trans-eq-geral-conf-txt');
     var txtNcEq = document.getElementById('trans-eq-geral-nc-txt');
@@ -11273,36 +9494,26 @@ document.addEventListener('DOMContentLoaded', function () {
     var barConfEq = document.getElementById('trans-eq-geral-conf-bar');
     var barNcEq = document.getElementById('trans-eq-geral-nc-bar');
     var barCancEq = document.getElementById('trans-eq-geral-canc-bar');
-
     if (badgeEq) badgeEq.textContent = 'Total: ' + eqTotal + ' transmissões';
     if (txtConfEq) txtConfEq.textContent = eqPctConf + '% · ' + eqTotConf;
     if (txtNcEq) txtNcEq.textContent = eqPctNc + '% · ' + eqTotNc;
     if (txtCancEq) txtCancEq.textContent = eqPctCanc + '% · ' + eqTotCanc;
-
     if (barConfEq) barConfEq.style.height = eqTotal > 0 ? Math.max(eqPctConf * 0.85, 4) + '%' : '4px';
     if (barNcEq) barNcEq.style.height = eqTotal > 0 ? Math.max(eqPctNc * 0.85, 4) + '%' : '4px';
     if (barCancEq) barCancEq.style.height = eqTotal > 0 ? Math.max(eqPctCanc * 0.85, 4) + '%' : '4px';
   }
   window.renderResumoTransmissoesGerais = renderResumoTransmissoesGerais;
 
-
-  /* ═══════════════════════════════════════════
-     PLANEJAMENTO ORÇAMENTÁRIO (ANO ATUAL + 1) — BANCO DE DADOS SUPABASE
-  ═══════════════════════════════════════════ */
-
   var anoOrcamento = new Date().getFullYear() + 1;
-
   function syncAnoOrcamentoUI() {
     anoOrcamento = new Date().getFullYear() + 1;
     document.querySelectorAll('.orc-ano-display, .sidebar-orc-ano').forEach(function(el) {
       el.textContent = anoOrcamento;
     });
   }
-
   var orcamentoSeedData = [];
   var filtroOrcamentoAtivo = 'todos';
   var ORCAMENTO_STORAGE_KEY = 'tv_orcamento_seed_v2';
-
   function getOrcamentoDBCredentials() {
     var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
     var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
@@ -11314,7 +9525,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return { url: url ? url.replace(/\/+$/, '') : '', key: key };
   }
-
   function filtrarOrcamentoTipo(tipo, btn) {
     filtroOrcamentoAtivo = tipo || 'todos';
     if (btn && btn.closest('.pills')) {
@@ -11324,11 +9534,9 @@ document.addEventListener('DOMContentLoaded', function () {
     renderOrcamento();
   }
   window.filtrarOrcamentoTipo = filtrarOrcamentoTipo;
-
   function formatarMoeda(val) {
     return 'R$ ' + Number(val || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
-
   function limparDescricao(desc, id) {
     if (!desc || typeof desc !== 'string') {
       if (id === 'orc_init_1') return 'Aquisição de Switcher de Vídeo SDI 12G 4K';
@@ -11343,7 +9551,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return trimmed;
   }
-
   function limparPrioridade(prio, id) {
     if (!prio || typeof prio !== 'string') {
       if (id === 'orc_init_1') return 'Alta';
@@ -11358,7 +9565,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return trimmed;
   }
-
   function limparJustificativa(just, id) {
     if (!just || typeof just !== 'string') {
       if (id === 'orc_init_1') return 'Modernização do controle mestre e suporte a sinais HD/4K de alta taxa de quadros.';
@@ -11373,7 +9579,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return trimmed;
   }
-
   function limparPraca(praca) {
     if (!praca || typeof praca !== 'string') return 'Juiz de Fora';
     var trimmed = praca.trim();
@@ -11382,13 +9587,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return trimmed;
   }
-
   function limparTipo(tipo) {
     if (!tipo || typeof tipo !== 'string') return 'CAPEX';
     var t = tipo.trim().toUpperCase();
     return (t === 'OPEX') ? 'OPEX' : 'CAPEX';
   }
-
   function limparStatus(st) {
     if (!st || typeof st !== 'string') return 'Proposto';
     var trimmed = st.trim();
@@ -11397,19 +9600,16 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return trimmed;
   }
-
   function atualizarFmtValorOrcamento(val) {
     var el = document.getElementById('orc-det-valor-fmt');
     if (el) el.textContent = formatarMoeda(val);
   }
   window.atualizarFmtValorOrcamento = atualizarFmtValorOrcamento;
-
   function atualizarFmtValorNovoOrcamento(val) {
     var el = document.getElementById('orc-modal-valor-fmt');
     if (el) el.textContent = formatarMoeda(val);
   }
   window.atualizarFmtValorNovoOrcamento = atualizarFmtValorNovoOrcamento;
-
   function pertenceAPracaAtivaOrcamento(item) {
     if (!item) return false;
     var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
@@ -11422,72 +9622,55 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.pertenceAPracaAtivaOrcamento = pertenceAPracaAtivaOrcamento;
-
   function renderOrcamento() {
     syncAnoOrcamentoUI();
     var tbody = document.getElementById('orc-itens-tbody');
     if (!tbody) return;
-
     if (!Array.isArray(orcamentoSeedData)) orcamentoSeedData = [];
-
     var itensDaPraca = orcamentoSeedData.filter(pertenceAPracaAtivaOrcamento);
-
     var totalGeral = 0;
     var totalCapex = 0;
     var totalOpex = 0;
-
     itensDaPraca.forEach(function(item) {
       var val = Number(item.valor) || 0;
       totalGeral += val;
       if (item.tipo === 'CAPEX') totalCapex += val;
       else totalOpex += val;
     });
-
     var kpiTot = document.getElementById('orc-kpi-total');
     var kpiCapex = document.getElementById('orc-kpi-capex');
     var kpiOpex = document.getElementById('orc-kpi-opex');
-
     if (kpiTot) kpiTot.textContent = formatarMoeda(totalGeral);
     if (kpiCapex) kpiCapex.textContent = formatarMoeda(totalCapex);
     if (kpiOpex) kpiOpex.textContent = formatarMoeda(totalOpex);
-
-    /* Atualiza Barra de Distribuição de Recursos */
     var pctCapex = totalGeral > 0 ? Math.round((totalCapex / totalGeral) * 100) : 0;
     var pctOpex = totalGeral > 0 ? (100 - pctCapex) : 0;
-
     var barCapexTxt = document.getElementById('orc-bar-capex-txt');
     var barOpexTxt = document.getElementById('orc-bar-opex-txt');
     var barCapexFill = document.getElementById('orc-bar-capex-fill');
     var barOpexFill = document.getElementById('orc-bar-opex-fill');
-
     if (barCapexTxt) barCapexTxt.textContent = pctCapex + '% (' + formatarMoeda(totalCapex) + ')';
     if (barOpexTxt) barOpexTxt.textContent = pctOpex + '% (' + formatarMoeda(totalOpex) + ')';
     if (barCapexFill) barCapexFill.style.width = (totalGeral > 0 ? pctCapex : 50) + '%';
     if (barOpexFill) barOpexFill.style.width = (totalGeral > 0 ? pctOpex : 50) + '%';
-
-    /* Atualiza contadores nas abas pills */
     var countCapex = itensDaPraca.filter(function(i){ return i.tipo === 'CAPEX'; }).length;
     var countOpex = itensDaPraca.filter(function(i){ return i.tipo === 'OPEX'; }).length;
     var tabTodos = document.getElementById('orc-tab-todos');
     var tabCapex = document.getElementById('orc-tab-capex');
     var tabOpex = document.getElementById('orc-tab-opex');
-
     if (tabTodos) tabTodos.textContent = 'Todas as Linhas (' + itensDaPraca.length + ')';
     if (tabCapex) tabCapex.textContent = 'Equipamentos (' + countCapex + ')';
     if (tabOpex) tabOpex.textContent = 'Manutenção (' + countOpex + ')';
-
-    /* Filtra itens para exibição na tabela */
     var itensExibir = itensDaPraca.filter(function(item) {
       if (filtroOrcamentoAtivo === 'CAPEX') return item.tipo === 'CAPEX';
       if (filtroOrcamentoAtivo === 'OPEX') return item.tipo === 'OPEX';
       return true;
     });
-
     if (itensExibir.length === 0) {
       tbody.innerHTML =
         '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px 12px;font-size:12.5px;">' +
         '<i data-lucide="inbox" style="width:24px;height:24px;stroke-width:1.5;margin-bottom:6px;color:var(--dim);"></i><br/>' +
-        (orcamentoSeedData.length === 0 
+        (orcamentoSeedData.length === 0
           ? 'Nenhuma linha orçamentária cadastrada ainda. Clique em <strong>"+ Propor Orçamento"</strong> para iniciar.'
           : 'Nenhum item orçamentário encontrado nesta categoria.') +
         '</td></tr>';
@@ -11500,15 +9683,12 @@ document.addEventListener('DOMContentLoaded', function () {
         var itemPraca = limparPraca(item.praca);
         var itemTipo = limparTipo(item.tipo);
         var itemStatus = limparStatus(item.status);
-
-        var tagTipo = itemTipo === 'CAPEX' 
-          ? '<span class="tag" style="background:#E8F2FF;color:#0071E3;border:1px solid #C7DFFB;font-weight:700;">⚙️ Equipamentos</span>' 
+        var tagTipo = itemTipo === 'CAPEX'
+          ? '<span class="tag" style="background:#E8F2FF;color:#0071E3;border:1px solid #C7DFFB;font-weight:700;">⚙️ Equipamentos</span>'
           : '<span class="tag" style="background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;font-weight:700;">🛠️ Manutenção</span>';
-
         var tagPrio = itemPrio === 'Alta' || itemPrio === 'Estratégica'
           ? '<span class="tag tag-r">' + escapeHTML(itemPrio) + '</span>'
           : '<span class="tag tag-y">' + escapeHTML(itemPrio) + '</span>';
-
         var tagStatus = itemStatus === 'Aprovado'
           ? '<span class="tag tag-g">✓ Aprovado</span>'
           : itemStatus === 'Em Revisão'
@@ -11516,7 +9696,6 @@ document.addEventListener('DOMContentLoaded', function () {
           : itemStatus === 'Rejeitado'
           ? '<span class="tag tag-r">Rejeitado</span>'
           : '<span class="tag tag-ind">Proposto</span>';
-
         return (
           '<tr style="transition:background 0.12s ease;cursor:pointer;" onclick="abrirDetalhesItemOrcamento(\'' + item.id + '\')" title="Clique para ver detalhes, editar ou excluir">' +
             '<td style="text-align:center;font-weight:700;color:var(--muted);">' + (idx + 1) + '</td>' +
@@ -11535,11 +9714,9 @@ document.addEventListener('DOMContentLoaded', function () {
         );
       }).join('');
     }
-
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.renderOrcamento = renderOrcamento;
-
   function abrirModalAdicionarItemOrcamento() {
     syncAnoOrcamentoUI();
     var descEl = document.getElementById('orc-modal-desc');
@@ -11548,7 +9725,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var tipoEl = document.getElementById('orc-modal-tipo');
     var pracaEl = document.getElementById('orc-modal-praca');
     var prioEl = document.getElementById('orc-modal-prio');
-
     if (descEl) descEl.value = '';
     if (valEl) valEl.value = '';
     if (justEl) justEl.value = '';
@@ -11558,13 +9734,11 @@ document.addEventListener('DOMContentLoaded', function () {
       else pracaEl.selectedIndex = 0;
     }
     if (prioEl) prioEl.selectedIndex = 1;
-
     atualizarFmtValorNovoOrcamento(0);
     abrirPopup('popup-novo-item-orcamento');
     if (descEl) setTimeout(function(){ descEl.focus(); }, 150);
   }
   window.abrirModalAdicionarItemOrcamento = abrirModalAdicionarItemOrcamento;
-
   function confirmarItemOrcamento() {
     var descEl = document.getElementById('orc-modal-desc');
     var tipoEl = document.getElementById('orc-modal-tipo');
@@ -11572,16 +9746,13 @@ document.addEventListener('DOMContentLoaded', function () {
     var valorEl = document.getElementById('orc-modal-valor');
     var prioEl = document.getElementById('orc-modal-prio');
     var justEl = document.getElementById('orc-modal-just');
-
     var rawDesc = descEl ? descEl.value.trim() : '';
     var desc = limparDescricao(rawDesc);
     var valor = valorEl ? parseFloat(valorEl.value) : 0;
-
     if (!desc || isNaN(valor) || valor <= 0) {
       alert('Por favor, informe a Descrição do item e o Valor Estimado (R$).');
       return;
     }
-
     var prio = limparPrioridade(prioEl ? prioEl.value : 'Média');
     var autor = (typeof getUsuarioAtual === 'function') ? getUsuarioAtual() : 'Operador';
     var novo = {
@@ -11598,26 +9769,19 @@ document.addEventListener('DOMContentLoaded', function () {
       status: 'Proposto',
       criado_por: autor
     };
-
     orcamentoSeedData.push(novo);
     salvarOrcamentoStore();
     fecharPopup('popup-novo-item-orcamento');
     renderOrcamento();
-
-    // Sincroniza diretamente com a tabela orcamentos no Supabase
     salvarItemOrcamentoNuvem(novo);
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Item Adicionado ao Orçamento', desc + ' gravado no banco de dados para ' + anoOrcamento + '.', 'success');
     }
   }
   window.confirmarItemOrcamento = confirmarItemOrcamento;
-
-  /* ── Modal Detalhes & Edição do Item Orçamentário (Estilo Ocorrências) ── */
   function abrirDetalhesItemOrcamento(id) {
     var item = orcamentoSeedData.find(function(i) { return i && i.id === id; });
     if (!item) return;
-
     var idEl = document.getElementById('orc-det-id');
     var descEl = document.getElementById('orc-det-desc');
     var tipoEl = document.getElementById('orc-det-tipo');
@@ -11626,7 +9790,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var prioEl = document.getElementById('orc-det-prio');
     var statusEl = document.getElementById('orc-det-status');
     var justEl = document.getElementById('orc-det-just');
-
     var cleanDesc = limparDescricao(item.desc || item.descricao, item.id);
     var cleanTipo = limparTipo(item.tipo);
     var cleanPraca = limparPraca(item.praca);
@@ -11634,8 +9797,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var cleanJust = limparJustificativa(item.justificativa, item.id);
     var cleanStatus = limparStatus(item.status);
     var valNum = Number(item.valor) || 0;
-
-    // Atualiza o próprio item na memória para manter tudo saneado
     item.desc = cleanDesc;
     item.descricao = cleanDesc;
     item.tipo = cleanTipo;
@@ -11645,7 +9806,6 @@ document.addEventListener('DOMContentLoaded', function () {
     item.justificativa = cleanJust;
     item.status = cleanStatus;
     item.valor = valNum;
-
     if (idEl) idEl.value = item.id;
     if (descEl) descEl.value = cleanDesc;
     if (tipoEl) tipoEl.value = cleanTipo;
@@ -11654,13 +9814,11 @@ document.addEventListener('DOMContentLoaded', function () {
     if (prioEl) prioEl.value = cleanPrio;
     if (statusEl) statusEl.value = cleanStatus;
     if (justEl) justEl.value = cleanJust;
-
     atualizarFmtValorOrcamento(valNum);
     abrirPopup('popup-detalhes-orcamento');
     if (descEl) setTimeout(function(){ descEl.focus(); }, 150);
   }
   window.abrirDetalhesItemOrcamento = abrirDetalhesItemOrcamento;
-
   function salvarEdicaoItemOrcamento() {
     var idEl = document.getElementById('orc-det-id');
     var descEl = document.getElementById('orc-det-desc');
@@ -11670,22 +9828,17 @@ document.addEventListener('DOMContentLoaded', function () {
     var prioEl = document.getElementById('orc-det-prio');
     var statusEl = document.getElementById('orc-det-status');
     var justEl = document.getElementById('orc-det-just');
-
     if (!idEl || !idEl.value) return;
     var id = idEl.value;
-
     var rawDesc = descEl ? descEl.value.trim() : '';
     var desc = limparDescricao(rawDesc, id);
     var valor = valorEl ? parseFloat(valorEl.value) : 0;
-
     if (!desc || isNaN(valor) || valor <= 0) {
       alert('Por favor, informe uma descrição válida e um valor maior que zero.');
       return;
     }
-
     var item = orcamentoSeedData.find(function(i) { return i && i.id === id; });
     if (!item) return;
-
     var prio = limparPrioridade(prioEl ? prioEl.value : 'Média', id);
     item.desc = desc;
     item.descricao = desc;
@@ -11696,43 +9849,32 @@ document.addEventListener('DOMContentLoaded', function () {
     item.prioridade = prio;
     item.status = limparStatus(statusEl ? statusEl.value : 'Proposto');
     item.justificativa = justEl ? justEl.value.trim() : '';
-
     salvarOrcamentoStore();
     fecharPopup('popup-detalhes-orcamento');
     renderOrcamento();
-
-    // Sincroniza alteração no Supabase
     salvarItemOrcamentoNuvem(item);
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Orçamento Atualizado', 'A linha orçamentária foi atualizada com sucesso no banco de dados.', 'success');
     }
   }
   window.salvarEdicaoItemOrcamento = salvarEdicaoItemOrcamento;
-
   function excluirItemOrcamentoModal() {
     var idEl = document.getElementById('orc-det-id');
     if (!idEl || !idEl.value) return;
     var id = idEl.value;
-
     if (!confirm('Deseja realmente excluir esta linha orçamentária do plano? Essa ação removerá o registro do banco de dados.')) {
       return;
     }
-
     fecharPopup('popup-detalhes-orcamento');
     orcamentoSeedData = orcamentoSeedData.filter(function(i){ return i.id !== id; });
     salvarOrcamentoStore();
     renderOrcamento();
-
-    // Exclui do Supabase
     excluirItemOrcamentoNuvem(id);
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Item Excluído', 'Linha orçamentária removida do banco de dados.', 'info');
     }
   }
   window.excluirItemOrcamentoModal = excluirItemOrcamentoModal;
-
   function removerItemOrcamento(id) {
     if (!confirm('Deseja remover esta linha orçamentária do plano?')) return;
     orcamentoSeedData = orcamentoSeedData.filter(function(i){ return i.id !== id; });
@@ -11741,14 +9883,12 @@ document.addEventListener('DOMContentLoaded', function () {
     excluirItemOrcamentoNuvem(id);
   }
   window.removerItemOrcamento = removerItemOrcamento;
-
   function salvarOrcamentoStore() {
     window.orcamentoSeedData = orcamentoSeedData;
     try {
       localStorage.setItem(ORCAMENTO_STORAGE_KEY, JSON.stringify(orcamentoSeedData));
     } catch (e) {}
   }
-
   function carregarOrcamentoStore() {
     try {
       var raw = localStorage.getItem(ORCAMENTO_STORAGE_KEY);
@@ -11788,15 +9928,9 @@ document.addEventListener('DOMContentLoaded', function () {
     sincronizarOrcamentoNuvem();
   }
   window.carregarOrcamentoStore = carregarOrcamentoStore;
-
-  /* ═══════════════════════════════════════════
-     SINCRONIZAÇÃO EM NUVEM (SUPABASE: TABELA ORCAMENTOS)
-  ═══════════════════════════════════════════ */
-
   function sincronizarOrcamentoNuvem() {
     var db = getOrcamentoDBCredentials();
     if (!db.url || !db.key) return;
-
     var endpoint = db.url + '/rest/v1/orcamentos?select=*&order=id.asc';
     fetch(endpoint, {
       headers: {
@@ -11829,24 +9963,17 @@ document.addEventListener('DOMContentLoaded', function () {
             criado_por: c.criado_por || 'Sistema'
           };
         });
-
-        // Preserva itens locais recém-adicionados que ainda não subiram para a nuvem
         var locaisPendentes = (Array.isArray(orcamentoSeedData) ? orcamentoSeedData : []).filter(function(loc) {
           return loc && loc.id && !cloudIds[loc.id];
         });
-
-        // Envia os itens locais pendentes para a nuvem para garantir persistência mútua
         if (locaisPendentes.length > 0) {
           locaisPendentes.forEach(function(itemPend) {
             salvarItemOrcamentoNuvem(itemPend);
           });
         }
-
         orcamentoSeedData = formatadosDaNuvem.concat(locaisPendentes);
-
         salvarOrcamentoStore();
         renderOrcamento();
-        console.log('[Orçamento DB] ✅ ' + formatadosDaNuvem.length + ' linhas orçamentárias sincronizadas do banco de dados (Supabase orcamentos).');
       }
     })
     .catch(function(err) {
@@ -11854,11 +9981,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   window.sincronizarOrcamentoNuvem = sincronizarOrcamentoNuvem;
-
   function salvarItemOrcamentoNuvem(item) {
     var db = getOrcamentoDBCredentials();
     if (!db.url || !db.key) return;
-
     var cleanDesc = limparDescricao(item.desc || item.descricao, item.id);
     var cleanPrio = limparPrioridade(item.prio || item.prioridade, item.id);
     var cleanJust = limparJustificativa(item.justificativa, item.id);
@@ -11866,7 +9991,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var cleanTipo = limparTipo(item.tipo);
     var cleanStatus = limparStatus(item.status);
     var autor = item.criado_por || (typeof getUsuarioAtual === 'function' ? getUsuarioAtual() : 'Operador');
-
     var payload = {
       id: item.id,
       ano: item.ano || anoOrcamento,
@@ -11881,7 +10005,6 @@ document.addEventListener('DOMContentLoaded', function () {
       status: cleanStatus,
       criado_por: autor
     };
-
     var endpoint = db.url + '/rest/v1/orcamentos';
     fetch(endpoint, {
       method: 'POST',
@@ -11899,18 +10022,15 @@ document.addEventListener('DOMContentLoaded', function () {
           console.error('[Orçamento DB] Erro Supabase ao gravar orçamento:', res.status, errText);
         });
       }
-      console.log('[Orçamento DB] ✅ Linha orçamentária salva diretamente no banco de dados (orcamentos):', cleanDesc);
     })
     .catch(function(err) {
       console.error('[Orçamento DB] Falha ao enviar orçamento para o banco:', err);
     });
   }
   window.salvarItemOrcamentoNuvem = salvarItemOrcamentoNuvem;
-
   function excluirItemOrcamentoNuvem(id) {
     var db = getOrcamentoDBCredentials();
     if (!db.url || !db.key || !id) return;
-
     var endpoint = db.url + '/rest/v1/orcamentos?id=eq.' + encodeURIComponent(id);
     fetch(endpoint, {
       method: 'DELETE',
@@ -11921,7 +10041,6 @@ document.addEventListener('DOMContentLoaded', function () {
     })
     .then(function(res) {
       if (res.ok) {
-        console.log('[Orçamento DB] ✅ Linha orçamentária excluída do banco de dados:', id);
       }
     })
     .catch(function(err) {
@@ -11929,7 +10048,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   window.excluirItemOrcamentoNuvem = excluirItemOrcamentoNuvem;
-
   function salvarOrcamento() {
     salvarOrcamentoStore();
     orcamentoSeedData.forEach(function(item) {
@@ -11941,20 +10059,13 @@ document.addEventListener('DOMContentLoaded', function () {
     alert('Plano Orçamentário de ' + anoOrcamento + ' salvo com sucesso no banco de dados!');
   }
   window.salvarOrcamento = salvarOrcamento;
-
   function exportarOrcamentoExcel() {
     alert('Relatório de Orçamento ' + anoOrcamento + ' exportado com sucesso em formato consolidado (CAPEX/OPEX).');
   }
   window.exportarOrcamentoExcel = exportarOrcamentoExcel;
 
-
-  /* ═══════════════════════════════════════════
-     CATÁLOGO DE EQUIPAMENTOS & FICHEIRO DE VIDA — POSTGRESQL / SUPABASE
-  ═══════════════════════════════════════════ */
-
   var EQUIPAMENTOS_STORAGE_KEY = 'tv_equipamentos_catalogo_v1';
   var TAGS_PADRAO_EQUIPAMENTOS = ['LiveU', 'Transmissão', 'Estúdio', 'Áudio', 'Vídeo', 'RF', 'Rede/Fibra', 'Satélite', 'Energia'];
-
   var EQUIPAMENTOS_SEED_JF = [
     { id: 'eq_jf_liveu1',  codigo_patrimonio: 'PAT-JF-001', numero_serie: 'SN-LU600-01', nome: 'LIVE U1',      categoria: 'Mochilink / LiveU', fabricante_modelo: 'LiveU LU600 HEVC',       praca: 'Juiz de Fora', setor_local: 'Jornalismo Externo', tags: ['LiveU', 'Transmissão'], status_operacional: 'operacional', obs_tecnicas: 'Unidade móvel principal para entradas ao vivo externas.' },
     { id: 'eq_jf_liveu2',  codigo_patrimonio: 'PAT-JF-002', numero_serie: 'SN-LU600-02', nome: 'LIVE U2',      categoria: 'Mochilink / LiveU', fabricante_modelo: 'LiveU LU600 HEVC',       praca: 'Juiz de Fora', setor_local: 'Jornalismo Externo', tags: ['LiveU', 'Transmissão'], status_operacional: 'operacional', obs_tecnicas: 'Unidade móvel de reportagem externa.' },
@@ -11970,11 +10081,9 @@ document.addEventListener('DOMContentLoaded', function () {
     { id: 'eq_jf_net3',    codigo_patrimonio: 'PAT-JF-012', numero_serie: 'SN-SW-3AND',  nome: 'NET 3º ANDAR', categoria: 'Link de Internet',  fabricante_modelo: 'Switch / Ponto 3º Andar',praca: 'Juiz de Fora', setor_local: '3º Andar',          tags: ['Rede/Fibra'],            status_operacional: 'operacional', obs_tecnicas: 'Infraestrutura de rede do 3º andar.' },
     { id: 'eq_jf_net4',    codigo_patrimonio: 'PAT-JF-013', numero_serie: 'SN-SW-4AND',  nome: 'NET 4º ANDAR', categoria: 'Link de Internet',  fabricante_modelo: 'Switch / Ponto 4º Andar',praca: 'Juiz de Fora', setor_local: '4º Andar',          tags: ['Rede/Fibra'],            status_operacional: 'operacional', obs_tecnicas: 'Infraestrutura de rede do 4º andar.' }
   ];
-
   var catalogoEquipamentos = [];
   var filtroEquipamentoTag = 'todos';
   var tagsSelecionadasModalEq = [];
-
   function getEquipamentosDBCredentials() {
     var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
     var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
@@ -11986,7 +10095,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return { url: url ? url.replace(/\/+$/, '') : '', key: key };
   }
-
   function normalizarTagsEquipamento(tagsRaw) {
     if (!Array.isArray(tagsRaw)) return [];
     var vistos = {};
@@ -12002,7 +10110,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     return limpas;
   }
-
   function sanitizarEquipamento(eq) {
     if (!eq || !eq.nome) return null;
     var nomeUp = String(eq.nome).trim().toUpperCase();
@@ -12036,9 +10143,7 @@ document.addEventListener('DOMContentLoaded', function () {
       criado_em: eq.criado_em || Date.now()
     };
   }
-
   var ORDEM_EQUIPAMENTOS_STORAGE_KEY = 'tv_equipamentos_ordem_custom_v1';
-
   function salvarOrdemPersonalizadaEquipamentos(pracaAtiva, listaNomes) {
     try {
       var isUdi = String(pracaAtiva || '').indexOf('Uber') !== -1;
@@ -12050,11 +10155,9 @@ document.addEventListener('DOMContentLoaded', function () {
       localStorage.setItem(ORDEM_EQUIPAMENTOS_STORAGE_KEY, JSON.stringify(obj));
     } catch (e) {}
   }
-
   function aplicarOrdemPersonalizadaNoCatalogo() {
     var posSeedJF = {};
     EQUIPAMENTOS_SEED_JF.forEach(function(s, i) { posSeedJF[s.nome] = i; });
-
     var temOrdemCustomJF = false;
     var temOrdemCustomUDI = false;
     try {
@@ -12082,14 +10185,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
       }
     } catch (e) {}
-
-    // Se não há ordem customizada salva (ou se algum item padrão perdeu o campo ordem antes da correção),
-    // garante que os equipamentos padrão de JF sigam a ordem original do catálogo (LIVE U1, LIVE U2, ...)
     var itensJF = (catalogoEquipamentos || []).filter(function(eq) {
       return eq && String(eq.praca || '').indexOf('Uber') === -1;
     });
     var algumSemOrdemJF = itensJF.some(function(eq) { return typeof eq.ordem !== 'number'; });
-
     if (!temOrdemCustomJF && algumSemOrdemJF) {
       itensJF.forEach(function(eq) {
         if (posSeedJF[eq.nome] !== undefined) {
@@ -12099,7 +10198,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       });
     }
-
     catalogoEquipamentos.sort(function(a, b) {
       if (!a || !b) return 0;
       var oa = (typeof a.ordem === 'number') ? a.ordem : (posSeedJF[a.nome] !== undefined ? posSeedJF[a.nome] : 999999);
@@ -12108,7 +10206,6 @@ document.addEventListener('DOMContentLoaded', function () {
       return (a.criado_em || 0) - (b.criado_em || 0);
     });
   }
-
   function obterListaNomesEquipamentosOrdenados(pracaOpcional) {
     aplicarOrdemPersonalizadaNoCatalogo();
     var pracaAtiva = pracaOpcional || ((typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora');
@@ -12126,7 +10223,6 @@ document.addEventListener('DOMContentLoaded', function () {
     return [];
   }
   window.obterListaNomesEquipamentosOrdenados = obterListaNomesEquipamentosOrdenados;
-
   function salvarCatalogoEquipamentosLocal() {
     window.catalogoEquipamentos = catalogoEquipamentos;
     try {
@@ -12134,7 +10230,6 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch (e) {}
     sincronizarDashboardMetricsComCatalogo();
   }
-
   function sincronizarDashboardMetricsComCatalogo() {
     if (typeof dashboardMetrics === 'undefined' || !dashboardMetrics) return;
     if (!dashboardMetrics.equipamento || Object.keys(dashboardMetrics.equipamento).length === 0) {
@@ -12143,16 +10238,13 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       if (!dashboardMetrics.equipamento) dashboardMetrics.equipamento = {};
     }
-
     aplicarOrdemPersonalizadaNoCatalogo();
     var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var isUdi = pracaAtiva.indexOf('Uber') !== -1;
-
     var ativosDaPraca = (catalogoEquipamentos || []).filter(function(eq) {
       if (!eq || eq.status_operacional === 'lixeira') return false;
       return isUdi ? (eq.praca === 'Uberlândia') : (eq.praca === 'Juiz de Fora');
     });
-
     var novoMapaEq = {};
     ativosDaPraca.forEach(function(eq) {
       var existente = dashboardMetrics.equipamento[eq.nome];
@@ -12168,7 +10260,6 @@ document.addEventListener('DOMContentLoaded', function () {
         obs: eq.obs_tecnicas
       };
     });
-
     dashboardMetrics.equipamento = novoMapaEq;
     if (typeof salvarDashboardMetricsStore === 'function') {
       salvarDashboardMetricsStore();
@@ -12179,7 +10270,6 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch (e) {}
   }
   window.sincronizarDashboardMetricsComCatalogo = sincronizarDashboardMetricsComCatalogo;
-
   function carregarEquipamentosStore() {
     try {
       var raw = localStorage.getItem(EQUIPAMENTOS_STORAGE_KEY);
@@ -12190,14 +10280,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       }
     } catch (e) {}
-
-    // Se ainda não houver equipamentos de Juiz de Fora no catálogo, inicializa com os 13 padrão
     var temJF = catalogoEquipamentos.some(function(e) { return e.praca === 'Juiz de Fora'; });
     if (!temJF) {
       catalogoEquipamentos = EQUIPAMENTOS_SEED_JF.map(sanitizarEquipamento).concat(catalogoEquipamentos);
     }
-
-    // Migra qualquer equipamento que tenha sido cadastrado anteriormente no dashboardMetrics
     try {
       ['tv_dashboard_metrics_v2_jf', 'tv_dashboard_metrics_v2_udi'].forEach(function(k) {
         var mRaw = localStorage.getItem(k);
@@ -12224,17 +10310,14 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       });
     } catch (eMig) {}
-
     salvarCatalogoEquipamentosLocal();
     renderCatalogoEquipamentos();
     sincronizarEquipamentosPostgreSQL();
   }
   window.carregarEquipamentosStore = carregarEquipamentosStore;
-
   function sincronizarEquipamentosPostgreSQL() {
     var db = getEquipamentosDBCredentials();
     if (!db.url || !db.key) return;
-
     fetch(db.url + '/rest/v1/equipamentos?select=*&order=criado_em.asc', {
       headers: {
         'apikey': db.key,
@@ -12269,16 +10352,12 @@ document.addEventListener('DOMContentLoaded', function () {
           }
         }
       });
-
-      // Preserva itens locais que ainda não subiram para o banco PostgreSQL
       var pendentesLocais = (catalogoEquipamentos || []).filter(function(loc) {
         return loc && loc.id && !mapaRemoto[loc.id];
       });
-
       if (pendentesLocais.length > 0) {
         pendentesLocais.forEach(function(p) { salvarEquipamentoPostgreSQL(p); });
       }
-
       if (listaRemota.length > 0 || pendentesLocais.length > 0) {
         catalogoEquipamentos = listaRemota.concat(pendentesLocais);
         aplicarOrdemPersonalizadaNoCatalogo();
@@ -12292,11 +10371,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   window.sincronizarEquipamentosPostgreSQL = sincronizarEquipamentosPostgreSQL;
-
   function salvarEquipamentoPostgreSQL(eq) {
     var db = getEquipamentosDBCredentials();
     if (!db.url || !db.key || !eq) return;
-
     var payload = {
       id: eq.id,
       codigo_patrimonio: eq.codigo_patrimonio || '',
@@ -12313,7 +10390,6 @@ document.addEventListener('DOMContentLoaded', function () {
       criado_por: eq.criado_por || 'Operador',
       criado_em: eq.criado_em || Date.now()
     };
-
     fetch(db.url + '/rest/v1/equipamentos', {
       method: 'POST',
       headers: {
@@ -12326,7 +10402,6 @@ document.addEventListener('DOMContentLoaded', function () {
     })
     .then(function(res) {
       if (res.ok) {
-        console.log('[PostgreSQL Equipamentos] ✅ Equipamento sincronizado no banco:', eq.nome);
       }
     })
     .catch(function(err) {
@@ -12334,13 +10409,11 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   window.salvarEquipamentoPostgreSQL = salvarEquipamentoPostgreSQL;
-
   function obterOcorrenciasDoEquipamento(eq) {
     if (!eq) return [];
     var nomeBusca = (eq.nome || '').toUpperCase();
     var idBusca = eq.id || '';
     var todasOcs = (typeof ocorrencias !== 'undefined' && Array.isArray(ocorrencias)) ? ocorrencias : [];
-
     return todasOcs.filter(function(oc) {
       if (!oc || oc.status === 'lixeira') return false;
       if (idBusca && oc.equipamento_id === idBusca) return true;
@@ -12351,7 +10424,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   window.obterOcorrenciasDoEquipamento = obterOcorrenciasDoEquipamento;
-
   function calcularStatusEquipamentoDinamico(eq) {
     if (!eq) return 'operacional';
     if (eq.status_operacional === 'manutencao') return 'manutencao';
@@ -12359,7 +10431,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var temAberta = ocs.some(function(o) { return o.status === 'aberta'; });
     return temAberta ? 'atencao' : 'operacional';
   }
-
   function filtrarEquipamentosPorTag(tag, btn) {
     filtroEquipamentoTag = tag ? String(tag).replace(/^#+/, '').trim() : 'todos';
     if (btn && btn.closest('.pills')) {
@@ -12369,26 +10440,20 @@ document.addEventListener('DOMContentLoaded', function () {
     renderCatalogoEquipamentos();
   }
   window.filtrarEquipamentosPorTag = filtrarEquipamentosPorTag;
-
   function renderCatalogoEquipamentos() {
     var grid = document.getElementById('equipamentos-catalogo-grid');
     if (!grid) return;
     aplicarOrdemPersonalizadaNoCatalogo();
-
     var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var isUdi = pracaAtiva.indexOf('Uber') !== -1;
     var pracaBadge = document.getElementById('eq-catalogo-praca-badge');
     if (pracaBadge) pracaBadge.textContent = isUdi ? 'Uberlândia' : 'Juiz de Fora';
-
     var buscaInput = document.getElementById('eq-catalogo-search');
     var termo = buscaInput ? buscaInput.value.trim().toLowerCase() : '';
-
     var doCatalogoPraca = (catalogoEquipamentos || []).filter(function(eq) {
       if (!eq || eq.status_operacional === 'lixeira') return false;
       return isUdi ? (eq.praca === 'Uberlândia') : (eq.praca === 'Juiz de Fora');
     });
-
-    // KPIs de topo
     var totEq = doCatalogoPraca.length;
     var totOp = 0, totAtencao = 0, totManut = 0;
     doCatalogoPraca.forEach(function(eq) {
@@ -12397,14 +10462,12 @@ document.addEventListener('DOMContentLoaded', function () {
       else if (st === 'atencao') totAtencao++;
       else totOp++;
     });
-
     var kpiTot = document.getElementById('eq-kpi-total');
     var kpiOp  = document.getElementById('eq-kpi-operacional');
     var kpiAt  = document.getElementById('eq-kpi-atencao');
     if (kpiTot) kpiTot.textContent = totEq;
     if (kpiOp)  kpiOp.textContent  = totOp;
     if (kpiAt)  kpiAt.textContent  = (totAtencao + totManut);
-
     var filtrados = doCatalogoPraca.filter(function(eq) {
       if (filtroEquipamentoTag !== 'todos') {
         var tagsEq = Array.isArray(eq.tags) ? eq.tags : [];
@@ -12424,7 +10487,6 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       return true;
     });
-
     if (filtrados.length === 0) {
       grid.innerHTML =
         '<div style="grid-column:1/-1;text-align:center;padding:42px 20px;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);">' +
@@ -12436,30 +10498,25 @@ document.addEventListener('DOMContentLoaded', function () {
       if (typeof lucide !== 'undefined') lucide.createIcons();
       return;
     }
-
     grid.innerHTML = filtrados.map(function(eq) {
       var st = calcularStatusEquipamentoDinamico(eq);
       var ocs = obterOcorrenciasDoEquipamento(eq);
       var abertasCount = ocs.filter(function(o){ return o.status === 'aberta'; }).length;
-
       var badgeStatus = st === 'manutencao'
         ? '<span class="tag tag-r">🔴 Em Manutenção</span>'
         : st === 'atencao'
         ? '<span class="tag tag-y">🟡 ' + abertasCount + ' Ocorrência(s)</span>'
         : '<span class="tag tag-g">🟢 Operacional</span>';
-
       var borderStyle = st === 'atencao'
         ? 'border-color:#FDE68A;background:#FFFBEB;'
         : st === 'manutencao'
         ? 'border-color:#FECACA;background:#FEF2F2;'
         : '';
-
       var tagsHTML = (Array.isArray(eq.tags) && eq.tags.length > 0)
         ? eq.tags.map(function(t) {
             return '<span style="font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:12px;background:#EFF6FF;color:#0071E3;border:1px solid #BFDBFE;">' + escapeHTML(t) + '</span>';
           }).join('')
         : '<span style="font-size:10.5px;color:var(--muted);">Sem tags</span>';
-
       return (
         '<div class="dash-card eq-draggable-card" data-eq-id="' + escapeHTML(eq.id) + '" ' +
           'onpointerdown="iniciarArrastoEquipamento(event, \'' + escapeHTML(eq.id) + '\')" ' +
@@ -12477,17 +10534,14 @@ document.addEventListener('DOMContentLoaded', function () {
               '</div>' +
               badgeStatus +
             '</div>' +
-
             '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;background:rgba(255,255,255,0.75);border:1px solid var(--border-lt);border-radius:8px;padding:8px 10px;font-size:11px;margin-bottom:10px;">' +
               '<div><span style="color:var(--muted);display:block;font-size:10px;">ID / PATRIMÔNIO</span><strong style="color:var(--txt);font-family:monospace;">' + escapeHTML(eq.codigo_patrimonio || 'Não inf.') + '</strong></div>' +
               '<div><span style="color:var(--muted);display:block;font-size:10px;">Nº DE SÉRIE</span><strong style="color:var(--txt);font-family:monospace;">' + escapeHTML(eq.numero_serie || 'Não inf.') + '</strong></div>' +
             '</div>' +
-
             '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px;">' +
               tagsHTML +
             '</div>' +
           '</div>' +
-
           '<div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border-lt);font-size:11.5px;" onclick="event.stopPropagation();">' +
             '<button type="button" class="btn btn-ghost btn-xs" onclick="abrirFichaVidaEquipamento(\'' + escapeHTML(eq.id) + '\')" style="color:var(--blue);font-weight:600;padding:4px 8px;display:inline-flex;align-items:center;gap:4px;">' +
               '<i data-lucide="file-text" style="width:12px;height:12px;"></i> Ficheiro de Vida (' + ocs.length + ')' +
@@ -12517,14 +10571,11 @@ document.addEventListener('DOMContentLoaded', function () {
         '</div>' +
       '</div>'
     );
-
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.renderCatalogoEquipamentos = renderCatalogoEquipamentos;
-
   var _eqDragState = null;
   window._arrastandoEqAgora = false;
-
   function animarFlipCardsGrid(grid, rectsAntes, cardIgnorado) {
     if (!grid || !rectsAntes) return;
     var cards = grid.querySelectorAll('.eq-draggable-card, .dash-card-add');
@@ -12545,7 +10596,6 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
   }
-
   function capturarRectsGrid(grid, cardIgnorado) {
     var mapa = {};
     if (!grid) return mapa;
@@ -12557,15 +10607,12 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     return mapa;
   }
-
   function iniciarArrastoEquipamento(ev, eqId) {
     if (!ev || (typeof ev.button === 'number' && ev.button !== 0)) return;
     if (ev.target && ev.target.closest('button, a, input, select, textarea')) return;
-
     var card = ev.currentTarget;
     var grid = document.getElementById('equipamentos-catalogo-grid');
     if (!card || !grid) return;
-
     var rect = card.getBoundingClientRect();
     _eqDragState = {
       eqId: eqId,
@@ -12582,25 +10629,20 @@ document.addEventListener('DOMContentLoaded', function () {
       placeholder: null,
       origStyle: card.getAttribute('style') || ''
     };
-
     document.addEventListener('pointermove', moverArrastoEquipamento, { passive: false });
     document.addEventListener('pointerup', encerrarArrastoEquipamento);
     document.addEventListener('pointercancel', encerrarArrastoEquipamento);
   }
   window.iniciarArrastoEquipamento = iniciarArrastoEquipamento;
-
   function moverArrastoEquipamento(ev) {
     if (!_eqDragState) return;
     var st = _eqDragState;
     var dx = ev.clientX - st.startX;
     var dy = ev.clientY - st.startY;
-
     if (!st.started) {
       if (Math.hypot(dx, dy) < 6) return;
       st.started = true;
       window._arrastandoEqAgora = true;
-
-      // Cria o espaço reservado (placeholder) na grade mantendo o layout firme
       var ph = document.createElement('div');
       ph.className = 'eq-drag-placeholder';
       ph.style.width = '100%';
@@ -12610,13 +10652,10 @@ document.addEventListener('DOMContentLoaded', function () {
       ph.style.borderRadius = 'var(--r-lg, 14px)';
       ph.style.background = 'rgba(239, 246, 255, 0.65)';
       ph.style.boxSizing = 'border-box';
-
       var bgComp = window.getComputedStyle(st.card).backgroundColor;
       st.grid.replaceChild(ph, st.card);
       document.body.appendChild(st.card);
       st.placeholder = ph;
-
-      // Destaca o próprio container real sólido (100% opaco) acompanhando o mouse
       var c = st.card;
       c.style.position = 'fixed';
       c.style.left = (ev.clientX - st.offsetX) + 'px';
@@ -12639,14 +10678,9 @@ document.addEventListener('DOMContentLoaded', function () {
       document.body.style.cursor = 'grabbing';
       document.body.style.userSelect = 'none';
     }
-
     if (ev.cancelable) ev.preventDefault();
-
-    // Move o container sólido diretamente com o ponteiro
     st.card.style.left = (ev.clientX - st.offsetX) + 'px';
     st.card.style.top = (ev.clientY - st.offsetY) + 'px';
-
-    // Auto-scroll suave se chegar perto do topo ou base da área de rolagem
     var scrollContainer = st.grid.closest('.scroll-area') || document.documentElement;
     if (scrollContainer) {
       var scRect = scrollContainer.getBoundingClientRect ? scrollContainer.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
@@ -12656,18 +10690,14 @@ document.addEventListener('DOMContentLoaded', function () {
         scrollContainer.scrollTop += 10;
       }
     }
-
-    // Verifica sobre qual card o ponteiro está passando para abrir espaço em tempo real
     var elemAbaixo = document.elementFromPoint(ev.clientX, ev.clientY);
     if (!elemAbaixo) return;
     var cardAlvo = elemAbaixo.closest('#equipamentos-catalogo-grid .eq-draggable-card');
     if (!cardAlvo || cardAlvo === st.card) return;
-
     var Filhos = Array.prototype.slice.call(st.grid.children);
     var idxPh = Filhos.indexOf(st.placeholder);
     var idxAlvo = Filhos.indexOf(cardAlvo);
     if (idxPh === -1 || idxAlvo === -1 || idxPh === idxAlvo) return;
-
     var rectsAntes = capturarRectsGrid(st.grid, st.card);
     if (idxPh < idxAlvo) {
       st.grid.insertBefore(st.placeholder, cardAlvo.nextSibling);
@@ -12677,27 +10707,21 @@ document.addEventListener('DOMContentLoaded', function () {
     st.movedOrder = true;
     animarFlipCardsGrid(st.grid, rectsAntes, st.card);
   }
-
   function encerrarArrastoEquipamento(ev) {
     document.removeEventListener('pointermove', moverArrastoEquipamento);
     document.removeEventListener('pointerup', encerrarArrastoEquipamento);
     document.removeEventListener('pointercancel', encerrarArrastoEquipamento);
-
     if (!_eqDragState) return;
     var st = _eqDragState;
     _eqDragState = null;
-
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
-
     if (!st.started) {
       window._arrastandoEqAgora = false;
       return;
     }
-
     var phRect = st.placeholder ? st.placeholder.getBoundingClientRect() : null;
     var c = st.card;
-
     var finalizarPosicao = function() {
       if (st.placeholder && st.placeholder.parentNode === st.grid) {
         st.grid.replaceChild(c, st.placeholder);
@@ -12705,16 +10729,13 @@ document.addEventListener('DOMContentLoaded', function () {
         st.grid.appendChild(c);
       }
       c.setAttribute('style', st.origStyle);
-
       if (st.movedOrder) {
         persistirNovaOrdemGridEquipamentos(st.grid);
       }
-
       setTimeout(function() {
         window._arrastandoEqAgora = false;
       }, 60);
     };
-
     if (phRect) {
       c.style.transition = 'left 150ms cubic-bezier(0.2, 0, 0, 1), top 150ms cubic-bezier(0.2, 0, 0, 1), transform 150ms ease, box-shadow 150ms ease';
       c.style.left = phRect.left + 'px';
@@ -12726,22 +10747,17 @@ document.addEventListener('DOMContentLoaded', function () {
       finalizarPosicao();
     }
   }
-
   function persistirNovaOrdemGridEquipamentos(grid) {
     if (!grid) return;
     var cardsNoDom = Array.prototype.slice.call(grid.querySelectorAll('.eq-draggable-card'));
     var idsOrdenadosVisiveis = cardsNoDom.map(function(el) {
       return el.getAttribute('data-eq-id');
     }).filter(Boolean);
-
     if (idsOrdenadosVisiveis.length < 2) return;
-
     var mapaPorId = {};
     catalogoEquipamentos.forEach(function(eq) {
       if (eq && eq.id) mapaPorId[eq.id] = eq;
     });
-
-    // Substitui nas posições correspondentes mantendo a ordem exata da grade visual
     var posicoesOriginais = [];
     for (var i = 0; i < catalogoEquipamentos.length; i++) {
       var item = catalogoEquipamentos[i];
@@ -12749,14 +10765,12 @@ document.addEventListener('DOMContentLoaded', function () {
         posicoesOriginais.push(i);
       }
     }
-
     for (var j = 0; j < posicoesOriginais.length; j++) {
       var novoEq = mapaPorId[idsOrdenadosVisiveis[j]];
       if (novoEq) {
         catalogoEquipamentos[posicoesOriginais[j]] = novoEq;
       }
     }
-
     var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var isUdi = pracaAtiva.indexOf('Uber') !== -1;
     var ordemCounter = 0;
@@ -12774,7 +10788,6 @@ document.addEventListener('DOMContentLoaded', function () {
         salvarEquipamentoPostgreSQL(eq);
       }
     });
-
     salvarOrdemPersonalizadaEquipamentos(pracaAtiva, nomesNaNovaOrdem);
     salvarCatalogoEquipamentosLocal();
     if (typeof renderDashboards === 'function') renderDashboards();
@@ -12782,7 +10795,6 @@ document.addEventListener('DOMContentLoaded', function () {
       mostrarToast('Ordem Atualizada', 'A nova ordem dos equipamentos foi aplicada em todos os menus.', 'info');
     }
   }
-
   function renderSeletorTagsModalEq() {
     var container = document.getElementById('eq-modal-tags- selector') || document.getElementById('eq-modal-tags-selector');
     if (!container) return;
@@ -12798,7 +10810,6 @@ document.addEventListener('DOMContentLoaded', function () {
       );
     }).join('');
   }
-
   function toggleTagModalEquipamento(tag) {
     var idx = tagsSelecionadasModalEq.indexOf(tag);
     if (idx === -1) tagsSelecionadasModalEq.push(tag);
@@ -12806,7 +10817,6 @@ document.addEventListener('DOMContentLoaded', function () {
     renderSeletorTagsModalEq();
   }
   window.toggleTagModalEquipamento = toggleTagModalEquipamento;
-
   function abrirModalCadastroEquipamento(idEdicao) {
     var idEl     = document.getElementById('novo-eq-id');
     var nomeEl   = document.getElementById('novo-eq-nome');
@@ -12818,11 +10828,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var statusEl = document.getElementById('novo-eq-status');
     var obsEl    = document.getElementById('novo-eq-obs');
     var titleEl  = document.getElementById('novo-eq-title');
-
     var eqExistente = idEdicao
       ? (catalogoEquipamentos || []).find(function(e) { return e.id === idEdicao || e.nome === idEdicao; })
       : null;
-
     if (eqExistente) {
       if (titleEl)  titleEl.textContent = 'Modificar Equipamento · ' + eqExistente.nome;
       if (idEl)     idEl.value     = eqExistente.id;
@@ -12848,14 +10856,12 @@ document.addEventListener('DOMContentLoaded', function () {
       if (obsEl)    obsEl.value    = '';
       tagsSelecionadasModalEq = ['Transmissão'];
     }
-
     renderSeletorTagsModalEq();
     abrirPopup('popup-novo-equipamento');
     if (nomeEl) setTimeout(function() { nomeEl.focus(); }, 150);
   }
   window.abrirModalCadastroEquipamento = abrirModalCadastroEquipamento;
   window.abrirModalNovoEquipamento = abrirModalCadastroEquipamento;
-
   function salvarNovoEquipamentoDashboard() {
     var idEl     = document.getElementById('novo-eq-id');
     var nomeEl   = document.getElementById('novo-eq-nome');
@@ -12866,7 +10872,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var setorEl  = document.getElementById('novo-eq-setor');
     var statusEl = document.getElementById('novo-eq-status');
     var obsEl    = document.getElementById('novo-eq-obs');
-
     var idEdicao = idEl ? idEl.value.trim() : '';
     var nome = (nomeEl ? nomeEl.value : '').trim().toUpperCase();
     if (!nome) {
@@ -12874,7 +10879,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (nomeEl) nomeEl.focus();
       return;
     }
-
     var praca = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     var duplicado = (catalogoEquipamentos || []).find(function(e) {
       return e.status_operacional !== 'lixeira' && e.praca === praca && e.nome === nome && e.id !== idEdicao;
@@ -12883,7 +10887,6 @@ document.addEventListener('DOMContentLoaded', function () {
       alert('Já existe um equipamento ativo com o nome "' + nome + '" na praça de ' + praca + '.');
       return;
     }
-
     var itemSalvo = null;
     if (idEdicao) {
       catalogoEquipamentos = catalogoEquipamentos.map(function(e) {
@@ -12919,22 +10922,18 @@ document.addEventListener('DOMContentLoaded', function () {
       });
       catalogoEquipamentos.push(itemSalvo);
     }
-
     window._ultimoEqAdicionado = nome;
     salvarCatalogoEquipamentosLocal();
     if (itemSalvo) salvarEquipamentoPostgreSQL(itemSalvo);
-
     if (window._eqTriggeringSelect) {
       try {
         window._eqTriggeringSelect.value = nome;
       } catch (eSel) {}
       window._eqTriggeringSelect = null;
     }
-
     fecharPopup('popup-novo-equipamento');
     renderCatalogoEquipamentos();
     if (typeof renderDashboards === 'function') renderDashboards();
-
     if (typeof mostrarToast === 'function') {
       mostrarToast(
         idEdicao ? 'Equipamento Atualizado' : 'Equipamento Cadastrado',
@@ -12944,20 +10943,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.salvarNovoEquipamentoDashboard = salvarNovoEquipamentoDashboard;
-
   function excluirEquipamentoParaLixeira(idEq) {
     var eq = (catalogoEquipamentos || []).find(function(e) { return e.id === idEq || e.nome === idEq; });
     if (!eq) return;
-
     if (!confirm('Deseja mover o equipamento "' + eq.nome + '" para a Lixeira?\n\nEle deixará de aparecer nos novos relatórios, mas seu histórico será preservado na Lixeira por 7 dias.')) {
       return;
     }
-
     eq.status_operacional = 'lixeira';
     salvarCatalogoEquipamentosLocal();
     salvarEquipamentoPostgreSQL(eq);
-
-    // Adiciona registro também na Lixeira Geral do Sistema para permitir restauração
     if (typeof lixeiraData !== 'undefined' && Array.isArray(lixeiraData)) {
       var itemLixeira = {
         id: eq.id,
@@ -12982,23 +10976,19 @@ document.addEventListener('DOMContentLoaded', function () {
       if (typeof saveLixeira === 'function') saveLixeira(lixeiraData);
       if (typeof salvarItemLixeiraNuvem === 'function') salvarItemLixeiraNuvem(itemLixeira);
     }
-
     fecharPopup('popup-ficha-vida-equipamento');
     renderCatalogoEquipamentos();
     if (typeof renderDashboards === 'function') renderDashboards();
     if (typeof renderLixeira === 'function') renderLixeira();
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Equipamento na Lixeira', eq.nome + ' foi movido para a Lixeira.', 'info');
     }
   }
   window.excluirEquipamentoParaLixeira = excluirEquipamentoParaLixeira;
-
   function abrirOcorrenciaDiretaEquipamento(idOuNome) {
     var eq = (catalogoEquipamentos || []).find(function(e) { return e.id === idOuNome || e.nome === idOuNome; });
     fecharPopup('popup-ficha-vida-equipamento');
     abrirPopup('popup-nova-oc');
-
     if (eq) {
       var selEq = document.getElementById('nova-equipamento');
       if (selEq) selEq.value = eq.nome;
@@ -13014,20 +11004,14 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.abrirOcorrenciaDiretaEquipamento = abrirOcorrenciaDiretaEquipamento;
-
-  /* ═══════════════════════════════════════════
-     FICHEIRO DE VIDA DO EQUIPAMENTO (MODAL COMPLETO)
-  ═══════════════════════════════════════════ */
   function abrirFichaVidaEquipamento(idOuNome) {
     var eq = (catalogoEquipamentos || []).find(function(e) {
       return e.status_operacional !== 'lixeira' && (e.id === idOuNome || e.nome === idOuNome);
     });
     if (!eq) return;
-
     var ocs = obterOcorrenciasDoEquipamento(eq);
     var abertas = ocs.filter(function(o) { return o.status === 'aberta'; });
     var resolvidas = ocs.filter(function(o) { return o.status !== 'aberta'; });
-
     var metricObj = (typeof dashboardMetrics !== 'undefined' && dashboardMetrics.equipamento)
       ? dashboardMetrics.equipamento[eq.nome]
       : null;
@@ -13036,7 +11020,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var txCanc = metricObj ? (metricObj.canc || 0) : 0;
     var txTot  = txConf + txNc + txCanc;
     var saudePct = txTot > 0 ? ((txConf / txTot) * 100).toFixed(1) + '%' : (abertas.length === 0 ? '100%' : 'Atenção');
-
     var elNome   = document.getElementById('ficha-eq-nome');
     var elSub    = document.getElementById('ficha-eq-sub');
     var elBadge  = document.getElementById('ficha-eq-status-badge');
@@ -13046,13 +11029,11 @@ document.addEventListener('DOMContentLoaded', function () {
     var elLocal  = document.getElementById('ficha-eq-local');
     var elObs    = document.getElementById('ficha-eq-obs');
     var elTags   = document.getElementById('ficha-eq-tags');
-
     var elKpiOcs   = document.getElementById('ficha-kpi-ocs');
     var elKpiRes   = document.getElementById('ficha-kpi-resolvidas');
     var elKpiTx    = document.getElementById('ficha-kpi-tx');
     var elKpiSaude = document.getElementById('ficha-kpi-saude');
     var elTimeline = document.getElementById('ficha-eq-timeline');
-
     if (elNome)   elNome.textContent   = eq.nome;
     if (elSub)    elSub.textContent    = (eq.categoria || 'Equipamento') + ' · ' + eq.praca;
     if (elPat)    elPat.textContent    = eq.codigo_patrimonio || 'Não cadastrado';
@@ -13060,7 +11041,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (elModelo) elModelo.textContent = eq.fabricante_modelo || eq.categoria || 'Padrão';
     if (elLocal)  elLocal.textContent  = (eq.setor_local || 'Central Técnica') + ' (' + eq.praca + ')';
     if (elObs)    elObs.textContent    = eq.obs_tecnicas || 'Nenhuma observação técnica registrada para este equipamento.';
-
     var st = calcularStatusEquipamentoDinamico(eq);
     if (elBadge) {
       if (st === 'manutencao') {
@@ -13074,7 +11054,6 @@ document.addEventListener('DOMContentLoaded', function () {
         elBadge.textContent = '🟢 Operacional';
       }
     }
-
     if (elTags) {
       var tList = Array.isArray(eq.tags) ? eq.tags : [];
       elTags.innerHTML = tList.length > 0
@@ -13083,20 +11062,16 @@ document.addEventListener('DOMContentLoaded', function () {
           }).join('')
         : '<span style="font-size:11.5px;color:var(--muted);">Sem tags associadas</span>';
     }
-
     if (elKpiOcs)   elKpiOcs.textContent   = ocs.length;
     if (elKpiRes)   elKpiRes.textContent   = resolvidas.length;
     if (elKpiTx)    elKpiTx.textContent    = txTot;
     if (elKpiSaude) elKpiSaude.textContent = saudePct;
-
-    // Botões de ação do rodapé da Ficha de Vida
     var btnEdit = document.getElementById('btn-ficha-editar');
     var btnDel  = document.getElementById('btn-ficha-excluir');
     var btnNova = document.getElementById('btn-ficha-nova-oc');
     if (btnEdit) btnEdit.onclick = function() { fecharPopup('popup-ficha-vida-equipamento'); abrirModalCadastroEquipamento(eq.id); };
     if (btnDel)  btnDel.onclick  = function() { excluirEquipamentoParaLixeira(eq.id); };
     if (btnNova) btnNova.onclick = function() { abrirOcorrenciaDiretaEquipamento(eq.id); };
-
     if (elTimeline) {
       var nomeEqUp = String(eq.nome || '').toUpperCase().trim();
       var relsEq = (typeof historicoSeedData !== 'undefined' && Array.isArray(historicoSeedData) ? historicoSeedData : []).filter(function(h) {
@@ -13112,7 +11087,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (h.equipamento && String(h.equipamento).toUpperCase().indexOf(nomeEqUp) !== -1) return true;
         return false;
       });
-
       if (ocs.length === 0 && relsEq.length === 0) {
         elTimeline.innerHTML =
           '<div style="text-align:center;padding:24px 14px;background:#F8FAFC;border:1px dashed var(--border);border-radius:10px;color:var(--muted);font-size:12px;">' +
@@ -13132,12 +11106,10 @@ document.addEventListener('DOMContentLoaded', function () {
           var descRes = descResLimpa
             ? '<div style="margin-top:6px;padding:6px 10px;background:#F0FDF4;border-radius:6px;font-size:11.5px;color:#166534;"><strong>Solução aplicada:</strong> ' + escapeHTML(descResLimpa) + '</div>'
             : '';
-
           var temPreviewOc = !!(oc.htmlRelatorio || oc.dadosCTRS || (oc.desc && String(oc.desc).indexOf('<!--CTRS_JSON:') !== -1));
           var previewBtn = temPreviewOc
             ? '<span style="font-size:10.5px;font-weight:700;color:#0071E3;background:#EFF6FF;border:1px solid #BFDBFE;padding:2px 8px;border-radius:10px;">👁️ Ver Relatório na Descrição</span>'
             : '';
-
           return (
             '<div onclick=\"fecharPopup(\'popup-ficha-vida-equipamento\'); verDetalhesOcorrencia(\'' + oc.id + '\')\" style=\"background:#FFFFFF;border:1px solid var(--border-lt);border-left:3.5px solid ' + corBorda + ';border-radius:8px;padding:10px 14px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'var(--blue)\';\" onmouseout=\"this.style.borderColor=\'var(--border-lt)\';\" title=\"Clique para abrir a ocorrência completa com o preview do relatório\">' +
               '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
@@ -13153,7 +11125,6 @@ document.addEventListener('DOMContentLoaded', function () {
             '</div>'
           );
         }).join('');
-
         var htmlRels = relsEq.map(function(r) {
           var descRelLimpa = String(r.descCriacao || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
           var isNC = r.status && String(r.status).toLowerCase().indexOf('não conform') !== -1;
@@ -13174,18 +11145,14 @@ document.addEventListener('DOMContentLoaded', function () {
             '</div>'
           );
         }).join('');
-
         elTimeline.innerHTML = htmlOcs + htmlRels;
       }
     }
-
     if (typeof lucide !== 'undefined') lucide.createIcons();
     abrirPopup('popup-ficha-vida-equipamento');
   }
   window.abrirFichaVidaEquipamento = abrirFichaVidaEquipamento;
 
-
-  /* Garante conexão ativa com o PostgreSQL na nuvem (Modo Offline desativado) */
   if (typeof isEstacaoConectadaTV === 'function' && !isEstacaoConectadaTV() && typeof conectarComChaveTV === 'function') {
     conectarComChaveTV(atob('QEludGVncmEyNjIw')).then(function() {
       if (typeof carregarEquipamentosStore === 'function') carregarEquipamentosStore();
@@ -13193,10 +11160,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (typeof sincronizarEquipeNuvem === 'function') sincronizarEquipeNuvem();
     });
   }
-  /* ═══════════════════════════════════════════
-     FLUXO DE INICIALIZAÇÃO E IDENTIFICAÇÃO DO OPERADOR
-  ═══════════════════════════════════════════ */
-  /* Render inicial */
   try { carregarDashboardMetricsStore(); } catch(e) {}
   try { if (typeof aplicarModoPraca === 'function') aplicarModoPraca(); } catch(e) {}
   try { carregarFotoPerfilSalva(); } catch(e) {}
@@ -13206,7 +11169,6 @@ document.addEventListener('DOMContentLoaded', function () {
   try { carregarRascunhoRelatorioTV(); } catch(e) {}
   try { carregarRascunhoRecebimento(); } catch(e) {}
   try { carregarRascunhoCompra(); } catch(e) {}
-  try { carregarDashboardMetricsStore(); } catch(e) {}
   try { if (typeof carregarEquipamentosStore === 'function') carregarEquipamentosStore(); } catch(e) {}
   try { carregarOrcamentoStore(); } catch(e) {}
   try { carregarChecklistStore(); } catch(e) {}
@@ -13214,8 +11176,6 @@ document.addEventListener('DOMContentLoaded', function () {
   try { if (typeof sincronizarEquipeNuvem === 'function') sincronizarEquipeNuvem(); } catch(e) {}
   try { if (typeof DBService !== 'undefined' && DBService.init) DBService.init(); } catch(e) {}
   renderAll(true);
-
-  // Sincronização inteligente: periódica a cada 2 minutos APENAS se a aba estiver visível e conectada
   setInterval(function() {
     if (document.hidden) return; // Se a aba estiver minimizada ou em segundo plano, economiza tráfego
     if (typeof _isCloudConnected === 'function' && !_isCloudConnected()) {
@@ -13225,14 +11185,12 @@ document.addEventListener('DOMContentLoaded', function () {
       DBService.syncRemote();
     }
   }, 120000); // 2 minutos
-
   var lastFocusSync = 0;
   window.addEventListener('focus', function() {
     var now = Date.now();
     if (now - lastFocusSync < 60000) return; // Limite de 1 sincronização por minuto ao alternar abas
     lastFocusSync = now;
     if (typeof _isCloudConnected === 'function' && !_isCloudConnected()) {
-      // Ao voltar à aba se estiver desconectado, tenta reconexão imediata
       if (typeof tentarReconectarImediato === 'function') tentarReconectarImediato();
       return;
     }
@@ -13240,11 +11198,9 @@ document.addEventListener('DOMContentLoaded', function () {
       DBService.syncRemote();
     }
   });
-
   var savedUserName = localStorage.getItem(USER_NAME_STORAGE_KEY);
   try { if (typeof carregarOperadoresSugeridos === 'function') carregarOperadoresSugeridos(); } catch(e) {}
   try { if (typeof atualizarUIIdentificacaoOperador === 'function') atualizarUIIdentificacaoOperador(); } catch(e) {}
-
   var identPracaSelect = document.getElementById('ident-operador-praca');
   if (identPracaSelect) {
     if (typeof getPracaAtual === 'function') {
@@ -13256,7 +11212,6 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
   }
-
   if (!savedUserName || !savedUserName.trim() || savedUserName.trim() === 'Operador') {
     abrirPopup('popup-identificacao-operador');
     var identEmail = document.getElementById('ident-operador-email');
@@ -13285,5 +11240,4 @@ document.addEventListener('DOMContentLoaded', function () {
     try { if (typeof obterOuCriarOperadorPorNome === 'function') obterOuCriarOperadorPorNome(savedUserName.trim()); } catch(e) {}
     abrirPopup('popup-entrada');
   }
-
-}); /* fim DOMContentLoaded */
+});

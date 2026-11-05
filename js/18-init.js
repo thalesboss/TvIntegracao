@@ -1,4 +1,3 @@
-  /* Garante conexão ativa com o PostgreSQL na nuvem (Modo Offline desativado) */
   if (typeof isEstacaoConectadaTV === 'function' && !isEstacaoConectadaTV() && typeof conectarComChaveTV === 'function') {
     conectarComChaveTV(atob('QEludGVncmEyNjIw')).then(function() {
       if (typeof carregarEquipamentosStore === 'function') carregarEquipamentosStore();
@@ -6,10 +5,6 @@
       if (typeof sincronizarEquipeNuvem === 'function') sincronizarEquipeNuvem();
     });
   }
-  /* ═══════════════════════════════════════════
-     FLUXO DE INICIALIZAÇÃO E IDENTIFICAÇÃO DO OPERADOR
-  ═══════════════════════════════════════════ */
-  /* Render inicial */
   try { carregarDashboardMetricsStore(); } catch(e) {}
   try { if (typeof aplicarModoPraca === 'function') aplicarModoPraca(); } catch(e) {}
   try { carregarFotoPerfilSalva(); } catch(e) {}
@@ -19,7 +14,6 @@
   try { carregarRascunhoRelatorioTV(); } catch(e) {}
   try { carregarRascunhoRecebimento(); } catch(e) {}
   try { carregarRascunhoCompra(); } catch(e) {}
-  try { carregarDashboardMetricsStore(); } catch(e) {}
   try { if (typeof carregarEquipamentosStore === 'function') carregarEquipamentosStore(); } catch(e) {}
   try { carregarOrcamentoStore(); } catch(e) {}
   try { carregarChecklistStore(); } catch(e) {}
@@ -27,8 +21,6 @@
   try { if (typeof sincronizarEquipeNuvem === 'function') sincronizarEquipeNuvem(); } catch(e) {}
   try { if (typeof DBService !== 'undefined' && DBService.init) DBService.init(); } catch(e) {}
   renderAll(true);
-
-  // Sincronização inteligente: periódica a cada 2 minutos APENAS se a aba estiver visível e conectada
   setInterval(function() {
     if (document.hidden) return; // Se a aba estiver minimizada ou em segundo plano, economiza tráfego
     if (typeof _isCloudConnected === 'function' && !_isCloudConnected()) {
@@ -38,14 +30,12 @@
       DBService.syncRemote();
     }
   }, 120000); // 2 minutos
-
   var lastFocusSync = 0;
   window.addEventListener('focus', function() {
     var now = Date.now();
     if (now - lastFocusSync < 60000) return; // Limite de 1 sincronização por minuto ao alternar abas
     lastFocusSync = now;
     if (typeof _isCloudConnected === 'function' && !_isCloudConnected()) {
-      // Ao voltar à aba se estiver desconectado, tenta reconexão imediata
       if (typeof tentarReconectarImediato === 'function') tentarReconectarImediato();
       return;
     }
@@ -53,11 +43,9 @@
       DBService.syncRemote();
     }
   });
-
   var savedUserName = localStorage.getItem(USER_NAME_STORAGE_KEY);
   try { if (typeof carregarOperadoresSugeridos === 'function') carregarOperadoresSugeridos(); } catch(e) {}
   try { if (typeof atualizarUIIdentificacaoOperador === 'function') atualizarUIIdentificacaoOperador(); } catch(e) {}
-
   var identPracaSelect = document.getElementById('ident-operador-praca');
   if (identPracaSelect) {
     if (typeof getPracaAtual === 'function') {
@@ -69,7 +57,6 @@
       }
     });
   }
-
   if (!savedUserName || !savedUserName.trim() || savedUserName.trim() === 'Operador') {
     abrirPopup('popup-identificacao-operador');
     var identEmail = document.getElementById('ident-operador-email');
@@ -98,5 +85,4 @@
     try { if (typeof obterOuCriarOperadorPorNome === 'function') obterOuCriarOperadorPorNome(savedUserName.trim()); } catch(e) {}
     abrirPopup('popup-entrada');
   }
-
-}); /* fim DOMContentLoaded */
+});

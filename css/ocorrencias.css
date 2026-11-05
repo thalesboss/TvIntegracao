@@ -13,7 +13,6 @@
   color: var(--txt);
   letter-spacing: -0.01em;
 }
-
 .pills {
   display: inline-flex;
   gap: 3px;
@@ -45,10 +44,6 @@
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07), 0 1px 2px rgba(0, 0, 0, 0.04);
 }
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   CABEÇALHOS DE SEÇÕES TEMPORAIS & OCORRÊNCIAS
-   ═══════════════════════════════════════════════════════════════════════════ */
 .oc-section-header {
   display: flex;
   align-items: center;
@@ -84,7 +79,6 @@
   background: var(--border);
   opacity: 0.6;
 }
-
 .oc-card {
   background: #FFFFFF;
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -133,7 +127,6 @@
   border-color: #F59E0B !important;
   box-shadow: 0 8px 24px rgba(245, 158, 11, 0.16) !important;
 }
-
 .oc-card.arquivada {
   background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%) !important;
   border: 1px solid #CBD5E1 !important;
@@ -143,7 +136,6 @@
   border-color: #94A3B8 !important;
   box-shadow: 0 4px 12px rgba(100, 116, 139, 0.14) !important;
 }
-
 .prio-line {
   width: 4px;
   border-radius: var(--r-pill);
@@ -155,7 +147,6 @@
 .pl-y { background: var(--yellow); }
 .pl-g { background: var(--green); }
 .pl-gray { background: #94A3B8; }
-
 .oc-body {
   flex: 1;
   min-width: 0;
@@ -173,7 +164,6 @@
   color: var(--txt);
   letter-spacing: -0.015em;
 }
-
 .tag {
   display: inline-flex;
   align-items: center;
@@ -191,7 +181,6 @@
 .tag-teal-soft   { background: var(--teal-lt);   color: #0F766E;       border-color: rgba(48, 176, 199, 0.3); }
 .tag-yellow-soft { background: #FEF9C3; color: #B45309; border-color: #FDE68A; }
 .tag-gray-soft   { background: #F1F5F9; color: #475569; border-color: #CBD5E1; }
-
 .oc-desc {
   font-size: 12px;
   color: var(--txt2);
@@ -218,7 +207,6 @@
   flex-shrink: 0;
   padding-left: 8px;
 }
-
 .btn-card-action,
 .btn-apple-action {
   display: inline-flex;
@@ -235,7 +223,6 @@
   user-select: none;
   min-width: 96px;
 }
-
 .btn-card-resolve,
 .btn-apple-resolve {
   background: #ECFDF5;
@@ -250,7 +237,6 @@
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.22);
 }
-
 .btn-card-restore {
   background: #EFF6FF;
   color: #2563EB;
@@ -263,4 +249,3 @@
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(37, 99, 235, 0.18);
 }
-

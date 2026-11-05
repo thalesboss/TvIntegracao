@@ -1,6 +1,3 @@
-/* ═══════════════════════════════════════════════════════════════════════════
-   RELATÓRIO & SPLIT LAYOUTS
-   ═══════════════════════════════════════════════════════════════════════════ */
 .rel-layout {
   flex: 1;
   display: flex;
@@ -13,7 +10,6 @@
   overflow-y: auto;
   padding: 76px 24px 24px 24px;
 }
-
 .rel-aside {
   width: 250px;
   flex-shrink: 0;
@@ -24,7 +20,6 @@
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
-
 .dest-bar {
   background: var(--green-lt);
   border: 1px solid var(--green-border);
@@ -50,7 +45,6 @@
   font-weight: 600;
   color: var(--green-dk);
 }
-
 .form-card {
   background: #FFFFFF;
   border: 1px solid var(--border);
@@ -82,8 +76,6 @@
 .fci-g { background: var(--green-lt);  color: var(--green-dk); }
 .fci-y { background: var(--yellow-lt); color: var(--yellow); }
 .fci-p { background: var(--indigo-lt); color: var(--indigo); }
-
-/* Form Fields */
 .frow {
   display: flex;
   flex-direction: column;
@@ -141,7 +133,6 @@
   border-color: var(--blue);
   box-shadow: 0 0 0 3.5px rgba(0, 113, 227, 0.25), inset 0 1px 2px rgba(0, 0, 0, 0.01);
 }
-
 input[type="radio"],
 input[type="checkbox"] {
   outline: none !important;
@@ -154,7 +145,6 @@ input[type="checkbox"]:focus {
   outline: none !important;
   box-shadow: none !important;
 }
-
 .frow textarea {
   resize: vertical;
   min-height: 72px;
@@ -163,8 +153,6 @@ input[type="checkbox"]:focus {
 .fg3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 12px; }
 .fg2 > *, .fg3 > * { min-width: 0; }
 .divider { height: 1px; background: var(--border-lt); margin: 6px 0 14px; }
-
-/* Accordion CTRS */
 .acc-block {
   border: 1px solid var(--border);
   border-radius: var(--r-md);
@@ -211,8 +199,6 @@ input[type="checkbox"]:focus {
 .acc-body.open {
   display: block;
 }
-
-/* Submit bar & Tags de Envio Automático */
 .submit-bar {
   background: #FFFFFF;
   border: 1px solid var(--border);
@@ -225,14 +211,12 @@ input[type="checkbox"]:focus {
   flex-wrap: wrap;
   box-shadow: var(--shadow-sm);
 }
-
 .dest-info-group {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
-
 .dest-label, .submit-bar p {
   font-size: 12px;
   font-weight: 600;
@@ -240,14 +224,12 @@ input[type="checkbox"]:focus {
   margin: 0;
   white-space: nowrap;
 }
-
 .dest-tags {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
 }
-
 .sb-tag {
   background: var(--blue-lt);
   border: 1px solid var(--blue-border);
@@ -262,8 +244,6 @@ input[type="checkbox"]:focus {
   white-space: nowrap;
   letter-spacing: 0.2px;
 }
-
-/* Mini items (aside) */
 .aside-lbl {
   font-size: 10.5px;
   font-weight: 700;
@@ -341,17 +321,11 @@ input[type="checkbox"]:focus {
   font-size: 11px;
   color: var(--muted);
 }
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   PRINT / PDF STYLESHEET (A4 Otimizado para Laudos & CTR)
-   ═══════════════════════════════════════════════════════════════════════════ */
 @media print {
   @page {
     size: A4 portrait;
     margin: 12mm 15mm 12mm 15mm;
   }
-
-  /* Ocultar elementos de navegação, modais, botões e status */
   .sidebar,
   .topbar,
   .notif-btn,
@@ -367,8 +341,6 @@ input[type="checkbox"]:focus {
   .sn-r, .sn-y, .sn-g, .sn-b {
     display: none !important;
   }
-
-  /* Reset de layout e fundo para folha A4 limpa */
   html, body {
     background: #FFFFFF !important;
     color: #000000 !important;
@@ -379,7 +351,6 @@ input[type="checkbox"]:focus {
     overflow: visible !important;
     height: auto !important;
   }
-
   .main, .page, .scroll-area, .rel-layout, .rel-center {
     position: static !important;
     width: 100% !important;
@@ -390,13 +361,9 @@ input[type="checkbox"]:focus {
     background: transparent !important;
     display: block !important;
   }
-
-  /* Exibe somente a página em visualização ativa */
   .page:not(.active) {
     display: none !important;
   }
-
-  /* Prevenção de quebra de linha/página em tabelas e blocos de laudo */
   table, tr, td, th,
   .form-card,
   .rel-preview-container,
@@ -407,18 +374,15 @@ input[type="checkbox"]:focus {
     break-inside: avoid !important;
     box-shadow: none !important;
   }
-
   table {
     width: 100% !important;
     border-collapse: collapse !important;
   }
-
   th, td {
     border: 1px solid #D0D0D0 !important;
     color: #000000 !important;
     padding: 6px 8px !important;
   }
-
   input, select, textarea {
     border: 1px solid #D0D0D0 !important;
     background: transparent !important;
@@ -426,5 +390,3 @@ input[type="checkbox"]:focus {
     box-shadow: none !important;
   }
 }
-
-

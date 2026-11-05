@@ -28,7 +28,6 @@
   gap: 8px;
   flex-wrap: wrap;
 }
-
 .cfg-toggle-row {
   display: flex;
   align-items: center;
@@ -46,7 +45,6 @@
   color: var(--muted);
   margin-top: 1px;
 }
-
 .toggle {
   position: relative;
   display: inline-block;
@@ -87,4 +85,3 @@
 .toggle input:checked + .toggle-slider::before {
   transform: translateX(16px);
 }
-

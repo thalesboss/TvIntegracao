@@ -1,40 +1,23 @@
-  /* ═══════════════════════════════════════════
-     POPUP ENTRADA
-  /* ═══════════════════════════════════════════
-     CHECKLIST LOGOUT
-  ═══════════════════════════════════════════ */
-
-  function markDone(id, el) { 
+  function markDone(id, el) {
     var item = document.getElementById(id);
-    if (item && el) item.classList.toggle('done', el.checked); 
+    if (item && el) item.classList.toggle('done', el.checked);
   }
   window.markDone = markDone;
-
   function confirmarLogout() {
     var obs = document.getElementById('obs-logout');
     fecharPopup('popup-logout');
     if (obs) obs.value = '';
     loginTime = Date.now();
-
-    // Remove apenas o usuário logado para solicitar nova identificação
-    // mantendo credenciais da estação (banco de dados / Supabase)
     try {
       localStorage.removeItem(USER_NAME_STORAGE_KEY);
     } catch(e) {}
-
-    // Reseta visualmente a interface sem salvar 'Operador' no localStorage
     if (typeof atualizarNomeOperadorUI === 'function') {
       atualizarNomeOperadorUI('Operador', false);
     }
-
     if (typeof mostrarToast === 'function') {
       mostrarToast('Sessão Encerrada', 'Turno finalizado com sucesso. Identifique o próximo operador.', 'info');
     }
-
-    // Fecha popup de entrada se estiver aberto
     fecharPopup('popup-entrada');
-
-    // Prepara e abre o popup de identificação do operador
     var identEmail = document.getElementById('ident-operador-email');
     if (identEmail) identEmail.value = '';
     var identInput = document.getElementById('ident-operador-nome');
@@ -45,14 +28,12 @@
     if (chaveInput) {
       chaveInput.value = '';
     }
-
     if (typeof resetarFluxoEmailIdentificacao === 'function') {
       resetarFluxoEmailIdentificacao();
     }
     if (typeof atualizarUIIdentificacaoOperador === 'function') {
       atualizarUIIdentificacaoOperador();
     }
-
     abrirPopup('popup-identificacao-operador');
     setTimeout(function() {
       if (identEmail && identEmail.offsetParent !== null) identEmail.focus();
@@ -60,14 +41,8 @@
     }, 150);
   }
   window.confirmarLogout = confirmarLogout;
-
-  /* ═══════════════════════════════════════════
-     TIMER DE SESSÃO / TEMPO LOGADO
-  ═══════════════════════════════════════════ */
   var loginTime = Date.now();
-
   function pad(n) { return n < 10 ? '0' + n : n; }
-
   function getTempoLogadoStr() {
     var diff = Math.floor((Date.now() - loginTime) / 1000);
     if (diff < 0) diff = 0;
@@ -76,14 +51,11 @@
     var s = diff % 60;
     return pad(h) + 'h ' + pad(m) + 'm ' + pad(s) + 's';
   }
-
   function atualizarTimerLogin() {
     try {
       var timeStr = getTempoLogadoStr();
-
       var upTimer = document.getElementById('up-timer');
       if (upTimer) upTimer.textContent = timeStr;
-
       var pageChip = document.getElementById('page-chip');
       var activePage = document.querySelector('.page.active');
       if (pageChip && activePage && activePage.id === 'page-dashboard') {
@@ -93,13 +65,8 @@
       console.warn('Erro ao atualizar timer de login:', err);
     }
   }
-
   setInterval(atualizarTimerLogin, 1000);
   atualizarTimerLogin();
-
-  /* ═══════════════════════════════════════════
-     USER POPOVER (popup sobre o nome)
-  ═══════════════════════════════════════════ */
   function toggleUserPopover(e) {
     if (e) e.stopPropagation();
     var popover = document.getElementById('user-popover');
@@ -113,7 +80,6 @@
     }
   }
   window.toggleUserPopover = toggleUserPopover;
-
   document.addEventListener('click', function(e) {
     var popover = document.getElementById('user-popover');
     var userBlock = document.getElementById('s-user-block');
@@ -123,11 +89,6 @@
       }
     }
   });
-
-  /* ═══════════════════════════════════════════
-     NAVEGAÇÃO
-  ═══════════════════════════════════════════ */
-
   var pageMap = {
     recebimento:  { page:'page-recebimento',  title:'Recebimento de Materiais',                 chip:'Registro patrimonial e anexo de fotos/vídeos' },
     recebimento1: { page:'page-recebimento',  title:'Recebimento de Materiais',                 chip:'Registro patrimonial e anexo de fotos/vídeos' },
@@ -147,7 +108,6 @@
     ronda:         { page:'page-ronda',          title:'Relatório Diário — Tecnologia UDI',        chip:'Ronda técnica de plantão e infraestrutura' },
     config:        { page:'page-config',         title:'Configurações',                            chip:'Perfil e preferências'      }
   };
-
   function irPara(name, el) {
     document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
     document.querySelectorAll('.s-btn').forEach(function(b) { b.classList.remove('active'); });
@@ -190,11 +150,6 @@
     }
   }
   window.irPara = irPara;
-
-  /* ═══════════════════════════════════════════
-     ACCORDION
-  ═══════════════════════════════════════════ */
-
   function togAcc(head) {
     var isOpen = head.classList.contains('open');
     head.classList.toggle('open', !isOpen);
@@ -202,11 +157,6 @@
     head.nextElementSibling.classList.toggle('open', !isOpen);
   }
   window.togAcc = togAcc;
-
-  /* ═══════════════════════════════════════════
-     FILTROS
-  ═══════════════════════════════════════════ */
-
   function filtrar(elOrTipo, tipo) {
     var el = (elOrTipo && typeof elOrTipo === 'object' && elOrTipo.nodeType) ? elOrTipo : null;
     var tipoFinal = typeof elOrTipo === 'string' ? elOrTipo : tipo;
@@ -230,12 +180,7 @@
     renderCards();
   }
   window.filtrar = filtrar;
-
-  /* ═══════════════════════════════════════════
-     GESTÃO DE PRAÇA ATIVA (MULTI-PRAÇA)
-  ═══════════════════════════════════════════ */
   var CHAVE_PRACA = 'tv_praca_ativa';
-
   function getPracaAtual() {
     try {
       var salval = localStorage.getItem(CHAVE_PRACA);
@@ -246,7 +191,6 @@
     return 'Juiz de Fora';
   }
   window.getPracaAtual = getPracaAtual;
-
   function setPracaAtual(praca) {
     if (!praca) return;
     var norm = praca.indexOf('Uber') !== -1 ? 'Uberlândia' : 'Juiz de Fora';
@@ -256,51 +200,34 @@
     aplicarModoPraca(norm);
   }
   window.setPracaAtual = setPracaAtual;
-
   function aplicarModoPraca(praca) {
     var p = praca || getPracaAtual();
     var isUberlandia = p.indexOf('Uber') !== -1;
-
-    // 1. Atualizar topbar badge
     var nomeEl = document.getElementById('topbar-praca-nome');
     if (nomeEl) {
       nomeEl.textContent = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
     }
-
-    // 2. Atualizar menu lateral: Relatório Transmissões
     var ctrsLabel = document.getElementById('sidebar-label-ctrs');
     if (ctrsLabel) {
       ctrsLabel.textContent = 'Relatório Transmissões';
     }
-
-    // 3. Atualizar pageMap para título dinâmico de Transmissões
     if (pageMap && pageMap.ctrs) {
       pageMap.ctrs.title = isUberlandia ? 'Relatório de Transmissões' : 'Relatório de Transmissões (CTRS)';
       pageMap.ctrs.chip  = isUberlandia ? 'Preencher após cada transmissão / jornal' : 'Preencher após cada jornal';
     }
-
-    // 4. Se a página CTRS estiver aberta ou tiver cabeçalho no HTML, atualizar
     var ctrsPageHeader = document.querySelector('#page-ctrs .sec-header h2');
     if (ctrsPageHeader) {
       ctrsPageHeader.textContent = isUberlandia ? 'Relatório de Transmissões' : 'Relatório de Transmissões (CTRS)';
     }
-
-    // 5. Esconder / Exibir Recebimento de Materiais (somente Juiz de Fora)
     var btnRec = document.getElementById('sidebar-btn-recebimento');
     if (btnRec) btnRec.style.display = isUberlandia ? 'none' : '';
-
-    // 5b. Esconder / Exibir Relatório Diário de Tecnologia / Ronda (somente Uberlândia)
     var btnRonda = document.getElementById('sidebar-btn-ronda');
     if (btnRonda) btnRonda.style.display = isUberlandia ? '' : 'none';
-
-    // Manter o cabeçalho de seção "Suprimentos & Compras" visível para compras/orçamento terem seu próprio bloco
     var secCompras = document.getElementById('sidebar-section-compras') || document.getElementById('sidebar-section-recebimento');
     if (secCompras) {
       secCompras.style.display = '';
       secCompras.textContent = isUberlandia ? 'Compras & Orçamento' : 'Suprimentos & Compras';
     }
-
-    // Esconder / Exibir pílula de Recebimento no Histórico
     var histPillRec = document.getElementById('hist-pill-recebimento');
     if (histPillRec) histPillRec.style.display = isUberlandia ? 'none' : '';
     if (isUberlandia && typeof historicoFiltroCategoria !== 'undefined' && historicoFiltroCategoria === 'recebimento') {
@@ -309,58 +236,39 @@
         filtrarCategoriaHistorico('todos', pillTodos);
       }
     }
-
-    // Se estiver atualmente na página de recebimento e mudar para Uberlândia, redirecionar para dashboard
     var activePage = document.querySelector('.page.active');
     if (isUberlandia && activePage && activePage.id === 'page-recebimento') {
       irPara('dashboard');
     }
-    // Se estiver atualmente na página de ronda e mudar para Juiz de Fora, redirecionar para dashboard
     if (!isUberlandia && activePage && activePage.id === 'page-ronda') {
       irPara('dashboard');
     }
-
-    // 6. Atualizar selects nas páginas de formulários para a praça ativa
     var cfgPraca = document.getElementById('cfg-praca');
     if (cfgPraca) cfgPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
-
     var identPraca = document.getElementById('ident-operador-praca');
     if (identPraca) identPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
-
     var ctrsPraca = document.getElementById('ctrs-praca');
     if (ctrsPraca) ctrsPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
-
     var reqPraca = document.getElementById('req-praca');
     if (reqPraca) reqPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
-
     var orcPraca = document.getElementById('orc-modal-praca');
     if (orcPraca) orcPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
-
-    // 7. Atualizar subtítulos dos dashboards com a praça ativa
     var dashTransPraca = document.getElementById('dash-trans-praca');
     if (dashTransPraca) dashTransPraca.textContent = p;
-
     var dashResolvidasPraca = document.getElementById('dash-resolvidas-praca');
     if (dashResolvidasPraca) dashResolvidasPraca.textContent = p;
-
     var upPraca = document.getElementById('up-praca');
     if (upPraca) upPraca.textContent = p;
-
-    // 8. Atualizar equipamentos do Relatório (CTRS) dinamicamente para a praça ativa
     try {
       if (typeof window.atualizarSelectsEquipamentosCTRS === 'function') {
         window.atualizarSelectsEquipamentosCTRS();
       }
     } catch(eEq) {}
-
-    // 9. Re-sanitizar ocorrências em memória para consistência estrita de praça
     try {
       if (Array.isArray(window.ocorrencias) && typeof sanitizeOcorrencia === 'function') {
         window.ocorrencias = window.ocorrencias.map(sanitizeOcorrencia).filter(Boolean);
       }
     } catch(eSan) {}
-
-    // 10. Notificar e re-renderizar módulos com dados da praça selecionada
     try {
       if (typeof window.carregarDashboardMetricsStore === 'function') {
         window.carregarDashboardMetricsStore();
@@ -392,7 +300,6 @@
     }
   }
   window.aplicarModoPraca = aplicarModoPraca;
-
   function trocarPracaConfig(novaPraca) {
     setPracaAtual(novaPraca);
     if (typeof mostrarToast === 'function') {
@@ -400,4 +307,3 @@
     }
   }
   window.trocarPracaConfig = trocarPracaConfig;
-
