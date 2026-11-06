@@ -148,7 +148,8 @@
           dataResolucao: (oc.resolucao && oc.resolucao.data) ? formatDataHoraLocal(oc.resolucao.data) : formatDataHoraLocal(),
           resolvidoPor:  (oc.resolucao && oc.resolucao.resolvidoPor) ? oc.resolucao.resolvidoPor : getUsuarioAtual(),
           descResolucao: (oc.resolucao && oc.resolucao.descRes) ? oc.resolucao.descRes : (oc.desc || 'Ocorrência resolvida pela equipe técnica.'),
-          tags:          oc.tags || [],
+          link:          oc.link || (oc.resolucao && oc.resolucao.link) || '',
+      tags:          oc.tags || [],
           anexos:        (oc.anexos && Array.isArray(oc.anexos) && oc.anexos.length > 0) ? oc.anexos : ((oc.resolucao && Array.isArray(oc.resolucao.anexos)) ? oc.resolucao.anexos : [])
         };
       }
@@ -365,7 +366,8 @@
             dataResolucao: resFmt,
             resolvidoPor:  resPor,
             descResolucao: resDesc,
-            tags:          oc.tags || [],
+            link:          oc.link || (oc.resolucao && oc.resolucao.link) || '',
+      tags:          oc.tags || [],
             anexos:        anexosLista
           };
         }
@@ -616,8 +618,12 @@
               '<strong>Criado por:</strong> ' + escapeHTML(autorCri) + ' (' + escapeHTML(dataCri) + ')<br/>' +
               '<strong>Localidade:</strong> ' + escapeHTML(localidade) + '<br/>' +
               '<strong>Categoria:</strong> ' + escapeHTML(categoria) + '<br/>' +
-              '<div style="margin-top:8px;padding:10px 12px;background:var(--surface);border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
-                '<strong>Descrição da Ocorrência:</strong><br/>' + escapeHTML(descCri) +
+              '<div style="margin-top:8px;padding:10px 12px;background:var(--surface);border-radius:var(--r-md);border:1px solid var(--border-lt);overflow-wrap:anywhere;word-break:break-word;">' +
+                '<strong>Descrição da Ocorrência:</strong><br/>' +
+                (typeof formatarTextoComLinks === 'function' ? formatarTextoComLinks(descCri, false) : escapeHTML(descCri)) +
+                ((item.link || (ocFound && (ocFound.link || (ocFound.resolucao && ocFound.resolucao.link)))) && typeof renderBotaoLinkExterno === 'function'
+                  ? '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border-lt);display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><strong style="font-size:11.5px;color:var(--txt);">Link Relacionado:</strong> ' + renderBotaoLinkExterno(item.link || (ocFound && (ocFound.link || (ocFound.resolucao && ocFound.resolucao.link))), null, false) + '</div>'
+                  : '') +
                 blocoPreviewOcorrenciaHTML +
               '</div>' +
             '</div>' +
@@ -633,8 +639,8 @@
               '<strong>Responsável pela Resolução:</strong> ' + escapeHTML(respRes) + '<br/>' +
               '<strong>Data/Hora de Resolução:</strong> ' + escapeHTML(dataRes) + '<br/>' +
               '<strong>Status Final:</strong> <span style="color:var(--green);font-weight:600;">' + escapeHTML(statusFinal) + '</span><br/>' +
-              '<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
-                '<strong>O que foi realizado:</strong><br/>' + escapeHTML(descRes) +
+              '<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:var(--r-md);border:1px solid var(--border-lt);overflow-wrap:anywhere;word-break:break-word;">' +
+                '<strong>O que foi realizado:</strong><br/>' + (typeof formatarTextoComLinks === 'function' ? formatarTextoComLinks(descRes, false) : escapeHTML(descRes)) +
               '</div>' +
             '</div>' +
           '</div>';
@@ -676,7 +682,8 @@
           dataResolucao: resFmt,
           resolvidoPor:  resPor,
           descResolucao: resDesc,
-          tags:          oc.tags || [],
+          link:          oc.link || (oc.resolucao && oc.resolucao.link) || '',
+      tags:          oc.tags || [],
           anexos:        anexosLista
         };
       }
@@ -711,6 +718,7 @@
       dataResolucao: oc.resolucao ? formatDataHoraLocal(oc.resolucao.data) : 'Pendente de resolução',
       resolvidoPor:  oc.resolucao ? (oc.resolvidoPor || getUsuarioAtual()) : 'Aguardando resolução',
       descResolucao: oc.resolucao ? (oc.resolucao.descRes || 'Ocorrência ativa no turno aguardando tratativa da equipe.') : 'Ocorrência ativa no turno aguardando tratativa da equipe.',
+      link:          oc.link || (oc.resolucao && oc.resolucao.link) || '',
       tags:          oc.tags || [],
       historicoEdicoes: oc.historicoEdicoes || (oc.resolucao && oc.resolucao.historicoEdicoes) || [],
       htmlRelatorio: oc.htmlRelatorio || null,

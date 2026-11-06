@@ -470,7 +470,10 @@
               '<span class="tag ' + tagClass(oc.prio) + '">' + (oc.prio || 'Média') + '</span>' +
               '<span class="tag tag-teal-soft">' + (oc.cat || 'Equipamento') + '</span>' +
             '</div>' +
-            '<p class="oc-desc">' + String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim() + '</p>' +
+            '<p class="oc-desc">' + (typeof formatarTextoComLinks === 'function' ? formatarTextoComLinks(String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim(), true) : escapeHTML(String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim())) + '</p>' +
+            ((oc.link || (oc.resolucao && oc.resolucao.link)) && typeof renderBotaoLinkExterno === 'function'
+              ? '<div style="margin-top:4px;margin-bottom:6px;">' + renderBotaoLinkExterno(oc.link || (oc.resolucao && oc.resolucao.link), null, true) + '</div>'
+              : '') +
             resolucaoH +
             '<div class="oc-meta" style="margin-top:8px;">' +
               respH +
@@ -560,6 +563,7 @@
         descRes:   descResolucao,
         data:      Date.now(),
         resolvidoPor: usuarioLogado,
+        link:      oc.link || (oc.resolucao && oc.resolucao.link) || '',
         anexos:    anexosCombinados,
         historicoEdicoes: oc.historicoEdicoes || (oc.resolucao && oc.resolucao.historicoEdicoes) || []
       }
@@ -584,6 +588,7 @@
       historicoEdicoes: oc.historicoEdicoes || (oc.resolucao && oc.resolucao.historicoEdicoes) || [],
       htmlRelatorio: oc.htmlRelatorio || null,
       dadosCTRS:     oc.dadosCTRS || null,
+      link:          oc.link || (oc.resolucao && oc.resolucao.link) || '',
       tags:          tagsHist,
       anexos:        anexosCombinados,
       praca:         (typeof normalizarPracaOcorrencia === 'function')

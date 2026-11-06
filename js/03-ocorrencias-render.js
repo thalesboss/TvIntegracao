@@ -153,7 +153,10 @@
           '<div class="prio-line ' + prioLine(oc.prio) + '"></div>' +
           '<div class="oc-body">' +
             '<div class="oc-header"><h3>' + escapeHTML(oc.titulo || 'Sem título') + '</h3>' + tagsHTML + '</div>' +
-            '<p class="oc-desc">' + escapeHTML(String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim()) + '</p>' +
+            '<p class="oc-desc">' + (typeof formatarTextoComLinks === 'function' ? formatarTextoComLinks(String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim(), true) : escapeHTML(String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim())) + '</p>' +
+            ((oc.link || (oc.resolucao && oc.resolucao.link)) && typeof renderBotaoLinkExterno === 'function'
+              ? '<div style="margin-top:4px;margin-bottom:6px;">' + renderBotaoLinkExterno(oc.link || (oc.resolucao && oc.resolucao.link), null, true) + '</div>'
+              : '') +
             ((oc.htmlRelatorio || oc.dadosCTRS || (oc.desc && String(oc.desc).indexOf('<!--CTRS_JSON:') !== -1) || (oc.tags && oc.tags.indexOf('Relatório TV') !== -1))
               ? '<div style="margin-top:6px;padding:5px 10px;background:#EFF6FF;border:1px solid #BFDBFE;border-left:3px solid #0071E3;border-radius:6px;font-size:11px;color:#1E3A8A;display:inline-flex;align-items:center;gap:6px;font-weight:700;"><i data-lucide="file-text" style="width:12px;height:12px;color:#0071E3;"></i> Contém Preview do Relatório CTRS na Descrição — Clique para visualizar</div>'
               : '') +

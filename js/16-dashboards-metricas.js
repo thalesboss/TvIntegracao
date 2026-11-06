@@ -69,18 +69,8 @@
         viewTj.classList.add('dash-view-animated');
       }
       if (viewEq) viewEq.style.display = 'none';
-      if (btnTj) {
-        btnTj.style.background = '#007AFF';
-        btnTj.style.color = '#ffffff';
-        btnTj.style.fontWeight = '700';
-        btnTj.style.boxShadow = '0 2px 6px rgba(0,122,255,0.35)';
-      }
-      if (btnEq) {
-        btnEq.style.background = 'transparent';
-        btnEq.style.color = 'var(--muted)';
-        btnEq.style.fontWeight = '600';
-        btnEq.style.boxShadow = 'none';
-      }
+      if (btnTj) btnTj.classList.add('on');
+      if (btnEq) btnEq.classList.remove('on');
       if (titleEl) titleEl.textContent = 'Telejornal';
     } else {
       if (viewTj) viewTj.style.display = 'none';
@@ -90,18 +80,8 @@
         void viewEq.offsetWidth;
         viewEq.classList.add('dash-view-animated');
       }
-      if (btnTj) {
-        btnTj.style.background = 'transparent';
-        btnTj.style.color = 'var(--muted)';
-        btnTj.style.fontWeight = '600';
-        btnTj.style.boxShadow = 'none';
-      }
-      if (btnEq) {
-        btnEq.style.background = '#007AFF';
-        btnEq.style.color = '#ffffff';
-        btnEq.style.fontWeight = '700';
-        btnEq.style.boxShadow = '0 2px 6px rgba(0,122,255,0.35)';
-      }
+      if (btnTj) btnTj.classList.remove('on');
+      if (btnEq) btnEq.classList.add('on');
       if (titleEl) titleEl.textContent = 'Equipamentos';
     }
     renderDashboards();

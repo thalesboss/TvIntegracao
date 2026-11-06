@@ -307,3 +307,181 @@
     }
   }
   window.trocarPracaConfig = trocarPracaConfig;
+function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refraction) {
+    var cv = document.createElement('canvas');
+    cv.width = w;
+    cv.height = h;
+    var ctx = cv.getContext('2d');
+    var img = ctx.createImageData(w, h);
+    var data = img.data;
+    var bx = 0.5 * w;
+    var by = 0.5 * h;
+    var bevelPx = bevelWidth * Math.min(w, h);
+    var aspect = w / h;
+
+    function smoothstep(e0, e1, x) {
+      var t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
+      return t * t * (3 - 2 * t);
+    }
+
+    for (var y = 0; y < h; y++) {
+      var uvY = (y + 0.5) / h;
+      var py = (uvY - 0.5) * h;
+      for (var x = 0; x < w; x++) {
+        var uvX = (x + 0.5) / w;
+        var px = (uvX - 0.5) * w;
+        var mx = Math.max(Math.abs(px) - bx + radiusPx, 0);
+        var my = Math.max(Math.abs(py) - by + radiusPx, 0);
+        var lenM = Math.hypot(mx, my);
+        var d = -(lenM - radiusPx);
+        var edge = 1.0 - smoothstep(0.0, bevelPx, d);
+        var offsetAmt = edge * refraction + Math.pow(edge, 10.0) * bevelDepth;
+        var pNormX = (uvX - 0.5) * aspect;
+        var pNormY = uvY - 0.5;
+        var pLen = Math.hypot(pNormX, pNormY);
+        var centreBlend = smoothstep(0.15, 0.45, pLen);
+        var fbLen = pLen > 1e-5 ? pLen : 1.0;
+        var dirX = pNormX / fbLen;
+        var dirY = pNormY / fbLen;
+        if (lenM > 0) {
+          var wCorner = smoothstep(0.0, Math.max(radiusPx * 0.5, 1.0), Math.min(mx, my));
+          if (wCorner > 0) {
+            var cx = (px < 0 ? -1.0 : 1.0) * (mx / lenM);
+            var cy = (py < 0 ? -1.0 : 1.0) * (my / lenM);
+            var mixX = dirX * (1 - wCorner) + cx * wCorner;
+            var mixY = dirY * (1 - wCorner) + cy * wCorner;
+            var mixLen = Math.hypot(mixX, mixY) || 1.0;
+            dirX = mixX / mixLen;
+            dirY = mixY / mixLen;
+          }
+        }
+        var scaleNorm = offsetAmt * centreBlend / Math.max(bevelDepth + refraction, 0.001);
+        var idx = (y * w + x) * 4;
+        data[idx] = Math.round(Math.max(0, Math.min(255, 128 + dirX * scaleNorm * 127)));
+        data[idx + 1] = Math.round(Math.max(0, Math.min(255, 128 + dirY * scaleNorm * 127)));
+        data[idx + 2] = 128;
+        data[idx + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    return cv.toDataURL('image/png');
+  }
+
+  function inicializarMapasLiquidGL() {
+    try {
+      var fePill = document.getElementById('liquidgl-map-pill');
+      if (fePill) {
+        var pillMapUrl = gerarMapaSDFBevelLiquidGL(192, 56, 28, 0.211, 0.052, 0.02);
+        fePill.setAttribute('href', pillMapUrl);
+        fePill.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', pillMapUrl);
+      }
+    } catch (e) {}
+  }
+
+  function posicionarGliderEmPills(pillsEl, animarStretch) {
+    if (!pillsEl) return;
+    var activePill = pillsEl.querySelector('.pill.on');
+    var glider = pillsEl.querySelector('.expo-glass-glider');
+    if (!activePill) {
+      if (glider) glider.style.opacity = '0';
+      return;
+    }
+    if (!glider) {
+      glider = document.createElement('span');
+      glider.className = 'expo-glass-glider';
+      glider.setAttribute('aria-hidden', 'true');
+      pillsEl.insertBefore(glider, pillsEl.firstChild);
+    }
+    var w = activePill.offsetWidth;
+    var x = activePill.offsetLeft;
+    if (w <= 0) return;
+    pillsEl.classList.add('has-glider');
+    glider.style.opacity = '1';
+    glider.style.width = w + 'px';
+    if (animarStretch) {
+      glider.classList.add('glider-moving');
+      glider.style.transform = 'translate3d(' + x + 'px, 0, 0) scaleX(1.06) scaleY(1.12)';
+      clearTimeout(glider._stretchTimer);
+      glider._stretchTimer = setTimeout(function() {
+        glider.style.transform = 'translate3d(' + x + 'px, 0, 0) scaleX(1) scaleY(1)';
+        glider.classList.remove('glider-moving');
+      }, 280);
+    } else {
+      glider.style.transform = 'translate3d(' + x + 'px, 0, 0) scaleX(1) scaleY(1)';
+    }
+  }
+
+  function atualizarTodosGlidersPills(animarStretch) {
+    var lista = document.querySelectorAll('.pills');
+    for (var i = 0; i < lista.length; i++) {
+      posicionarGliderEmPills(lista[i], animarStretch);
+    }
+  }
+  window.atualizarTodosGlidersPills = atualizarTodosGlidersPills;
+
+  var _lqglStartTime = Date.now();
+  function atualizarLuzEspecularLiquidGL() {
+    if (document.hidden) return;
+    var uTime = (Date.now() - _lqglStartTime) / 1000;
+    var root = document.documentElement.style;
+    root.setProperty('--lqgl-lp1-x', ((Math.sin(uTime * 0.2) * 0.6 + 0.5) * 100).toFixed(1) + '%');
+    root.setProperty('--lqgl-lp1-y', ((Math.cos(uTime * 0.3) * 0.6 + 0.5) * 100).toFixed(1) + '%');
+    root.setProperty('--lqgl-lp2-x', ((Math.sin(uTime * -0.4 + 1.5) * 0.6 + 0.5) * 100).toFixed(1) + '%');
+    root.setProperty('--lqgl-lp2-y', ((Math.cos(uTime * 0.25 - 0.5) * 0.6 + 0.5) * 100).toFixed(1) + '%');
+  }
+  setInterval(atualizarLuzEspecularLiquidGL, 90);
+
+  var _activeDragPills = null;
+
+  document.addEventListener('pointerdown', function(e) {
+    var pillsEl = e.target && e.target.closest ? e.target.closest('.pills') : null;
+    if (!pillsEl) return;
+    _activeDragPills = pillsEl;
+    var glider = pillsEl.querySelector('.expo-glass-glider');
+    if (glider) glider.classList.add('glider-moving');
+  });
+
+  document.addEventListener('pointermove', function(e) {
+    if (_activeDragPills) {
+      var elUnder = document.elementFromPoint(e.clientX, e.clientY);
+      var pillOver = elUnder && elUnder.closest ? elUnder.closest('.pill') : null;
+      if (pillOver && _activeDragPills.contains(pillOver) && !pillOver.classList.contains('on')) {
+        pillOver.click();
+      }
+    }
+  }, { passive: true });
+
+  document.addEventListener('pointerup', function() {
+    if (_activeDragPills) {
+      var p = _activeDragPills;
+      _activeDragPills = null;
+      posicionarGliderEmPills(p, false);
+      var glider = p.querySelector('.expo-glass-glider');
+      if (glider) glider.classList.remove('glider-moving');
+    }
+  });
+
+  document.addEventListener('click', function(e) {
+    var pillBtn = e.target && e.target.closest ? e.target.closest('.pill') : null;
+    if (pillBtn) {
+      var parentPills = pillBtn.closest('.pills');
+      requestAnimationFrame(function() {
+        posicionarGliderEmPills(parentPills, true);
+      });
+      return;
+    }
+    var navItem = e.target && e.target.closest ? e.target.closest('.s-item') : null;
+    if (navItem) {
+      setTimeout(function() { atualizarTodosGlidersPills(false); }, 40);
+    }
+  });
+
+  window.addEventListener('resize', function() {
+    atualizarTodosGlidersPills(false);
+  });
+
+  setTimeout(function() {
+    inicializarMapasLiquidGL();
+    atualizarLuzEspecularLiquidGL();
+    atualizarTodosGlidersPills(false);
+  }, 80);

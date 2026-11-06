@@ -12,6 +12,54 @@ document.addEventListener('DOMContentLoaded', function () {
       .replace(/'/g, '&#39;');
   }
   window.escapeHTML = escapeHTML;
+  function normalizarUrlExterna(urlStr) {
+    if (!urlStr || typeof urlStr !== 'string') return '';
+    var u = urlStr.trim();
+    if (!u) return '';
+    if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+    return u;
+  }
+  window.normalizarUrlExterna = normalizarUrlExterna;
+  function renderBotaoLinkExterno(urlStr, labelTexto, compact) {
+    var u = normalizarUrlExterna(urlStr);
+    if (!u) return '';
+    var lbl = labelTexto || 'Abrir Link Anexo';
+    try {
+      var parsed = new URL(u);
+      var host = parsed.hostname.replace(/^www\./i, '');
+      if (host.indexOf('sharepoint.com') !== -1) lbl = 'Abrir Planilha / SharePoint (' + host + ')';
+      else if (host.indexOf('docs.google.com') !== -1 || host.indexOf('drive.google.com') !== -1) lbl = 'Abrir Google Drive / Docs (' + host + ')';
+      else if (!labelTexto) lbl = 'Abrir Link (' + host + ')';
+    } catch (e) {}
+    var pad = compact ? '4px 10px' : '6px 12px';
+    var fz = compact ? '11px' : '11.5px';
+    return '<a href="' + escapeHTML(u) + '" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" style="display:inline-flex;align-items:center;gap:6px;padding:' + pad + ';background:#EFF6FF;color:#0071E3;border:1px solid #BFDBFE;border-radius:8px;font-size:' + fz + ';font-weight:700;text-decoration:none;max-width:100%;box-sizing:border-box;transition:all 0.15s ease;" onmouseover="this.style.background=\'#DBEAFE\';this.style.borderColor=\'#93C5FD\';" onmouseout="this.style.background=\'#EFF6FF\';this.style.borderColor=\'#BFDBFE\';" title="' + escapeHTML(u) + '">' +
+      '<i data-lucide="external-link" style="width:13px;height:13px;flex-shrink:0;color:#0071E3;stroke-width:2.2;"></i>' +
+      '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHTML(lbl) + '</span>' +
+    '</a>';
+  }
+  window.renderBotaoLinkExterno = renderBotaoLinkExterno;
+  function formatarTextoComLinks(str, stopProp) {
+    if (str === null || str === undefined) return '';
+    var texto = String(str);
+    var regexUrl = /(https?:\/\/[^\s<>"']+)/gi;
+    var partes = texto.split(regexUrl);
+    if (partes.length === 1) return escapeHTML(texto);
+    var out = '';
+    for (var i = 0; i < partes.length; i++) {
+      var p = partes[i];
+      if (!p) continue;
+      if (/^https?:\/\//i.test(p)) {
+        var cleanUrl = p.replace(/[.,;!?)]+$/, '');
+        var trailing = p.slice(cleanUrl.length);
+        out += renderBotaoLinkExterno(cleanUrl, null, stopProp) + escapeHTML(trailing);
+      } else {
+        out += escapeHTML(p);
+      }
+    }
+    return out;
+  }
+  window.formatarTextoComLinks = formatarTextoComLinks;
   function getUsuarioAtual() {
     var stored = localStorage.getItem(USER_NAME_STORAGE_KEY);
     if (stored && stored.trim()) return stored.trim();
@@ -259,6 +307,9 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       if (item.historicoEdicoes && Array.isArray(item.historicoEdicoes) && item.historicoEdicoes.length > 0) {
         resObj.historicoEdicoes = item.historicoEdicoes;
+      }
+      if (item.link) {
+        resObj.link = item.link;
       }
       return {
         id: item.id,
@@ -748,6 +799,7 @@ document.addEventListener('DOMContentLoaded', function () {
       resp: o.resp || 'Todos do turno',
       local: o.local || '',
       prazo: o.prazo || '',
+      link: o.link || (res && res.link) || '',
       desc: o.desc || '',
       mine: isMine,
       tags: Array.isArray(o.tags) ? o.tags : [],

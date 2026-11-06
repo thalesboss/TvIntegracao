@@ -102,6 +102,14 @@
     if (telVal) tagsArr.push(telVal);
     if (eqVal)  tagsArr.push(eqVal);
     var anexosFinais = (uploadedFilesStore['nova-previews'] || []).slice();
+    var linkValRaw = document.getElementById('nova-link') ? document.getElementById('nova-link').value.trim() : '';
+    var linkVal = (linkValRaw && typeof normalizarUrlExterna === 'function') ? normalizarUrlExterna(linkValRaw) : linkValRaw;
+    var resInicial = null;
+    if (anexosFinais.length > 0 || linkVal) {
+      resInicial = { statusRes: 'Aberta' };
+      if (anexosFinais.length > 0) resInicial.anexos = anexosFinais;
+      if (linkVal) resInicial.link = linkVal;
+    }
     var novo = {
       id:          'oc_' + Date.now(),
       titulo:      tituloVal,
@@ -110,6 +118,7 @@
       resp:        respVal || 'Todos do turno',
       local:       document.getElementById('nova-local') ? document.getElementById('nova-local').value.trim() : '',
       prazo:       document.getElementById('nova-prazo') ? document.getElementById('nova-prazo').value : '',
+      link:        linkVal || '',
       telejornal:  telVal || null,
       equipamento: eqVal || null,
       desc:        descVal,
@@ -118,7 +127,7 @@
       status:      'aberta',
       criado:      Date.now(),
       dataCriacao: formatDataHoraLocal(),
-      resolucao:   anexosFinais.length > 0 ? { statusRes: 'Aberta', anexos: anexosFinais } : null,
+      resolucao:   resInicial,
       anexos:      anexosFinais,
       praca:       (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora'),
       _pendingSync: true
@@ -155,6 +164,7 @@
     if (document.getElementById('nova-cat'))  document.getElementById('nova-cat').selectedIndex  = 0;
     if (document.getElementById('nova-local')) document.getElementById('nova-local').value = '';
     if (document.getElementById('nova-prazo')) document.getElementById('nova-prazo').value = '';
+    if (document.getElementById('nova-link')) document.getElementById('nova-link').value = '';
     if (document.getElementById('nova-telejornal')) document.getElementById('nova-telejornal').value = '';
     if (document.getElementById('nova-equipamento')) document.getElementById('nova-equipamento').value = '';
     validarNova();
@@ -218,6 +228,9 @@
     document.getElementById('edit-oc-resp').value = oc.resp || 'Todos do turno';
     document.getElementById('edit-oc-local').value = oc.local || '';
     document.getElementById('edit-oc-prazo').value = oc.prazo || '';
+    if (document.getElementById('edit-oc-link')) {
+      document.getElementById('edit-oc-link').value = oc.link || (oc.resolucao && oc.resolucao.link) || '';
+    }
     document.getElementById('edit-oc-desc').value = String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
     atualizarSelectEquipamentosNovaOc();
     if (document.getElementById('edit-oc-telejornal')) {
@@ -242,6 +255,8 @@
     var resp = document.getElementById('edit-oc-resp').value;
     var local = document.getElementById('edit-oc-local').value.trim();
     var prazo = document.getElementById('edit-oc-prazo').value;
+    var linkRaw = document.getElementById('edit-oc-link') ? document.getElementById('edit-oc-link').value.trim() : '';
+    var linkVal = (linkRaw && typeof normalizarUrlExterna === 'function') ? normalizarUrlExterna(linkRaw) : linkRaw;
     var telVal = document.getElementById('edit-oc-telejornal') ? document.getElementById('edit-oc-telejornal').value : '';
     var eqVal  = document.getElementById('edit-oc-equipamento') ? document.getElementById('edit-oc-equipamento').value : '';
     var desc = document.getElementById('edit-oc-desc').value.trim();
@@ -283,6 +298,7 @@
     regMudanca('Telejornal', anterior.telejornal || '', telVal || '', 'Sem telejornal');
     regMudanca('Equipamento', anterior.equipamento || '', eqVal || '', 'Sem equipamento');
     regMudanca('Prazo Estimado', anterior.prazo || '', prazo || '', 'Sem prazo');
+    regMudanca('Link / URL', anterior.link || (anterior.resolucao && anterior.resolucao.link) || '', linkVal || '', 'Sem link');
     var ctrsMarkerExistente = '';
     if (anterior.desc && String(anterior.desc).indexOf('<!--CTRS_JSON:') !== -1) {
       var mCtrs = String(anterior.desc).match(/(<!--CTRS_JSON:[^>]+-->)/);
@@ -322,6 +338,11 @@
     if (historicoEdicoes.length > 0) {
       resolucaoAtual.historicoEdicoes = historicoEdicoes;
     }
+    if (linkVal) {
+      resolucaoAtual.link = linkVal;
+    } else {
+      delete resolucaoAtual.link;
+    }
     ocorrencias[idx] = Object.assign({}, ocorrencias[idx], {
       titulo:           titulo,
       prio:             prio,
@@ -329,6 +350,7 @@
       resp:             resp,
       local:            local,
       prazo:            prazo,
+      link:             linkVal || '',
       telejornal:       telVal || null,
       equipamento:      eqVal || null,
       desc:             desc,

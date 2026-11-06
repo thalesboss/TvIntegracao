@@ -103,6 +103,54 @@ document.addEventListener('DOMContentLoaded', function () {
       .replace(/'/g, '&#39;');
   }
   window.escapeHTML = escapeHTML;
+  function normalizarUrlExterna(urlStr) {
+    if (!urlStr || typeof urlStr !== 'string') return '';
+    var u = urlStr.trim();
+    if (!u) return '';
+    if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+    return u;
+  }
+  window.normalizarUrlExterna = normalizarUrlExterna;
+  function renderBotaoLinkExterno(urlStr, labelTexto, compact) {
+    var u = normalizarUrlExterna(urlStr);
+    if (!u) return '';
+    var lbl = labelTexto || 'Abrir Link Anexo';
+    try {
+      var parsed = new URL(u);
+      var host = parsed.hostname.replace(/^www\./i, '');
+      if (host.indexOf('sharepoint.com') !== -1) lbl = 'Abrir Planilha / SharePoint (' + host + ')';
+      else if (host.indexOf('docs.google.com') !== -1 || host.indexOf('drive.google.com') !== -1) lbl = 'Abrir Google Drive / Docs (' + host + ')';
+      else if (!labelTexto) lbl = 'Abrir Link (' + host + ')';
+    } catch (e) {}
+    var pad = compact ? '4px 10px' : '6px 12px';
+    var fz = compact ? '11px' : '11.5px';
+    return '<a href="' + escapeHTML(u) + '" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" style="display:inline-flex;align-items:center;gap:6px;padding:' + pad + ';background:#EFF6FF;color:#0071E3;border:1px solid #BFDBFE;border-radius:8px;font-size:' + fz + ';font-weight:700;text-decoration:none;max-width:100%;box-sizing:border-box;transition:all 0.15s ease;" onmouseover="this.style.background=\'#DBEAFE\';this.style.borderColor=\'#93C5FD\';" onmouseout="this.style.background=\'#EFF6FF\';this.style.borderColor=\'#BFDBFE\';" title="' + escapeHTML(u) + '">' +
+      '<i data-lucide="external-link" style="width:13px;height:13px;flex-shrink:0;color:#0071E3;stroke-width:2.2;"></i>' +
+      '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHTML(lbl) + '</span>' +
+    '</a>';
+  }
+  window.renderBotaoLinkExterno = renderBotaoLinkExterno;
+  function formatarTextoComLinks(str, stopProp) {
+    if (str === null || str === undefined) return '';
+    var texto = String(str);
+    var regexUrl = /(https?:\/\/[^\s<>"']+)/gi;
+    var partes = texto.split(regexUrl);
+    if (partes.length === 1) return escapeHTML(texto);
+    var out = '';
+    for (var i = 0; i < partes.length; i++) {
+      var p = partes[i];
+      if (!p) continue;
+      if (/^https?:\/\//i.test(p)) {
+        var cleanUrl = p.replace(/[.,;!?)]+$/, '');
+        var trailing = p.slice(cleanUrl.length);
+        out += renderBotaoLinkExterno(cleanUrl, null, stopProp) + escapeHTML(trailing);
+      } else {
+        out += escapeHTML(p);
+      }
+    }
+    return out;
+  }
+  window.formatarTextoComLinks = formatarTextoComLinks;
   function getUsuarioAtual() {
     var stored = localStorage.getItem(USER_NAME_STORAGE_KEY);
     if (stored && stored.trim()) return stored.trim();
@@ -350,6 +398,9 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       if (item.historicoEdicoes && Array.isArray(item.historicoEdicoes) && item.historicoEdicoes.length > 0) {
         resObj.historicoEdicoes = item.historicoEdicoes;
+      }
+      if (item.link) {
+        resObj.link = item.link;
       }
       return {
         id: item.id,
@@ -839,6 +890,7 @@ document.addEventListener('DOMContentLoaded', function () {
       resp: o.resp || 'Todos do turno',
       local: o.local || '',
       prazo: o.prazo || '',
+      link: o.link || (res && res.link) || '',
       desc: o.desc || '',
       mine: isMine,
       tags: Array.isArray(o.tags) ? o.tags : [],
@@ -1123,7 +1175,10 @@ document.addEventListener('DOMContentLoaded', function () {
           '<div class="prio-line ' + prioLine(oc.prio) + '"></div>' +
           '<div class="oc-body">' +
             '<div class="oc-header"><h3>' + escapeHTML(oc.titulo || 'Sem título') + '</h3>' + tagsHTML + '</div>' +
-            '<p class="oc-desc">' + escapeHTML(String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim()) + '</p>' +
+            '<p class="oc-desc">' + (typeof formatarTextoComLinks === 'function' ? formatarTextoComLinks(String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim(), true) : escapeHTML(String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim())) + '</p>' +
+            ((oc.link || (oc.resolucao && oc.resolucao.link)) && typeof renderBotaoLinkExterno === 'function'
+              ? '<div style="margin-top:4px;margin-bottom:6px;">' + renderBotaoLinkExterno(oc.link || (oc.resolucao && oc.resolucao.link), null, true) + '</div>'
+              : '') +
             ((oc.htmlRelatorio || oc.dadosCTRS || (oc.desc && String(oc.desc).indexOf('<!--CTRS_JSON:') !== -1) || (oc.tags && oc.tags.indexOf('Relatório TV') !== -1))
               ? '<div style="margin-top:6px;padding:5px 10px;background:#EFF6FF;border:1px solid #BFDBFE;border-left:3px solid #0071E3;border-radius:6px;font-size:11px;color:#1E3A8A;display:inline-flex;align-items:center;gap:6px;font-weight:700;"><i data-lucide="file-text" style="width:12px;height:12px;color:#0071E3;"></i> Contém Preview do Relatório CTRS na Descrição — Clique para visualizar</div>'
               : '') +
@@ -1914,6 +1969,184 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.trocarPracaConfig = trocarPracaConfig;
+function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refraction) {
+    var cv = document.createElement('canvas');
+    cv.width = w;
+    cv.height = h;
+    var ctx = cv.getContext('2d');
+    var img = ctx.createImageData(w, h);
+    var data = img.data;
+    var bx = 0.5 * w;
+    var by = 0.5 * h;
+    var bevelPx = bevelWidth * Math.min(w, h);
+    var aspect = w / h;
+
+    function smoothstep(e0, e1, x) {
+      var t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
+      return t * t * (3 - 2 * t);
+    }
+
+    for (var y = 0; y < h; y++) {
+      var uvY = (y + 0.5) / h;
+      var py = (uvY - 0.5) * h;
+      for (var x = 0; x < w; x++) {
+        var uvX = (x + 0.5) / w;
+        var px = (uvX - 0.5) * w;
+        var mx = Math.max(Math.abs(px) - bx + radiusPx, 0);
+        var my = Math.max(Math.abs(py) - by + radiusPx, 0);
+        var lenM = Math.hypot(mx, my);
+        var d = -(lenM - radiusPx);
+        var edge = 1.0 - smoothstep(0.0, bevelPx, d);
+        var offsetAmt = edge * refraction + Math.pow(edge, 10.0) * bevelDepth;
+        var pNormX = (uvX - 0.5) * aspect;
+        var pNormY = uvY - 0.5;
+        var pLen = Math.hypot(pNormX, pNormY);
+        var centreBlend = smoothstep(0.15, 0.45, pLen);
+        var fbLen = pLen > 1e-5 ? pLen : 1.0;
+        var dirX = pNormX / fbLen;
+        var dirY = pNormY / fbLen;
+        if (lenM > 0) {
+          var wCorner = smoothstep(0.0, Math.max(radiusPx * 0.5, 1.0), Math.min(mx, my));
+          if (wCorner > 0) {
+            var cx = (px < 0 ? -1.0 : 1.0) * (mx / lenM);
+            var cy = (py < 0 ? -1.0 : 1.0) * (my / lenM);
+            var mixX = dirX * (1 - wCorner) + cx * wCorner;
+            var mixY = dirY * (1 - wCorner) + cy * wCorner;
+            var mixLen = Math.hypot(mixX, mixY) || 1.0;
+            dirX = mixX / mixLen;
+            dirY = mixY / mixLen;
+          }
+        }
+        var scaleNorm = offsetAmt * centreBlend / Math.max(bevelDepth + refraction, 0.001);
+        var idx = (y * w + x) * 4;
+        data[idx] = Math.round(Math.max(0, Math.min(255, 128 + dirX * scaleNorm * 127)));
+        data[idx + 1] = Math.round(Math.max(0, Math.min(255, 128 + dirY * scaleNorm * 127)));
+        data[idx + 2] = 128;
+        data[idx + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    return cv.toDataURL('image/png');
+  }
+
+  function inicializarMapasLiquidGL() {
+    try {
+      var fePill = document.getElementById('liquidgl-map-pill');
+      if (fePill) {
+        var pillMapUrl = gerarMapaSDFBevelLiquidGL(192, 56, 28, 0.211, 0.052, 0.02);
+        fePill.setAttribute('href', pillMapUrl);
+        fePill.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', pillMapUrl);
+      }
+    } catch (e) {}
+  }
+
+  function posicionarGliderEmPills(pillsEl, animarStretch) {
+    if (!pillsEl) return;
+    var activePill = pillsEl.querySelector('.pill.on');
+    var glider = pillsEl.querySelector('.expo-glass-glider');
+    if (!activePill) {
+      if (glider) glider.style.opacity = '0';
+      return;
+    }
+    if (!glider) {
+      glider = document.createElement('span');
+      glider.className = 'expo-glass-glider';
+      glider.setAttribute('aria-hidden', 'true');
+      pillsEl.insertBefore(glider, pillsEl.firstChild);
+    }
+    var w = activePill.offsetWidth;
+    var x = activePill.offsetLeft;
+    if (w <= 0) return;
+    pillsEl.classList.add('has-glider');
+    glider.style.opacity = '1';
+    glider.style.width = w + 'px';
+    if (animarStretch) {
+      glider.classList.add('glider-moving');
+      glider.style.transform = 'translate3d(' + x + 'px, 0, 0) scaleX(1.06) scaleY(1.12)';
+      clearTimeout(glider._stretchTimer);
+      glider._stretchTimer = setTimeout(function() {
+        glider.style.transform = 'translate3d(' + x + 'px, 0, 0) scaleX(1) scaleY(1)';
+        glider.classList.remove('glider-moving');
+      }, 280);
+    } else {
+      glider.style.transform = 'translate3d(' + x + 'px, 0, 0) scaleX(1) scaleY(1)';
+    }
+  }
+
+  function atualizarTodosGlidersPills(animarStretch) {
+    var lista = document.querySelectorAll('.pills');
+    for (var i = 0; i < lista.length; i++) {
+      posicionarGliderEmPills(lista[i], animarStretch);
+    }
+  }
+  window.atualizarTodosGlidersPills = atualizarTodosGlidersPills;
+
+  var _lqglStartTime = Date.now();
+  function atualizarLuzEspecularLiquidGL() {
+    if (document.hidden) return;
+    var uTime = (Date.now() - _lqglStartTime) / 1000;
+    var root = document.documentElement.style;
+    root.setProperty('--lqgl-lp1-x', ((Math.sin(uTime * 0.2) * 0.6 + 0.5) * 100).toFixed(1) + '%');
+    root.setProperty('--lqgl-lp1-y', ((Math.cos(uTime * 0.3) * 0.6 + 0.5) * 100).toFixed(1) + '%');
+    root.setProperty('--lqgl-lp2-x', ((Math.sin(uTime * -0.4 + 1.5) * 0.6 + 0.5) * 100).toFixed(1) + '%');
+    root.setProperty('--lqgl-lp2-y', ((Math.cos(uTime * 0.25 - 0.5) * 0.6 + 0.5) * 100).toFixed(1) + '%');
+  }
+  setInterval(atualizarLuzEspecularLiquidGL, 90);
+
+  var _activeDragPills = null;
+
+  document.addEventListener('pointerdown', function(e) {
+    var pillsEl = e.target && e.target.closest ? e.target.closest('.pills') : null;
+    if (!pillsEl) return;
+    _activeDragPills = pillsEl;
+    var glider = pillsEl.querySelector('.expo-glass-glider');
+    if (glider) glider.classList.add('glider-moving');
+  });
+
+  document.addEventListener('pointermove', function(e) {
+    if (_activeDragPills) {
+      var elUnder = document.elementFromPoint(e.clientX, e.clientY);
+      var pillOver = elUnder && elUnder.closest ? elUnder.closest('.pill') : null;
+      if (pillOver && _activeDragPills.contains(pillOver) && !pillOver.classList.contains('on')) {
+        pillOver.click();
+      }
+    }
+  }, { passive: true });
+
+  document.addEventListener('pointerup', function() {
+    if (_activeDragPills) {
+      var p = _activeDragPills;
+      _activeDragPills = null;
+      posicionarGliderEmPills(p, false);
+      var glider = p.querySelector('.expo-glass-glider');
+      if (glider) glider.classList.remove('glider-moving');
+    }
+  });
+
+  document.addEventListener('click', function(e) {
+    var pillBtn = e.target && e.target.closest ? e.target.closest('.pill') : null;
+    if (pillBtn) {
+      var parentPills = pillBtn.closest('.pills');
+      requestAnimationFrame(function() {
+        posicionarGliderEmPills(parentPills, true);
+      });
+      return;
+    }
+    var navItem = e.target && e.target.closest ? e.target.closest('.s-item') : null;
+    if (navItem) {
+      setTimeout(function() { atualizarTodosGlidersPills(false); }, 40);
+    }
+  });
+
+  window.addEventListener('resize', function() {
+    atualizarTodosGlidersPills(false);
+  });
+
+  setTimeout(function() {
+    inicializarMapasLiquidGL();
+    atualizarLuzEspecularLiquidGL();
+    atualizarTodosGlidersPills(false);
+  }, 80);
 
   var IDB_NAME = 'SistemaTV_MediaDB';
   var IDB_STORE = 'midias';
@@ -5960,6 +6193,14 @@ document.addEventListener('DOMContentLoaded', function () {
     if (telVal) tagsArr.push(telVal);
     if (eqVal)  tagsArr.push(eqVal);
     var anexosFinais = (uploadedFilesStore['nova-previews'] || []).slice();
+    var linkValRaw = document.getElementById('nova-link') ? document.getElementById('nova-link').value.trim() : '';
+    var linkVal = (linkValRaw && typeof normalizarUrlExterna === 'function') ? normalizarUrlExterna(linkValRaw) : linkValRaw;
+    var resInicial = null;
+    if (anexosFinais.length > 0 || linkVal) {
+      resInicial = { statusRes: 'Aberta' };
+      if (anexosFinais.length > 0) resInicial.anexos = anexosFinais;
+      if (linkVal) resInicial.link = linkVal;
+    }
     var novo = {
       id:          'oc_' + Date.now(),
       titulo:      tituloVal,
@@ -5968,6 +6209,7 @@ document.addEventListener('DOMContentLoaded', function () {
       resp:        respVal || 'Todos do turno',
       local:       document.getElementById('nova-local') ? document.getElementById('nova-local').value.trim() : '',
       prazo:       document.getElementById('nova-prazo') ? document.getElementById('nova-prazo').value : '',
+      link:        linkVal || '',
       telejornal:  telVal || null,
       equipamento: eqVal || null,
       desc:        descVal,
@@ -5976,7 +6218,7 @@ document.addEventListener('DOMContentLoaded', function () {
       status:      'aberta',
       criado:      Date.now(),
       dataCriacao: formatDataHoraLocal(),
-      resolucao:   anexosFinais.length > 0 ? { statusRes: 'Aberta', anexos: anexosFinais } : null,
+      resolucao:   resInicial,
       anexos:      anexosFinais,
       praca:       (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora'),
       _pendingSync: true
@@ -6013,6 +6255,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (document.getElementById('nova-cat'))  document.getElementById('nova-cat').selectedIndex  = 0;
     if (document.getElementById('nova-local')) document.getElementById('nova-local').value = '';
     if (document.getElementById('nova-prazo')) document.getElementById('nova-prazo').value = '';
+    if (document.getElementById('nova-link')) document.getElementById('nova-link').value = '';
     if (document.getElementById('nova-telejornal')) document.getElementById('nova-telejornal').value = '';
     if (document.getElementById('nova-equipamento')) document.getElementById('nova-equipamento').value = '';
     validarNova();
@@ -6076,6 +6319,9 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('edit-oc-resp').value = oc.resp || 'Todos do turno';
     document.getElementById('edit-oc-local').value = oc.local || '';
     document.getElementById('edit-oc-prazo').value = oc.prazo || '';
+    if (document.getElementById('edit-oc-link')) {
+      document.getElementById('edit-oc-link').value = oc.link || (oc.resolucao && oc.resolucao.link) || '';
+    }
     document.getElementById('edit-oc-desc').value = String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
     atualizarSelectEquipamentosNovaOc();
     if (document.getElementById('edit-oc-telejornal')) {
@@ -6100,6 +6346,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var resp = document.getElementById('edit-oc-resp').value;
     var local = document.getElementById('edit-oc-local').value.trim();
     var prazo = document.getElementById('edit-oc-prazo').value;
+    var linkRaw = document.getElementById('edit-oc-link') ? document.getElementById('edit-oc-link').value.trim() : '';
+    var linkVal = (linkRaw && typeof normalizarUrlExterna === 'function') ? normalizarUrlExterna(linkRaw) : linkRaw;
     var telVal = document.getElementById('edit-oc-telejornal') ? document.getElementById('edit-oc-telejornal').value : '';
     var eqVal  = document.getElementById('edit-oc-equipamento') ? document.getElementById('edit-oc-equipamento').value : '';
     var desc = document.getElementById('edit-oc-desc').value.trim();
@@ -6141,6 +6389,7 @@ document.addEventListener('DOMContentLoaded', function () {
     regMudanca('Telejornal', anterior.telejornal || '', telVal || '', 'Sem telejornal');
     regMudanca('Equipamento', anterior.equipamento || '', eqVal || '', 'Sem equipamento');
     regMudanca('Prazo Estimado', anterior.prazo || '', prazo || '', 'Sem prazo');
+    regMudanca('Link / URL', anterior.link || (anterior.resolucao && anterior.resolucao.link) || '', linkVal || '', 'Sem link');
     var ctrsMarkerExistente = '';
     if (anterior.desc && String(anterior.desc).indexOf('<!--CTRS_JSON:') !== -1) {
       var mCtrs = String(anterior.desc).match(/(<!--CTRS_JSON:[^>]+-->)/);
@@ -6180,6 +6429,11 @@ document.addEventListener('DOMContentLoaded', function () {
     if (historicoEdicoes.length > 0) {
       resolucaoAtual.historicoEdicoes = historicoEdicoes;
     }
+    if (linkVal) {
+      resolucaoAtual.link = linkVal;
+    } else {
+      delete resolucaoAtual.link;
+    }
     ocorrencias[idx] = Object.assign({}, ocorrencias[idx], {
       titulo:           titulo,
       prio:             prio,
@@ -6187,6 +6441,7 @@ document.addEventListener('DOMContentLoaded', function () {
       resp:             resp,
       local:            local,
       prazo:            prazo,
+      link:             linkVal || '',
       telejornal:       telVal || null,
       equipamento:      eqVal || null,
       desc:             desc,
@@ -6679,7 +6934,10 @@ document.addEventListener('DOMContentLoaded', function () {
               '<span class="tag ' + tagClass(oc.prio) + '">' + (oc.prio || 'Média') + '</span>' +
               '<span class="tag tag-teal-soft">' + (oc.cat || 'Equipamento') + '</span>' +
             '</div>' +
-            '<p class="oc-desc">' + String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim() + '</p>' +
+            '<p class="oc-desc">' + (typeof formatarTextoComLinks === 'function' ? formatarTextoComLinks(String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim(), true) : escapeHTML(String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim())) + '</p>' +
+            ((oc.link || (oc.resolucao && oc.resolucao.link)) && typeof renderBotaoLinkExterno === 'function'
+              ? '<div style="margin-top:4px;margin-bottom:6px;">' + renderBotaoLinkExterno(oc.link || (oc.resolucao && oc.resolucao.link), null, true) + '</div>'
+              : '') +
             resolucaoH +
             '<div class="oc-meta" style="margin-top:8px;">' +
               respH +
@@ -6769,6 +7027,7 @@ document.addEventListener('DOMContentLoaded', function () {
         descRes:   descResolucao,
         data:      Date.now(),
         resolvidoPor: usuarioLogado,
+        link:      oc.link || (oc.resolucao && oc.resolucao.link) || '',
         anexos:    anexosCombinados,
         historicoEdicoes: oc.historicoEdicoes || (oc.resolucao && oc.resolucao.historicoEdicoes) || []
       }
@@ -6793,6 +7052,7 @@ document.addEventListener('DOMContentLoaded', function () {
       historicoEdicoes: oc.historicoEdicoes || (oc.resolucao && oc.resolucao.historicoEdicoes) || [],
       htmlRelatorio: oc.htmlRelatorio || null,
       dadosCTRS:     oc.dadosCTRS || null,
+      link:          oc.link || (oc.resolucao && oc.resolucao.link) || '',
       tags:          tagsHist,
       anexos:        anexosCombinados,
       praca:         (typeof normalizarPracaOcorrencia === 'function')
@@ -7877,7 +8137,8 @@ document.addEventListener('DOMContentLoaded', function () {
           dataResolucao: (oc.resolucao && oc.resolucao.data) ? formatDataHoraLocal(oc.resolucao.data) : formatDataHoraLocal(),
           resolvidoPor:  (oc.resolucao && oc.resolucao.resolvidoPor) ? oc.resolucao.resolvidoPor : getUsuarioAtual(),
           descResolucao: (oc.resolucao && oc.resolucao.descRes) ? oc.resolucao.descRes : (oc.desc || 'Ocorrência resolvida pela equipe técnica.'),
-          tags:          oc.tags || [],
+          link:          oc.link || (oc.resolucao && oc.resolucao.link) || '',
+      tags:          oc.tags || [],
           anexos:        (oc.anexos && Array.isArray(oc.anexos) && oc.anexos.length > 0) ? oc.anexos : ((oc.resolucao && Array.isArray(oc.resolucao.anexos)) ? oc.resolucao.anexos : [])
         };
       }
@@ -8094,7 +8355,8 @@ document.addEventListener('DOMContentLoaded', function () {
             dataResolucao: resFmt,
             resolvidoPor:  resPor,
             descResolucao: resDesc,
-            tags:          oc.tags || [],
+            link:          oc.link || (oc.resolucao && oc.resolucao.link) || '',
+      tags:          oc.tags || [],
             anexos:        anexosLista
           };
         }
@@ -8345,8 +8607,12 @@ document.addEventListener('DOMContentLoaded', function () {
               '<strong>Criado por:</strong> ' + escapeHTML(autorCri) + ' (' + escapeHTML(dataCri) + ')<br/>' +
               '<strong>Localidade:</strong> ' + escapeHTML(localidade) + '<br/>' +
               '<strong>Categoria:</strong> ' + escapeHTML(categoria) + '<br/>' +
-              '<div style="margin-top:8px;padding:10px 12px;background:var(--surface);border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
-                '<strong>Descrição da Ocorrência:</strong><br/>' + escapeHTML(descCri) +
+              '<div style="margin-top:8px;padding:10px 12px;background:var(--surface);border-radius:var(--r-md);border:1px solid var(--border-lt);overflow-wrap:anywhere;word-break:break-word;">' +
+                '<strong>Descrição da Ocorrência:</strong><br/>' +
+                (typeof formatarTextoComLinks === 'function' ? formatarTextoComLinks(descCri, false) : escapeHTML(descCri)) +
+                ((item.link || (ocFound && (ocFound.link || (ocFound.resolucao && ocFound.resolucao.link)))) && typeof renderBotaoLinkExterno === 'function'
+                  ? '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border-lt);display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><strong style="font-size:11.5px;color:var(--txt);">Link Relacionado:</strong> ' + renderBotaoLinkExterno(item.link || (ocFound && (ocFound.link || (ocFound.resolucao && ocFound.resolucao.link))), null, false) + '</div>'
+                  : '') +
                 blocoPreviewOcorrenciaHTML +
               '</div>' +
             '</div>' +
@@ -8362,8 +8628,8 @@ document.addEventListener('DOMContentLoaded', function () {
               '<strong>Responsável pela Resolução:</strong> ' + escapeHTML(respRes) + '<br/>' +
               '<strong>Data/Hora de Resolução:</strong> ' + escapeHTML(dataRes) + '<br/>' +
               '<strong>Status Final:</strong> <span style="color:var(--green);font-weight:600;">' + escapeHTML(statusFinal) + '</span><br/>' +
-              '<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
-                '<strong>O que foi realizado:</strong><br/>' + escapeHTML(descRes) +
+              '<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:var(--r-md);border:1px solid var(--border-lt);overflow-wrap:anywhere;word-break:break-word;">' +
+                '<strong>O que foi realizado:</strong><br/>' + (typeof formatarTextoComLinks === 'function' ? formatarTextoComLinks(descRes, false) : escapeHTML(descRes)) +
               '</div>' +
             '</div>' +
           '</div>';
@@ -8405,7 +8671,8 @@ document.addEventListener('DOMContentLoaded', function () {
           dataResolucao: resFmt,
           resolvidoPor:  resPor,
           descResolucao: resDesc,
-          tags:          oc.tags || [],
+          link:          oc.link || (oc.resolucao && oc.resolucao.link) || '',
+      tags:          oc.tags || [],
           anexos:        anexosLista
         };
       }
@@ -8440,6 +8707,7 @@ document.addEventListener('DOMContentLoaded', function () {
       dataResolucao: oc.resolucao ? formatDataHoraLocal(oc.resolucao.data) : 'Pendente de resolução',
       resolvidoPor:  oc.resolucao ? (oc.resolvidoPor || getUsuarioAtual()) : 'Aguardando resolução',
       descResolucao: oc.resolucao ? (oc.resolucao.descRes || 'Ocorrência ativa no turno aguardando tratativa da equipe.') : 'Ocorrência ativa no turno aguardando tratativa da equipe.',
+      link:          oc.link || (oc.resolucao && oc.resolucao.link) || '',
       tags:          oc.tags || [],
       historicoEdicoes: oc.historicoEdicoes || (oc.resolucao && oc.resolucao.historicoEdicoes) || [],
       htmlRelatorio: oc.htmlRelatorio || null,
@@ -8888,18 +9156,8 @@ document.addEventListener('DOMContentLoaded', function () {
         viewTj.classList.add('dash-view-animated');
       }
       if (viewEq) viewEq.style.display = 'none';
-      if (btnTj) {
-        btnTj.style.background = '#007AFF';
-        btnTj.style.color = '#ffffff';
-        btnTj.style.fontWeight = '700';
-        btnTj.style.boxShadow = '0 2px 6px rgba(0,122,255,0.35)';
-      }
-      if (btnEq) {
-        btnEq.style.background = 'transparent';
-        btnEq.style.color = 'var(--muted)';
-        btnEq.style.fontWeight = '600';
-        btnEq.style.boxShadow = 'none';
-      }
+      if (btnTj) btnTj.classList.add('on');
+      if (btnEq) btnEq.classList.remove('on');
       if (titleEl) titleEl.textContent = 'Telejornal';
     } else {
       if (viewTj) viewTj.style.display = 'none';
@@ -8909,18 +9167,8 @@ document.addEventListener('DOMContentLoaded', function () {
         void viewEq.offsetWidth;
         viewEq.classList.add('dash-view-animated');
       }
-      if (btnTj) {
-        btnTj.style.background = 'transparent';
-        btnTj.style.color = 'var(--muted)';
-        btnTj.style.fontWeight = '600';
-        btnTj.style.boxShadow = 'none';
-      }
-      if (btnEq) {
-        btnEq.style.background = '#007AFF';
-        btnEq.style.color = '#ffffff';
-        btnEq.style.fontWeight = '700';
-        btnEq.style.boxShadow = '0 2px 6px rgba(0,122,255,0.35)';
-      }
+      if (btnTj) btnTj.classList.remove('on');
+      if (btnEq) btnEq.classList.add('on');
       if (titleEl) titleEl.textContent = 'Equipamentos';
     }
     renderDashboards();
