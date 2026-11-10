@@ -1,5 +1,25 @@
-# Arquivos com credenciais privadas (NUNCA ENVIAR AO GITHUB)
+
+# Credenciais e variáveis de ambiente
 config.js
 .env
-.env.local
+.env.*
+*.pem
+*.key
+
+# Scripts de banco de dados (schemas, tabelas, patrimônios e operadores)
+database/
+*.sql
+
+# Infraestrutura Docker (contém senhas de container PostgreSQL/pgAdmin)
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile
+
+# Arquivos temporários, backups e configurações locais do editor
+.vscode/
+.idea/
 *.log
+*.bak
+*.tmp
+.DS_Store
+Thumbs.db

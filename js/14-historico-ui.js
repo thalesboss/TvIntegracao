@@ -99,7 +99,7 @@
             '<span><i data-lucide="calendar" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> ' + escapeHTML(item.dataCriacao || item.dataResolucao || '') + '</span>'
           )
         : (
-            '<span><i data-lucide="user" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Criado por: ' + escapeHTML(item.criadoPor || 'Sistema') + '</span>' +
+            '<span><i data-lucide="user-check" style="width:12px;height:12px;stroke-width:2;color:var(--blue);"></i> Criado por: <strong style="color:var(--txt);">' + escapeHTML(typeof obterCriadorOcorrencia === 'function' ? obterCriadorOcorrencia(item) : (item.criadoPor || getUsuarioAtual())) + '</strong></span>' +
             '<span><i data-lucide="check-circle-2" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Resolvido por: ' + escapeHTML(item.resolvidoPor || 'Pendente') + '</span>' +
             '<span><i data-lucide="calendar" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> ' + escapeHTML(item.dataResolucao || item.dataCriacao || '') + '</span>'
           );
@@ -142,7 +142,8 @@
           categoria:     oc.cat || 'Equipamento',
           local:         oc.local || 'Central Técnica',
           dataCriacao:   formatDataHoraLocal(oc.dataCriacao || oc.criado),
-          criadoPor:     oc.resp || 'Sistema',
+          criadoPor:     (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual()),
+          resp:          (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
           descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
           status:        (oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : (oc.status === 'arquivada' ? 'Resolvida e Arquivada' : 'Resolvido'),
           dataResolucao: (oc.resolucao && oc.resolucao.data) ? formatDataHoraLocal(oc.resolucao.data) : formatDataHoraLocal(),
@@ -360,7 +361,8 @@
             categoria:     oc.cat || 'Equipamento',
             local:         oc.local || 'Central Técnica',
             dataCriacao:   nowFmt,
-            criadoPor:     oc.resp || 'Sistema',
+            criadoPor:     (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual()),
+            resp:          (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
             descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
             status:        (oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : (oc.status === 'arquivada' ? 'Resolvida e Arquivada' : 'Resolvido'),
             dataResolucao: resFmt,
@@ -381,7 +383,12 @@
       return o.id === item.id || o.id === targetOcId || ('h_oc_' + o.id) === item.id;
     });
     var descCri = item.descCriacao || item.desc || (ocFound && ocFound.desc) || 'Sem descrição registrada.';
-    var autorCri = item.criadoPor || item.resp || (ocFound && (ocFound.resp || ocFound.criadoPor)) || 'Sistema';
+    var autorCri = (typeof obterCriadorOcorrencia === 'function')
+      ? obterCriadorOcorrencia(ocFound || item)
+      : (item.criadoPor || (ocFound && ocFound.criadoPor) || getUsuarioAtual());
+    var atribuidoPara = (typeof formatarAtribuicaoResp === 'function')
+      ? formatarAtribuicaoResp((ocFound && ocFound.resp) || item.resp)
+      : ((ocFound && ocFound.resp) || item.resp || 'Equipe do Turno (Todos)');
     var dataCri = item.dataCriacao || (item.criado ? formatDataHoraLocal(item.criado) : '') || (ocFound && (ocFound.dataCriacao || (ocFound.criado ? formatDataHoraLocal(ocFound.criado) : ''))) || 'Data não informada';
     var equip = item.equipamento || (ocFound && ocFound.local ? (ocFound.local + ' — ' + (ocFound.cat || 'Equipamento')) : '') || (ocFound && (ocFound.cat || ocFound.titulo)) || 'N/A';
     var localidade = item.local || (ocFound && ocFound.local) || 'Central Técnica';
@@ -615,7 +622,8 @@
             '</h4>' +
             '<div style="font-size:12px;color:var(--txt2);line-height:1.6;">' +
               '<strong>Equipamento / Recurso:</strong> ' + escapeHTML(equip) + '<br/>' +
-              '<strong>Criado por:</strong> ' + escapeHTML(autorCri) + ' (' + escapeHTML(dataCri) + ')<br/>' +
+              '<strong>Criado por:</strong> <strong style="color:var(--txt);">' + escapeHTML(autorCri) + '</strong> (' + escapeHTML(dataCri) + ')<br/>' +
+              '<strong>Atribuído para:</strong> ' + escapeHTML(atribuidoPara) + '<br/>' +
               '<strong>Localidade:</strong> ' + escapeHTML(localidade) + '<br/>' +
               '<strong>Categoria:</strong> ' + escapeHTML(categoria) + '<br/>' +
               '<div style="margin-top:8px;padding:10px 12px;background:var(--surface);border-radius:var(--r-md);border:1px solid var(--border-lt);overflow-wrap:anywhere;word-break:break-word;">' +
@@ -676,7 +684,8 @@
           categoria:     oc.cat || 'Equipamento',
           local:         oc.local || 'Central Técnica',
           dataCriacao:   nowFmt,
-          criadoPor:     oc.resp || 'Sistema',
+          criadoPor:     (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual()),
+          resp:          (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
           descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
           status:        (oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : (oc.status === 'arquivada' ? 'Resolvida e Arquivada' : 'Resolvido'),
           dataResolucao: resFmt,
@@ -712,7 +721,8 @@
       categoria:     oc.cat || 'Equipamento',
       local:         oc.local || 'Central Técnica',
       dataCriacao:   formatDataHoraLocal(oc.dataCriacao || oc.criado),
-      criadoPor:     oc.resp || 'Sistema',
+      criadoPor:     (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual()),
+      resp:          (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
       descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
       status:        oc.status === 'resolvida' ? ((oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : 'Resolvido') : (isOcorrenciaVencida(oc) ? 'Prazo Expirado' : 'Aberta'),
       dataResolucao: oc.resolucao ? formatDataHoraLocal(oc.resolucao.data) : 'Pendente de resolução',

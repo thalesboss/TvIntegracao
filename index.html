@@ -345,6 +345,13 @@
         <p style="font-size:12.5px;color:var(--txt2);line-height:1.5;margin:0;">
           Digite seu <strong>e-mail corporativo</strong>. Se for o seu 1º acesso, você criará sua senha pessoal na próxima etapa.
         </p>
+        <div id="ident-box-chave-estacao" style="display:none;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 12px;">
+          <label for="ident-chave-estacao-input" style="font-weight:700;font-size:12px;color:#92400E;display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+            <span>🔑 Chave de Acesso da Estação *</span>
+            <span style="font-size:10.5px;font-weight:500;color:#B45309;">Necessária no 1º acesso deste PC</span>
+          </label>
+          <input type="password" id="ident-chave-estacao-input" placeholder="Digite a Chave de Acesso da TV..." style="width:100%;font-size:13px;padding:8px 11px;border:1px solid #FCD34D;border-radius:var(--r-md);background:#fff;" onkeydown="if(event.key==='Enter') confirmarIdentificacaoOperador(false);" />
+        </div>
         <div class="frow">
           <label for="ident-operador-email" style="font-weight:600;font-size:12.5px;color:var(--txt);display:flex;align-items:center;justify-content:space-between;">
             <span>E-mail Corporativo *</span>
@@ -480,11 +487,10 @@
         <div class="frow">
           <label for="nova-resp">Atribuir para</label>
           <select id="nova-resp">
-            <option value="Todos do turno">Todos do turno</option>
-            <option value="Operador" id="opt-user-name">Operador (Você)</option>
-            <option value="Técnico de Turno">Técnico de Turno</option>
-            <option value="Supervisão">Supervisão</option>
-            <option value="Suporte de TI">Suporte de TI</option>
+            <option value="Equipe do Turno (Todos)">Equipe do Turno (Todos)</option>
+            <option value="Operador" id="opt-user-name">Operador (Atribuir a mim)</option>
+            <option value="Coordenação &amp; Supervisão">Coordenação &amp; Supervisão</option>
+            <option value="Tecnologia da Informação (TI)">Tecnologia da Informação (TI)</option>
           </select>
         </div>
         <div class="frow">
@@ -585,11 +591,10 @@
         <div class="frow">
           <label for="edit-oc-resp">Atribuir para</label>
           <select id="edit-oc-resp">
-            <option value="Todos do turno">Todos do turno</option>
-            <option value="Operador" id="edit-opt-user-name">Operador (Você)</option>
-            <option value="Técnico de Turno">Técnico de Turno</option>
-            <option value="Supervisão">Supervisão</option>
-            <option value="Suporte de TI">Suporte de TI</option>
+            <option value="Equipe do Turno (Todos)">Equipe do Turno (Todos)</option>
+            <option value="Operador" id="edit-opt-user-name">Operador (Atribuir a mim)</option>
+            <option value="Coordenação &amp; Supervisão">Coordenação &amp; Supervisão</option>
+            <option value="Tecnologia da Informação (TI)">Tecnologia da Informação (TI)</option>
           </select>
         </div>
         <div class="frow">
@@ -1114,7 +1119,7 @@
           <label for="novo-eq-setor">Setor / Localização Física</label>
           <input id="novo-eq-setor" type="text" placeholder="Ex: Estúdio Principal, Unidade Móvel..." />
         </div>
-      </div>
+      </div
       <div class="frow">
         <label for="novo-eq-status">Status Operacional Inicial</label>
         <select id="novo-eq-status">

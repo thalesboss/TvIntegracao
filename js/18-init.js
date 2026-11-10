@@ -1,10 +1,4 @@
-  if (typeof isEstacaoConectadaTV === 'function' && !isEstacaoConectadaTV() && typeof conectarComChaveTV === 'function') {
-    conectarComChaveTV(atob('QEludGVncmEyNjIw')).then(function() {
-      if (typeof carregarEquipamentosStore === 'function') carregarEquipamentosStore();
-      if (typeof sincronizarOrcamentoNuvem === 'function') sincronizarOrcamentoNuvem();
-      if (typeof sincronizarEquipeNuvem === 'function') sincronizarEquipeNuvem();
-    });
-  }
+  // Conexão segura: requer Chave de Acesso da Estação no 1º acesso do computador ou config.js local
   try { carregarDashboardMetricsStore(); } catch(e) {}
   try { if (typeof aplicarModoPraca === 'function') aplicarModoPraca(); } catch(e) {}
   try { carregarFotoPerfilSalva(); } catch(e) {}
@@ -57,7 +51,8 @@
       }
     });
   }
-  if (!savedUserName || !savedUserName.trim() || savedUserName.trim() === 'Operador') {
+  var estacaoConectadaInit = (typeof isEstacaoConectadaTV === 'function') ? isEstacaoConectadaTV() : true;
+  if (!estacaoConectadaInit || !savedUserName || !savedUserName.trim() || savedUserName.trim() === 'Operador') {
     abrirPopup('popup-identificacao-operador');
     var identEmail = document.getElementById('ident-operador-email');
     var identInput = document.getElementById('ident-operador-nome');

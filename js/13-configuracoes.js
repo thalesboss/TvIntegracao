@@ -79,7 +79,12 @@
     var optUser = document.getElementById('opt-user-name');
     if (optUser) {
       optUser.value = nomeExibido;
-      optUser.textContent = nomeExibido + ' (Você)';
+      optUser.textContent = nomeExibido + ' (Atribuir a mim)';
+    }
+    var editOptUser = document.getElementById('edit-opt-user-name');
+    if (editOptUser) {
+      editOptUser.value = nomeExibido;
+      editOptUser.textContent = nomeExibido + ' (Atribuir a mim)';
     }
     var sAvatar = document.querySelector('.s-avatar');
     var cfgAvatar = document.getElementById('cfg-avatar');
@@ -206,14 +211,24 @@
       var k = (typeof DBService !== 'undefined' && DBService.key) ? DBService.key : localStorage.getItem('tv_supabase_key');
       return { ok: true, url: u.replace(/\/+$/, ''), key: k };
     }
+    var boxChaveLogin = document.getElementById('ident-box-chave-estacao');
+    if (boxChaveLogin) boxChaveLogin.style.display = 'block';
+    var chaveInput = document.getElementById('ident-chave-estacao-input');
+    var chaveDigitada = chaveInput ? chaveInput.value.trim() : '';
+    if (!chaveDigitada) {
+      return { ok: false, motivo: 'chave_vazia' };
+    }
     var pack = window.ENCRYPTED_TV_CREDENTIALS || (window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS);
     if (pack && pack.data && typeof TVCrypto !== 'undefined') {
       try {
-        var creds = await TVCrypto.decrypt(atob('QEludGVncmEyNjIw'), pack);
+        var creds = await TVCrypto.decrypt(chaveDigitada, pack);
         if (creds && creds.url && creds.key) {
+          if (boxChaveLogin) boxChaveLogin.style.display = 'none';
           return { ok: true, url: creds.url.replace(/\/+$/, ''), key: creds.key, credsObj: creds };
         }
-      } catch (e) {}
+      } catch (e) {
+        return { ok: false, motivo: 'chave_incorreta' };
+      }
     }
     return { ok: false };
   }
@@ -250,7 +265,16 @@
       }
       var con = await garantirConexaoBancoParaLogin();
       if (!con.ok) {
-        exibirMsgLogin(msgEl, 'Não foi possível conectar ao banco. Use a opção de Chave da Estação abaixo.', 'erro');
+        var inChaveEst = document.getElementById('ident-chave-estacao-input');
+        if (con.motivo === 'chave_vazia') {
+          exibirMsgLogin(msgEl, '🔑 Digite a <strong>Chave de Acesso da Estação</strong> acima para liberar o 1º acesso neste computador.', 'erro');
+          if (inChaveEst) inChaveEst.focus();
+        } else if (con.motivo === 'chave_incorreta') {
+          exibirMsgLogin(msgEl, '❌ <strong>Chave de Acesso da Estação incorreta.</strong> Verifique com a equipe técnica.', 'erro');
+          if (inChaveEst) { inChaveEst.focus(); inChaveEst.select(); }
+        } else {
+          exibirMsgLogin(msgEl, 'Não foi possível conectar ao banco. Verifique a Chave de Acesso da Estação.', 'erro');
+        }
         return;
       }
       if (!window._operadorLoginPendente || (window._operadorLoginPendente.email || '').toLowerCase() !== email) {

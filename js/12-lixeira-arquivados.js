@@ -459,7 +459,10 @@
       var timeRel = formatDataRelativa(oc.criado || oc.dataCriacao);
       var timeH = timeRel ? '<span class="oc-meta-item" style="color:var(--muted);"><i data-lucide="clock" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + timeRel + '</span>' : '';
       var localH = oc.local ? '<span class="oc-meta-item"><i data-lucide="map-pin" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + oc.local + '</span>' : '';
-      var respH = oc.resp ? '<span class="oc-meta-item"><i data-lucide="user" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + oc.resp + '</span>' : '';
+      var criadorArq = (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual());
+      var respArq = (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)');
+      var respH = '<span class="oc-meta-item"><i data-lucide="user-check" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--blue);"></i>Criado por: <strong style="color:var(--txt);">' + escapeHTML(criadorArq) + '</strong></span>' +
+                  '<span class="oc-meta-item"><i data-lucide="users" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + escapeHTML(respArq) + '</span>';
       var resolucaoH = (oc.resolucao && oc.resolucao.descRes) ? ('<p style="font-size:12px;color:var(--green-dk);background:#F0FDF4;padding:6px 10px;border-radius:6px;border:1px solid #BBF7D0;margin-top:6px;"><strong>Resolução:</strong> ' + oc.resolucao.descRes + '</p>') : '';
       return (
         '<article class="oc-card" style="background:#FFFFFF;cursor:pointer;margin-bottom:10px;" onclick="verDetalhesHistoricoDirect(\'' + oc.id + '\')">' +
@@ -563,6 +566,7 @@
         descRes:   descResolucao,
         data:      Date.now(),
         resolvidoPor: usuarioLogado,
+        criadoPor: (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || usuarioLogado),
         link:      oc.link || (oc.resolucao && oc.resolucao.link) || '',
         anexos:    anexosCombinados,
         historicoEdicoes: oc.historicoEdicoes || (oc.resolucao && oc.resolucao.historicoEdicoes) || []
@@ -579,7 +583,8 @@
       categoria:     oc.cat || 'Equipamento',
       local:         oc.local || 'Central Técnica',
       dataCriacao:   nowStr,
-      criadoPor:     oc.resp || 'Sistema',
+      criadoPor:     (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || usuarioLogado),
+      resp:          (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
       descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
       status:        statusEscolhido,
       dataResolucao: nowStr,

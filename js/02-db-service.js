@@ -193,6 +193,11 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.isEstacaoConectadaTV = isEstacaoConectadaTV;
   function atualizarUIIdentificacaoOperador() {
+    var conectada = isEstacaoConectadaTV();
+    var boxChaveLogin = document.getElementById('ident-box-chave-estacao');
+    if (boxChaveLogin) {
+      boxChaveLogin.style.display = conectada ? 'none' : 'block';
+    }
     var group = document.getElementById('ident-chave-group');
     var label = document.getElementById('ident-chave-label');
     var hint  = document.getElementById('ident-chave-hint');
@@ -284,6 +289,49 @@ document.addEventListener('DOMContentLoaded', function () {
     return 'Juiz de Fora';
   }
   window.normalizarPracaOcorrencia = normalizarPracaOcorrencia;
+  function isValorAtribuicaoGenerico(val) {
+    if (!val) return true;
+    var v = String(val).trim().toLowerCase();
+    return v === 'todos do turno' ||
+           v === 'equipe do turno (todos)' ||
+           v === 'equipe do turno' ||
+           v === 'técnico de turno' ||
+           v === 'tecnico de turno' ||
+           v === 'supervisão' ||
+           v === 'supervisao' ||
+           v === 'coordenação & supervisão' ||
+           v === 'supervisão & coordenação' ||
+           v === 'suporte de ti' ||
+           v === 'tecnologia da informação (ti)' ||
+           v === 'sistema' ||
+           v === 'operador';
+  }
+  window.isValorAtribuicaoGenerico = isValorAtribuicaoGenerico;
+  function obterCriadorOcorrencia(item) {
+    if (!item) return getUsuarioAtual();
+    var c = item.criadoPor || (item.resolucao && item.resolucao.criadoPor) || '';
+    if (c && !isValorAtribuicaoGenerico(c)) {
+      return String(c).replace(/\s*\((Você|Atribuir a mim)\)\s*/i, '').trim();
+    }
+    if (item.resp && !isValorAtribuicaoGenerico(item.resp)) {
+      return String(item.resp).replace(/\s*\((Você|Atribuir a mim)\)\s*/i, '').trim();
+    }
+    if (item.historicoEdicoes && Array.isArray(item.historicoEdicoes) && item.historicoEdicoes.length > 0) {
+      var ult = item.historicoEdicoes[item.historicoEdicoes.length - 1];
+      if (ult && ult.autor && !isValorAtribuicaoGenerico(ult.autor)) return ult.autor;
+    }
+    return getUsuarioAtual();
+  }
+  window.obterCriadorOcorrencia = obterCriadorOcorrencia;
+  function formatarAtribuicaoResp(resp) {
+    if (!resp) return 'Equipe do Turno (Todos)';
+    var r = String(resp).trim();
+    if (r === 'Todos do turno' || r === 'Técnico de Turno') return 'Equipe do Turno (Todos)';
+    if (r === 'Supervisão') return 'Coordenação & Supervisão';
+    if (r === 'Suporte de TI') return 'Tecnologia da Informação (TI)';
+    return r;
+  }
+  window.formatarAtribuicaoResp = formatarAtribuicaoResp;
   var DBService = {
     mode: (SUPABASE_URL && SUPABASE_ANON_KEY) ? 'supabase' : 'local',
     url: SUPABASE_URL,
@@ -310,6 +358,9 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       if (item.link) {
         resObj.link = item.link;
+      }
+      if (item.criadoPor) {
+        resObj.criadoPor = item.criadoPor;
       }
       return {
         id: item.id,
@@ -780,10 +831,11 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!o || typeof o !== 'object') return null;
     var userAtual = getUsuarioAtual();
     var isMine = !!o.mine;
-    if (o.resp && (o.resp === userAtual || o.resp.indexOf(userAtual) !== -1 || o.resp.indexOf('Você') !== -1)) {
+    if (o.resp && (o.resp === userAtual || o.resp.indexOf(userAtual) !== -1 || o.resp.indexOf('Você') !== -1 || o.resp.indexOf('Atribuir a mim') !== -1)) {
       isMine = true;
     }
     var res = o.resolucao || null;
+    var criadorExtraido = o.criadoPor || (res && res.criadoPor) || '';
     var anx = (o.anexos && Array.isArray(o.anexos) && o.anexos.length > 0)
       ? o.anexos
       : ((res && Array.isArray(res.anexos) && res.anexos.length > 0) ? res.anexos : []);
@@ -791,12 +843,16 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!res) res = { statusRes: (o.status === 'aberta' ? 'Aberta' : 'Resolvido'), anexos: anx };
       else if (!res.anexos || res.anexos.length === 0) res.anexos = anx;
     }
+    if (criadorExtraido && res && !res.criadoPor) {
+      res.criadoPor = criadorExtraido;
+    }
     return {
       id: o.id || ('oc_' + Date.now()),
       titulo: o.titulo || 'Ocorrência sem título',
       prio: o.prio || 'Média',
       cat: o.cat || 'Equipamento',
-      resp: o.resp || 'Todos do turno',
+      resp: formatarAtribuicaoResp(o.resp || 'Equipe do Turno (Todos)'),
+      criadoPor: criadorExtraido,
       local: o.local || '',
       prazo: o.prazo || '',
       link: o.link || (res && res.link) || '',

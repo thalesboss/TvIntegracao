@@ -95,7 +95,8 @@
     }
     var respVal = document.getElementById('nova-resp') ? document.getElementById('nova-resp').value : '';
     var userAtual = getUsuarioAtual();
-    var isMine = (respVal === userAtual || respVal === 'Operador' || respVal.indexOf(userAtual) !== -1 || respVal.indexOf('Você') !== -1);
+    if (respVal === 'Operador' && userAtual) respVal = userAtual;
+    var isMine = (respVal === userAtual || respVal === 'Operador' || respVal.indexOf(userAtual) !== -1 || respVal.indexOf('Você') !== -1 || respVal.indexOf('Atribuir a mim') !== -1);
     var telVal = document.getElementById('nova-telejornal') ? document.getElementById('nova-telejornal').value : '';
     var eqVal  = document.getElementById('nova-equipamento') ? document.getElementById('nova-equipamento').value : '';
     var tagsArr = ['Nova'];
@@ -104,18 +105,16 @@
     var anexosFinais = (uploadedFilesStore['nova-previews'] || []).slice();
     var linkValRaw = document.getElementById('nova-link') ? document.getElementById('nova-link').value.trim() : '';
     var linkVal = (linkValRaw && typeof normalizarUrlExterna === 'function') ? normalizarUrlExterna(linkValRaw) : linkValRaw;
-    var resInicial = null;
-    if (anexosFinais.length > 0 || linkVal) {
-      resInicial = { statusRes: 'Aberta' };
-      if (anexosFinais.length > 0) resInicial.anexos = anexosFinais;
-      if (linkVal) resInicial.link = linkVal;
-    }
+    var resInicial = { statusRes: 'Aberta', criadoPor: userAtual };
+    if (anexosFinais.length > 0) resInicial.anexos = anexosFinais;
+    if (linkVal) resInicial.link = linkVal;
     var novo = {
       id:          'oc_' + Date.now(),
       titulo:      tituloVal,
       prio:        document.getElementById('nova-prio') ? document.getElementById('nova-prio').value : 'Média',
       cat:         document.getElementById('nova-cat') ? document.getElementById('nova-cat').value : 'Equipamento',
-      resp:        respVal || 'Todos do turno',
+      resp:        respVal || 'Equipe do Turno (Todos)',
+      criadoPor:   userAtual,
       local:       document.getElementById('nova-local') ? document.getElementById('nova-local').value.trim() : '',
       prazo:       document.getElementById('nova-prazo') ? document.getElementById('nova-prazo').value : '',
       link:        linkVal || '',
@@ -225,7 +224,18 @@
     document.getElementById('edit-oc-titulo').value = oc.titulo || '';
     document.getElementById('edit-oc-prio').value = oc.prio || 'Média';
     document.getElementById('edit-oc-cat').value = oc.cat || 'Equipamento';
-    document.getElementById('edit-oc-resp').value = oc.resp || 'Todos do turno';
+    var editOptUser = document.getElementById('edit-opt-user-name');
+    var userLogadoEdit = getUsuarioAtual();
+    if (editOptUser && userLogadoEdit) {
+      editOptUser.value = userLogadoEdit;
+      editOptUser.textContent = userLogadoEdit + ' (Atribuir a mim)';
+    }
+    var respNorm = typeof formatarAtribuicaoResp === 'function' ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)');
+    var selEditResp = document.getElementById('edit-oc-resp');
+    if (selEditResp) {
+      selEditResp.value = respNorm;
+      if (!selEditResp.value) selEditResp.value = 'Equipe do Turno (Todos)';
+    }
     document.getElementById('edit-oc-local').value = oc.local || '';
     document.getElementById('edit-oc-prazo').value = oc.prazo || '';
     if (document.getElementById('edit-oc-link')) {
@@ -274,7 +284,8 @@
       return;
     }
     var usuarioLogado = getUsuarioAtual();
-    var isMine = (resp === usuarioLogado || resp === 'Operador' || resp.indexOf(usuarioLogado) !== -1 || resp.indexOf('Você') !== -1);
+    if (resp === 'Operador' && usuarioLogado) resp = usuarioLogado;
+    var isMine = (resp === usuarioLogado || resp === 'Operador' || resp.indexOf(usuarioLogado) !== -1 || resp.indexOf('Você') !== -1 || resp.indexOf('Atribuir a mim') !== -1);
     var anexosAtualizados = (uploadedFilesStore['edit-oc-previews'] || []).slice();
     var anterior = ocorrencias[idx];
     var mudancas = [];
@@ -293,7 +304,7 @@
     regMudanca('Título', anterior.titulo || '', titulo, 'Sem título');
     regMudanca('Prioridade', anterior.prio || 'Média', prio, 'Média');
     regMudanca('Categoria', anterior.cat || 'Equipamento', cat, 'Equipamento');
-    regMudanca('Responsável', anterior.resp || 'Todos do turno', resp, 'Todos do turno');
+    regMudanca('Atribuído para', anterior.resp || 'Equipe do Turno (Todos)', resp, 'Equipe do Turno (Todos)');
     regMudanca('Local / Praça', anterior.local || '', local, 'Não informado');
     regMudanca('Telejornal', anterior.telejornal || '', telVal || '', 'Sem telejornal');
     regMudanca('Equipamento', anterior.equipamento || '', eqVal || '', 'Sem equipamento');
@@ -343,11 +354,14 @@
     } else {
       delete resolucaoAtual.link;
     }
+    var criadorPreservado = typeof obterCriadorOcorrencia === 'function' ? obterCriadorOcorrencia(anterior) : (anterior.criadoPor || usuarioLogado);
+    resolucaoAtual.criadoPor = criadorPreservado;
     ocorrencias[idx] = Object.assign({}, ocorrencias[idx], {
       titulo:           titulo,
       prio:             prio,
       cat:              cat,
       resp:             resp,
+      criadoPor:        criadorPreservado,
       local:            local,
       prazo:            prazo,
       link:             linkVal || '',

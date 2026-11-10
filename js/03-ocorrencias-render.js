@@ -132,7 +132,10 @@
           tagsHTML += '<span class="tag tag-y">' + escapeHTML(t) + '</span>';
         }
       });
-      var respIco  = (oc.resp === 'Todos do turno') ? 'users' : 'user';
+      var respExibido = typeof formatarAtribuicaoResp === 'function' ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)');
+      var respIco  = (respExibido === 'Equipe do Turno (Todos)' || oc.resp === 'Todos do turno') ? 'users' : 'user';
+      var criadorNome = typeof obterCriadorOcorrencia === 'function' ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual());
+      var criadorH = '<span class="oc-meta-item" title="Criado pelo operador conectado"><i data-lucide="user-check" style="width:12px;height:12px;stroke-width:2;color:var(--blue);"></i>Criado por: <strong style="color:var(--txt);font-weight:600;">' + escapeHTML(criadorNome) + '</strong></span>';
       var timeRel  = formatDataRelativa(oc.criado || oc.dataCriacao);
       var timeH    = timeRel ? '<span class="oc-meta-item" style="color:var(--muted);"><i data-lucide="clock" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + timeRel + '</span>' : '';
       var prazoH   = '';
@@ -161,7 +164,8 @@
               ? '<div style="margin-top:6px;padding:5px 10px;background:#EFF6FF;border:1px solid #BFDBFE;border-left:3px solid #0071E3;border-radius:6px;font-size:11px;color:#1E3A8A;display:inline-flex;align-items:center;gap:6px;font-weight:700;"><i data-lucide="file-text" style="width:12px;height:12px;color:#0071E3;"></i> Contém Preview do Relatório CTRS na Descrição — Clique para visualizar</div>'
               : '') +
             '<div class="oc-meta">' +
-              '<span class="oc-meta-item"><i data-lucide="' + respIco + '" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i>' + escapeHTML(oc.resp || 'Todos do turno') + '</span>' +
+              criadorH +
+              '<span class="oc-meta-item" title="Atribuído para"><i data-lucide="' + respIco + '" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i>' + escapeHTML(respExibido) + '</span>' +
               timeH + prazoH + localH +
             '</div>' +
           '</div>' +
