@@ -49,8 +49,11 @@
     if (anexo.url && anexo.url.startsWith('http')) return Promise.resolve(anexo);
     if (!anexo.fileObj) return Promise.resolve(anexo);
     var timestamp = Date.now();
-    var cleanName = (anexo.name || 'arquivo').replace(/[^a-zA-Z0-9._-]/g, '_');
-    var filePath = timestamp + '_' + cleanName;
+    var randBytes = new Uint8Array(6);
+    if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(randBytes);
+    var randHex = Array.prototype.map.call(randBytes, function(b) { return ('00' + b.toString(16)).slice(-2); }).join('');
+    var cleanName = (anexo.name || 'arquivo').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
+    var filePath = timestamp + '_' + randHex + '_' + cleanName;
     var uploadUrl = SUPABASE_URL.replace(/\/$/, '') + '/storage/v1/object/anexos/' + filePath;
     return fetch(uploadUrl, {
       method: 'POST',
@@ -58,7 +61,7 @@
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
         'Content-Type': anexo.type || 'application/octet-stream',
-        'x-upsert': 'true'
+        'x-upsert': 'false'
       },
       body: anexo.fileObj
     })
@@ -135,10 +138,32 @@
     reader.readAsDataURL(file);
   }
   window.comprimirImagemSeNecessario = comprimirImagemSeNecessario;
+  var EXTENSOES_PERMITIDAS_UPLOAD = /\.(jpg|jpeg|png|gif|webp|bmp|mp4|webm|mov|pdf)$/i;
+  var MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024; // 25 MB
   function handleFileSelect(input, containerId) {
     if (!input || !input.files || input.files.length === 0) return;
     if (!uploadedFilesStore[containerId]) uploadedFilesStore[containerId] = [];
-    var fileList = Array.from(input.files);
+    var fileList = Array.from(input.files).filter(function(file) {
+      var nome = (file && file.name) ? file.name : '';
+      var tipo = (file && file.type) ? file.type.toLowerCase() : '';
+      if (!EXTENSOES_PERMITIDAS_UPLOAD.test(nome) || tipo === 'image/svg+xml' || tipo === 'text/html') {
+        if (typeof mostrarToast === 'function') {
+          mostrarToast('Formato Bloqueado', 'O arquivo "' + nome + '" não é permitido. Envie apenas JPG, PNG, WEBP, MP4, MOV ou PDF.', 'warning');
+        }
+        return false;
+      }
+      if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+        if (typeof mostrarToast === 'function') {
+          mostrarToast('Arquivo Muito Grande', 'O arquivo "' + nome + '" excede o limite de 25 MB.', 'warning');
+        }
+        return false;
+      }
+      return true;
+    });
+    if (fileList.length === 0) {
+      input.value = '';
+      return;
+    }
     var pending = fileList.length;
     fileList.forEach(function(file) {
       var mediaId = 'med_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);

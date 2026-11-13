@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; media-src 'self' https: data: blob:; connect-src 'self' https://*.supabase.co https://script.google.com https://script.googleusercontent.com; object-src 'none'; base-uri 'self';"/>
   <title>TV Integração</title>
   <link rel="icon" type="image/png" href="assets/icons/favicon.png?v=7.9"/>
   <link rel="shortcut icon" href="assets/icons/favicon.ico?v=7.9"/>
   <link rel="stylesheet" href="style.css?v=8.0"/>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js" crossorigin="anonymous"></script>
   <style>
     .lucide { display:inline-block; vertical-align:middle; flex-shrink:0; }
     .s-btn .lucide { color: var(--muted); }
@@ -371,8 +372,12 @@
             🎉 Primeiro acesso detectado! Crie sua senha pessoal:
           </div>
           <div class="frow">
-            <label for="ident-senha-nova" style="font-size:12px;font-weight:600;color:var(--txt);">Nova Senha * <span style="font-weight:400;color:var(--muted);">(mín. 4 caracteres)</span></label>
-            <input type="password" id="ident-senha-nova" placeholder="Crie sua senha..." style="width:100%;font-size:13px;padding:8px 11px;border:1px solid var(--border);border-radius:var(--r-md);background:#fff;" onkeydown="if(event.key==='Enter') confirmarIdentificacaoOperador(false);" />
+            <label for="ident-chave-primeiro-acesso" style="font-size:12px;font-weight:600;color:#92400E;">🔑 Chave da Estação * <span style="font-weight:400;color:var(--muted);">(confirmação de segurança do 1º acesso)</span></label>
+            <input type="password" id="ident-chave-primeiro-acesso" placeholder="Digite a Chave de Acesso da Estação..." style="width:100%;font-size:13px;padding:8px 11px;border:1px solid #FCD34D;border-radius:var(--r-md);background:#FFFBEB;" onkeydown="if(event.key==='Enter') confirmarIdentificacaoOperador(false);" />
+          </div>
+          <div class="frow">
+            <label for="ident-senha-nova" style="font-size:12px;font-weight:600;color:var(--txt);">Nova Senha * <span style="font-weight:400;color:var(--muted);">(mín. 6 caracteres)</span></label>
+            <input type="password" id="ident-senha-nova" placeholder="Crie sua senha (mín. 6 caracteres)..." style="width:100%;font-size:13px;padding:8px 11px;border:1px solid var(--border);border-radius:var(--r-md);background:#fff;" onkeydown="if(event.key==='Enter') confirmarIdentificacaoOperador(false);" />
           </div>
           <div class="frow">
             <label for="ident-senha-confirma" style="font-size:12px;font-weight:600;color:var(--txt);">Confirmar Senha *</label>
@@ -3215,8 +3220,8 @@
   </main>
 </div>
 <script>
-  // Pacote Criptografado Global (AES-256-GCM + PBKDF2)
-  // Descriptografado em tempo de execução via Chave de Acesso da Equipe (@Integra2620)
+  // Pacote Criptografado Global (AES-256-GCM + PBKDF2 250k)
+  // Descriptografado exclusivamente mediante digitação da Chave de Acesso da Estação
   window.ENCRYPTED_TV_CREDENTIALS = {
     salt: '9f6ca6650ad6670436a478d785b65dbd',
     iv: '289b276d312c24f6a3d6102e',

@@ -65,9 +65,10 @@
     listEl.innerHTML = itensExibir.map(function(obj) {
       var oc = obj.item;
       var isV = obj.isVencida;
+      var safeOcId = typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(oc.id) : escapeHTML(oc.id);
       if (isV) {
         return (
-          '<article class="oc-card vencida" style="cursor:pointer;" onclick="verDetalhesOcorrenciaResolvida(\'' + oc.id + '\')">' +
+          '<article class="oc-card vencida" tabindex="0" role="button" style="cursor:pointer;" onclick="verDetalhesOcorrenciaResolvida(\'' + safeOcId + '\')">' +
             '<div class="prio-line pl-r"></div>' +
             '<div class="oc-body">' +
               '<div class="oc-header">' +
@@ -83,7 +84,7 @@
               '</div>' +
             '</div>' +
             '<div class="oc-actions" onclick="event.stopPropagation();">' +
-              '<button class="btn-card-action btn-card-resolve" onclick="event.stopPropagation(); abrirResolver(\'' + oc.id + '\')" title="Resolver ocorrência">' +
+              '<button class="btn-card-action btn-card-resolve" onclick="event.stopPropagation(); abrirResolver(\'' + safeOcId + '\')" title="Resolver ocorrência">' +
                 '<i data-lucide="check-circle-2" style="width:12px;height:12px;stroke-width:2.2;"></i> Resolver' +
               '</button>' +
             '</div>' +
@@ -98,7 +99,7 @@
         var prioLineClass = isParcial ? 'pl-y' : 'pl-g';
         var tagStatusClass = isParcial ? 'tag-y' : 'tag-g';
         return (
-          '<article class="' + cardClass + '" style="' + cardStyle + '" onclick="verDetalhesOcorrenciaResolvida(\'' + oc.id + '\')">' +
+          '<article class="' + cardClass + '" tabindex="0" role="button" style="' + cardStyle + '" onclick="verDetalhesOcorrenciaResolvida(\'' + safeOcId + '\')">' +
             '<div class="prio-line ' + prioLineClass + '"></div>' +
             '<div class="oc-body">' +
               '<div class="oc-header">' +

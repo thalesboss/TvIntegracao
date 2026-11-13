@@ -9,15 +9,8 @@
   var filtroOrcamentoAtivo = 'todos';
   var ORCAMENTO_STORAGE_KEY = 'tv_orcamento_seed_v2';
   function getOrcamentoDBCredentials() {
-    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
-    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
-    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
-      url = window.ENV_CONFIG.SUPABASE_URL;
-    }
-    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
-      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
-    }
-    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
+    if (typeof getDBCredentials === 'function') return getDBCredentials();
+    return { url: '', key: '' };
   }
   function filtrarOrcamentoTipo(tipo, btn) {
     filtroOrcamentoAtivo = tipo || 'todos';
@@ -190,8 +183,9 @@
           : itemStatus === 'Rejeitado'
           ? '<span class="tag tag-r">Rejeitado</span>'
           : '<span class="tag tag-ind">Proposto</span>';
+        var safeOrcId = typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(item.id) : escapeHTML(item.id);
         return (
-          '<tr style="transition:background 0.12s ease;cursor:pointer;" onclick="abrirDetalhesItemOrcamento(\'' + item.id + '\')" title="Clique para ver detalhes, editar ou excluir">' +
+          '<tr style="transition:background 0.12s ease;cursor:pointer;" onclick="abrirDetalhesItemOrcamento(\'' + safeOrcId + '\')" title="Clique para ver detalhes, editar ou excluir">' +
             '<td style="text-align:center;font-weight:700;color:var(--muted);">' + (idx + 1) + '</td>' +
             '<td><strong style="color:var(--txt);font-size:13px;">' + escapeHTML(itemDesc) + '</strong></td>' +
             '<td>' + tagTipo + '</td>' +
@@ -200,7 +194,7 @@
             '<td style="text-align:right;font-weight:700;color:var(--txt);font-size:13px;">' + formatarMoeda(val) + '</td>' +
             '<td style="text-align:center;">' + tagStatus + '</td>' +
             '<td style="text-align:center;" onclick="event.stopPropagation();">' +
-              '<button type="button" class="btn btn-ghost btn-xs" onclick="event.stopPropagation(); removerItemOrcamento(\'' + item.id + '\')" title="Remover linha orçamentária" style="color:var(--red);padding:3px 8px;border-radius:6px;">' +
+              '<button type="button" class="btn btn-ghost btn-xs" onclick="event.stopPropagation(); removerItemOrcamento(\'' + safeOrcId + '\')" title="Remover linha orçamentária" style="color:var(--red);padding:3px 8px;border-radius:6px;">' +
                 '<i data-lucide="trash-2" style="width:12px;height:12px;stroke-width:2;"></i>' +
               '</button>' +
             '</td>' +
@@ -370,6 +364,7 @@
   }
   window.excluirItemOrcamentoModal = excluirItemOrcamentoModal;
   function removerItemOrcamento(id) {
+    if (typeof verificarPermissaoPerfil === 'function' && !verificarPermissaoPerfil(['TI/ADM', 'Gestor'], 'remover linha orçamentária')) return;
     if (!confirm('Deseja remover esta linha orçamentária do plano?')) return;
     orcamentoSeedData = orcamentoSeedData.filter(function(i){ return i.id !== id; });
     salvarOrcamentoStore();

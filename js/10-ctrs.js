@@ -1033,22 +1033,30 @@
     var tipo  = tipoEl ? tipoEl.value : 'INTEGRAÇÃO NOTÍCIA';
     var obs   = obsEl ? obsEl.value.trim() : '';
     var relayUrl = obterEndpointRelayEmailCTRS();
-    try {
-      fetch(relayUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8'
-        },
-        body: JSON.stringify({
-          to: destinatario,
-          subject: assuntoFinal,
-          html: htmlFinal,
-          senderName: getUsuarioAtual()
-        })
-      }).catch(function(err) {
-        console.warn('Aviso no disparo de e-mail CTRS:', err);
-      });
-    } catch (e) {}
+    var agoraEnvio = Date.now();
+    var listaDestValidos = String(destinatario || '').split(/[,;]+/).map(function(e){ return e.trim(); }).filter(function(e){
+      return /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(e);
+    });
+    if (listaDestValidos.length > 0 && (!window._ultimoDisparoRelayCTRS || (agoraEnvio - window._ultimoDisparoRelayCTRS > 10000))) {
+      window._ultimoDisparoRelayCTRS = agoraEnvio;
+      var htmlSanitizado = String(htmlFinal || '').replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+      try {
+        fetch(relayUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify({
+            to: listaDestValidos.join(', '),
+            subject: String(assuntoFinal || '').slice(0, 220),
+            html: htmlSanitizado,
+            senderName: getUsuarioAtual()
+          })
+        }).catch(function(err) {
+          console.warn('Aviso no disparo de e-mail CTRS:', err);
+        });
+      } catch (e) {}
+    }
     var tipoUp = (tipo || 'INTEGRAÇÃO NOTÍCIA').trim().toUpperCase();
     var chaveJornal = 'INTEGRAÇÃO NOTÍCIA';
     if (tipoUp.indexOf('NOTÍCIA') !== -1 || tipoUp.indexOf('NOTICIA') !== -1 || tipoUp === 'IN') {
@@ -1073,6 +1081,11 @@
       if (!val) return false;
       var v = String(val).trim().toUpperCase();
       return v.indexOf('NC') === 0 || v.indexOf('NÃO CONFORME') !== -1 || v.indexOf('NAO CONFORME') !== -1;
+    };
+    var ehCampoCancelado = function(val) {
+      if (!val) return false;
+      var v = String(val).trim().toUpperCase();
+      return v.indexOf('CA') === 0 || v.indexOf('CANCELADO') !== -1;
     };
     var falhasEstruturadas = [];
     var accBlocksEnvio = document.querySelectorAll('#page-ctrs .acc-block');
@@ -1111,6 +1124,7 @@
       var videoNC  = ehCampoNC(videoVal);
       var statusNC = ehCampoNC(statusVal);
       var temNCTx  = audioNC || videoNC || statusNC;
+      var temCancTx = !temNCTx && (ehCampoCancelado(statusVal) || ehCampoCancelado(audioVal) || ehCampoCancelado(videoVal));
       var temObsFalha = !!(obsTx && !obsTx.toLowerCase().includes('sem ocorrência') && !obsTx.toLowerCase().includes('sem ocorrencia'));
       var blocoAtivo = !!(infraTx || cidadeTx || horaAbTx || horaFmTx || reporterTx || entradasTx || rcTx || obsTx || temNCTx);
       if (idx > 0 && !blocoAtivo) return;
@@ -1147,27 +1161,20 @@
         statusTx: fmtCodQual(statusVal),
         falhas: obsTx
       });
+      var statusMetricaTx = temNCTx ? 'nc' : (temCancTx ? 'canc' : 'conf');
       metricasContabilizadasHist.push({
         telejornal: chaveJornal,
         equipamento: infraTx || '',
-        status: temNCTx ? 'nc' : 'conf'
+        status: statusMetricaTx
       });
       if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.telejornal && dashboardMetrics.telejornal[chaveJornal]) {
-        if (temNCTx) {
-          dashboardMetrics.telejornal[chaveJornal].nc = (dashboardMetrics.telejornal[chaveJornal].nc || 0) + 1;
-        } else {
-          dashboardMetrics.telejornal[chaveJornal].conf = (dashboardMetrics.telejornal[chaveJornal].conf || 0) + 1;
-        }
+        dashboardMetrics.telejornal[chaveJornal][statusMetricaTx] = (dashboardMetrics.telejornal[chaveJornal][statusMetricaTx] || 0) + 1;
       }
       if (infraTx && typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
         if (!dashboardMetrics.equipamento[infraTx]) {
           dashboardMetrics.equipamento[infraTx] = { conf: 0, nc: 0, canc: 0 };
         }
-        if (temNCTx) {
-          dashboardMetrics.equipamento[infraTx].nc = (dashboardMetrics.equipamento[infraTx].nc || 0) + 1;
-        } else {
-          dashboardMetrics.equipamento[infraTx].conf = (dashboardMetrics.equipamento[infraTx].conf || 0) + 1;
-        }
+        dashboardMetrics.equipamento[infraTx][statusMetricaTx] = (dashboardMetrics.equipamento[infraTx][statusMetricaTx] || 0) + 1;
       }
       if (temNCTx) {
         var itensNC = [];

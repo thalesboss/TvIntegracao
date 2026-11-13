@@ -141,26 +141,27 @@
         var tagClass = 'tag-' + (item.categoria || 'avulso');
         var metaHorario = item.horario ? '<span>·</span><span>' + escapeHTML(item.horario) + '</span>' : '';
         var recBadgeHTML = getRecorrenciaBadgeHTML(item);
-        html += '<li class="reminder-item' + completedClass + '" id="chk-item-' + item.id + '">' +
-          '<button class="reminder-checkbox" onclick="toggleChecklistItem(\'' + item.id + '\')" title="' + (item.concluido ? 'Desmarcar' : 'Concluir') + '">' +
+        var safeChkId = typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(item.id) : escapeHTML(item.id);
+        html += '<li class="reminder-item' + completedClass + '" id="chk-item-' + safeChkId + '">' +
+          '<button class="reminder-checkbox" onclick="toggleChecklistItem(\'' + safeChkId + '\')" title="' + (item.concluido ? 'Desmarcar' : 'Concluir') + '">' +
             '<i data-lucide="check" style="width:13px;height:13px;stroke-width:3;"></i>' +
           '</button>' +
           '<div class="reminder-body">' +
             '<div class="reminder-title">' + escapeHTML(item.titulo) + '</div>' +
             '<div class="reminder-meta">' +
-              '<span class="reminder-tag ' + tagClass + '">' + tagLabel + '</span>' +
+              '<span class="reminder-tag ' + escapeHTML(tagClass) + '">' + escapeHTML(tagLabel) + '</span>' +
               recBadgeHTML +
               metaHorario +
             '</div>' +
           '</div>' +
           '<div class="reminder-actions">' +
-            '<button class="reminder-action-btn edit" onclick="abrirModalRecorrencia(\'' + item.id + '\')" title="Editar e Configurar Repetição" aria-label="Editar Rotina">' +
+            '<button class="reminder-action-btn edit" onclick="abrirModalRecorrencia(\'' + safeChkId + '\')" title="Editar e Configurar Repetição" aria-label="Editar Rotina">' +
               '<i data-lucide="pencil" style="width:14px;height:14px;stroke-width:2.2;"></i>' +
             '</button>' +
-            '<button class="reminder-action-btn alert" onclick="criarOcorrenciaDoChecklist(\'' + item.id + '\')" data-tooltip="Falha detectada? Criar ocorrência desta rotina" aria-label="Criar ocorrência desta rotina">' +
+            '<button class="reminder-action-btn alert" onclick="criarOcorrenciaDoChecklist(\'' + safeChkId + '\')" data-tooltip="Falha detectada? Criar ocorrência desta rotina" aria-label="Criar ocorrência desta rotina">' +
               '<i data-lucide="alert-triangle" style="width:14px;height:14px;stroke-width:2.2;"></i>' +
             '</button>' +
-            '<button class="reminder-action-btn del" onclick="removerItemChecklist(\'' + item.id + '\')" title="Excluir rotina/lembrete" aria-label="Excluir rotina">' +
+            '<button class="reminder-action-btn del" onclick="removerItemChecklist(\'' + safeChkId + '\')" title="Excluir rotina/lembrete" aria-label="Excluir rotina">' +
               '<i data-lucide="trash-2" style="width:14px;height:14px;stroke-width:2;"></i>' +
             '</button>' +
           '</div>' +

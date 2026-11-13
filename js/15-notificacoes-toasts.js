@@ -4,15 +4,8 @@
   var notificacoesDispensadas = [];
   var INITIAL_NOTIFICACOES_SEED = [];
   function getNotifDBCredentials() {
-    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
-    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
-    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
-      url = window.ENV_CONFIG.SUPABASE_URL;
-    }
-    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
-      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
-    }
-    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
+    if (typeof getDBCredentials === 'function') return getDBCredentials();
+    return { url: '', key: '' };
   }
   function salvarDispensadas() {
     window.notificacoesDispensadas = notificacoesDispensadas;
@@ -118,7 +111,8 @@
   function deletarTodasNotificacoesNuvem() {
     var db = getNotifDBCredentials();
     if (!db.url || !db.key) return;
-    fetch(db.url + '/rest/v1/notificacoes?id=not.is.null', {
+    var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+    fetch(db.url + '/rest/v1/notificacoes?praca=eq.' + encodeURIComponent(pracaAtiva), {
       method: 'DELETE',
       headers: {
         'apikey': db.key,
@@ -138,8 +132,8 @@
     toastEl.innerHTML =
       '<div class="toast-icon"><i data-lucide="' + iconName + '" style="width:18px;height:18px;stroke-width:2;"></i></div>' +
       '<div class="toast-content">' +
-        '<div class="toast-title">' + (titulo || 'Notificação') + '</div>' +
-        '<div class="toast-msg">' + (mensagem || '') + '</div>' +
+        '<div class="toast-title">' + escapeHTML(titulo || 'Notificação') + '</div>' +
+        '<div class="toast-msg">' + escapeHTML(mensagem || '') + '</div>' +
       '</div>' +
       '<button class="toast-close" type="button" aria-label="Fechar notificação">&times;</button>';
     function fecharComAnimacao() {
@@ -264,17 +258,18 @@
       var txtCor    = isDanger ? '#DC2626' : isWarning ? '#D97706' : isSuccess ? '#16A34A' : '#2563EB';
       var icoNome   = isDanger ? 'alert-circle' : isWarning ? 'alert-triangle' : isSuccess ? 'check-circle-2' : 'info';
       var unreadBadge = !n.lida ? '<span class="tag tag-blue" style="font-size:9.5px;padding:1px 6px;margin-left:6px;font-weight:600;">Nova</span>' : '';
+      var safeNotifId = typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(n.id) : escapeHTML(n.id);
       return (
         '<div style="background:' + bgCor + ';border:1px solid ' + borderCor + ';border-radius:var(--r-md);padding:10px 12px;display:flex;gap:10px;align-items:flex-start;position:relative;">' +
           '<div style="color:' + txtCor + ';margin-top:1px;"><i data-lucide="' + icoNome + '" style="width:16px;height:16px;stroke-width:2.2;"></i></div>' +
           '<div style="flex:1;display:flex;flex-direction:column;gap:2px;padding-right:18px;">' +
             '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-              '<div style="display:flex;align-items:center;"><strong style="font-size:12.5px;color:' + txtCor + ';">' + (n.titulo || 'Alerta') + '</strong>' + unreadBadge + '</div>' +
-              '<span style="font-size:10.5px;color:var(--muted);white-space:nowrap;margin-left:8px;">' + (n.tempo || '') + '</span>' +
+              '<div style="display:flex;align-items:center;"><strong style="font-size:12.5px;color:' + txtCor + ';">' + escapeHTML(n.titulo || 'Alerta') + '</strong>' + unreadBadge + '</div>' +
+              '<span style="font-size:10.5px;color:var(--muted);white-space:nowrap;margin-left:8px;">' + escapeHTML(n.tempo || '') + '</span>' +
             '</div>' +
-            '<span style="font-size:12px;color:var(--txt2);line-height:1.4;">' + (n.msg || '') + '</span>' +
+            '<span style="font-size:12px;color:var(--txt2);line-height:1.4;">' + escapeHTML(n.msg || '') + '</span>' +
           '</div>' +
-          '<button type="button" onclick="removerNotificacao(\'' + n.id + '\')" title="Dispensar notificação" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;" onmouseover="this.style.color=\'var(--red)\'" onmouseout="this.style.color=\'var(--muted)\'">' +
+          '<button type="button" onclick="removerNotificacao(\'' + safeNotifId + '\')" title="Dispensar notificação" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;" onmouseover="this.style.color=\'var(--red)\'" onmouseout="this.style.color=\'var(--muted)\'">' +
             '<i data-lucide="x" style="width:13px;height:13px;stroke-width:2.2;"></i>' +
           '</button>' +
         '</div>'

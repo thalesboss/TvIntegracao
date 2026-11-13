@@ -189,6 +189,26 @@
     var descFinal = 'Relatório diário de tecnologia e ronda de infraestrutura executado em Uberlândia.\n\n' +
       resumoItens.join('\n') +
       (obsVal ? ('\n\nObservações do plantão:\n' + obsVal) : '');
+    var detalhesRondaObj = {
+      data: dataVal,
+      operador: usuario,
+      tempoSessao: (typeof getTempoLogadoStr === 'function') ? getTempoLogadoStr() : '',
+      potenciaW: potVal,
+      refletidaW: refVal,
+      satRedeDb: satRedeDb ? satRedeDb.value : '',
+      satBhDb: satBhDb ? satBhDb.value : '',
+      satSpDb: satSpDb ? satSpDb.value : '',
+      statusSistemas: statusMap,
+      naoConformidades: ncs.map(function(n){ return n.nome; }),
+      obs: obsVal
+    };
+    var marcadorRondaJson = '';
+    try {
+      marcadorRondaJson = '<!--RONDA_JSON:' + encodeURIComponent(JSON.stringify(detalhesRondaObj)) + '-->';
+    } catch (eRondaJson) {}
+    var textoFechamentoRonda = (ncs.length > 0
+      ? 'Ronda técnica concluída por ' + usuario + ' com ' + ncs.length + ' não conformidade(s) apontada(s).'
+      : 'Ronda técnica concluída por ' + usuario + ' — 100% dos sistemas em conformidade.') + marcadorRondaJson;
     var novoRelatorio = {
       id:            'rel_udi_' + Date.now(),
       tipo:          'relatorio',
@@ -202,26 +222,21 @@
       criadoPor:     usuario,
       descCriacao:   descFinal,
       status:        ncs.length > 0 ? 'Com Não Conformidade' : 'Conforme',
+      dataResolucao: nowFmt,
+      resolvidoPor:  usuario,
+      descResolucao: textoFechamentoRonda,
       tags:          ['Ronda Técnica', 'Uberlândia', ncs.length > 0 ? 'NC' : '100% Conforme'],
-      detalhesRonda: {
-        data: dataVal,
-        operador: usuario,
-        tempoSessao: (typeof getTempoLogadoStr === 'function') ? getTempoLogadoStr() : '',
-        potenciaW: potVal,
-        refletidaW: refVal,
-        satRedeDb: satRedeDb ? satRedeDb.value : '',
-        satBhDb: satBhDb ? satBhDb.value : '',
-        satSpDb: satSpDb ? satSpDb.value : '',
-        statusSistemas: statusMap,
-        naoConformidades: ncs.map(function(n){ return n.nome; }),
-        obs: obsVal
-      }
+      detalhesRonda: detalhesRondaObj
     };
-    if (Array.isArray(window.historicoSeedData)) {
-      window.historicoSeedData = [novoRelatorio].concat(window.historicoSeedData);
-      if (typeof saveHistorico === 'function') {
-        saveHistorico(window.historicoSeedData, novoRelatorio);
-      }
+    var baseHist = (typeof historicoSeedData !== 'undefined' && Array.isArray(historicoSeedData))
+      ? historicoSeedData
+      : (Array.isArray(window.historicoSeedData) ? window.historicoSeedData : []);
+    var novaListaHist = [novoRelatorio].concat(baseHist);
+    window.historicoSeedData = novaListaHist;
+    if (typeof saveHistorico === 'function') {
+      saveHistorico(novaListaHist, novoRelatorio);
+    } else if (typeof window.saveHistorico === 'function') {
+      window.saveHistorico(novaListaHist, novoRelatorio);
     }
     try { localStorage.removeItem(RONDA_DRAFT_KEY); } catch(e) {}
     if (typeof renderAll === 'function') renderAll(true);
@@ -320,9 +335,19 @@
   });
   function calcularMetricasRondaUdi() {
     var relatorios = [];
-    if (Array.isArray(window.historicoSeedData)) {
-      relatorios = window.historicoSeedData.filter(function(h) {
-        return h && (h.subtipo === 'Tecnologia UDI' || (h.detalhesRonda && h.praca === 'Uberlândia'));
+    var fonteHist = (typeof historicoSeedData !== 'undefined' && Array.isArray(historicoSeedData))
+      ? historicoSeedData
+      : (Array.isArray(window.historicoSeedData) ? window.historicoSeedData : []);
+    if (Array.isArray(fonteHist)) {
+      relatorios = fonteHist.filter(function(h) {
+        if (!h) return false;
+        if (!h.detalhesRonda && h.descResolucao && String(h.descResolucao).indexOf('<!--RONDA_JSON:') !== -1) {
+          try {
+            var mR = String(h.descResolucao).match(/<!--RONDA_JSON:([^>]+)-->/);
+            if (mR && mR[1]) h.detalhesRonda = JSON.parse(decodeURIComponent(mR[1]));
+          } catch (eR) {}
+        }
+        return h.subtipo === 'Tecnologia UDI' || (h.detalhesRonda && h.praca === 'Uberlândia');
       });
     }
     var totalGeral = relatorios.length;

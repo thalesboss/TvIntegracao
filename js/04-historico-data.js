@@ -22,6 +22,7 @@
       }
     }
   }
+  window.saveHistorico = saveHistorico;
   function getHistoricoCompleto() {
     var mapa = {};
     var lista = [];
@@ -104,9 +105,9 @@
     if (item.tipo === 'ocorrencia') {
       return '<span class="tag tag-blue-soft">Ocorrência</span>';
     } else if (item.tipo === 'relatorio') {
-      return '<span class="tag tag-teal-soft">' + (item.subtipo || 'Relatório') + '</span>';
+      return '<span class="tag tag-teal-soft">' + escapeHTML(item.subtipo || 'Relatório') + '</span>';
     } else if (item.tipo === 'recebimento') {
-      return '<span class="tag tag-yellow-soft">' + (item.subtipo || 'Recebimento') + '</span>';
+      return '<span class="tag tag-yellow-soft">' + escapeHTML(item.subtipo || 'Recebimento') + '</span>';
     }
     return '<span class="tag tag-blue-soft">Registro</span>';
   }

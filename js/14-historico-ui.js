@@ -71,7 +71,7 @@
       );
       var resolucaoBox = '';
       var textoResRaw = item.descResolucao || (item.resolucao && item.resolucao.descRes) || '';
-      var textoRes = String(textoResRaw).replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
+      var textoRes = String(textoResRaw).replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim();
       if (isRelatorioCTRS) {
         resolucaoBox =
           '<div style="margin-top:8px;padding:7px 11px;background:#EFF6FF;border:1px solid #BFDBFE;border-left:3px solid #0071E3;border-radius:6px;font-size:11.5px;color:#1E3A8A;display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
@@ -108,7 +108,7 @@
           '<div class="prio-line ' + plClass + '"></div>' +
           '<div class="oc-body">' +
             '<div class="oc-header"><h3>' + escapeHTML(item.titulo || 'Sem título') + '</h3>' + tagTipo + tagMeu + '</div>' +
-            '<p class="oc-desc" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + escapeHTML(String(item.descCriacao || item.desc || 'Sem descrição').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim()) + '</p>' +
+            '<p class="oc-desc" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + escapeHTML(String(item.descCriacao || item.desc || 'Sem descrição').replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim()) + '</p>' +
             resolucaoBox +
             '<div class="oc-meta" style="margin-top:8px;gap:14px;flex-wrap:wrap;display:flex;align-items:center;font-size:11.5px;">' +
               metaFooterHTML +
@@ -403,7 +403,7 @@
     if (modalTitle) modalTitle.textContent = item.titulo;
     if (modalTags) {
       var tagMeu = isItemDoUsuario(item) ? '<span class="tag tag-ind">Seu Registro / Resolução</span>' : '';
-      modalTags.innerHTML = getTagTipoBadge(item) + ' <span class="tag tag-g">' + statusFinal + '</span> ' + tagMeu;
+      modalTags.innerHTML = getTagTipoBadge(item) + ' <span class="tag tag-g">' + escapeHTML(statusFinal) + '</span> ' + tagMeu;
     }
     var anexos = (item.anexos && Array.isArray(item.anexos) && item.anexos.length > 0)
       ? item.anexos
@@ -425,16 +425,19 @@
         if (!anx) return;
         var fName = (anx.name || anx.nome || anx.fileName || '').toLowerCase();
         var fType = (anx.type || '').toLowerCase();
-        var mediaSrc = anx.url || anx.dataUrl || (typeof anx === 'string' ? anx : '');
-        if (!mediaSrc && anx.caminho) mediaSrc = anx.caminho;
+        var mediaSrcRaw = anx.url || anx.dataUrl || (typeof anx === 'string' ? anx : '');
+        if (!mediaSrcRaw && anx.caminho) mediaSrcRaw = anx.caminho;
+        var mediaSrc = typeof sanitizeMediaUrl === 'function' ? sanitizeMediaUrl(mediaSrcRaw) : escapeHTML(mediaSrcRaw);
+        if (!mediaSrc) return;
         var isImg = fType.startsWith('image/') ||
                     mediaSrc.startsWith('data:image/') ||
-                    fName.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i) ||
-                    mediaSrc.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i);
+                    fName.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i) ||
+                    mediaSrc.match(/\.(jpg|jpeg|png|gif|webp|bmp)(\?.*)?$/i);
         var isVid = fType.startsWith('video/') ||
                     mediaSrc.startsWith('data:video/') ||
                     fName.match(/\.(mp4|webm|mov|mkv|avi|ogg)$/i) ||
                     mediaSrc.match(/\.(mp4|webm|mov|mkv|avi|ogg)(\?.*)?$/i);
+        var safeAnxName = escapeHTML(anx.name || 'Arquivo Anexo');
         if (isImg && mediaSrc) {
           mediaHTML +=
             '<div style="text-align:center;background:var(--surface);padding:8px;border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
@@ -447,14 +450,14 @@
               '<video src="' + mediaSrc + '" controls style="width:100%;max-height:360px;border-radius:var(--r-md);background:#000;" preload="metadata"></video>' +
               '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding:0 2px;">' +
                 '<span style="font-size:11.5px;color:var(--txt);font-weight:600;">🎬 Vídeo Anexado</span>' +
-                '<a href="' + mediaSrc + '" target="_blank" download="video_anexo" class="btn btn-ghost btn-xs">Baixar Vídeo</a>' +
+                '<a href="' + mediaSrc + '" target="_blank" rel="noopener noreferrer" download="video_anexo" class="btn btn-ghost btn-xs">Baixar Vídeo</a>' +
               '</div>' +
             '</div>';
         } else if (mediaSrc) {
           mediaHTML +=
             '<div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);padding:8px 12px;border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
-              '<span style="font-size:12px;color:var(--txt);">📄 <strong>' + (anx.name || 'Arquivo Anexo') + '</strong></span>' +
-              '<a href="' + mediaSrc + '" target="_blank" download="' + (anx.name || 'arquivo') + '" class="btn btn-ghost btn-sm">Abrir / Baixar</a>' +
+              '<span style="font-size:12px;color:var(--txt);">📄 <strong>' + safeAnxName + '</strong></span>' +
+              '<a href="' + mediaSrc + '" target="_blank" rel="noopener noreferrer" download="' + safeAnxName + '" class="btn btn-ghost btn-sm">Abrir / Baixar</a>' +
             '</div>';
         }
       });
@@ -526,8 +529,8 @@
     }
     var rawDescCriOriginal = String(descCri || '');
     var rawDescResOriginal = String(descRes || '');
-    descCri = rawDescCriOriginal.replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
-    descRes = rawDescResOriginal.replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
+    descCri = rawDescCriOriginal.replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim();
+    descRes = rawDescResOriginal.replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim();
     var isRelatorioCTRSModal = (item.tipo === 'relatorio') && (
       item.subtipo === 'CTRS Transmissão' ||
       item.subtipo === 'Relatório Transmissão' ||

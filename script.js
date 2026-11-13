@@ -103,6 +103,45 @@ document.addEventListener('DOMContentLoaded', function () {
       .replace(/'/g, '&#39;');
   }
   window.escapeHTML = escapeHTML;
+  function sanitizeIdAttr(id) {
+    if (id === null || id === undefined) return '';
+    return String(id).replace(/[^a-zA-Z0-9_.:-]/g, '');
+  }
+  window.sanitizeIdAttr = sanitizeIdAttr;
+  function sanitizeMediaUrl(urlStr) {
+    if (!urlStr || typeof urlStr !== 'string') return '';
+    var u = urlStr.trim();
+    if (/^https?:\/\//i.test(u)) return escapeHTML(u);
+    if (/^data:(image\/(jpeg|jpg|png|gif|webp|bmp)|video\/(mp4|webm|ogg|quicktime)|application\/pdf);base64,/i.test(u)) return u;
+    if (/^blob:/i.test(u)) return escapeHTML(u);
+    return '';
+  }
+  window.sanitizeMediaUrl = sanitizeMediaUrl;
+  function obterTagPerfilAtual() {
+    var tag = localStorage.getItem('tv_user_tag_v1') || 'Tecnico';
+    return String(tag).trim();
+  }
+  window.obterTagPerfilAtual = obterTagPerfilAtual;
+  function verificarPermissaoPerfil(perfisPermitidos, acaoLabel) {
+    var tagAtual = obterTagPerfilAtual();
+    var lista = Array.isArray(perfisPermitidos) ? perfisPermitidos : ['TI/ADM', 'Gestor'];
+    var permitido = lista.some(function(p) { return p.toLowerCase() === tagAtual.toLowerCase(); });
+    if (!permitido) {
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('Permissão Restrita', 'A ação "' + (acaoLabel || 'solicitada') + '" requer perfil ' + lista.join(' ou ') + ' (seu perfil: ' + tagAtual + ').', 'warning');
+      }
+      return false;
+    }
+    return true;
+  }
+  window.verificarPermissaoPerfil = verificarPermissaoPerfil;
+  var IGNORED_LEGACY_OC_IDS = ['oc_1787932348110'];
+  function isIdLegadoIgnorado(id) {
+    if (!id) return false;
+    var s = String(id);
+    return s.indexOf('oc_init_') === 0 || IGNORED_LEGACY_OC_IDS.indexOf(s) !== -1;
+  }
+  window.isIdLegadoIgnorado = isIdLegadoIgnorado;
   function normalizarUrlExterna(urlStr) {
     if (!urlStr || typeof urlStr !== 'string') return '';
     var u = urlStr.trim();
@@ -423,6 +462,18 @@ document.addEventListener('DOMContentLoaded', function () {
     return r;
   }
   window.formatarAtribuicaoResp = formatarAtribuicaoResp;
+  function getDBCredentials() {
+    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
+    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
+    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
+      url = window.ENV_CONFIG.SUPABASE_URL;
+    }
+    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
+      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
+    }
+    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
+  }
+  window.getDBCredentials = getDBCredentials;
   var DBService = {
     mode: (SUPABASE_URL && SUPABASE_ANON_KEY) ? 'supabase' : 'local',
     url: SUPABASE_URL,
@@ -547,6 +598,12 @@ document.addEventListener('DOMContentLoaded', function () {
     },
     formatHistoricoPayload: function(h) {
       if (!h || !h.id) return null;
+      var descRes = h.descResolucao || '';
+      if (h.detalhesRonda && typeof h.detalhesRonda === 'object' && descRes.indexOf('<!--RONDA_JSON:') === -1) {
+        try {
+          descRes = (descRes ? descRes + ' ' : '') + '<!--RONDA_JSON:' + encodeURIComponent(JSON.stringify(h.detalhesRonda)) + '-->';
+        } catch (eRonda) {}
+      }
       return {
         id: h.id,
         tipo: h.tipo || 'relatorio',
@@ -559,9 +616,9 @@ document.addEventListener('DOMContentLoaded', function () {
         criadoPor: h.criadoPor || 'Operador',
         descCriacao: h.descCriacao || '',
         status: h.status || 'Concluído',
-        dataResolucao: h.dataResolucao || '',
-        resolvidoPor: h.resolvidoPor || '',
-        descResolucao: h.descResolucao || '',
+        dataResolucao: h.dataResolucao || h.dataCriacao || '',
+        resolvidoPor: h.resolvidoPor || h.criadoPor || '',
+        descResolucao: descRes,
         praca: h.praca || h.local || 'Juiz de Fora'
       };
     },
@@ -647,7 +704,7 @@ document.addEventListener('DOMContentLoaded', function () {
       var self = this;
       return new Promise(function(resolveSync) {
         try {
-          var urlOc = self.url.replace(/\/$/, '') + '/rest/v1/ocorrencias?select=*&order=criado.desc&limit=100';
+          var urlOc = self.url.replace(/\/$/, '') + '/rest/v1/ocorrencias?select=*&order=criado.desc&limit=500';
           var pOc = fetch(urlOc, {
             headers: {
               'apikey': self.key,
@@ -681,7 +738,7 @@ document.addEventListener('DOMContentLoaded', function () {
             updateCloudStatus(false);
             console.warn('[DBService Cloud Sync] Offline ou conectando ao Supabase...', err);
           });
-          var urlHist = self.url.replace(/\/$/, '') + '/rest/v1/historico?select=*&order=dataCriacao.desc&limit=100';
+          var urlHist = self.url.replace(/\/$/, '') + '/rest/v1/historico?select=*&order=dataCriacao.desc&limit=500';
           var pHist = fetch(urlHist, {
             headers: {
               'apikey': self.key,
@@ -702,7 +759,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 return true;
               });
               var mapHist = {};
-              remoteFiltered.forEach(function(h){ mapHist[h.id] = h; });
+              remoteFiltered.forEach(function(h){
+                if (h && !h.detalhesRonda && h.descResolucao && String(h.descResolucao).indexOf('<!--RONDA_JSON:') !== -1) {
+                  try {
+                    var mRonda = String(h.descResolucao).match(/<!--RONDA_JSON:([^>]+)-->/);
+                    if (mRonda && mRonda[1]) h.detalhesRonda = JSON.parse(decodeURIComponent(mRonda[1]));
+                  } catch (eR) {}
+                }
+                if (h && !h.dadosCTRS && h.descResolucao && String(h.descResolucao).indexOf('<!--CTRS_JSON:') !== -1) {
+                  try {
+                    var mCtrs = String(h.descResolucao).match(/<!--CTRS_JSON:([^>]+)-->/);
+                    if (mCtrs && mCtrs[1]) h.dadosCTRS = JSON.parse(decodeURIComponent(mCtrs[1]));
+                  } catch (eC) {}
+                }
+                mapHist[h.id] = h;
+              });
               (historicoSeedData || []).forEach(function(localH){
                 if (localH && localH.id) {
                   if (mapHist[localH.id]) {
@@ -712,12 +783,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (localH.dadosCTRS && !mapHist[localH.id].dadosCTRS) {
                       mapHist[localH.id].dadosCTRS = localH.dadosCTRS;
                     }
+                    if (localH.detalhesRonda && !mapHist[localH.id].detalhesRonda) {
+                      mapHist[localH.id].detalhesRonda = localH.detalhesRonda;
+                    }
                   } else if (!idsNaLixeira.includes(localH.id) && localH.status !== 'lixeira') {
                     remoteFiltered.push(localH);
                   }
                 }
               });
               historicoSeedData = remoteFiltered;
+              window.historicoSeedData = historicoSeedData;
               try {
                 localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(historicoSeedData));
               } catch(e) {}
@@ -974,18 +1049,16 @@ document.addEventListener('DOMContentLoaded', function () {
     var now = Date.now();
     (remotas || []).forEach(function(rRaw) {
       var r = sanitizeOcorrencia(rRaw);
-      if (!r || !r.id || r.status === 'lixeira' || lixeiraArr.indexOf(r.id) !== -1 || r.id === 'oc_1787932348110') return;
+      if (!r || !r.id || r.status === 'lixeira' || lixeiraArr.indexOf(r.id) !== -1 || isIdLegadoIgnorado(r.id)) return;
       r._synced = true;
       delete r._pendingSync;
       mapa[r.id] = r;
     });
     (locais || []).forEach(function(l) {
-      if (!l || !l.id || l.status === 'lixeira' || lixeiraArr.indexOf(l.id) !== -1 || l.id === 'oc_1787932348110') return;
+      if (!l || !l.id || l.status === 'lixeira' || lixeiraArr.indexOf(l.id) !== -1 || isIdLegadoIgnorado(l.id)) return;
       var r = mapa[l.id];
       if (!r) {
         if (l._synced) return;
-        var idadeLocal = now - (l.criado || 0);
-        if (idadeLocal > 3600000 && !l._pendingSync) return;
         mapa[l.id] = l;
         try {
           if (typeof DBService !== 'undefined' && DBService && typeof DBService.upsertOcorrenciaRemota === 'function') {
@@ -1229,8 +1302,9 @@ document.addEventListener('DOMContentLoaded', function () {
       if (isVencida) cardClasses += ' vencida';
       else if (isParcial) cardClasses += ' parcialmente-resolvida';
       else if (oc.mine) cardClasses += ' mine';
+      var safeId = typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(oc.id) : escapeHTML(oc.id);
       return (
-        '<article class="' + cardClasses + '" data-id="' + oc.id + '" onclick="verDetalhesOcorrencia(\'' + oc.id + '\')" style="margin-bottom:10px;" title="Clique para ver detalhes">' +
+        '<article class="' + cardClasses + '" data-id="' + safeId + '" tabindex="0" role="button" onclick="verDetalhesOcorrencia(\'' + safeId + '\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();verDetalhesOcorrencia(\'' + safeId + '\');}" style="margin-bottom:10px;" title="Clique para ver detalhes">' +
           '<div class="prio-line ' + prioLine(oc.prio) + '"></div>' +
           '<div class="oc-body">' +
             '<div class="oc-header"><h3>' + escapeHTML(oc.titulo || 'Sem título') + '</h3>' + tagsHTML + '</div>' +
@@ -1248,7 +1322,7 @@ document.addEventListener('DOMContentLoaded', function () {
             '</div>' +
           '</div>' +
           '<div class="oc-actions" onclick="event.stopPropagation();">' +
-            '<button class="btn-card-action btn-card-resolve" onclick="event.stopPropagation(); abrirResolver(\'' + oc.id + '\')" title="Resolver ocorrência">' +
+            '<button class="btn-card-action btn-card-resolve" onclick="event.stopPropagation(); abrirResolver(\'' + safeId + '\')" title="Resolver ocorrência">' +
               '<i data-lucide="check-circle-2" style="width:13px;height:13px;stroke-width:2.2;"></i> Resolver' +
             '</button>' +
           '</div>' +
@@ -1389,6 +1463,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
   }
+  window.saveHistorico = saveHistorico;
   function getHistoricoCompleto() {
     var mapa = {};
     var lista = [];
@@ -1471,9 +1546,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (item.tipo === 'ocorrencia') {
       return '<span class="tag tag-blue-soft">Ocorrência</span>';
     } else if (item.tipo === 'relatorio') {
-      return '<span class="tag tag-teal-soft">' + (item.subtipo || 'Relatório') + '</span>';
+      return '<span class="tag tag-teal-soft">' + escapeHTML(item.subtipo || 'Relatório') + '</span>';
     } else if (item.tipo === 'recebimento') {
-      return '<span class="tag tag-yellow-soft">' + (item.subtipo || 'Recebimento') + '</span>';
+      return '<span class="tag tag-yellow-soft">' + escapeHTML(item.subtipo || 'Recebimento') + '</span>';
     }
     return '<span class="tag tag-blue-soft">Registro</span>';
   }
@@ -1545,9 +1620,10 @@ document.addEventListener('DOMContentLoaded', function () {
     listEl.innerHTML = itensExibir.map(function(obj) {
       var oc = obj.item;
       var isV = obj.isVencida;
+      var safeOcId = typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(oc.id) : escapeHTML(oc.id);
       if (isV) {
         return (
-          '<article class="oc-card vencida" style="cursor:pointer;" onclick="verDetalhesOcorrenciaResolvida(\'' + oc.id + '\')">' +
+          '<article class="oc-card vencida" tabindex="0" role="button" style="cursor:pointer;" onclick="verDetalhesOcorrenciaResolvida(\'' + safeOcId + '\')">' +
             '<div class="prio-line pl-r"></div>' +
             '<div class="oc-body">' +
               '<div class="oc-header">' +
@@ -1563,7 +1639,7 @@ document.addEventListener('DOMContentLoaded', function () {
               '</div>' +
             '</div>' +
             '<div class="oc-actions" onclick="event.stopPropagation();">' +
-              '<button class="btn-card-action btn-card-resolve" onclick="event.stopPropagation(); abrirResolver(\'' + oc.id + '\')" title="Resolver ocorrência">' +
+              '<button class="btn-card-action btn-card-resolve" onclick="event.stopPropagation(); abrirResolver(\'' + safeOcId + '\')" title="Resolver ocorrência">' +
                 '<i data-lucide="check-circle-2" style="width:12px;height:12px;stroke-width:2.2;"></i> Resolver' +
               '</button>' +
             '</div>' +
@@ -1578,7 +1654,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var prioLineClass = isParcial ? 'pl-y' : 'pl-g';
         var tagStatusClass = isParcial ? 'tag-y' : 'tag-g';
         return (
-          '<article class="' + cardClass + '" style="' + cardStyle + '" onclick="verDetalhesOcorrenciaResolvida(\'' + oc.id + '\')">' +
+          '<article class="' + cardClass + '" tabindex="0" role="button" style="' + cardStyle + '" onclick="verDetalhesOcorrenciaResolvida(\'' + safeOcId + '\')">' +
             '<div class="prio-line ' + prioLineClass + '"></div>' +
             '<div class="oc-body">' +
               '<div class="oc-header">' +
@@ -2260,8 +2336,11 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     if (anexo.url && anexo.url.startsWith('http')) return Promise.resolve(anexo);
     if (!anexo.fileObj) return Promise.resolve(anexo);
     var timestamp = Date.now();
-    var cleanName = (anexo.name || 'arquivo').replace(/[^a-zA-Z0-9._-]/g, '_');
-    var filePath = timestamp + '_' + cleanName;
+    var randBytes = new Uint8Array(6);
+    if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(randBytes);
+    var randHex = Array.prototype.map.call(randBytes, function(b) { return ('00' + b.toString(16)).slice(-2); }).join('');
+    var cleanName = (anexo.name || 'arquivo').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
+    var filePath = timestamp + '_' + randHex + '_' + cleanName;
     var uploadUrl = SUPABASE_URL.replace(/\/$/, '') + '/storage/v1/object/anexos/' + filePath;
     return fetch(uploadUrl, {
       method: 'POST',
@@ -2269,7 +2348,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
         'Content-Type': anexo.type || 'application/octet-stream',
-        'x-upsert': 'true'
+        'x-upsert': 'false'
       },
       body: anexo.fileObj
     })
@@ -2346,10 +2425,32 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     reader.readAsDataURL(file);
   }
   window.comprimirImagemSeNecessario = comprimirImagemSeNecessario;
+  var EXTENSOES_PERMITIDAS_UPLOAD = /\.(jpg|jpeg|png|gif|webp|bmp|mp4|webm|mov|pdf)$/i;
+  var MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024; // 25 MB
   function handleFileSelect(input, containerId) {
     if (!input || !input.files || input.files.length === 0) return;
     if (!uploadedFilesStore[containerId]) uploadedFilesStore[containerId] = [];
-    var fileList = Array.from(input.files);
+    var fileList = Array.from(input.files).filter(function(file) {
+      var nome = (file && file.name) ? file.name : '';
+      var tipo = (file && file.type) ? file.type.toLowerCase() : '';
+      if (!EXTENSOES_PERMITIDAS_UPLOAD.test(nome) || tipo === 'image/svg+xml' || tipo === 'text/html') {
+        if (typeof mostrarToast === 'function') {
+          mostrarToast('Formato Bloqueado', 'O arquivo "' + nome + '" não é permitido. Envie apenas JPG, PNG, WEBP, MP4, MOV ou PDF.', 'warning');
+        }
+        return false;
+      }
+      if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+        if (typeof mostrarToast === 'function') {
+          mostrarToast('Arquivo Muito Grande', 'O arquivo "' + nome + '" excede o limite de 25 MB.', 'warning');
+        }
+        return false;
+      }
+      return true;
+    });
+    if (fileList.length === 0) {
+      input.value = '';
+      return;
+    }
     var pending = fileList.length;
     fileList.forEach(function(file) {
       var mediaId = 'med_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
@@ -3967,22 +4068,30 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     var tipo  = tipoEl ? tipoEl.value : 'INTEGRAÇÃO NOTÍCIA';
     var obs   = obsEl ? obsEl.value.trim() : '';
     var relayUrl = obterEndpointRelayEmailCTRS();
-    try {
-      fetch(relayUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8'
-        },
-        body: JSON.stringify({
-          to: destinatario,
-          subject: assuntoFinal,
-          html: htmlFinal,
-          senderName: getUsuarioAtual()
-        })
-      }).catch(function(err) {
-        console.warn('Aviso no disparo de e-mail CTRS:', err);
-      });
-    } catch (e) {}
+    var agoraEnvio = Date.now();
+    var listaDestValidos = String(destinatario || '').split(/[,;]+/).map(function(e){ return e.trim(); }).filter(function(e){
+      return /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(e);
+    });
+    if (listaDestValidos.length > 0 && (!window._ultimoDisparoRelayCTRS || (agoraEnvio - window._ultimoDisparoRelayCTRS > 10000))) {
+      window._ultimoDisparoRelayCTRS = agoraEnvio;
+      var htmlSanitizado = String(htmlFinal || '').replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+      try {
+        fetch(relayUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify({
+            to: listaDestValidos.join(', '),
+            subject: String(assuntoFinal || '').slice(0, 220),
+            html: htmlSanitizado,
+            senderName: getUsuarioAtual()
+          })
+        }).catch(function(err) {
+          console.warn('Aviso no disparo de e-mail CTRS:', err);
+        });
+      } catch (e) {}
+    }
     var tipoUp = (tipo || 'INTEGRAÇÃO NOTÍCIA').trim().toUpperCase();
     var chaveJornal = 'INTEGRAÇÃO NOTÍCIA';
     if (tipoUp.indexOf('NOTÍCIA') !== -1 || tipoUp.indexOf('NOTICIA') !== -1 || tipoUp === 'IN') {
@@ -4007,6 +4116,11 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       if (!val) return false;
       var v = String(val).trim().toUpperCase();
       return v.indexOf('NC') === 0 || v.indexOf('NÃO CONFORME') !== -1 || v.indexOf('NAO CONFORME') !== -1;
+    };
+    var ehCampoCancelado = function(val) {
+      if (!val) return false;
+      var v = String(val).trim().toUpperCase();
+      return v.indexOf('CA') === 0 || v.indexOf('CANCELADO') !== -1;
     };
     var falhasEstruturadas = [];
     var accBlocksEnvio = document.querySelectorAll('#page-ctrs .acc-block');
@@ -4045,6 +4159,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       var videoNC  = ehCampoNC(videoVal);
       var statusNC = ehCampoNC(statusVal);
       var temNCTx  = audioNC || videoNC || statusNC;
+      var temCancTx = !temNCTx && (ehCampoCancelado(statusVal) || ehCampoCancelado(audioVal) || ehCampoCancelado(videoVal));
       var temObsFalha = !!(obsTx && !obsTx.toLowerCase().includes('sem ocorrência') && !obsTx.toLowerCase().includes('sem ocorrencia'));
       var blocoAtivo = !!(infraTx || cidadeTx || horaAbTx || horaFmTx || reporterTx || entradasTx || rcTx || obsTx || temNCTx);
       if (idx > 0 && !blocoAtivo) return;
@@ -4081,27 +4196,20 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
         statusTx: fmtCodQual(statusVal),
         falhas: obsTx
       });
+      var statusMetricaTx = temNCTx ? 'nc' : (temCancTx ? 'canc' : 'conf');
       metricasContabilizadasHist.push({
         telejornal: chaveJornal,
         equipamento: infraTx || '',
-        status: temNCTx ? 'nc' : 'conf'
+        status: statusMetricaTx
       });
       if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.telejornal && dashboardMetrics.telejornal[chaveJornal]) {
-        if (temNCTx) {
-          dashboardMetrics.telejornal[chaveJornal].nc = (dashboardMetrics.telejornal[chaveJornal].nc || 0) + 1;
-        } else {
-          dashboardMetrics.telejornal[chaveJornal].conf = (dashboardMetrics.telejornal[chaveJornal].conf || 0) + 1;
-        }
+        dashboardMetrics.telejornal[chaveJornal][statusMetricaTx] = (dashboardMetrics.telejornal[chaveJornal][statusMetricaTx] || 0) + 1;
       }
       if (infraTx && typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
         if (!dashboardMetrics.equipamento[infraTx]) {
           dashboardMetrics.equipamento[infraTx] = { conf: 0, nc: 0, canc: 0 };
         }
-        if (temNCTx) {
-          dashboardMetrics.equipamento[infraTx].nc = (dashboardMetrics.equipamento[infraTx].nc || 0) + 1;
-        } else {
-          dashboardMetrics.equipamento[infraTx].conf = (dashboardMetrics.equipamento[infraTx].conf || 0) + 1;
-        }
+        dashboardMetrics.equipamento[infraTx][statusMetricaTx] = (dashboardMetrics.equipamento[infraTx][statusMetricaTx] || 0) + 1;
       }
       if (temNCTx) {
         var itensNC = [];
@@ -4389,26 +4497,27 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
         var tagClass = 'tag-' + (item.categoria || 'avulso');
         var metaHorario = item.horario ? '<span>·</span><span>' + escapeHTML(item.horario) + '</span>' : '';
         var recBadgeHTML = getRecorrenciaBadgeHTML(item);
-        html += '<li class="reminder-item' + completedClass + '" id="chk-item-' + item.id + '">' +
-          '<button class="reminder-checkbox" onclick="toggleChecklistItem(\'' + item.id + '\')" title="' + (item.concluido ? 'Desmarcar' : 'Concluir') + '">' +
+        var safeChkId = typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(item.id) : escapeHTML(item.id);
+        html += '<li class="reminder-item' + completedClass + '" id="chk-item-' + safeChkId + '">' +
+          '<button class="reminder-checkbox" onclick="toggleChecklistItem(\'' + safeChkId + '\')" title="' + (item.concluido ? 'Desmarcar' : 'Concluir') + '">' +
             '<i data-lucide="check" style="width:13px;height:13px;stroke-width:3;"></i>' +
           '</button>' +
           '<div class="reminder-body">' +
             '<div class="reminder-title">' + escapeHTML(item.titulo) + '</div>' +
             '<div class="reminder-meta">' +
-              '<span class="reminder-tag ' + tagClass + '">' + tagLabel + '</span>' +
+              '<span class="reminder-tag ' + escapeHTML(tagClass) + '">' + escapeHTML(tagLabel) + '</span>' +
               recBadgeHTML +
               metaHorario +
             '</div>' +
           '</div>' +
           '<div class="reminder-actions">' +
-            '<button class="reminder-action-btn edit" onclick="abrirModalRecorrencia(\'' + item.id + '\')" title="Editar e Configurar Repetição" aria-label="Editar Rotina">' +
+            '<button class="reminder-action-btn edit" onclick="abrirModalRecorrencia(\'' + safeChkId + '\')" title="Editar e Configurar Repetição" aria-label="Editar Rotina">' +
               '<i data-lucide="pencil" style="width:14px;height:14px;stroke-width:2.2;"></i>' +
             '</button>' +
-            '<button class="reminder-action-btn alert" onclick="criarOcorrenciaDoChecklist(\'' + item.id + '\')" data-tooltip="Falha detectada? Criar ocorrência desta rotina" aria-label="Criar ocorrência desta rotina">' +
+            '<button class="reminder-action-btn alert" onclick="criarOcorrenciaDoChecklist(\'' + safeChkId + '\')" data-tooltip="Falha detectada? Criar ocorrência desta rotina" aria-label="Criar ocorrência desta rotina">' +
               '<i data-lucide="alert-triangle" style="width:14px;height:14px;stroke-width:2.2;"></i>' +
             '</button>' +
-            '<button class="reminder-action-btn del" onclick="removerItemChecklist(\'' + item.id + '\')" title="Excluir rotina/lembrete" aria-label="Excluir rotina">' +
+            '<button class="reminder-action-btn del" onclick="removerItemChecklist(\'' + safeChkId + '\')" title="Excluir rotina/lembrete" aria-label="Excluir rotina">' +
               '<i data-lucide="trash-2" style="width:14px;height:14px;stroke-width:2;"></i>' +
             '</button>' +
           '</div>' +
@@ -5313,6 +5422,26 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     var descFinal = 'Relatório diário de tecnologia e ronda de infraestrutura executado em Uberlândia.\n\n' +
       resumoItens.join('\n') +
       (obsVal ? ('\n\nObservações do plantão:\n' + obsVal) : '');
+    var detalhesRondaObj = {
+      data: dataVal,
+      operador: usuario,
+      tempoSessao: (typeof getTempoLogadoStr === 'function') ? getTempoLogadoStr() : '',
+      potenciaW: potVal,
+      refletidaW: refVal,
+      satRedeDb: satRedeDb ? satRedeDb.value : '',
+      satBhDb: satBhDb ? satBhDb.value : '',
+      satSpDb: satSpDb ? satSpDb.value : '',
+      statusSistemas: statusMap,
+      naoConformidades: ncs.map(function(n){ return n.nome; }),
+      obs: obsVal
+    };
+    var marcadorRondaJson = '';
+    try {
+      marcadorRondaJson = '<!--RONDA_JSON:' + encodeURIComponent(JSON.stringify(detalhesRondaObj)) + '-->';
+    } catch (eRondaJson) {}
+    var textoFechamentoRonda = (ncs.length > 0
+      ? 'Ronda técnica concluída por ' + usuario + ' com ' + ncs.length + ' não conformidade(s) apontada(s).'
+      : 'Ronda técnica concluída por ' + usuario + ' — 100% dos sistemas em conformidade.') + marcadorRondaJson;
     var novoRelatorio = {
       id:            'rel_udi_' + Date.now(),
       tipo:          'relatorio',
@@ -5326,26 +5455,21 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       criadoPor:     usuario,
       descCriacao:   descFinal,
       status:        ncs.length > 0 ? 'Com Não Conformidade' : 'Conforme',
+      dataResolucao: nowFmt,
+      resolvidoPor:  usuario,
+      descResolucao: textoFechamentoRonda,
       tags:          ['Ronda Técnica', 'Uberlândia', ncs.length > 0 ? 'NC' : '100% Conforme'],
-      detalhesRonda: {
-        data: dataVal,
-        operador: usuario,
-        tempoSessao: (typeof getTempoLogadoStr === 'function') ? getTempoLogadoStr() : '',
-        potenciaW: potVal,
-        refletidaW: refVal,
-        satRedeDb: satRedeDb ? satRedeDb.value : '',
-        satBhDb: satBhDb ? satBhDb.value : '',
-        satSpDb: satSpDb ? satSpDb.value : '',
-        statusSistemas: statusMap,
-        naoConformidades: ncs.map(function(n){ return n.nome; }),
-        obs: obsVal
-      }
+      detalhesRonda: detalhesRondaObj
     };
-    if (Array.isArray(window.historicoSeedData)) {
-      window.historicoSeedData = [novoRelatorio].concat(window.historicoSeedData);
-      if (typeof saveHistorico === 'function') {
-        saveHistorico(window.historicoSeedData, novoRelatorio);
-      }
+    var baseHist = (typeof historicoSeedData !== 'undefined' && Array.isArray(historicoSeedData))
+      ? historicoSeedData
+      : (Array.isArray(window.historicoSeedData) ? window.historicoSeedData : []);
+    var novaListaHist = [novoRelatorio].concat(baseHist);
+    window.historicoSeedData = novaListaHist;
+    if (typeof saveHistorico === 'function') {
+      saveHistorico(novaListaHist, novoRelatorio);
+    } else if (typeof window.saveHistorico === 'function') {
+      window.saveHistorico(novaListaHist, novoRelatorio);
     }
     try { localStorage.removeItem(RONDA_DRAFT_KEY); } catch(e) {}
     if (typeof renderAll === 'function') renderAll(true);
@@ -5444,9 +5568,19 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   });
   function calcularMetricasRondaUdi() {
     var relatorios = [];
-    if (Array.isArray(window.historicoSeedData)) {
-      relatorios = window.historicoSeedData.filter(function(h) {
-        return h && (h.subtipo === 'Tecnologia UDI' || (h.detalhesRonda && h.praca === 'Uberlândia'));
+    var fonteHist = (typeof historicoSeedData !== 'undefined' && Array.isArray(historicoSeedData))
+      ? historicoSeedData
+      : (Array.isArray(window.historicoSeedData) ? window.historicoSeedData : []);
+    if (Array.isArray(fonteHist)) {
+      relatorios = fonteHist.filter(function(h) {
+        if (!h) return false;
+        if (!h.detalhesRonda && h.descResolucao && String(h.descResolucao).indexOf('<!--RONDA_JSON:') !== -1) {
+          try {
+            var mR = String(h.descResolucao).match(/<!--RONDA_JSON:([^>]+)-->/);
+            if (mR && mR[1]) h.detalhesRonda = JSON.parse(decodeURIComponent(mR[1]));
+          } catch (eR) {}
+        }
+        return h.subtipo === 'Tecnologia UDI' || (h.detalhesRonda && h.praca === 'Uberlândia');
       });
     }
     var totalGeral = relatorios.length;
@@ -6540,15 +6674,8 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
 
   var lixeiraData = [];
   function getLixeiraDBCredentials() {
-    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
-    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
-    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
-      url = window.ENV_CONFIG.SUPABASE_URL;
-    }
-    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
-      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
-    }
-    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
+    if (typeof getDBCredentials === 'function') return getDBCredentials();
+    return { url: '', key: '' };
   }
   function loadLixeira() {
     sincronizarLixeiraNuvem();
@@ -6587,8 +6714,8 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   window.sincronizarLixeiraNuvem = sincronizarLixeiraNuvem;
   function salvarItemLixeiraNuvem(item) {
     var db = getLixeiraDBCredentials();
-    if (!db.url || !db.key || !item) return;
-    fetch(db.url + '/rest/v1/lixeira', {
+    if (!db.url || !db.key || !item) return Promise.resolve(false);
+    return fetch(db.url + '/rest/v1/lixeira', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -6599,11 +6726,11 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       body: JSON.stringify(item)
     })
     .then(function(res) {
-      if (res.ok) {
-      }
+      return !!(res && res.ok);
     })
     .catch(function(err) {
       console.warn('[Lixeira DB] Erro ao enviar para lixeira remota:', err);
+      return false;
     });
   }
   window.salvarItemLixeiraNuvem = salvarItemLixeiraNuvem;
@@ -6744,12 +6871,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     var titulo = oc ? (oc.titulo || 'esta ocorrência') : (hist ? hist.titulo : 'esta ocorrência');
     if (confirm('Mover a ocorrência "' + titulo + '" para a Lixeira?\n\nEla ficará retida por 7 dias na Lixeira como backup antes da exclusão permanente.')) {
       var idParaSalvar = oc ? oc.id : (hist ? hist.id : targetId);
-      if (typeof DBService !== 'undefined' && DBService && typeof DBService.deleteRemote === 'function') {
-        if (idParaSalvar) {
-          DBService.deleteRemote('ocorrencias', idParaSalvar);
-          DBService.deleteRemote('historico', idParaSalvar);
-        }
-      }
       var itemPraca = (oc && oc.praca) || (hist && hist.praca) || (typeof normalizarPracaOcorrencia === 'function' ? normalizarPracaOcorrencia(null, (oc && oc.local) || (hist && hist.local), titulo) : 'Juiz de Fora');
       var itemLixeira = {
         id: idParaSalvar,
@@ -6764,7 +6885,12 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       };
       lixeiraData = [itemLixeira].concat(lixeiraData.filter(function(i){ return i.id !== idParaSalvar; }));
       saveLixeira(lixeiraData);
-      salvarItemLixeiraNuvem(itemLixeira);
+      salvarItemLixeiraNuvem(itemLixeira).then(function() {
+        if (typeof DBService !== 'undefined' && DBService && typeof DBService.deleteRemote === 'function' && idParaSalvar) {
+          DBService.deleteRemote('ocorrencias', idParaSalvar);
+          DBService.deleteRemote('historico', idParaSalvar);
+        }
+      });
       var idsOcsVinculadasRelatorio = [];
       if (hist) {
         ajustarMetricasDashboardPorRelatorioCTRS(hist, -1);
@@ -6866,27 +6992,28 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
         expiraBadge = '<span class="tag tag-yellow-soft" style="font-weight:600;"><i data-lucide="clock" style="width:11px;height:11px;stroke-width:2;margin-right:3px;"></i>Expira em ' + diasRestantes + ' dias</span>';
       }
       var oc = item.ocOriginal || {};
-      var desc = String(oc.desc || (item.histOriginal ? item.histOriginal.descCriacao : 'Sem descrição.')).replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
-      var local = oc.local || (item.histOriginal ? item.histOriginal.local : 'Central Técnica');
-      var excluidoEmStr = formatDataHoraLocal(item.dataExclusao);
+      var desc = escapeHTML(String(oc.desc || (item.histOriginal ? item.histOriginal.descCriacao : 'Sem descrição.')).replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim());
+      var local = escapeHTML(oc.local || (item.histOriginal ? item.histOriginal.local : 'Central Técnica'));
+      var excluidoEmStr = escapeHTML(formatDataHoraLocal(item.dataExclusao));
+      var safeLixId = typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(item.id) : escapeHTML(item.id);
       return (
         '<article class="oc-card" style="background:#FFFFFF;border:1px solid #E2E8F0;margin-bottom:10px;">' +
           '<div class="prio-line pl-r"></div>' +
           '<div class="oc-body">' +
             '<div class="oc-header">' +
-              '<h3>' + (item.titulo || 'Ocorrência') + '</h3>' +
+              '<h3>' + escapeHTML(item.titulo || 'Ocorrência') + '</h3>' +
               '<span class="tag tag-gray-soft">Lixeira</span>' +
               expiraBadge +
             '</div>' +
             '<p class="oc-desc" style="color:var(--txt2);">' + desc + '</p>' +
             '<div class="oc-meta" style="margin-top:8px;">' +
-              '<span><i data-lucide="trash" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Excluído por: ' + (item.excluidoPor || 'Operador') + '</span>' +
+              '<span><i data-lucide="trash" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Excluído por: ' + escapeHTML(item.excluidoPor || 'Operador') + '</span>' +
               '<span><i data-lucide="calendar" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Em: ' + excluidoEmStr + '</span>' +
               '<span><i data-lucide="map-pin" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> ' + local + '</span>' +
             '</div>' +
           '</div>' +
           '<div class="oc-actions" style="justify-content:center;gap:8px;">' +
-            '<button class="btn-card-action btn-card-restore" onclick="restaurarOcorrenciaLixeira(\'' + item.id + '\')" title="Restaurar ocorrência para as ativas">' +
+            '<button class="btn-card-action btn-card-restore" onclick="restaurarOcorrenciaLixeira(\'' + safeLixId + '\')" title="Restaurar ocorrência para as ativas">' +
               '<i data-lucide="rotate-ccw" style="width:12px;height:12px;stroke-width:2.2;"></i> Restaurar' +
             '</button>' +
           '</div>' +
@@ -6998,20 +7125,21 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       var plClass = prioLine(oc.prio);
       var timeRel = formatDataRelativa(oc.criado || oc.dataCriacao);
       var timeH = timeRel ? '<span class="oc-meta-item" style="color:var(--muted);"><i data-lucide="clock" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + timeRel + '</span>' : '';
-      var localH = oc.local ? '<span class="oc-meta-item"><i data-lucide="map-pin" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + oc.local + '</span>' : '';
+      var localH = oc.local ? '<span class="oc-meta-item"><i data-lucide="map-pin" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + escapeHTML(oc.local) + '</span>' : '';
       var criadorArq = (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual());
       var respArq = (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)');
       var respH = '<span class="oc-meta-item"><i data-lucide="user-check" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--blue);"></i>Criado por: <strong style="color:var(--txt);">' + escapeHTML(criadorArq) + '</strong></span>' +
                   '<span class="oc-meta-item"><i data-lucide="users" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + escapeHTML(respArq) + '</span>';
-      var resolucaoH = (oc.resolucao && oc.resolucao.descRes) ? ('<p style="font-size:12px;color:var(--green-dk);background:#F0FDF4;padding:6px 10px;border-radius:6px;border:1px solid #BBF7D0;margin-top:6px;"><strong>Resolução:</strong> ' + oc.resolucao.descRes + '</p>') : '';
+      var resolucaoH = (oc.resolucao && oc.resolucao.descRes) ? ('<p style="font-size:12px;color:var(--green-dk);background:#F0FDF4;padding:6px 10px;border-radius:6px;border:1px solid #BBF7D0;margin-top:6px;"><strong>Resolução:</strong> ' + escapeHTML(oc.resolucao.descRes) + '</p>') : '';
+      var safeArqId = typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(oc.id) : escapeHTML(oc.id);
       return (
-        '<article class="oc-card" style="background:#FFFFFF;cursor:pointer;margin-bottom:10px;" onclick="verDetalhesHistoricoDirect(\'' + oc.id + '\')">' +
+        '<article class="oc-card" tabindex="0" role="button" style="background:#FFFFFF;cursor:pointer;margin-bottom:10px;" onclick="verDetalhesHistoricoDirect(\'' + safeArqId + '\')">' +
           '<div class="prio-line ' + plClass + '"></div>' +
           '<div class="oc-body">' +
             '<div class="oc-header">' +
-              '<h3>' + (oc.titulo || 'Ocorrência') + '</h3>' +
-              '<span class="tag ' + tagClass(oc.prio) + '">' + (oc.prio || 'Média') + '</span>' +
-              '<span class="tag tag-teal-soft">' + (oc.cat || 'Equipamento') + '</span>' +
+              '<h3>' + escapeHTML(oc.titulo || 'Ocorrência') + '</h3>' +
+              '<span class="tag ' + tagClass(oc.prio) + '">' + escapeHTML(oc.prio || 'Média') + '</span>' +
+              '<span class="tag tag-teal-soft">' + escapeHTML(oc.cat || 'Equipamento') + '</span>' +
             '</div>' +
             '<p class="oc-desc">' + (typeof formatarTextoComLinks === 'function' ? formatarTextoComLinks(String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim(), true) : escapeHTML(String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim())) + '</p>' +
             ((oc.link || (oc.resolucao && oc.resolucao.link)) && typeof renderBotaoLinkExterno === 'function'
@@ -7025,10 +7153,10 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
             '</div>' +
           '</div>' +
           '<div class="oc-actions" style="justify-content:center;gap:8px;" onclick="event.stopPropagation();">' +
-            '<button class="btn-card-action btn-card-resolve" onclick="event.stopPropagation(); concluirVerificacaoArquivado(\'' + oc.id + '\');" title="Concluir verificação do turno">' +
+            '<button class="btn-card-action btn-card-resolve" onclick="event.stopPropagation(); concluirVerificacaoArquivado(\'' + safeArqId + '\');" title="Concluir verificação do turno">' +
               '<i data-lucide="check" style="width:12px;height:12px;stroke-width:2.5;"></i> Concluir / Verificado' +
             '</button>' +
-            '<button class="btn-card-action btn-card-restore" onclick="event.stopPropagation(); restaurarArquivadoParaAbertas(\'' + oc.id + '\');" title="Restaurar para Ocorrências Abertas">' +
+            '<button class="btn-card-action btn-card-restore" onclick="event.stopPropagation(); restaurarArquivadoParaAbertas(\'' + safeArqId + '\');" title="Restaurar para Ocorrências Abertas">' +
               '<i data-lucide="rotate-ccw" style="width:12px;height:12px;stroke-width:2.2;"></i> Restaurar' +
             '</button>' +
           '</div>' +
@@ -7264,11 +7392,24 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   }
   window.atualizarNomeUsuario = atualizarNomeOperadorUI;
   window.atualizarNomeOperadorUI = atualizarNomeOperadorUI;
-  async function hashSenhaSHA256(texto) {
+  async function hashSenhaSHA256(texto, emailSalt) {
     if (!window.crypto || !window.crypto.subtle) {
-      return btoa(unescape(encodeURIComponent(texto)));
+      throw new Error('Ambiente inseguro (HTTPS ou localhost obrigatório para criptografia de senha).');
     }
     var enc = new TextEncoder();
+    if (emailSalt) {
+      var saltNorm = 'TVI_PBKDF2_v2:' + String(emailSalt).trim().toLowerCase();
+      var keyMat = await crypto.subtle.importKey('raw', enc.encode(texto), { name: 'PBKDF2' }, false, ['deriveBits']);
+      var bits = await crypto.subtle.deriveBits(
+        { name: 'PBKDF2', salt: enc.encode(saltNorm), iterations: 120000, hash: 'SHA-256' },
+        keyMat,
+        256
+      );
+      var hexPbkdf2 = Array.prototype.map.call(new Uint8Array(bits), function(x) {
+        return ('00' + x.toString(16)).slice(-2);
+      }).join('');
+      return 'pbkdf2v2$' + hexPbkdf2;
+    }
     var buf = await crypto.subtle.digest('SHA-256', enc.encode(texto));
     return Array.prototype.map.call(new Uint8Array(buf), function(x) {
       return ('00' + x.toString(16)).slice(-2);
@@ -7421,9 +7562,10 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     }
     if (!modoManualAtivo) {
       var emailInput = document.getElementById('ident-operador-email');
-      var email = (emailInput ? emailInput.value : '').trim().toLowerCase();
-      if (!email || email.indexOf('@') === -1) {
-        exibirMsgLogin(msgEl, 'Por favor, digite seu <strong>e-mail corporativo</strong> válido.', 'erro');
+      var emailRaw = (emailInput ? emailInput.value : '').trim().toLowerCase();
+      var email = emailRaw.replace(/[%*\s]/g, '');
+      if (!email || !/^[a-z0-9._+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(email)) {
+        exibirMsgLogin(msgEl, 'Por favor, digite um <strong>e-mail corporativo</strong> válido (sem caracteres curinga).', 'erro');
         if (emailInput) emailInput.focus();
         return;
       }
@@ -7445,7 +7587,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
         if (btn) { btn.disabled = true; btn.textContent = 'Verificando e-mail...'; }
         exibirMsgLogin(msgEl, 'Consultando seu cadastro no banco PostgreSQL...', 'info');
         try {
-          var resOp = await fetch(con.url + '/rest/v1/operadores?email=ilike.' + encodeURIComponent(email) + '&select=*&limit=1', {
+          var resOp = await fetch(con.url + '/rest/v1/operadores?email=ilike.' + encodeURIComponent(email) + '&select=id,nome,email,cargo,tag_perfil,praca,ativo,senha_hash&limit=1', {
             headers: {
               'apikey': con.key,
               'Authorization': 'Bearer ' + con.key,
@@ -7516,10 +7658,27 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       var opAtivo = window._operadorLoginPendente;
       var primeiroAcesso = !opAtivo.senha_hash || String(opAtivo.senha_hash).trim() === '';
       if (primeiroAcesso) {
+        var inChavePrim = document.getElementById('ident-chave-primeiro-acesso');
+        var chavePrim = (inChavePrim ? inChavePrim.value : '').trim();
+        var packVerif = window.ENCRYPTED_TV_CREDENTIALS || (window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS);
+        if (packVerif && packVerif.data && typeof TVCrypto !== 'undefined') {
+          if (!chavePrim) {
+            exibirMsgLogin(msgEl, '🔑 Por segurança, informe a <strong>Chave da Estação</strong> para validar seu 1º acesso e criar sua senha.', 'erro');
+            if (inChavePrim) inChavePrim.focus();
+            return;
+          }
+          try {
+            await TVCrypto.decrypt(chavePrim, packVerif);
+          } catch (eChv) {
+            exibirMsgLogin(msgEl, '❌ <strong>Chave da Estação incorreta.</strong> A criação de senha no 1º acesso exige a chave válida da equipe.', 'erro');
+            if (inChavePrim) { inChavePrim.focus(); inChavePrim.select(); }
+            return;
+          }
+        }
         var sNova = (document.getElementById('ident-senha-nova') ? document.getElementById('ident-senha-nova').value : '').trim();
         var sConf = (document.getElementById('ident-senha-confirma') ? document.getElementById('ident-senha-confirma').value : '').trim();
-        if (sNova.length < 4) {
-          exibirMsgLogin(msgEl, 'A senha deve ter pelo menos <strong>4 caracteres</strong>.', 'erro');
+        if (sNova.length < 6) {
+          exibirMsgLogin(msgEl, 'A senha deve ter pelo menos <strong>6 caracteres</strong>.', 'erro');
           return;
         }
         if (sNova !== sConf) {
@@ -7527,7 +7686,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
           return;
         }
         if (btn) { btn.disabled = true; btn.textContent = 'Salvando senha...'; }
-        var novoHash = await hashSenhaSHA256(sNova);
+        var novoHash = await hashSenhaSHA256(sNova, opAtivo.email || email);
         try {
           var resPatch = await fetch(con.url + '/rest/v1/operadores?id=eq.' + encodeURIComponent(opAtivo.id), {
             method: 'PATCH',
@@ -7558,8 +7717,27 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
           exibirMsgLogin(msgEl, 'Por favor, digite sua <strong>senha pessoal</strong>.', 'erro');
           return;
         }
-        var hashDigitado = await hashSenhaSHA256(sDigitada);
-        if (hashDigitado !== opAtivo.senha_hash && sDigitada !== opAtivo.senha_hash) {
+        var hashArmazenado = String(opAtivo.senha_hash || '');
+        var senhaValida = false;
+        if (hashArmazenado.indexOf('pbkdf2v2$') === 0) {
+          var hashPbkdf2 = await hashSenhaSHA256(sDigitada, opAtivo.email || email);
+          senhaValida = (hashPbkdf2 === hashArmazenado);
+        } else {
+          var hashLegado = await hashSenhaSHA256(sDigitada);
+          senhaValida = (hashLegado === hashArmazenado);
+          if (senhaValida) {
+            try {
+              var hashUpgrade = await hashSenhaSHA256(sDigitada, opAtivo.email || email);
+              fetch(con.url + '/rest/v1/operadores?id=eq.' + encodeURIComponent(opAtivo.id), {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'apikey': con.key, 'Authorization': 'Bearer ' + con.key },
+                body: JSON.stringify({ senha_hash: hashUpgrade, atualizado_em: new Date().toISOString() })
+              }).catch(function() {});
+              opAtivo.senha_hash = hashUpgrade;
+            } catch (eUpg) {}
+          }
+        }
+        if (!senhaValida) {
           exibirMsgLogin(msgEl, '❌ <strong>Senha incorreta.</strong> Tente novamente.', 'erro');
           var inAtErr = document.getElementById('ident-senha-atual');
           if (inAtErr) { inAtErr.focus(); inAtErr.select(); }
@@ -8009,6 +8187,9 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   window.usarCredenciaisPreenchidasParaGerador = usarCredenciaisPreenchidasParaGerador;
   var ultimoBlocoGerado = null;
   async function executarGeradorChaveSegura() {
+    if (typeof verificarPermissaoPerfil === 'function' && !verificarPermissaoPerfil(['TI/ADM', 'Gestor'], 'gerar pacote criptografado da estação')) {
+      return;
+    }
     var urlEl = document.getElementById('cfg-supabase-url');
     var keyEl = document.getElementById('cfg-supabase-key');
     var passEl = document.getElementById('gen-chave-passphrase');
@@ -8051,7 +8232,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       if (outPre) outPre.textContent = snippet;
       if (outArea) outArea.style.display = 'block';
       if (typeof mostrarToast === 'function') {
-        mostrarToast('Código Gerado!', 'Bloco criptografado com sucesso. Totalmente seguro para o GitHub!', 'success');
+        mostrarToast('Código Gerado!', 'Bloco AES-256-GCM gerado. Nunca inclua a senha em comentários ou no código enviado ao GitHub!', 'success');
       }
     } catch (e) {
       alert('Erro ao criptografar: ' + e.message);
@@ -8165,7 +8346,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       );
       var resolucaoBox = '';
       var textoResRaw = item.descResolucao || (item.resolucao && item.resolucao.descRes) || '';
-      var textoRes = String(textoResRaw).replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
+      var textoRes = String(textoResRaw).replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim();
       if (isRelatorioCTRS) {
         resolucaoBox =
           '<div style="margin-top:8px;padding:7px 11px;background:#EFF6FF;border:1px solid #BFDBFE;border-left:3px solid #0071E3;border-radius:6px;font-size:11.5px;color:#1E3A8A;display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
@@ -8202,7 +8383,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
           '<div class="prio-line ' + plClass + '"></div>' +
           '<div class="oc-body">' +
             '<div class="oc-header"><h3>' + escapeHTML(item.titulo || 'Sem título') + '</h3>' + tagTipo + tagMeu + '</div>' +
-            '<p class="oc-desc" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + escapeHTML(String(item.descCriacao || item.desc || 'Sem descrição').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim()) + '</p>' +
+            '<p class="oc-desc" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + escapeHTML(String(item.descCriacao || item.desc || 'Sem descrição').replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim()) + '</p>' +
             resolucaoBox +
             '<div class="oc-meta" style="margin-top:8px;gap:14px;flex-wrap:wrap;display:flex;align-items:center;font-size:11.5px;">' +
               metaFooterHTML +
@@ -8497,7 +8678,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     if (modalTitle) modalTitle.textContent = item.titulo;
     if (modalTags) {
       var tagMeu = isItemDoUsuario(item) ? '<span class="tag tag-ind">Seu Registro / Resolução</span>' : '';
-      modalTags.innerHTML = getTagTipoBadge(item) + ' <span class="tag tag-g">' + statusFinal + '</span> ' + tagMeu;
+      modalTags.innerHTML = getTagTipoBadge(item) + ' <span class="tag tag-g">' + escapeHTML(statusFinal) + '</span> ' + tagMeu;
     }
     var anexos = (item.anexos && Array.isArray(item.anexos) && item.anexos.length > 0)
       ? item.anexos
@@ -8519,16 +8700,19 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
         if (!anx) return;
         var fName = (anx.name || anx.nome || anx.fileName || '').toLowerCase();
         var fType = (anx.type || '').toLowerCase();
-        var mediaSrc = anx.url || anx.dataUrl || (typeof anx === 'string' ? anx : '');
-        if (!mediaSrc && anx.caminho) mediaSrc = anx.caminho;
+        var mediaSrcRaw = anx.url || anx.dataUrl || (typeof anx === 'string' ? anx : '');
+        if (!mediaSrcRaw && anx.caminho) mediaSrcRaw = anx.caminho;
+        var mediaSrc = typeof sanitizeMediaUrl === 'function' ? sanitizeMediaUrl(mediaSrcRaw) : escapeHTML(mediaSrcRaw);
+        if (!mediaSrc) return;
         var isImg = fType.startsWith('image/') ||
                     mediaSrc.startsWith('data:image/') ||
-                    fName.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i) ||
-                    mediaSrc.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i);
+                    fName.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i) ||
+                    mediaSrc.match(/\.(jpg|jpeg|png|gif|webp|bmp)(\?.*)?$/i);
         var isVid = fType.startsWith('video/') ||
                     mediaSrc.startsWith('data:video/') ||
                     fName.match(/\.(mp4|webm|mov|mkv|avi|ogg)$/i) ||
                     mediaSrc.match(/\.(mp4|webm|mov|mkv|avi|ogg)(\?.*)?$/i);
+        var safeAnxName = escapeHTML(anx.name || 'Arquivo Anexo');
         if (isImg && mediaSrc) {
           mediaHTML +=
             '<div style="text-align:center;background:var(--surface);padding:8px;border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
@@ -8541,14 +8725,14 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
               '<video src="' + mediaSrc + '" controls style="width:100%;max-height:360px;border-radius:var(--r-md);background:#000;" preload="metadata"></video>' +
               '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding:0 2px;">' +
                 '<span style="font-size:11.5px;color:var(--txt);font-weight:600;">🎬 Vídeo Anexado</span>' +
-                '<a href="' + mediaSrc + '" target="_blank" download="video_anexo" class="btn btn-ghost btn-xs">Baixar Vídeo</a>' +
+                '<a href="' + mediaSrc + '" target="_blank" rel="noopener noreferrer" download="video_anexo" class="btn btn-ghost btn-xs">Baixar Vídeo</a>' +
               '</div>' +
             '</div>';
         } else if (mediaSrc) {
           mediaHTML +=
             '<div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);padding:8px 12px;border-radius:var(--r-md);border:1px solid var(--border-lt);">' +
-              '<span style="font-size:12px;color:var(--txt);">📄 <strong>' + (anx.name || 'Arquivo Anexo') + '</strong></span>' +
-              '<a href="' + mediaSrc + '" target="_blank" download="' + (anx.name || 'arquivo') + '" class="btn btn-ghost btn-sm">Abrir / Baixar</a>' +
+              '<span style="font-size:12px;color:var(--txt);">📄 <strong>' + safeAnxName + '</strong></span>' +
+              '<a href="' + mediaSrc + '" target="_blank" rel="noopener noreferrer" download="' + safeAnxName + '" class="btn btn-ghost btn-sm">Abrir / Baixar</a>' +
             '</div>';
         }
       });
@@ -8620,8 +8804,8 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     }
     var rawDescCriOriginal = String(descCri || '');
     var rawDescResOriginal = String(descRes || '');
-    descCri = rawDescCriOriginal.replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
-    descRes = rawDescResOriginal.replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
+    descCri = rawDescCriOriginal.replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim();
+    descRes = rawDescResOriginal.replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim();
     var isRelatorioCTRSModal = (item.tipo === 'relatorio') && (
       item.subtipo === 'CTRS Transmissão' ||
       item.subtipo === 'Relatório Transmissão' ||
@@ -8870,15 +9054,8 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   var notificacoesDispensadas = [];
   var INITIAL_NOTIFICACOES_SEED = [];
   function getNotifDBCredentials() {
-    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
-    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
-    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
-      url = window.ENV_CONFIG.SUPABASE_URL;
-    }
-    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
-      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
-    }
-    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
+    if (typeof getDBCredentials === 'function') return getDBCredentials();
+    return { url: '', key: '' };
   }
   function salvarDispensadas() {
     window.notificacoesDispensadas = notificacoesDispensadas;
@@ -8984,7 +9161,8 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   function deletarTodasNotificacoesNuvem() {
     var db = getNotifDBCredentials();
     if (!db.url || !db.key) return;
-    fetch(db.url + '/rest/v1/notificacoes?id=not.is.null', {
+    var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
+    fetch(db.url + '/rest/v1/notificacoes?praca=eq.' + encodeURIComponent(pracaAtiva), {
       method: 'DELETE',
       headers: {
         'apikey': db.key,
@@ -9004,8 +9182,8 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     toastEl.innerHTML =
       '<div class="toast-icon"><i data-lucide="' + iconName + '" style="width:18px;height:18px;stroke-width:2;"></i></div>' +
       '<div class="toast-content">' +
-        '<div class="toast-title">' + (titulo || 'Notificação') + '</div>' +
-        '<div class="toast-msg">' + (mensagem || '') + '</div>' +
+        '<div class="toast-title">' + escapeHTML(titulo || 'Notificação') + '</div>' +
+        '<div class="toast-msg">' + escapeHTML(mensagem || '') + '</div>' +
       '</div>' +
       '<button class="toast-close" type="button" aria-label="Fechar notificação">&times;</button>';
     function fecharComAnimacao() {
@@ -9130,17 +9308,18 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       var txtCor    = isDanger ? '#DC2626' : isWarning ? '#D97706' : isSuccess ? '#16A34A' : '#2563EB';
       var icoNome   = isDanger ? 'alert-circle' : isWarning ? 'alert-triangle' : isSuccess ? 'check-circle-2' : 'info';
       var unreadBadge = !n.lida ? '<span class="tag tag-blue" style="font-size:9.5px;padding:1px 6px;margin-left:6px;font-weight:600;">Nova</span>' : '';
+      var safeNotifId = typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(n.id) : escapeHTML(n.id);
       return (
         '<div style="background:' + bgCor + ';border:1px solid ' + borderCor + ';border-radius:var(--r-md);padding:10px 12px;display:flex;gap:10px;align-items:flex-start;position:relative;">' +
           '<div style="color:' + txtCor + ';margin-top:1px;"><i data-lucide="' + icoNome + '" style="width:16px;height:16px;stroke-width:2.2;"></i></div>' +
           '<div style="flex:1;display:flex;flex-direction:column;gap:2px;padding-right:18px;">' +
             '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-              '<div style="display:flex;align-items:center;"><strong style="font-size:12.5px;color:' + txtCor + ';">' + (n.titulo || 'Alerta') + '</strong>' + unreadBadge + '</div>' +
-              '<span style="font-size:10.5px;color:var(--muted);white-space:nowrap;margin-left:8px;">' + (n.tempo || '') + '</span>' +
+              '<div style="display:flex;align-items:center;"><strong style="font-size:12.5px;color:' + txtCor + ';">' + escapeHTML(n.titulo || 'Alerta') + '</strong>' + unreadBadge + '</div>' +
+              '<span style="font-size:10.5px;color:var(--muted);white-space:nowrap;margin-left:8px;">' + escapeHTML(n.tempo || '') + '</span>' +
             '</div>' +
-            '<span style="font-size:12px;color:var(--txt2);line-height:1.4;">' + (n.msg || '') + '</span>' +
+            '<span style="font-size:12px;color:var(--txt2);line-height:1.4;">' + escapeHTML(n.msg || '') + '</span>' +
           '</div>' +
-          '<button type="button" onclick="removerNotificacao(\'' + n.id + '\')" title="Dispensar notificação" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;" onmouseover="this.style.color=\'var(--red)\'" onmouseout="this.style.color=\'var(--muted)\'">' +
+          '<button type="button" onclick="removerNotificacao(\'' + safeNotifId + '\')" title="Dispensar notificação" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;" onmouseover="this.style.color=\'var(--red)\'" onmouseout="this.style.color=\'var(--muted)\'">' +
             '<i data-lucide="x" style="width:13px;height:13px;stroke-width:2.2;"></i>' +
           '</button>' +
         '</div>'
@@ -9388,7 +9567,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
           var descLimpa = String(o.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
           var temPreview = !!(o.htmlRelatorio || o.dadosCTRS || (o.desc && String(o.desc).indexOf('<!--CTRS_JSON:') !== -1) || (o.tags && o.tags.indexOf('Relatório TV') !== -1));
           htmlItens +=
-            '<div onclick=\"fecharPopup(\'popup-detalhes-transmissao\'); verDetalhesOcorrencia(\'' + o.id + '\')\" style=\"background:#FFFFFF;border:1px solid var(--border-lt);border-left:3px solid ' + (o.status === 'resolvida' ? '#10B981' : '#EF4444') + ';border-radius:var(--r-sm);padding:8px 10px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'var(--blue)\';\" onmouseout=\"this.style.borderColor=\'var(--border-lt)\';\" title=\"Clique para abrir os detalhes e o preview do relatório na descrição\">' +
+            '<div onclick=\"fecharPopup(\'popup-detalhes-transmissao\'); verDetalhesOcorrencia(\'' + (typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(o.id) : escapeHTML(o.id)) + '\')\" style=\"background:#FFFFFF;border:1px solid var(--border-lt);border-left:3px solid ' + (o.status === 'resolvida' ? '#10B981' : '#EF4444') + ';border-radius:var(--r-sm);padding:8px 10px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'var(--blue)\';\" onmouseout=\"this.style.borderColor=\'var(--border-lt)\';\" title=\"Clique para abrir os detalhes e o preview do relatório na descrição\">' +
               '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
                 '<div><strong style="color:var(--txt);">' + escapeHTML(o.titulo) + '</strong> <span style="color:var(--muted);">· ' + escapeHTML(o.dataCriacao || o.resp || '') + '</span></div>' +
                 '<div style="display:flex;align-items:center;gap:6px;">' +
@@ -9403,7 +9582,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
           var descRelLimpa = String(r.descCriacao || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
           var isNC = r.status && String(r.status).toLowerCase().indexOf('não conform') !== -1;
           htmlItens +=
-            '<div onclick=\"fecharPopup(\'popup-detalhes-transmissao\'); verDetalhesHistoricoDirect(\'' + r.id + '\')\" style=\"background:#F8FAFC;border:1px solid #BFDBFE;border-left:3px solid #0071E3;border-radius:var(--r-sm);padding:8px 10px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'#0071E3\';\" onmouseout=\"this.style.borderColor=\'#BFDBFE\';\" title=\"Clique para abrir o Preview Completo do Relatório CTRS\">' +
+            '<div onclick=\"fecharPopup(\'popup-detalhes-transmissao\'); verDetalhesHistoricoDirect(\'' + (typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(r.id) : escapeHTML(r.id)) + '\')\" style=\"background:#F8FAFC;border:1px solid #BFDBFE;border-left:3px solid #0071E3;border-radius:var(--r-sm);padding:8px 10px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'#0071E3\';\" onmouseout=\"this.style.borderColor=\'#BFDBFE\';\" title=\"Clique para abrir o Preview Completo do Relatório CTRS\">' +
               '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
                 '<div><strong style="color:#1E3A8A;">📄 ' + escapeHTML(r.titulo) + '</strong> <span style="color:var(--muted);">· ' + escapeHTML(r.dataCriacao || '') + '</span></div>' +
                 '<div style="display:flex;align-items:center;gap:6px;">' +
@@ -9704,23 +9883,24 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
         d.transmissoes.forEach(function(tx) {
           if (!tx) return;
           var temNC = (tx.audioQ === 'NC' || tx.videoQ === 'NC' || tx.statusTx === 'NC');
+          var temCanc = !temNC && (tx.statusTx === 'NA' || tx.statusTx === 'CA' || tx.audioQ === 'NA' || tx.videoQ === 'NA');
           listaM.push({
             telejornal: cj,
             equipamento: tx.infra || '',
-            status: temNC ? 'nc' : 'conf'
+            status: temNC ? 'nc' : (temCanc ? 'canc' : 'conf')
           });
         });
       }
       listaM.forEach(function(mItem) {
-        var st = (mItem.status === 'nc') ? 'nc' : 'conf';
+        var st = (mItem.status === 'nc') ? 'nc' : ((mItem.status === 'canc') ? 'canc' : 'conf');
         if (mItem.telejornal) {
           var tjKey = String(mItem.telejornal).trim().toUpperCase();
-          if (!minTj[tjKey]) minTj[tjKey] = { conf: 0, nc: 0 };
+          if (!minTj[tjKey]) minTj[tjKey] = { conf: 0, nc: 0, canc: 0 };
           minTj[tjKey][st] += 1;
         }
         if (mItem.equipamento) {
           var eqKey = String(mItem.equipamento).trim().toUpperCase();
-          if (!minEq[eqKey]) minEq[eqKey] = { conf: 0, nc: 0 };
+          if (!minEq[eqKey]) minEq[eqKey] = { conf: 0, nc: 0, canc: 0 };
           minEq[eqKey][st] += 1;
         }
       });
@@ -9729,14 +9909,12 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     if (dashboardMetrics.telejornal) {
       Object.keys(minTj).forEach(function(tjKey) {
         if (dashboardMetrics.telejornal[tjKey]) {
-          if ((dashboardMetrics.telejornal[tjKey].conf || 0) < minTj[tjKey].conf) {
-            dashboardMetrics.telejornal[tjKey].conf = minTj[tjKey].conf;
-            alterou = true;
-          }
-          if ((dashboardMetrics.telejornal[tjKey].nc || 0) < minTj[tjKey].nc) {
-            dashboardMetrics.telejornal[tjKey].nc = minTj[tjKey].nc;
-            alterou = true;
-          }
+          ['conf', 'nc', 'canc'].forEach(function(campo) {
+            if ((dashboardMetrics.telejornal[tjKey][campo] || 0) < minTj[tjKey][campo]) {
+              dashboardMetrics.telejornal[tjKey][campo] = minTj[tjKey][campo];
+              alterou = true;
+            }
+          });
         }
       });
     }
@@ -9745,14 +9923,12 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
         if (!dashboardMetrics.equipamento[eqKey]) {
           dashboardMetrics.equipamento[eqKey] = { conf: 0, nc: 0, canc: 0 };
         }
-        if ((dashboardMetrics.equipamento[eqKey].conf || 0) < minEq[eqKey].conf) {
-          dashboardMetrics.equipamento[eqKey].conf = minEq[eqKey].conf;
-          alterou = true;
-        }
-        if ((dashboardMetrics.equipamento[eqKey].nc || 0) < minEq[eqKey].nc) {
-          dashboardMetrics.equipamento[eqKey].nc = minEq[eqKey].nc;
-          alterou = true;
-        }
+        ['conf', 'nc', 'canc'].forEach(function(campo) {
+          if ((dashboardMetrics.equipamento[eqKey][campo] || 0) < minEq[eqKey][campo]) {
+            dashboardMetrics.equipamento[eqKey][campo] = minEq[eqKey][campo];
+            alterou = true;
+          }
+        });
       });
     }
     if (alterou && typeof salvarDashboardMetricsStore === 'function') {
@@ -9878,15 +10054,8 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   var filtroOrcamentoAtivo = 'todos';
   var ORCAMENTO_STORAGE_KEY = 'tv_orcamento_seed_v2';
   function getOrcamentoDBCredentials() {
-    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
-    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
-    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
-      url = window.ENV_CONFIG.SUPABASE_URL;
-    }
-    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
-      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
-    }
-    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
+    if (typeof getDBCredentials === 'function') return getDBCredentials();
+    return { url: '', key: '' };
   }
   function filtrarOrcamentoTipo(tipo, btn) {
     filtroOrcamentoAtivo = tipo || 'todos';
@@ -10059,8 +10228,9 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
           : itemStatus === 'Rejeitado'
           ? '<span class="tag tag-r">Rejeitado</span>'
           : '<span class="tag tag-ind">Proposto</span>';
+        var safeOrcId = typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(item.id) : escapeHTML(item.id);
         return (
-          '<tr style="transition:background 0.12s ease;cursor:pointer;" onclick="abrirDetalhesItemOrcamento(\'' + item.id + '\')" title="Clique para ver detalhes, editar ou excluir">' +
+          '<tr style="transition:background 0.12s ease;cursor:pointer;" onclick="abrirDetalhesItemOrcamento(\'' + safeOrcId + '\')" title="Clique para ver detalhes, editar ou excluir">' +
             '<td style="text-align:center;font-weight:700;color:var(--muted);">' + (idx + 1) + '</td>' +
             '<td><strong style="color:var(--txt);font-size:13px;">' + escapeHTML(itemDesc) + '</strong></td>' +
             '<td>' + tagTipo + '</td>' +
@@ -10069,7 +10239,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
             '<td style="text-align:right;font-weight:700;color:var(--txt);font-size:13px;">' + formatarMoeda(val) + '</td>' +
             '<td style="text-align:center;">' + tagStatus + '</td>' +
             '<td style="text-align:center;" onclick="event.stopPropagation();">' +
-              '<button type="button" class="btn btn-ghost btn-xs" onclick="event.stopPropagation(); removerItemOrcamento(\'' + item.id + '\')" title="Remover linha orçamentária" style="color:var(--red);padding:3px 8px;border-radius:6px;">' +
+              '<button type="button" class="btn btn-ghost btn-xs" onclick="event.stopPropagation(); removerItemOrcamento(\'' + safeOrcId + '\')" title="Remover linha orçamentária" style="color:var(--red);padding:3px 8px;border-radius:6px;">' +
                 '<i data-lucide="trash-2" style="width:12px;height:12px;stroke-width:2;"></i>' +
               '</button>' +
             '</td>' +
@@ -10239,6 +10409,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   }
   window.excluirItemOrcamentoModal = excluirItemOrcamentoModal;
   function removerItemOrcamento(id) {
+    if (typeof verificarPermissaoPerfil === 'function' && !verificarPermissaoPerfil(['TI/ADM', 'Gestor'], 'remover linha orçamentária')) return;
     if (!confirm('Deseja remover esta linha orçamentária do plano?')) return;
     orcamentoSeedData = orcamentoSeedData.filter(function(i){ return i.id !== id; });
     salvarOrcamentoStore();
@@ -10448,15 +10619,8 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   var filtroEquipamentoTag = 'todos';
   var tagsSelecionadasModalEq = [];
   function getEquipamentosDBCredentials() {
-    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
-    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
-    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
-      url = window.ENV_CONFIG.SUPABASE_URL;
-    }
-    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
-      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
-    }
-    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
+    if (typeof getDBCredentials === 'function') return getDBCredentials();
+    return { url: '', key: '' };
   }
   function normalizarTagsEquipamento(tagsRaw) {
     if (!Array.isArray(tagsRaw)) return [];
@@ -11599,3 +11763,4 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     abrirPopup('popup-entrada');
   }
 });
+

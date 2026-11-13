@@ -151,8 +151,9 @@
       if (isVencida) cardClasses += ' vencida';
       else if (isParcial) cardClasses += ' parcialmente-resolvida';
       else if (oc.mine) cardClasses += ' mine';
+      var safeId = typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(oc.id) : escapeHTML(oc.id);
       return (
-        '<article class="' + cardClasses + '" data-id="' + oc.id + '" onclick="verDetalhesOcorrencia(\'' + oc.id + '\')" style="margin-bottom:10px;" title="Clique para ver detalhes">' +
+        '<article class="' + cardClasses + '" data-id="' + safeId + '" tabindex="0" role="button" onclick="verDetalhesOcorrencia(\'' + safeId + '\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();verDetalhesOcorrencia(\'' + safeId + '\');}" style="margin-bottom:10px;" title="Clique para ver detalhes">' +
           '<div class="prio-line ' + prioLine(oc.prio) + '"></div>' +
           '<div class="oc-body">' +
             '<div class="oc-header"><h3>' + escapeHTML(oc.titulo || 'Sem título') + '</h3>' + tagsHTML + '</div>' +
@@ -170,7 +171,7 @@
             '</div>' +
           '</div>' +
           '<div class="oc-actions" onclick="event.stopPropagation();">' +
-            '<button class="btn-card-action btn-card-resolve" onclick="event.stopPropagation(); abrirResolver(\'' + oc.id + '\')" title="Resolver ocorrência">' +
+            '<button class="btn-card-action btn-card-resolve" onclick="event.stopPropagation(); abrirResolver(\'' + safeId + '\')" title="Resolver ocorrência">' +
               '<i data-lucide="check-circle-2" style="width:13px;height:13px;stroke-width:2.2;"></i> Resolver' +
             '</button>' +
           '</div>' +

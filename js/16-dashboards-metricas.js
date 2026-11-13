@@ -186,7 +186,7 @@
           var descLimpa = String(o.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
           var temPreview = !!(o.htmlRelatorio || o.dadosCTRS || (o.desc && String(o.desc).indexOf('<!--CTRS_JSON:') !== -1) || (o.tags && o.tags.indexOf('Relatório TV') !== -1));
           htmlItens +=
-            '<div onclick=\"fecharPopup(\'popup-detalhes-transmissao\'); verDetalhesOcorrencia(\'' + o.id + '\')\" style=\"background:#FFFFFF;border:1px solid var(--border-lt);border-left:3px solid ' + (o.status === 'resolvida' ? '#10B981' : '#EF4444') + ';border-radius:var(--r-sm);padding:8px 10px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'var(--blue)\';\" onmouseout=\"this.style.borderColor=\'var(--border-lt)\';\" title=\"Clique para abrir os detalhes e o preview do relatório na descrição\">' +
+            '<div onclick=\"fecharPopup(\'popup-detalhes-transmissao\'); verDetalhesOcorrencia(\'' + (typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(o.id) : escapeHTML(o.id)) + '\')\" style=\"background:#FFFFFF;border:1px solid var(--border-lt);border-left:3px solid ' + (o.status === 'resolvida' ? '#10B981' : '#EF4444') + ';border-radius:var(--r-sm);padding:8px 10px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'var(--blue)\';\" onmouseout=\"this.style.borderColor=\'var(--border-lt)\';\" title=\"Clique para abrir os detalhes e o preview do relatório na descrição\">' +
               '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
                 '<div><strong style="color:var(--txt);">' + escapeHTML(o.titulo) + '</strong> <span style="color:var(--muted);">· ' + escapeHTML(o.dataCriacao || o.resp || '') + '</span></div>' +
                 '<div style="display:flex;align-items:center;gap:6px;">' +
@@ -201,7 +201,7 @@
           var descRelLimpa = String(r.descCriacao || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
           var isNC = r.status && String(r.status).toLowerCase().indexOf('não conform') !== -1;
           htmlItens +=
-            '<div onclick=\"fecharPopup(\'popup-detalhes-transmissao\'); verDetalhesHistoricoDirect(\'' + r.id + '\')\" style=\"background:#F8FAFC;border:1px solid #BFDBFE;border-left:3px solid #0071E3;border-radius:var(--r-sm);padding:8px 10px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'#0071E3\';\" onmouseout=\"this.style.borderColor=\'#BFDBFE\';\" title=\"Clique para abrir o Preview Completo do Relatório CTRS\">' +
+            '<div onclick=\"fecharPopup(\'popup-detalhes-transmissao\'); verDetalhesHistoricoDirect(\'' + (typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(r.id) : escapeHTML(r.id)) + '\')\" style=\"background:#F8FAFC;border:1px solid #BFDBFE;border-left:3px solid #0071E3;border-radius:var(--r-sm);padding:8px 10px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'#0071E3\';\" onmouseout=\"this.style.borderColor=\'#BFDBFE\';\" title=\"Clique para abrir o Preview Completo do Relatório CTRS\">' +
               '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
                 '<div><strong style="color:#1E3A8A;">📄 ' + escapeHTML(r.titulo) + '</strong> <span style="color:var(--muted);">· ' + escapeHTML(r.dataCriacao || '') + '</span></div>' +
                 '<div style="display:flex;align-items:center;gap:6px;">' +
@@ -502,23 +502,24 @@
         d.transmissoes.forEach(function(tx) {
           if (!tx) return;
           var temNC = (tx.audioQ === 'NC' || tx.videoQ === 'NC' || tx.statusTx === 'NC');
+          var temCanc = !temNC && (tx.statusTx === 'NA' || tx.statusTx === 'CA' || tx.audioQ === 'NA' || tx.videoQ === 'NA');
           listaM.push({
             telejornal: cj,
             equipamento: tx.infra || '',
-            status: temNC ? 'nc' : 'conf'
+            status: temNC ? 'nc' : (temCanc ? 'canc' : 'conf')
           });
         });
       }
       listaM.forEach(function(mItem) {
-        var st = (mItem.status === 'nc') ? 'nc' : 'conf';
+        var st = (mItem.status === 'nc') ? 'nc' : ((mItem.status === 'canc') ? 'canc' : 'conf');
         if (mItem.telejornal) {
           var tjKey = String(mItem.telejornal).trim().toUpperCase();
-          if (!minTj[tjKey]) minTj[tjKey] = { conf: 0, nc: 0 };
+          if (!minTj[tjKey]) minTj[tjKey] = { conf: 0, nc: 0, canc: 0 };
           minTj[tjKey][st] += 1;
         }
         if (mItem.equipamento) {
           var eqKey = String(mItem.equipamento).trim().toUpperCase();
-          if (!minEq[eqKey]) minEq[eqKey] = { conf: 0, nc: 0 };
+          if (!minEq[eqKey]) minEq[eqKey] = { conf: 0, nc: 0, canc: 0 };
           minEq[eqKey][st] += 1;
         }
       });
@@ -527,14 +528,12 @@
     if (dashboardMetrics.telejornal) {
       Object.keys(minTj).forEach(function(tjKey) {
         if (dashboardMetrics.telejornal[tjKey]) {
-          if ((dashboardMetrics.telejornal[tjKey].conf || 0) < minTj[tjKey].conf) {
-            dashboardMetrics.telejornal[tjKey].conf = minTj[tjKey].conf;
-            alterou = true;
-          }
-          if ((dashboardMetrics.telejornal[tjKey].nc || 0) < minTj[tjKey].nc) {
-            dashboardMetrics.telejornal[tjKey].nc = minTj[tjKey].nc;
-            alterou = true;
-          }
+          ['conf', 'nc', 'canc'].forEach(function(campo) {
+            if ((dashboardMetrics.telejornal[tjKey][campo] || 0) < minTj[tjKey][campo]) {
+              dashboardMetrics.telejornal[tjKey][campo] = minTj[tjKey][campo];
+              alterou = true;
+            }
+          });
         }
       });
     }
@@ -543,14 +542,12 @@
         if (!dashboardMetrics.equipamento[eqKey]) {
           dashboardMetrics.equipamento[eqKey] = { conf: 0, nc: 0, canc: 0 };
         }
-        if ((dashboardMetrics.equipamento[eqKey].conf || 0) < minEq[eqKey].conf) {
-          dashboardMetrics.equipamento[eqKey].conf = minEq[eqKey].conf;
-          alterou = true;
-        }
-        if ((dashboardMetrics.equipamento[eqKey].nc || 0) < minEq[eqKey].nc) {
-          dashboardMetrics.equipamento[eqKey].nc = minEq[eqKey].nc;
-          alterou = true;
-        }
+        ['conf', 'nc', 'canc'].forEach(function(campo) {
+          if ((dashboardMetrics.equipamento[eqKey][campo] || 0) < minEq[eqKey][campo]) {
+            dashboardMetrics.equipamento[eqKey][campo] = minEq[eqKey][campo];
+            alterou = true;
+          }
+        });
       });
     }
     if (alterou && typeof salvarDashboardMetricsStore === 'function') {

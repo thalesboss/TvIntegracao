@@ -100,11 +100,24 @@
   }
   window.atualizarNomeUsuario = atualizarNomeOperadorUI;
   window.atualizarNomeOperadorUI = atualizarNomeOperadorUI;
-  async function hashSenhaSHA256(texto) {
+  async function hashSenhaSHA256(texto, emailSalt) {
     if (!window.crypto || !window.crypto.subtle) {
-      return btoa(unescape(encodeURIComponent(texto)));
+      throw new Error('Ambiente inseguro (HTTPS ou localhost obrigatório para criptografia de senha).');
     }
     var enc = new TextEncoder();
+    if (emailSalt) {
+      var saltNorm = 'TVI_PBKDF2_v2:' + String(emailSalt).trim().toLowerCase();
+      var keyMat = await crypto.subtle.importKey('raw', enc.encode(texto), { name: 'PBKDF2' }, false, ['deriveBits']);
+      var bits = await crypto.subtle.deriveBits(
+        { name: 'PBKDF2', salt: enc.encode(saltNorm), iterations: 120000, hash: 'SHA-256' },
+        keyMat,
+        256
+      );
+      var hexPbkdf2 = Array.prototype.map.call(new Uint8Array(bits), function(x) {
+        return ('00' + x.toString(16)).slice(-2);
+      }).join('');
+      return 'pbkdf2v2$' + hexPbkdf2;
+    }
     var buf = await crypto.subtle.digest('SHA-256', enc.encode(texto));
     return Array.prototype.map.call(new Uint8Array(buf), function(x) {
       return ('00' + x.toString(16)).slice(-2);
@@ -257,9 +270,10 @@
     }
     if (!modoManualAtivo) {
       var emailInput = document.getElementById('ident-operador-email');
-      var email = (emailInput ? emailInput.value : '').trim().toLowerCase();
-      if (!email || email.indexOf('@') === -1) {
-        exibirMsgLogin(msgEl, 'Por favor, digite seu <strong>e-mail corporativo</strong> válido.', 'erro');
+      var emailRaw = (emailInput ? emailInput.value : '').trim().toLowerCase();
+      var email = emailRaw.replace(/[%*\s]/g, '');
+      if (!email || !/^[a-z0-9._+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(email)) {
+        exibirMsgLogin(msgEl, 'Por favor, digite um <strong>e-mail corporativo</strong> válido (sem caracteres curinga).', 'erro');
         if (emailInput) emailInput.focus();
         return;
       }
@@ -281,7 +295,7 @@
         if (btn) { btn.disabled = true; btn.textContent = 'Verificando e-mail...'; }
         exibirMsgLogin(msgEl, 'Consultando seu cadastro no banco PostgreSQL...', 'info');
         try {
-          var resOp = await fetch(con.url + '/rest/v1/operadores?email=ilike.' + encodeURIComponent(email) + '&select=*&limit=1', {
+          var resOp = await fetch(con.url + '/rest/v1/operadores?email=ilike.' + encodeURIComponent(email) + '&select=id,nome,email,cargo,tag_perfil,praca,ativo,senha_hash&limit=1', {
             headers: {
               'apikey': con.key,
               'Authorization': 'Bearer ' + con.key,
@@ -352,10 +366,27 @@
       var opAtivo = window._operadorLoginPendente;
       var primeiroAcesso = !opAtivo.senha_hash || String(opAtivo.senha_hash).trim() === '';
       if (primeiroAcesso) {
+        var inChavePrim = document.getElementById('ident-chave-primeiro-acesso');
+        var chavePrim = (inChavePrim ? inChavePrim.value : '').trim();
+        var packVerif = window.ENCRYPTED_TV_CREDENTIALS || (window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS);
+        if (packVerif && packVerif.data && typeof TVCrypto !== 'undefined') {
+          if (!chavePrim) {
+            exibirMsgLogin(msgEl, '🔑 Por segurança, informe a <strong>Chave da Estação</strong> para validar seu 1º acesso e criar sua senha.', 'erro');
+            if (inChavePrim) inChavePrim.focus();
+            return;
+          }
+          try {
+            await TVCrypto.decrypt(chavePrim, packVerif);
+          } catch (eChv) {
+            exibirMsgLogin(msgEl, '❌ <strong>Chave da Estação incorreta.</strong> A criação de senha no 1º acesso exige a chave válida da equipe.', 'erro');
+            if (inChavePrim) { inChavePrim.focus(); inChavePrim.select(); }
+            return;
+          }
+        }
         var sNova = (document.getElementById('ident-senha-nova') ? document.getElementById('ident-senha-nova').value : '').trim();
         var sConf = (document.getElementById('ident-senha-confirma') ? document.getElementById('ident-senha-confirma').value : '').trim();
-        if (sNova.length < 4) {
-          exibirMsgLogin(msgEl, 'A senha deve ter pelo menos <strong>4 caracteres</strong>.', 'erro');
+        if (sNova.length < 6) {
+          exibirMsgLogin(msgEl, 'A senha deve ter pelo menos <strong>6 caracteres</strong>.', 'erro');
           return;
         }
         if (sNova !== sConf) {
@@ -363,7 +394,7 @@
           return;
         }
         if (btn) { btn.disabled = true; btn.textContent = 'Salvando senha...'; }
-        var novoHash = await hashSenhaSHA256(sNova);
+        var novoHash = await hashSenhaSHA256(sNova, opAtivo.email || email);
         try {
           var resPatch = await fetch(con.url + '/rest/v1/operadores?id=eq.' + encodeURIComponent(opAtivo.id), {
             method: 'PATCH',
@@ -394,8 +425,27 @@
           exibirMsgLogin(msgEl, 'Por favor, digite sua <strong>senha pessoal</strong>.', 'erro');
           return;
         }
-        var hashDigitado = await hashSenhaSHA256(sDigitada);
-        if (hashDigitado !== opAtivo.senha_hash && sDigitada !== opAtivo.senha_hash) {
+        var hashArmazenado = String(opAtivo.senha_hash || '');
+        var senhaValida = false;
+        if (hashArmazenado.indexOf('pbkdf2v2$') === 0) {
+          var hashPbkdf2 = await hashSenhaSHA256(sDigitada, opAtivo.email || email);
+          senhaValida = (hashPbkdf2 === hashArmazenado);
+        } else {
+          var hashLegado = await hashSenhaSHA256(sDigitada);
+          senhaValida = (hashLegado === hashArmazenado);
+          if (senhaValida) {
+            try {
+              var hashUpgrade = await hashSenhaSHA256(sDigitada, opAtivo.email || email);
+              fetch(con.url + '/rest/v1/operadores?id=eq.' + encodeURIComponent(opAtivo.id), {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'apikey': con.key, 'Authorization': 'Bearer ' + con.key },
+                body: JSON.stringify({ senha_hash: hashUpgrade, atualizado_em: new Date().toISOString() })
+              }).catch(function() {});
+              opAtivo.senha_hash = hashUpgrade;
+            } catch (eUpg) {}
+          }
+        }
+        if (!senhaValida) {
           exibirMsgLogin(msgEl, '❌ <strong>Senha incorreta.</strong> Tente novamente.', 'erro');
           var inAtErr = document.getElementById('ident-senha-atual');
           if (inAtErr) { inAtErr.focus(); inAtErr.select(); }
@@ -845,6 +895,9 @@
   window.usarCredenciaisPreenchidasParaGerador = usarCredenciaisPreenchidasParaGerador;
   var ultimoBlocoGerado = null;
   async function executarGeradorChaveSegura() {
+    if (typeof verificarPermissaoPerfil === 'function' && !verificarPermissaoPerfil(['TI/ADM', 'Gestor'], 'gerar pacote criptografado da estação')) {
+      return;
+    }
     var urlEl = document.getElementById('cfg-supabase-url');
     var keyEl = document.getElementById('cfg-supabase-key');
     var passEl = document.getElementById('gen-chave-passphrase');
@@ -887,7 +940,7 @@
       if (outPre) outPre.textContent = snippet;
       if (outArea) outArea.style.display = 'block';
       if (typeof mostrarToast === 'function') {
-        mostrarToast('Código Gerado!', 'Bloco criptografado com sucesso. Totalmente seguro para o GitHub!', 'success');
+        mostrarToast('Código Gerado!', 'Bloco AES-256-GCM gerado. Nunca inclua a senha em comentários ou no código enviado ao GitHub!', 'success');
       }
     } catch (e) {
       alert('Erro ao criptografar: ' + e.message);

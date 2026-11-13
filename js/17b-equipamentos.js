@@ -19,15 +19,8 @@
   var filtroEquipamentoTag = 'todos';
   var tagsSelecionadasModalEq = [];
   function getEquipamentosDBCredentials() {
-    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
-    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
-    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
-      url = window.ENV_CONFIG.SUPABASE_URL;
-    }
-    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
-      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
-    }
-    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
+    if (typeof getDBCredentials === 'function') return getDBCredentials();
+    return { url: '', key: '' };
   }
   function normalizarTagsEquipamento(tagsRaw) {
     if (!Array.isArray(tagsRaw)) return [];

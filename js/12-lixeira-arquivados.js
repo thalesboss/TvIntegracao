@@ -1,14 +1,7 @@
   var lixeiraData = [];
   function getLixeiraDBCredentials() {
-    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
-    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
-    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
-      url = window.ENV_CONFIG.SUPABASE_URL;
-    }
-    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
-      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
-    }
-    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
+    if (typeof getDBCredentials === 'function') return getDBCredentials();
+    return { url: '', key: '' };
   }
   function loadLixeira() {
     sincronizarLixeiraNuvem();
@@ -47,8 +40,8 @@
   window.sincronizarLixeiraNuvem = sincronizarLixeiraNuvem;
   function salvarItemLixeiraNuvem(item) {
     var db = getLixeiraDBCredentials();
-    if (!db.url || !db.key || !item) return;
-    fetch(db.url + '/rest/v1/lixeira', {
+    if (!db.url || !db.key || !item) return Promise.resolve(false);
+    return fetch(db.url + '/rest/v1/lixeira', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -59,11 +52,11 @@
       body: JSON.stringify(item)
     })
     .then(function(res) {
-      if (res.ok) {
-      }
+      return !!(res && res.ok);
     })
     .catch(function(err) {
       console.warn('[Lixeira DB] Erro ao enviar para lixeira remota:', err);
+      return false;
     });
   }
   window.salvarItemLixeiraNuvem = salvarItemLixeiraNuvem;
@@ -204,12 +197,6 @@
     var titulo = oc ? (oc.titulo || 'esta ocorrência') : (hist ? hist.titulo : 'esta ocorrência');
     if (confirm('Mover a ocorrência "' + titulo + '" para a Lixeira?\n\nEla ficará retida por 7 dias na Lixeira como backup antes da exclusão permanente.')) {
       var idParaSalvar = oc ? oc.id : (hist ? hist.id : targetId);
-      if (typeof DBService !== 'undefined' && DBService && typeof DBService.deleteRemote === 'function') {
-        if (idParaSalvar) {
-          DBService.deleteRemote('ocorrencias', idParaSalvar);
-          DBService.deleteRemote('historico', idParaSalvar);
-        }
-      }
       var itemPraca = (oc && oc.praca) || (hist && hist.praca) || (typeof normalizarPracaOcorrencia === 'function' ? normalizarPracaOcorrencia(null, (oc && oc.local) || (hist && hist.local), titulo) : 'Juiz de Fora');
       var itemLixeira = {
         id: idParaSalvar,
@@ -224,7 +211,12 @@
       };
       lixeiraData = [itemLixeira].concat(lixeiraData.filter(function(i){ return i.id !== idParaSalvar; }));
       saveLixeira(lixeiraData);
-      salvarItemLixeiraNuvem(itemLixeira);
+      salvarItemLixeiraNuvem(itemLixeira).then(function() {
+        if (typeof DBService !== 'undefined' && DBService && typeof DBService.deleteRemote === 'function' && idParaSalvar) {
+          DBService.deleteRemote('ocorrencias', idParaSalvar);
+          DBService.deleteRemote('historico', idParaSalvar);
+        }
+      });
       var idsOcsVinculadasRelatorio = [];
       if (hist) {
         ajustarMetricasDashboardPorRelatorioCTRS(hist, -1);
@@ -326,27 +318,28 @@
         expiraBadge = '<span class="tag tag-yellow-soft" style="font-weight:600;"><i data-lucide="clock" style="width:11px;height:11px;stroke-width:2;margin-right:3px;"></i>Expira em ' + diasRestantes + ' dias</span>';
       }
       var oc = item.ocOriginal || {};
-      var desc = String(oc.desc || (item.histOriginal ? item.histOriginal.descCriacao : 'Sem descrição.')).replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
-      var local = oc.local || (item.histOriginal ? item.histOriginal.local : 'Central Técnica');
-      var excluidoEmStr = formatDataHoraLocal(item.dataExclusao);
+      var desc = escapeHTML(String(oc.desc || (item.histOriginal ? item.histOriginal.descCriacao : 'Sem descrição.')).replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim());
+      var local = escapeHTML(oc.local || (item.histOriginal ? item.histOriginal.local : 'Central Técnica'));
+      var excluidoEmStr = escapeHTML(formatDataHoraLocal(item.dataExclusao));
+      var safeLixId = typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(item.id) : escapeHTML(item.id);
       return (
         '<article class="oc-card" style="background:#FFFFFF;border:1px solid #E2E8F0;margin-bottom:10px;">' +
           '<div class="prio-line pl-r"></div>' +
           '<div class="oc-body">' +
             '<div class="oc-header">' +
-              '<h3>' + (item.titulo || 'Ocorrência') + '</h3>' +
+              '<h3>' + escapeHTML(item.titulo || 'Ocorrência') + '</h3>' +
               '<span class="tag tag-gray-soft">Lixeira</span>' +
               expiraBadge +
             '</div>' +
             '<p class="oc-desc" style="color:var(--txt2);">' + desc + '</p>' +
             '<div class="oc-meta" style="margin-top:8px;">' +
-              '<span><i data-lucide="trash" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Excluído por: ' + (item.excluidoPor || 'Operador') + '</span>' +
+              '<span><i data-lucide="trash" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Excluído por: ' + escapeHTML(item.excluidoPor || 'Operador') + '</span>' +
               '<span><i data-lucide="calendar" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Em: ' + excluidoEmStr + '</span>' +
               '<span><i data-lucide="map-pin" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> ' + local + '</span>' +
             '</div>' +
           '</div>' +
           '<div class="oc-actions" style="justify-content:center;gap:8px;">' +
-            '<button class="btn-card-action btn-card-restore" onclick="restaurarOcorrenciaLixeira(\'' + item.id + '\')" title="Restaurar ocorrência para as ativas">' +
+            '<button class="btn-card-action btn-card-restore" onclick="restaurarOcorrenciaLixeira(\'' + safeLixId + '\')" title="Restaurar ocorrência para as ativas">' +
               '<i data-lucide="rotate-ccw" style="width:12px;height:12px;stroke-width:2.2;"></i> Restaurar' +
             '</button>' +
           '</div>' +
@@ -458,20 +451,21 @@
       var plClass = prioLine(oc.prio);
       var timeRel = formatDataRelativa(oc.criado || oc.dataCriacao);
       var timeH = timeRel ? '<span class="oc-meta-item" style="color:var(--muted);"><i data-lucide="clock" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + timeRel + '</span>' : '';
-      var localH = oc.local ? '<span class="oc-meta-item"><i data-lucide="map-pin" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + oc.local + '</span>' : '';
+      var localH = oc.local ? '<span class="oc-meta-item"><i data-lucide="map-pin" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + escapeHTML(oc.local) + '</span>' : '';
       var criadorArq = (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual());
       var respArq = (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)');
       var respH = '<span class="oc-meta-item"><i data-lucide="user-check" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--blue);"></i>Criado por: <strong style="color:var(--txt);">' + escapeHTML(criadorArq) + '</strong></span>' +
                   '<span class="oc-meta-item"><i data-lucide="users" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + escapeHTML(respArq) + '</span>';
-      var resolucaoH = (oc.resolucao && oc.resolucao.descRes) ? ('<p style="font-size:12px;color:var(--green-dk);background:#F0FDF4;padding:6px 10px;border-radius:6px;border:1px solid #BBF7D0;margin-top:6px;"><strong>Resolução:</strong> ' + oc.resolucao.descRes + '</p>') : '';
+      var resolucaoH = (oc.resolucao && oc.resolucao.descRes) ? ('<p style="font-size:12px;color:var(--green-dk);background:#F0FDF4;padding:6px 10px;border-radius:6px;border:1px solid #BBF7D0;margin-top:6px;"><strong>Resolução:</strong> ' + escapeHTML(oc.resolucao.descRes) + '</p>') : '';
+      var safeArqId = typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(oc.id) : escapeHTML(oc.id);
       return (
-        '<article class="oc-card" style="background:#FFFFFF;cursor:pointer;margin-bottom:10px;" onclick="verDetalhesHistoricoDirect(\'' + oc.id + '\')">' +
+        '<article class="oc-card" tabindex="0" role="button" style="background:#FFFFFF;cursor:pointer;margin-bottom:10px;" onclick="verDetalhesHistoricoDirect(\'' + safeArqId + '\')">' +
           '<div class="prio-line ' + plClass + '"></div>' +
           '<div class="oc-body">' +
             '<div class="oc-header">' +
-              '<h3>' + (oc.titulo || 'Ocorrência') + '</h3>' +
-              '<span class="tag ' + tagClass(oc.prio) + '">' + (oc.prio || 'Média') + '</span>' +
-              '<span class="tag tag-teal-soft">' + (oc.cat || 'Equipamento') + '</span>' +
+              '<h3>' + escapeHTML(oc.titulo || 'Ocorrência') + '</h3>' +
+              '<span class="tag ' + tagClass(oc.prio) + '">' + escapeHTML(oc.prio || 'Média') + '</span>' +
+              '<span class="tag tag-teal-soft">' + escapeHTML(oc.cat || 'Equipamento') + '</span>' +
             '</div>' +
             '<p class="oc-desc">' + (typeof formatarTextoComLinks === 'function' ? formatarTextoComLinks(String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim(), true) : escapeHTML(String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim())) + '</p>' +
             ((oc.link || (oc.resolucao && oc.resolucao.link)) && typeof renderBotaoLinkExterno === 'function'
@@ -485,10 +479,10 @@
             '</div>' +
           '</div>' +
           '<div class="oc-actions" style="justify-content:center;gap:8px;" onclick="event.stopPropagation();">' +
-            '<button class="btn-card-action btn-card-resolve" onclick="event.stopPropagation(); concluirVerificacaoArquivado(\'' + oc.id + '\');" title="Concluir verificação do turno">' +
+            '<button class="btn-card-action btn-card-resolve" onclick="event.stopPropagation(); concluirVerificacaoArquivado(\'' + safeArqId + '\');" title="Concluir verificação do turno">' +
               '<i data-lucide="check" style="width:12px;height:12px;stroke-width:2.5;"></i> Concluir / Verificado' +
             '</button>' +
-            '<button class="btn-card-action btn-card-restore" onclick="event.stopPropagation(); restaurarArquivadoParaAbertas(\'' + oc.id + '\');" title="Restaurar para Ocorrências Abertas">' +
+            '<button class="btn-card-action btn-card-restore" onclick="event.stopPropagation(); restaurarArquivadoParaAbertas(\'' + safeArqId + '\');" title="Restaurar para Ocorrências Abertas">' +
               '<i data-lucide="rotate-ccw" style="width:12px;height:12px;stroke-width:2.2;"></i> Restaurar' +
             '</button>' +
           '</div>' +

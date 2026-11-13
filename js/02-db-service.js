@@ -12,6 +12,45 @@ document.addEventListener('DOMContentLoaded', function () {
       .replace(/'/g, '&#39;');
   }
   window.escapeHTML = escapeHTML;
+  function sanitizeIdAttr(id) {
+    if (id === null || id === undefined) return '';
+    return String(id).replace(/[^a-zA-Z0-9_.:-]/g, '');
+  }
+  window.sanitizeIdAttr = sanitizeIdAttr;
+  function sanitizeMediaUrl(urlStr) {
+    if (!urlStr || typeof urlStr !== 'string') return '';
+    var u = urlStr.trim();
+    if (/^https?:\/\//i.test(u)) return escapeHTML(u);
+    if (/^data:(image\/(jpeg|jpg|png|gif|webp|bmp)|video\/(mp4|webm|ogg|quicktime)|application\/pdf);base64,/i.test(u)) return u;
+    if (/^blob:/i.test(u)) return escapeHTML(u);
+    return '';
+  }
+  window.sanitizeMediaUrl = sanitizeMediaUrl;
+  function obterTagPerfilAtual() {
+    var tag = localStorage.getItem('tv_user_tag_v1') || 'Tecnico';
+    return String(tag).trim();
+  }
+  window.obterTagPerfilAtual = obterTagPerfilAtual;
+  function verificarPermissaoPerfil(perfisPermitidos, acaoLabel) {
+    var tagAtual = obterTagPerfilAtual();
+    var lista = Array.isArray(perfisPermitidos) ? perfisPermitidos : ['TI/ADM', 'Gestor'];
+    var permitido = lista.some(function(p) { return p.toLowerCase() === tagAtual.toLowerCase(); });
+    if (!permitido) {
+      if (typeof mostrarToast === 'function') {
+        mostrarToast('Permissão Restrita', 'A ação "' + (acaoLabel || 'solicitada') + '" requer perfil ' + lista.join(' ou ') + ' (seu perfil: ' + tagAtual + ').', 'warning');
+      }
+      return false;
+    }
+    return true;
+  }
+  window.verificarPermissaoPerfil = verificarPermissaoPerfil;
+  var IGNORED_LEGACY_OC_IDS = ['oc_1787932348110'];
+  function isIdLegadoIgnorado(id) {
+    if (!id) return false;
+    var s = String(id);
+    return s.indexOf('oc_init_') === 0 || IGNORED_LEGACY_OC_IDS.indexOf(s) !== -1;
+  }
+  window.isIdLegadoIgnorado = isIdLegadoIgnorado;
   function normalizarUrlExterna(urlStr) {
     if (!urlStr || typeof urlStr !== 'string') return '';
     var u = urlStr.trim();
@@ -332,6 +371,18 @@ document.addEventListener('DOMContentLoaded', function () {
     return r;
   }
   window.formatarAtribuicaoResp = formatarAtribuicaoResp;
+  function getDBCredentials() {
+    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
+    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
+    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
+      url = window.ENV_CONFIG.SUPABASE_URL;
+    }
+    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
+      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
+    }
+    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
+  }
+  window.getDBCredentials = getDBCredentials;
   var DBService = {
     mode: (SUPABASE_URL && SUPABASE_ANON_KEY) ? 'supabase' : 'local',
     url: SUPABASE_URL,
@@ -456,6 +507,12 @@ document.addEventListener('DOMContentLoaded', function () {
     },
     formatHistoricoPayload: function(h) {
       if (!h || !h.id) return null;
+      var descRes = h.descResolucao || '';
+      if (h.detalhesRonda && typeof h.detalhesRonda === 'object' && descRes.indexOf('<!--RONDA_JSON:') === -1) {
+        try {
+          descRes = (descRes ? descRes + ' ' : '') + '<!--RONDA_JSON:' + encodeURIComponent(JSON.stringify(h.detalhesRonda)) + '-->';
+        } catch (eRonda) {}
+      }
       return {
         id: h.id,
         tipo: h.tipo || 'relatorio',
@@ -468,9 +525,9 @@ document.addEventListener('DOMContentLoaded', function () {
         criadoPor: h.criadoPor || 'Operador',
         descCriacao: h.descCriacao || '',
         status: h.status || 'Concluído',
-        dataResolucao: h.dataResolucao || '',
-        resolvidoPor: h.resolvidoPor || '',
-        descResolucao: h.descResolucao || '',
+        dataResolucao: h.dataResolucao || h.dataCriacao || '',
+        resolvidoPor: h.resolvidoPor || h.criadoPor || '',
+        descResolucao: descRes,
         praca: h.praca || h.local || 'Juiz de Fora'
       };
     },
@@ -556,7 +613,7 @@ document.addEventListener('DOMContentLoaded', function () {
       var self = this;
       return new Promise(function(resolveSync) {
         try {
-          var urlOc = self.url.replace(/\/$/, '') + '/rest/v1/ocorrencias?select=*&order=criado.desc&limit=100';
+          var urlOc = self.url.replace(/\/$/, '') + '/rest/v1/ocorrencias?select=*&order=criado.desc&limit=500';
           var pOc = fetch(urlOc, {
             headers: {
               'apikey': self.key,
@@ -590,7 +647,7 @@ document.addEventListener('DOMContentLoaded', function () {
             updateCloudStatus(false);
             console.warn('[DBService Cloud Sync] Offline ou conectando ao Supabase...', err);
           });
-          var urlHist = self.url.replace(/\/$/, '') + '/rest/v1/historico?select=*&order=dataCriacao.desc&limit=100';
+          var urlHist = self.url.replace(/\/$/, '') + '/rest/v1/historico?select=*&order=dataCriacao.desc&limit=500';
           var pHist = fetch(urlHist, {
             headers: {
               'apikey': self.key,
@@ -611,7 +668,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 return true;
               });
               var mapHist = {};
-              remoteFiltered.forEach(function(h){ mapHist[h.id] = h; });
+              remoteFiltered.forEach(function(h){
+                if (h && !h.detalhesRonda && h.descResolucao && String(h.descResolucao).indexOf('<!--RONDA_JSON:') !== -1) {
+                  try {
+                    var mRonda = String(h.descResolucao).match(/<!--RONDA_JSON:([^>]+)-->/);
+                    if (mRonda && mRonda[1]) h.detalhesRonda = JSON.parse(decodeURIComponent(mRonda[1]));
+                  } catch (eR) {}
+                }
+                if (h && !h.dadosCTRS && h.descResolucao && String(h.descResolucao).indexOf('<!--CTRS_JSON:') !== -1) {
+                  try {
+                    var mCtrs = String(h.descResolucao).match(/<!--CTRS_JSON:([^>]+)-->/);
+                    if (mCtrs && mCtrs[1]) h.dadosCTRS = JSON.parse(decodeURIComponent(mCtrs[1]));
+                  } catch (eC) {}
+                }
+                mapHist[h.id] = h;
+              });
               (historicoSeedData || []).forEach(function(localH){
                 if (localH && localH.id) {
                   if (mapHist[localH.id]) {
@@ -621,12 +692,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (localH.dadosCTRS && !mapHist[localH.id].dadosCTRS) {
                       mapHist[localH.id].dadosCTRS = localH.dadosCTRS;
                     }
+                    if (localH.detalhesRonda && !mapHist[localH.id].detalhesRonda) {
+                      mapHist[localH.id].detalhesRonda = localH.detalhesRonda;
+                    }
                   } else if (!idsNaLixeira.includes(localH.id) && localH.status !== 'lixeira') {
                     remoteFiltered.push(localH);
                   }
                 }
               });
               historicoSeedData = remoteFiltered;
+              window.historicoSeedData = historicoSeedData;
               try {
                 localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(historicoSeedData));
               } catch(e) {}
@@ -883,18 +958,16 @@ document.addEventListener('DOMContentLoaded', function () {
     var now = Date.now();
     (remotas || []).forEach(function(rRaw) {
       var r = sanitizeOcorrencia(rRaw);
-      if (!r || !r.id || r.status === 'lixeira' || lixeiraArr.indexOf(r.id) !== -1 || r.id === 'oc_1787932348110') return;
+      if (!r || !r.id || r.status === 'lixeira' || lixeiraArr.indexOf(r.id) !== -1 || isIdLegadoIgnorado(r.id)) return;
       r._synced = true;
       delete r._pendingSync;
       mapa[r.id] = r;
     });
     (locais || []).forEach(function(l) {
-      if (!l || !l.id || l.status === 'lixeira' || lixeiraArr.indexOf(l.id) !== -1 || l.id === 'oc_1787932348110') return;
+      if (!l || !l.id || l.status === 'lixeira' || lixeiraArr.indexOf(l.id) !== -1 || isIdLegadoIgnorado(l.id)) return;
       var r = mapa[l.id];
       if (!r) {
         if (l._synced) return;
-        var idadeLocal = now - (l.criado || 0);
-        if (idadeLocal > 3600000 && !l._pendingSync) return;
         mapa[l.id] = l;
         try {
           if (typeof DBService !== 'undefined' && DBService && typeof DBService.upsertOcorrenciaRemota === 'function') {
