@@ -221,9 +221,9 @@ document.addEventListener('DOMContentLoaded', function () {
   };
   window.TVCrypto = TVCrypto;
   window.ENCRYPTED_TV_CREDENTIALS = window.ENCRYPTED_TV_CREDENTIALS || (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS) || {
-    salt: '9f6ca6650ad6670436a478d785b65dbd',
-    iv: '289b276d312c24f6a3d6102e',
-    data: '9c1e2b61b20cc9d3596ad6bb98944e2acce2ffeaab2e2e43c669d3a2a6918f761be4d464e984b4255195293aaa0d6cf993381959d332101d0d01bec6a89f08421d11a8e26be003711dd3602b37cad059ef6eefd47bc0615a9b26b050bcc25ca36a98cb18b46541aeb86b07cf32206a4e8699adaa0f8493e124'
+    salt: 'f37eefee9195919adb5b14e12f9bb900',
+    iv: 'b0e029893d4f1f0ee49d624b',
+    data: '8eeb4d7fd875a35c8abad781fcbe3e75f0dd0ed777735a5f79619486690b4a1c48951c48f6f7ee6d277195ada6873a13314618584d00b688c8e4096a39f687d74c7b815644a7e8e01497277b761991442ff16fdf10cf0722b1cfdb621a400ae045bbbfc5131d46e18539a6e2af19c2c8741a8a5bc48860751a'
   };
   function isEstacaoConectadaTV() {
     var u = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
@@ -236,30 +236,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var boxChaveLogin = document.getElementById('ident-box-chave-estacao');
     if (boxChaveLogin) {
       boxChaveLogin.style.display = conectada ? 'none' : 'block';
-    }
-    var group = document.getElementById('ident-chave-group');
-    var label = document.getElementById('ident-chave-label');
-    var hint  = document.getElementById('ident-chave-hint');
-    var input = document.getElementById('ident-chave-acesso');
-    var msg   = document.getElementById('ident-chave-msg');
-    if (!group) return;
-    var conectada = isEstacaoConectadaTV();
-    var pack = window.ENCRYPTED_TV_CREDENTIALS || (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS);
-    if (conectada) {
-      if (label) label.innerHTML = 'Chave de Acesso <span style="font-weight:400;color:var(--muted);font-size:11px;">(Opcional neste computador)</span>';
-      if (hint)  hint.innerHTML  = '';
-      if (input) input.placeholder = 'Deixe em branco para manter a sessão';
-      if (msg)   msg.style.display = 'none';
-    } else if (pack && pack.data) {
-      if (label) label.innerHTML = 'Chave de Acesso *';
-      if (hint)  hint.textContent = 'Senha de acesso';
-      if (input) input.placeholder = 'Digite sua chave de acesso...';
-      if (msg)   msg.style.display = 'none';
-    } else {
-      if (label) label.innerHTML = 'Chave de Acesso <span style="font-weight:400;color:var(--muted);font-size:11px;">(Opcional)</span>';
-      if (hint)  hint.textContent = '';
-      if (input) input.placeholder = 'Digite sua chave ou deixe em branco';
-      if (msg)   msg.style.display = 'none';
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
@@ -285,9 +261,6 @@ document.addEventListener('DOMContentLoaded', function () {
       localStorage.setItem('tv_supabase_url', creds.url);
       localStorage.setItem('tv_supabase_key', creds.key);
       updateCloudStatus(true);
-      if (typeof carregarCredenciaisSupabaseConfig === 'function') {
-        carregarCredenciaisSupabaseConfig();
-      }
       if (typeof DBService.syncRemote === 'function') {
         await DBService.syncRemote(true);
       }
@@ -413,6 +386,11 @@ document.addEventListener('DOMContentLoaded', function () {
       if (item.criadoPor) {
         resObj.criadoPor = item.criadoPor;
       }
+      if (item.equipamento) resObj.equipamento = item.equipamento;
+      if (item.equipamento_id) resObj.equipamento_id = item.equipamento_id;
+      if (item.telejornal) resObj.telejornal = item.telejornal;
+      if (item.ultimaEdicaoPor) resObj.ultimaEdicaoPor = item.ultimaEdicaoPor;
+      if (item.ultimaEdicaoEm) resObj.ultimaEdicaoEm = item.ultimaEdicaoEm;
       return {
         id: item.id,
         titulo: item.titulo,
@@ -937,9 +915,9 @@ document.addEventListener('DOMContentLoaded', function () {
       status: o.status || 'aberta',
       criado: o.criado || Date.now(),
       dataCriacao: o.dataCriacao || formatDataHoraLocal(o.criado),
-      equipamento: o.equipamento || null,
-      equipamento_id: o.equipamento_id || '',
-      telejornal: o.telejornal || null,
+      equipamento: o.equipamento || (res && res.equipamento) || null,
+      equipamento_id: o.equipamento_id || (res && res.equipamento_id) || '',
+      telejornal: o.telejornal || (res && res.telejornal) || null,
       historicoEdicoes: Array.isArray(o.historicoEdicoes) ? o.historicoEdicoes : ((res && Array.isArray(res.historicoEdicoes)) ? res.historicoEdicoes : []),
       ultimaEdicaoPor: o.ultimaEdicaoPor || (res && res.ultimaEdicaoPor) || null,
       ultimaEdicaoEm: o.ultimaEdicaoEm || (res && res.ultimaEdicaoEm) || null,
@@ -975,9 +953,9 @@ document.addEventListener('DOMContentLoaded', function () {
           }
         } catch (eSync) {}
       } else {
-        var localResolvida = (l.status === 'resolvida' && r.status !== 'resolvida');
+        var localStatusAvancado = ((l.status === 'resolvida' || l.status === 'arquivada') && r.status === 'aberta');
         var editLocalRecente = (l.ultimaEdicaoEm && (!r.ultimaEdicaoEm || l.ultimaEdicaoEm > r.ultimaEdicaoEm));
-        if (localResolvida || editLocalRecente) {
+        if (localStatusAvancado || editLocalRecente) {
           mapa[l.id] = Object.assign({}, r, l);
         }
       }
@@ -1024,7 +1002,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.save = save;
-  var INITIAL_OCORRENCIAS_SEED = [];
   var ocorrencias = (function() {
     try {
       var rawCache = localStorage.getItem(OCORRENCIAS_CACHE_KEY);

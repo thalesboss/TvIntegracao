@@ -1,8 +1,4 @@
   var lixeiraData = [];
-  function getLixeiraDBCredentials() {
-    if (typeof getDBCredentials === 'function') return getDBCredentials();
-    return { url: '', key: '' };
-  }
   function loadLixeira() {
     sincronizarLixeiraNuvem();
     return lixeiraData;
@@ -15,7 +11,7 @@
   }
   window.saveLixeira = saveLixeira;
   function sincronizarLixeiraNuvem() {
-    var db = getLixeiraDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key) return;
     fetch(db.url + '/rest/v1/lixeira?select=*&order=dataExclusao.desc&limit=50', {
       headers: {
@@ -39,7 +35,7 @@
   }
   window.sincronizarLixeiraNuvem = sincronizarLixeiraNuvem;
   function salvarItemLixeiraNuvem(item) {
-    var db = getLixeiraDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key || !item) return Promise.resolve(false);
     return fetch(db.url + '/rest/v1/lixeira', {
       method: 'POST',
@@ -61,7 +57,7 @@
   }
   window.salvarItemLixeiraNuvem = salvarItemLixeiraNuvem;
   function excluirItemLixeiraNuvem(id) {
-    var db = getLixeiraDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key || !id) return;
     fetch(db.url + '/rest/v1/lixeira?id=eq.' + encodeURIComponent(id), {
       method: 'DELETE',
@@ -164,16 +160,17 @@
       d.transmissoes.forEach(function(tx) {
         if (!tx) return;
         var temNC = (tx.audioQ === 'NC' || tx.videoQ === 'NC' || tx.statusTx === 'NC');
+        var temCanc = !temNC && (tx.statusTx === 'NA' || tx.statusTx === 'CA' || tx.audioQ === 'NA' || tx.videoQ === 'NA');
         listaMet.push({
           telejornal: cj,
           equipamento: tx.infra || '',
-          status: temNC ? 'nc' : 'conf'
+          status: temNC ? 'nc' : (temCanc ? 'canc' : 'conf')
         });
       });
     }
     if (listaMet.length === 0) return;
     listaMet.forEach(function(m) {
-      var campo = (m.status === 'nc') ? 'nc' : 'conf';
+      var campo = (m.status === 'nc') ? 'nc' : ((m.status === 'canc') ? 'canc' : 'conf');
       if (m.telejornal && dashboardMetrics.telejornal && dashboardMetrics.telejornal[m.telejornal]) {
         var atualTj = dashboardMetrics.telejornal[m.telejornal][campo] || 0;
         dashboardMetrics.telejornal[m.telejornal][campo] = Math.max(0, atualTj + delta);
@@ -192,8 +189,9 @@
   }
   function excluirOcorrencia(id) {
     var targetId = id;
-    var oc = ocorrencias.find(function(o){ return o && o.id === targetId; });
-    var hist = historicoSeedData.find(function(h){ return h && h.id === targetId; });
+    var cleanOcId = String(targetId || '').replace(/^h_oc_/, '');
+    var oc = ocorrencias.find(function(o){ return o && (o.id === targetId || o.id === cleanOcId); });
+    var hist = historicoSeedData.find(function(h){ return h && (h.id === targetId || h.id === ('h_oc_' + cleanOcId) || h.ocId === cleanOcId); });
     var titulo = oc ? (oc.titulo || 'esta ocorrência') : (hist ? hist.titulo : 'esta ocorrência');
     if (confirm('Mover a ocorrência "' + titulo + '" para a Lixeira?\n\nEla ficará retida por 7 dias na Lixeira como backup antes da exclusão permanente.')) {
       var idParaSalvar = oc ? oc.id : (hist ? hist.id : targetId);
@@ -209,12 +207,13 @@
         notificado24h: false,
         praca: itemPraca
       };
-      lixeiraData = [itemLixeira].concat(lixeiraData.filter(function(i){ return i.id !== idParaSalvar; }));
+      lixeiraData = [itemLixeira].concat(lixeiraData.filter(function(i){ return i.id !== idParaSalvar && i.id !== targetId; }));
       saveLixeira(lixeiraData);
       salvarItemLixeiraNuvem(itemLixeira).then(function() {
         if (typeof DBService !== 'undefined' && DBService && typeof DBService.deleteRemote === 'function' && idParaSalvar) {
-          DBService.deleteRemote('ocorrencias', idParaSalvar);
+          DBService.deleteRemote('ocorrencias', cleanOcId);
           DBService.deleteRemote('historico', idParaSalvar);
+          DBService.deleteRemote('historico', 'h_oc_' + cleanOcId);
         }
       });
       var idsOcsVinculadasRelatorio = [];
@@ -232,13 +231,13 @@
       }
       ocorrencias = ocorrencias.filter(function(o){
         if (!o) return false;
-        if (o.id === idParaSalvar || o.id === targetId) return false;
+        if (o.id === idParaSalvar || o.id === targetId || o.id === cleanOcId) return false;
         if (idsOcsVinculadasRelatorio.indexOf(o.id) !== -1) return false;
         return true;
       });
       historicoSeedData = historicoSeedData.filter(function(h){
         if (!h) return false;
-        if (h.id === idParaSalvar || h.id === targetId) return false;
+        if (h.id === idParaSalvar || h.id === targetId || h.id === ('h_oc_' + cleanOcId) || h.ocId === cleanOcId) return false;
         return true;
       });
       save(ocorrencias);
@@ -352,6 +351,134 @@
   }
   window.renderLixeira = renderLixeira;
   var filtroArquivadosAtivo = 'todas';
+  function calcularProgressoObservacao(oc) {
+    var res = (oc && oc.resolucao) ? oc.resolucao : {};
+    var inicio = Number(res.inicioObservacao || res.data || (oc && oc.criado) || Date.now());
+    if (isNaN(inicio) || inicio <= 0) inicio = Date.now();
+    var metaHoras = Number(res.metaHorasObservacao) || 24;
+    var decorridoMs = Math.max(0, Date.now() - inicio);
+    var decorridoHoras = decorridoMs / (1000 * 60 * 60);
+    var pct = Math.min(100, Math.round((decorridoHoras / metaHoras) * 100));
+    var cumprida = decorridoHoras >= metaHoras;
+    var tempoLabel = decorridoHoras < 1
+      ? (Math.max(1, Math.round(decorridoHoras * 60)) + ' min')
+      : (Math.floor(decorridoHoras) + 'h');
+    return {
+      inicio: inicio,
+      metaHoras: metaHoras,
+      decorridoHoras: decorridoHoras,
+      pct: pct,
+      cumprida: cumprida,
+      tempoLabel: tempoLabel,
+      validacoes: Array.isArray(res.validacoesTurno) ? res.validacoesTurno : []
+    };
+  }
+  window.calcularProgressoObservacao = calcularProgressoObservacao;
+  function sincronizarOcorrenciaNoHistorico(oc) {
+    if (!oc || !oc.id) return null;
+    var histId = 'h_oc_' + oc.id;
+    var res = oc.resolucao || {};
+    var descLimpaOc = String(oc.desc || 'Ocorrência registrada no sistema.').replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim();
+    var nowFmt = formatDataHoraLocal(oc.dataCriacao || oc.criado);
+    var resFmt = res.data ? formatDataHoraLocal(res.data) : formatDataHoraLocal();
+    var usuarioLogado = getUsuarioAtual();
+    var statusFinal = oc.status === 'arquivada'
+      ? 'Em Observação'
+      : (res.statusRes || 'Resolvido');
+    var anexosHist = (oc.anexos && Array.isArray(oc.anexos) && oc.anexos.length > 0)
+      ? oc.anexos
+      : (Array.isArray(res.anexos) ? res.anexos : []);
+    var existente = (historicoSeedData || []).find(function(h) {
+      return h && (h.id === histId || h.id === oc.id || h.ocId === oc.id);
+    });
+    var idsDuplicadosRemovidos = [];
+    historicoSeedData = (historicoSeedData || []).filter(function(h) {
+      if (!h || !h.id) return false;
+      var mesmoId = (h.id === histId || h.id === oc.id || h.ocId === oc.id);
+      var mesmoLegado = false;
+      if (!mesmoId && h.tipo === 'ocorrencia' && /^h_oc_\d+$/.test(String(h.id))) {
+        var descH = String(h.descCriacao || '').replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim();
+        if (String(h.titulo || '').trim().toLowerCase() === String(oc.titulo || '').trim().toLowerCase() && descH.toLowerCase() === descLimpaOc.toLowerCase()) {
+          mesmoLegado = true;
+        }
+      }
+      if (mesmoId || mesmoLegado) {
+        if (h.id !== histId) idsDuplicadosRemovidos.push(h.id);
+        return false;
+      }
+      return true;
+    });
+    var itemHist = {
+      id:                      histId,
+      ocId:                    oc.id,
+      tipo:                    'ocorrencia',
+      subtipo:                 oc.cat || 'Equipamento',
+      titulo:                  oc.titulo,
+      equipamento:             oc.equipamento || (oc.local ? (oc.local + ' — ' + (oc.cat || 'Equipamento')) : (oc.cat || oc.titulo)),
+      categoria:               oc.cat || 'Equipamento',
+      local:                   oc.local || 'Central Técnica',
+      dataCriacao:             (existente && existente.dataCriacao) ? existente.dataCriacao : nowFmt,
+      criadoPor:               (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || usuarioLogado),
+      resp:                    (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
+      descCriacao:             oc.desc || 'Ocorrência registrada no sistema.',
+      status:                  statusFinal,
+      dataResolucao:           resFmt,
+      resolvidoPor:            res.resolvidoPor || usuarioLogado,
+      descResolucao:           res.descRes || '',
+      historicoEdicoes:        oc.historicoEdicoes || res.historicoEdicoes || [],
+      validacoesTurno:         Array.isArray(res.validacoesTurno) ? res.validacoesTurno : [],
+      metaHorasObservacao:     res.metaHorasObservacao || 24,
+      inicioObservacao:        res.inicioObservacao || null,
+      concluidoObservacaoPor:  res.concluidoObservacaoPor || '',
+      concluidoObservacaoEm:   res.concluidoObservacaoEm || '',
+      reincidencias:           Array.isArray(res.reincidencias) ? res.reincidencias : [],
+      htmlRelatorio:           oc.htmlRelatorio || null,
+      dadosCTRS:               oc.dadosCTRS || null,
+      link:                    oc.link || res.link || '',
+      tags:                    Array.isArray(oc.tags) ? oc.tags : [],
+      anexos:                  anexosHist,
+      praca:                   (typeof normalizarPracaOcorrencia === 'function')
+        ? normalizarPracaOcorrencia(oc.praca, oc.local, oc.titulo, oc.equipamento || (oc.tags && oc.tags[1]))
+        : (oc.praca || (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora'))
+    };
+    historicoSeedData = [itemHist].concat(historicoSeedData);
+    window.historicoSeedData = historicoSeedData;
+    saveHistorico(historicoSeedData, itemHist);
+    if (typeof DBService !== 'undefined' && DBService && typeof DBService.deleteRemote === 'function') {
+      idsDuplicadosRemovidos.forEach(function(dupId) {
+        DBService.deleteRemote('historico', dupId);
+      });
+    }
+    return itemHist;
+  }
+  function registrarCheckObservacaoTurno(id) {
+    var idx = ocorrencias.findIndex(function(o){ return o && o.id === id; });
+    if (idx === -1) return;
+    var oc = ocorrencias[idx];
+    var usuario = getUsuarioAtual();
+    var agoraFmt = formatDataHoraLocal();
+    var resAtual = Object.assign({}, oc.resolucao || {});
+    var validacoes = Array.isArray(resAtual.validacoesTurno) ? resAtual.validacoesTurno.slice() : [];
+    validacoes.push({
+      operador: usuario,
+      dataHora: agoraFmt,
+      turno: (typeof obterLabelTurnoAtivoCurto === 'function') ? obterLabelTurnoAtivoCurto() : '',
+      timestamp: Date.now()
+    });
+    resAtual.validacoesTurno = validacoes;
+    ocorrencias[idx] = Object.assign({}, oc, {
+      resolucao: resAtual,
+      ultimaEdicaoPor: usuario,
+      ultimaEdicaoEm: agoraFmt
+    });
+    sincronizarOcorrenciaNoHistorico(ocorrencias[idx]);
+    save(ocorrencias, ocorrencias[idx], false);
+    renderAll(true);
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Check de Turno Registrado', 'Estabilidade validada neste turno por ' + usuario + '.', 'success');
+    }
+  }
+  window.registrarCheckObservacaoTurno = registrarCheckObservacaoTurno;
   function filtrarArquivados(elOrTipo, tipo) {
     var el = (elOrTipo && typeof elOrTipo === 'object' && elOrTipo.nodeType) ? elOrTipo : null;
     var tipoFinal = typeof elOrTipo === 'string' ? elOrTipo : tipo;
@@ -379,26 +506,27 @@
     var idx = ocorrencias.findIndex(function(o){ return o && o.id === id; });
     if (idx === -1) return;
     var oc = ocorrencias[idx];
-    var tagsAtuais = (oc.tags || []).slice();
-    if (!tagsAtuais.includes('Arquivada')) tagsAtuais.push('Arquivada');
+    var usuario = getUsuarioAtual();
+    var agoraFmt = formatDataHoraLocal();
+    var tagsAtuais = (oc.tags || []).filter(function(t){ return t !== 'Arquivada' && t !== 'Em Observação'; });
+    if (!tagsAtuais.includes('Validada Pós-Reparo')) tagsAtuais.push('Validada Pós-Reparo');
+    var resAtual = Object.assign({}, oc.resolucao || {}, {
+      statusRes: 'Resolvido (Validado Pós-Reparo)',
+      concluidoObservacaoPor: usuario,
+      concluidoObservacaoEm: agoraFmt
+    });
     ocorrencias[idx] = Object.assign({}, oc, {
       status: 'resolvida',
-      tags: tagsAtuais
+      tags: tagsAtuais,
+      resolucao: resAtual,
+      ultimaEdicaoPor: usuario,
+      ultimaEdicaoEm: agoraFmt
     });
-    save(ocorrencias);
-    var histIdx = historicoSeedData.findIndex(function(h){ return h && (h.id === id || h.id === ('h_oc_' + id)); });
-    if (histIdx !== -1) {
-      var histTags = (historicoSeedData[histIdx].tags || []).slice();
-      if (!histTags.includes('Arquivada')) histTags.push('Arquivada');
-      historicoSeedData[histIdx] = Object.assign({}, historicoSeedData[histIdx], {
-        status: 'Resolvida e Arquivada',
-        tags: histTags
-      });
-      saveHistorico(historicoSeedData);
-    }
-    renderAll();
+    sincronizarOcorrenciaNoHistorico(ocorrencias[idx]);
+    save(ocorrencias, ocorrencias[idx], false);
+    renderAll(true);
     if (typeof mostrarToast === 'function') {
-      mostrarToast('Verificação Concluída', '"' + (oc.titulo || 'Ocorrência') + '" foi verificada e arquivada no histórico.', 'success');
+      mostrarToast('Observação Concluída', '"' + (oc.titulo || 'Ocorrência') + '" cumpriu o período de testes e foi concluída definitivamente.', 'success');
     }
   }
   window.concluirVerificacaoArquivado = concluirVerificacaoArquivado;
@@ -406,14 +534,61 @@
     var idx = ocorrencias.findIndex(function(o){ return o && o.id === id; });
     if (idx === -1) return;
     var oc = ocorrencias[idx];
+    var motivo = prompt('⚠️ O equipamento ou sistema voltou a apresentar problema?\n\nDescreva brevemente o que ocorreu neste turno (ou deixe em branco para apenas reabrir):', '');
+    if (motivo === null) return;
+    var motivoLimpo = String(motivo || '').trim();
+    var usuario = getUsuarioAtual();
+    var agoraFmt = formatDataHoraLocal();
+    var tagsNovas = (oc.tags || []).filter(function(t){ return t !== 'Arquivada' && t !== 'Em Observação' && t !== 'Validada Pós-Reparo'; });
+    if (tagsNovas.indexOf('Reincidente') === -1) tagsNovas.push('Reincidente');
+    var resAtual = Object.assign({}, oc.resolucao || {}, {
+      statusRes: 'Reaberta (Reincidente)'
+    });
+    var reincList = Array.isArray(resAtual.reincidencias) ? resAtual.reincidencias.slice() : [];
+    reincList.push({
+      operador: usuario,
+      dataHora: agoraFmt,
+      motivo: motivoLimpo || 'Voltou a apresentar falha durante período de observação'
+    });
+    resAtual.reincidencias = reincList;
+    var edicoes = Array.isArray(oc.historicoEdicoes) ? oc.historicoEdicoes.slice() : ((resAtual.historicoEdicoes && Array.isArray(resAtual.historicoEdicoes)) ? resAtual.historicoEdicoes.slice() : []);
+    edicoes.unshift({
+      autor: usuario,
+      dataHora: agoraFmt,
+      mudancas: [{
+        campo: 'Reincidência em Observação',
+        antes: 'Em Observação',
+        depois: motivoLimpo || 'Voltou a apresentar falha'
+      }]
+    });
+    resAtual.historicoEdicoes = edicoes;
+    var descAtual = String(oc.desc || '');
+    var ctrsMarker = '';
+    var mCtrs = descAtual.match(/(<!--CTRS_JSON:[^>]+-->)/);
+    if (mCtrs && mCtrs[1]) {
+      ctrsMarker = mCtrs[1];
+      descAtual = descAtual.replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
+    }
+    if (motivoLimpo) {
+      descAtual = (descAtual ? descAtual + '\n\n' : '') + '[⚠️ Reincidência em ' + agoraFmt + ' por ' + usuario + ']: ' + motivoLimpo;
+    }
+    if (ctrsMarker) {
+      descAtual = descAtual + ctrsMarker;
+    }
     ocorrencias[idx] = Object.assign({}, oc, {
       status: 'aberta',
-      tags: (oc.tags || []).filter(function(t){ return t !== 'Arquivada'; })
+      desc: descAtual,
+      tags: tagsNovas,
+      resolucao: resAtual,
+      historicoEdicoes: edicoes,
+      ultimaEdicaoPor: usuario,
+      ultimaEdicaoEm: agoraFmt
     });
-    save(ocorrencias);
-    renderAll();
+    sincronizarOcorrenciaNoHistorico(ocorrencias[idx]);
+    save(ocorrencias, ocorrencias[idx], false);
+    renderAll(true);
     if (typeof mostrarToast === 'function') {
-      mostrarToast('Ocorrência Restaurada', '"' + (oc.titulo || 'Ocorrência') + '" retornou para as ocorrências ativas.', 'info');
+      mostrarToast('Voltou a Falhar (Reaberta)', '"' + (oc.titulo || 'Ocorrência') + '" voltou para Ocorrências Abertas marcada como Reincidente.', 'warning');
     }
   }
   window.restaurarArquivadoParaAbertas = restaurarArquivadoParaAbertas;
@@ -430,7 +605,9 @@
       }
     }
     if (!container) return;
-    if (filtroArquivadosAtivo === 'alta') {
+    if (filtroArquivadosAtivo === 'prontas') {
+      lista = lista.filter(function(o) { return calcularProgressoObservacao(o).cumprida; });
+    } else if (filtroArquivadosAtivo === 'alta') {
       lista = lista.filter(function(o) { return (o.prio || '').toLowerCase() === 'alta'; });
     } else if (filtroArquivadosAtivo === 'media') {
       lista = lista.filter(function(o) { return (o.prio || '').toLowerCase() === 'média' || (o.prio || '').toLowerCase() === 'media'; });
@@ -440,15 +617,16 @@
     if (lista.length === 0) {
       container.innerHTML =
         '<div style="text-align:center;padding:48px 16px;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);">' +
-          '<i data-lucide="archive" style="width:36px;height:36px;color:var(--muted);stroke-width:1.5;margin-bottom:10px;"></i>' +
-          '<p style="color:var(--txt);font-size:14px;font-weight:600;">Nenhuma ocorrência arquivada</p>' +
-          '<p style="color:var(--muted);font-size:12px;margin-top:3px;">As ocorrências arquivadas para verificação do próximo turno aparecerão aqui.</p>' +
+          '<i data-lucide="eye" style="width:36px;height:36px;color:var(--muted);stroke-width:1.5;margin-bottom:10px;"></i>' +
+          '<p style="color:var(--txt);font-size:14px;font-weight:600;">Nenhuma ocorrência em observação</p>' +
+          '<p style="color:var(--muted);font-size:12px;margin-top:3px;">Quando uma ocorrência for resolvida na opção \'Resolvido (Em Observação)\', ela ficará aqui para acompanhamento dos próximos turnos.</p>' +
         '</div>';
       if (typeof lucide !== 'undefined') lucide.createIcons();
       return;
     }
     function renderCardArquivadoHTML(oc) {
       var plClass = prioLine(oc.prio);
+      var prog = calcularProgressoObservacao(oc);
       var timeRel = formatDataRelativa(oc.criado || oc.dataCriacao);
       var timeH = timeRel ? '<span class="oc-meta-item" style="color:var(--muted);"><i data-lucide="clock" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + timeRel + '</span>' : '';
       var localH = oc.local ? '<span class="oc-meta-item"><i data-lucide="map-pin" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + escapeHTML(oc.local) + '</span>' : '';
@@ -456,34 +634,73 @@
       var respArq = (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)');
       var respH = '<span class="oc-meta-item"><i data-lucide="user-check" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--blue);"></i>Criado por: <strong style="color:var(--txt);">' + escapeHTML(criadorArq) + '</strong></span>' +
                   '<span class="oc-meta-item"><i data-lucide="users" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + escapeHTML(respArq) + '</span>';
-      var resolucaoH = (oc.resolucao && oc.resolucao.descRes) ? ('<p style="font-size:12px;color:var(--green-dk);background:#F0FDF4;padding:6px 10px;border-radius:6px;border:1px solid #BBF7D0;margin-top:6px;"><strong>Resolução:</strong> ' + escapeHTML(oc.resolucao.descRes) + '</p>') : '';
+      var resolucaoH = (oc.resolucao && oc.resolucao.descRes) ? ('<p style="font-size:12px;color:var(--green-dk);background:#F0FDF4;padding:6px 10px;border-radius:6px;border:1px solid #BBF7D0;margin-top:6px;"><strong>Solução Aplicada:</strong> ' + escapeHTML(oc.resolucao.descRes) + '</p>') : '';
+      var progCor = prog.cumprida ? '#10B981' : '#6366F1';
+      var progBg  = prog.cumprida ? '#ECFDF5' : '#EEF2FF';
+      var progBdr = prog.cumprida ? '#A7F3D0' : '#C7D2FE';
+      var progTxt = prog.cumprida ? '#065F46' : '#3730A3';
+      var progressoObsH =
+        '<div style="margin-top:8px;padding:8px 10px;background:' + progBg + ';border:1px solid ' + progBdr + ';border-radius:8px;">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;font-weight:700;color:' + progTxt + ';margin-bottom:5px;">' +
+            '<span style="display:inline-flex;align-items:center;gap:5px;">' +
+              (prog.cumprida
+                ? '<i data-lucide="check-circle-2" style="width:13px;height:13px;stroke-width:2.3;"></i> Meta de observação cumprida — Pronto para concluir!'
+                : ('<i data-lucide="clock" style="width:13px;height:13px;stroke-width:2.2;"></i> Em observação há ' + prog.tempoLabel + ' (Meta: ' + prog.metaHoras + 'h sem falhas)')) +
+            '</span>' +
+            '<span>' + prog.pct + '%</span>' +
+          '</div>' +
+          '<div style="width:100%;height:6px;background:rgba(255,255,255,0.75);border-radius:99px;overflow:hidden;">' +
+            '<div style="width:' + prog.pct + '%;height:100%;background:' + progCor + ';border-radius:99px;transition:width .3s ease;"></div>' +
+          '</div>' +
+        '</div>';
+      var carimbosH = '';
+      if (prog.validacoes.length > 0) {
+        carimbosH =
+          '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;">' +
+            prog.validacoes.map(function(v) {
+              var turnoTxt = v.turno ? (' [' + escapeHTML(v.turno) + ']') : '';
+              return '<div style="font-size:11px;color:#047857;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:6px;padding:4px 8px;display:flex;align-items:center;gap:5px;">' +
+                '<i data-lucide="check" style="width:12px;height:12px;stroke-width:2.5;flex-shrink:0;"></i>' +
+                '<span>Estável no turno' + turnoTxt + ' — verificado por <strong>' + escapeHTML(v.operador || 'Operador') + '</strong> (' + escapeHTML(v.dataHora || '') + ')</span>' +
+              '</div>';
+            }).join('') +
+          '</div>';
+      }
       var safeArqId = typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(oc.id) : escapeHTML(oc.id);
+      var cardBorderStyle = prog.cumprida ? 'background:#FFFFFF;border-color:#A7F3D0;cursor:pointer;margin-bottom:10px;' : 'background:#FFFFFF;cursor:pointer;margin-bottom:10px;';
       return (
-        '<article class="oc-card" tabindex="0" role="button" style="background:#FFFFFF;cursor:pointer;margin-bottom:10px;" onclick="verDetalhesHistoricoDirect(\'' + safeArqId + '\')">' +
+        '<article class="oc-card" tabindex="0" role="button" style="' + cardBorderStyle + '" onclick="verDetalhesHistoricoDirect(\'' + safeArqId + '\')">' +
           '<div class="prio-line ' + plClass + '"></div>' +
           '<div class="oc-body">' +
             '<div class="oc-header">' +
               '<h3>' + escapeHTML(oc.titulo || 'Ocorrência') + '</h3>' +
               '<span class="tag ' + tagClass(oc.prio) + '">' + escapeHTML(oc.prio || 'Média') + '</span>' +
+              '<span class="tag tag-ind" style="font-weight:600;display:inline-flex;align-items:center;gap:4px;"><i data-lucide="eye" style="width:11px;height:11px;stroke-width:2.2;"></i> Em Observação</span>' +
               '<span class="tag tag-teal-soft">' + escapeHTML(oc.cat || 'Equipamento') + '</span>' +
+              (oc.equipamento ? '<span class="tag tag-blue-soft">' + escapeHTML(oc.equipamento) + '</span>' : '') +
             '</div>' +
             '<p class="oc-desc">' + (typeof formatarTextoComLinks === 'function' ? formatarTextoComLinks(String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim(), true) : escapeHTML(String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim())) + '</p>' +
             ((oc.link || (oc.resolucao && oc.resolucao.link)) && typeof renderBotaoLinkExterno === 'function'
               ? '<div style="margin-top:4px;margin-bottom:6px;">' + renderBotaoLinkExterno(oc.link || (oc.resolucao && oc.resolucao.link), null, true) + '</div>'
               : '') +
             resolucaoH +
+            progressoObsH +
+            carimbosH +
             '<div class="oc-meta" style="margin-top:8px;">' +
               respH +
               localH +
               timeH +
             '</div>' +
           '</div>' +
-          '<div class="oc-actions" style="justify-content:center;gap:8px;" onclick="event.stopPropagation();">' +
-            '<button class="btn-card-action btn-card-resolve" onclick="event.stopPropagation(); concluirVerificacaoArquivado(\'' + safeArqId + '\');" title="Concluir verificação do turno">' +
-              '<i data-lucide="check" style="width:12px;height:12px;stroke-width:2.5;"></i> Concluir / Verificado' +
+          '<div class="oc-actions" style="flex-direction:column;align-items:stretch;justify-content:center;gap:6px;" onclick="event.stopPropagation();">' +
+            '<button class="btn-card-action btn-card-resolve" onclick="event.stopPropagation(); concluirVerificacaoArquivado(\'' + safeArqId + '\');" title="Encerrar observação e concluir definitivamente">' +
+              '<i data-lucide="check-circle-2" style="width:13px;height:13px;stroke-width:2.2;"></i> Concluir' +
             '</button>' +
-            '<button class="btn-card-action btn-card-restore" onclick="event.stopPropagation(); restaurarArquivadoParaAbertas(\'' + safeArqId + '\');" title="Restaurar para Ocorrências Abertas">' +
-              '<i data-lucide="rotate-ccw" style="width:12px;height:12px;stroke-width:2.2;"></i> Restaurar' +
+            '<button class="btn-card-action btn-card-restore" onclick="event.stopPropagation(); registrarCheckObservacaoTurno(\'' + safeArqId + '\');" title="Confirmar que foi testado e operou sem falhas neste turno">' +
+              '<i data-lucide="shield-check" style="width:13px;height:13px;stroke-width:2.2;"></i> Testado no Turno' +
+            '</button>' +
+            '<button class="btn-card-action" style="background:#FEF2F2;color:#DC2626;border-color:#FECACA;" onclick="event.stopPropagation(); restaurarArquivadoParaAbertas(\'' + safeArqId + '\');" title="O problema retornou — reabrir ocorrência como Reincidente">' +
+              '<i data-lucide="alert-triangle" style="width:13px;height:13px;stroke-width:2.2;"></i> Voltou a Falhar' +
             '</button>' +
           '</div>' +
         '</article>'
@@ -496,10 +713,10 @@
   window.renderArquivados = renderArquivados;
   function editarOcorrenciaDoModalDetalhes() {
     if (!itemDetalhesAtual) return;
-    var targetId = itemDetalhesAtual.id;
+    var targetId = itemDetalhesAtual.ocId || String(itemDetalhesAtual.id || '').replace(/^h_oc_/, '');
     var targetTitulo = itemDetalhesAtual.titulo;
     fecharPopup('popup-detalhes-historico');
-    var oc = ocorrencias.find(function(o){ return o && (o.id === targetId || o.titulo === targetTitulo); });
+    var oc = ocorrencias.find(function(o){ return o && (o.id === targetId || o.id === itemDetalhesAtual.id || o.titulo === targetTitulo); });
     if (oc) {
       abrirEditarOcorrencia(oc.id);
     } else {
@@ -509,7 +726,7 @@
   window.editarOcorrenciaDoModalDetalhes = editarOcorrenciaDoModalDetalhes;
   function excluirOcorrenciaDoModalDetalhes() {
     if (!itemDetalhesAtual) return;
-    var targetId = itemDetalhesAtual.id;
+    var targetId = itemDetalhesAtual.ocId || itemDetalhesAtual.id;
     fecharPopup('popup-detalhes-historico');
     excluirOcorrencia(targetId);
   }
@@ -538,12 +755,24 @@
     var nowStr = formatDataHoraLocal();
     var usuarioLogado = getUsuarioAtual();
     var isParcial = (statusEscolhido === 'Parcialmente resolvido');
-    var isArquivada = (statusEscolhido === 'Resolvida e Arquivada');
-    var updatedTags = (oc.tags || []).filter(function(t){ return t !== 'Parcialmente Resolvida' && t !== 'Arquivada'; });
+    var isArquivada = (statusEscolhido === 'Em Observação' || statusEscolhido === 'Resolvida e Arquivada');
+    var horasObsEl = document.getElementById('resolver-obs-horas');
+    var metaHorasObs = 24;
+    if (horasObsEl) {
+      if (horasObsEl.value === 'custom') {
+        var cValEl = document.getElementById('resolver-obs-custom-val');
+        var cUnitEl = document.getElementById('resolver-obs-custom-unit');
+        var numVal = cValEl ? Math.max(1, parseInt(cValEl.value, 10) || 1) : 24;
+        metaHorasObs = (cUnitEl && cUnitEl.value === 'dias') ? (numVal * 24) : numVal;
+      } else {
+        metaHorasObs = parseInt(horasObsEl.value, 10) || 24;
+      }
+    }
+    var updatedTags = (oc.tags || []).filter(function(t){ return t !== 'Parcialmente Resolvida' && t !== 'Arquivada' && t !== 'Em Observação' && t !== 'Validada Pós-Reparo'; });
     if (isParcial) {
       updatedTags.push('Parcialmente Resolvida');
     } else if (isArquivada) {
-      updatedTags.push('Arquivada');
+      updatedTags.push('Em Observação');
     }
     var novoStatus = 'resolvida';
     if (isParcial) novoStatus = 'aberta';
@@ -551,61 +780,40 @@
     var anexosNovos = (uploadedFilesStore['resolver-previews'] || []).slice();
     var anexosAntigos = (oc.anexos && Array.isArray(oc.anexos)) ? oc.anexos : ((oc.resolucao && Array.isArray(oc.resolucao.anexos)) ? oc.resolucao.anexos : []);
     var anexosCombinados = anexosAntigos.concat(anexosNovos);
+    var resObjFinal = {
+      statusRes: statusEscolhido,
+      descRes:   descResolucao,
+      data:      Date.now(),
+      resolvidoPor: usuarioLogado,
+      criadoPor: (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || usuarioLogado),
+      link:      oc.link || (oc.resolucao && oc.resolucao.link) || '',
+      anexos:    anexosCombinados,
+      historicoEdicoes: oc.historicoEdicoes || (oc.resolucao && oc.resolucao.historicoEdicoes) || []
+    };
+    if (isArquivada) {
+      resObjFinal.inicioObservacao = Date.now();
+      resObjFinal.metaHorasObservacao = metaHorasObs;
+      resObjFinal.validacoesTurno = (oc.resolucao && Array.isArray(oc.resolucao.validacoesTurno)) ? oc.resolucao.validacoesTurno : [];
+    }
     ocorrencias[idx] = Object.assign({}, oc, {
       status: novoStatus,
       tags: updatedTags,
       anexos: anexosCombinados,
-      resolucao: {
-        statusRes: statusEscolhido,
-        descRes:   descResolucao,
-        data:      Date.now(),
-        resolvidoPor: usuarioLogado,
-        criadoPor: (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || usuarioLogado),
-        link:      oc.link || (oc.resolucao && oc.resolucao.link) || '',
-        anexos:    anexosCombinados,
-        historicoEdicoes: oc.historicoEdicoes || (oc.resolucao && oc.resolucao.historicoEdicoes) || []
-      }
+      resolucao: resObjFinal,
+      ultimaEdicaoPor: usuarioLogado,
+      ultimaEdicaoEm: nowStr
     });
     window.ocorrencias = ocorrencias;
-    var tagsHist = isArquivada ? ['Arquivada'] : [];
-    var novoItemHist = {
-      id:            'h_oc_' + Date.now(),
-      tipo:          'ocorrencia',
-      subtipo:       oc.cat || 'Equipamento',
-      titulo:        oc.titulo,
-      equipamento:   oc.local ? (oc.local + ' — ' + (oc.cat || 'Equipamento')) : (oc.cat || oc.titulo),
-      categoria:     oc.cat || 'Equipamento',
-      local:         oc.local || 'Central Técnica',
-      dataCriacao:   nowStr,
-      criadoPor:     (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || usuarioLogado),
-      resp:          (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
-      descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
-      status:        statusEscolhido,
-      dataResolucao: nowStr,
-      resolvidoPor:  usuarioLogado,
-      descResolucao: descResolucao,
-      historicoEdicoes: oc.historicoEdicoes || (oc.resolucao && oc.resolucao.historicoEdicoes) || [],
-      htmlRelatorio: oc.htmlRelatorio || null,
-      dadosCTRS:     oc.dadosCTRS || null,
-      link:          oc.link || (oc.resolucao && oc.resolucao.link) || '',
-      tags:          tagsHist,
-      anexos:        anexosCombinados,
-      praca:         (typeof normalizarPracaOcorrencia === 'function')
-        ? normalizarPracaOcorrencia(oc.praca, oc.local, oc.titulo, oc.equipamento || (oc.tags && oc.tags[1]))
-        : (oc.praca || (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora'))
-    };
-    historicoSeedData = [novoItemHist].concat(historicoSeedData);
-    window.historicoSeedData = historicoSeedData;
-    saveHistorico(historicoSeedData, novoItemHist);
+    sincronizarOcorrenciaNoHistorico(ocorrencias[idx]);
     save(ocorrencias, ocorrencias[idx], false);
     fecharPopup('popup-resolver');
-    renderAll();
+    renderAll(true);
     resolverAtualId = null;
     if (typeof mostrarToast === 'function') {
       if (isParcial) {
         mostrarToast('Parcialmente Resolvida', 'A ocorrência foi registrada no histórico e continua ativa para acompanhamento.', 'warning');
       } else if (isArquivada) {
-        mostrarToast('Ocorrência Arquivada', 'A ocorrência foi arquivada para verificação do próximo turno e salva no histórico.', 'info');
+        mostrarToast('Em Observação', 'Ocorrência enviada para monitoramento pós-reparo (' + metaHorasObs + 'h) nos próximos turnos.', 'info');
       } else {
         mostrarToast('Ocorrência Concluída', 'A ocorrência foi resolvida e registrada no histórico geral.', 'success');
       }

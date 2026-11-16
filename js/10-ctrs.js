@@ -324,19 +324,6 @@
     abrirPopup('popup-novo-profissional');
   }
   window.abrirModalNovoProfissional = abrirModalNovoProfissional;
-  function obterCredenciaisDB() {
-    if (typeof getDBCredentials === 'function') return getDBCredentials();
-    if (typeof window !== 'undefined' && typeof window.getDBCredentials === 'function') return window.getDBCredentials();
-    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
-    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
-    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
-      url = window.ENV_CONFIG.SUPABASE_URL;
-    }
-    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
-      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
-    }
-    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
-  }
   async function salvarNovoProfissionalEquipe() {
     var tipoEl = document.getElementById('novo-prof-tipo');
     var nomeEl = document.getElementById('novo-prof-nome');
@@ -374,7 +361,7 @@
         targetSelect.value = nome;
       } catch(e) {}
     }
-    var db = obterCredenciaisDB();
+    var db = getDBCredentials();
     if (db && db.url && db.key) {
       try {
         var payload = {
@@ -406,42 +393,8 @@
     }
   }
   window.salvarNovoProfissionalEquipe = salvarNovoProfissionalEquipe;
-  function removerProfissionalEquipe(id, tipo, nome, praca) {
-    praca = normalizarPracaEquipe(praca || (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora'));
-    if (!confirm('Deseja realmente remover "' + nome + '" de ' + praca + '?')) {
-      return;
-    }
-    var equipe = carregarEquipeLocal();
-    var chaveLista = (tipo === 'rc') ? 'rcs' : 'reporteres';
-    if (equipe[praca]) {
-      equipe[praca][chaveLista] = equipe[praca][chaveLista].filter(function(item) {
-        var itemId = typeof item === 'string' ? item : (item.id || item.nome);
-        return itemId !== id && item.nome !== nome;
-      });
-    }
-    salvarEquipeLocal(equipe);
-    atualizarSelectsProfissionaisCTRS();
-    if (typeof mostrarToast === 'function') {
-      mostrarToast('Profissional Removido', nome + ' foi removido da equipe.', 'info');
-    }
-    var db = obterCredenciaisDB();
-    if (db && db.url && db.key && id) {
-      try {
-        fetch(db.url.replace(/\/$/, '') + '/rest/v1/checklist_itens?id=eq.' + encodeURIComponent(id), {
-          method: 'DELETE',
-          headers: {
-            'apikey': db.key,
-            'Authorization': 'Bearer ' + db.key
-          }
-        }).catch(function(err) { console.error('[Equipe Nuvem] Erro ao excluir:', err); });
-      } catch(eDel) {
-        console.warn('[Equipe Nuvem] Falha ao excluir na nuvem:', eDel);
-      }
-    }
-  }
-  window.removerProfissionalEquipe = removerProfissionalEquipe;
   async function sincronizarEquipeNuvem() {
-    var db = obterCredenciaisDB();
+    var db = getDBCredentials();
     if (!db || !db.url || !db.key) return;
     try {
       var url = db.url.replace(/\/$/, '') + '/rest/v1/checklist_itens?select=id,titulo,categoria,operador_nome&categoria=in.(reporter,rc)&order=titulo.asc&limit=1000';

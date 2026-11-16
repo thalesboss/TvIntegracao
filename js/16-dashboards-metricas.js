@@ -93,6 +93,40 @@
   }
   window.abrirModalOcDashboardContextual = abrirModalOcDashboardContextual;
   var itemTransmissaoDetalhesAtual = { nome: '', tipo: '' };
+  var filtroDetTransmissaoAtual = 'todos';
+  var dadosDetTransmissaoAtual = { ocs: [], rels: [] };
+  function renderHistoricoDetTransmissao() {
+    var histListaEl = document.getElementById('det-trans-historico-lista');
+    if (!histListaEl) return;
+    var ocs = dadosDetTransmissaoAtual.ocs || [];
+    var rels = dadosDetTransmissaoAtual.rels || [];
+    if (typeof atualizarBotoesFiltroTimelineModal === 'function') {
+      atualizarBotoesFiltroTimelineModal(
+        {
+          cntTodos: 'det-trans-cnt-todos',
+          cntOc: 'det-trans-cnt-oc',
+          cntRel: 'det-trans-cnt-rel',
+          btnTodos: 'btn-det-trans-todos',
+          btnOc: 'btn-det-trans-oc',
+          btnRel: 'btn-det-trans-rel'
+        },
+        filtroDetTransmissaoAtual,
+        ocs.length + rels.length,
+        ocs.length,
+        rels.length
+      );
+    }
+    var emptyAll = 'Nenhuma ocorrência ou relatório registrado para este item no momento. Sistema estável e operando normalmente.';
+    histListaEl.innerHTML = (typeof renderCardsTimelineMistaHTML === 'function')
+      ? renderCardsTimelineMistaHTML(ocs, rels, filtroDetTransmissaoAtual, 'popup-detalhes-transmissao', (ocs.length === 0 && rels.length === 0) ? emptyAll : '')
+      : '';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+  function filtrarHistoricoDetTransmissao(filtro) {
+    filtroDetTransmissaoAtual = filtro || 'todos';
+    renderHistoricoDetTransmissao();
+  }
+  window.filtrarHistoricoDetTransmissao = filtrarHistoricoDetTransmissao;
   function abrirDetalhesTransmissao(nome, tipo) {
     if (!nome) return;
     tipo = (tipo === 'equipamento' || tipo === 'equipamentos') ? 'equipamento' : 'telejornal';
@@ -175,45 +209,9 @@
         }
         return false;
       });
-      if (histOcs.length === 0 && histRels.length === 0) {
-        histListaEl.innerHTML =
-          '<div style="background:#FFFFFF;border:1px solid var(--border-lt);border-radius:var(--r-sm);padding:8px 10px;font-size:11.5px;color:var(--muted);">' +
-            'Nenhuma ocorrência ou relatório registrado para este item no momento. Sistema estável e operando normalmente.' +
-          '</div>';
-      } else {
-        var htmlItens = '';
-        histOcs.forEach(function(o) {
-          var descLimpa = String(o.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
-          var temPreview = !!(o.htmlRelatorio || o.dadosCTRS || (o.desc && String(o.desc).indexOf('<!--CTRS_JSON:') !== -1) || (o.tags && o.tags.indexOf('Relatório TV') !== -1));
-          htmlItens +=
-            '<div onclick=\"fecharPopup(\'popup-detalhes-transmissao\'); verDetalhesOcorrencia(\'' + (typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(o.id) : escapeHTML(o.id)) + '\')\" style=\"background:#FFFFFF;border:1px solid var(--border-lt);border-left:3px solid ' + (o.status === 'resolvida' ? '#10B981' : '#EF4444') + ';border-radius:var(--r-sm);padding:8px 10px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'var(--blue)\';\" onmouseout=\"this.style.borderColor=\'var(--border-lt)\';\" title=\"Clique para abrir os detalhes e o preview do relatório na descrição\">' +
-              '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
-                '<div><strong style="color:var(--txt);">' + escapeHTML(o.titulo) + '</strong> <span style="color:var(--muted);">· ' + escapeHTML(o.dataCriacao || o.resp || '') + '</span></div>' +
-                '<div style="display:flex;align-items:center;gap:6px;">' +
-                  (temPreview ? '<span style="font-size:10.5px;font-weight:700;color:#0071E3;background:#EFF6FF;border:1px solid #BFDBFE;padding:1px 7px;border-radius:10px;">👁️ Preview CTRS</span>' : '') +
-                  '<span class="tag ' + (o.status === 'resolvida' ? 'tag-g' : 'tag-r') + '">' + (o.status === 'resolvida' ? 'Resolvida' : 'Em Aberto') + '</span>' +
-                '</div>' +
-              '</div>' +
-              (descLimpa ? '<div style="font-size:11px;color:var(--txt2);">' + escapeHTML(descLimpa) + '</div>' : '') +
-            '</div>';
-        });
-        histRels.forEach(function(r) {
-          var descRelLimpa = String(r.descCriacao || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
-          var isNC = r.status && String(r.status).toLowerCase().indexOf('não conform') !== -1;
-          htmlItens +=
-            '<div onclick=\"fecharPopup(\'popup-detalhes-transmissao\'); verDetalhesHistoricoDirect(\'' + (typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(r.id) : escapeHTML(r.id)) + '\')\" style=\"background:#F8FAFC;border:1px solid #BFDBFE;border-left:3px solid #0071E3;border-radius:var(--r-sm);padding:8px 10px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'#0071E3\';\" onmouseout=\"this.style.borderColor=\'#BFDBFE\';\" title=\"Clique para abrir o Preview Completo do Relatório CTRS\">' +
-              '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
-                '<div><strong style="color:#1E3A8A;">📄 ' + escapeHTML(r.titulo) + '</strong> <span style="color:var(--muted);">· ' + escapeHTML(r.dataCriacao || '') + '</span></div>' +
-                '<div style="display:flex;align-items:center;gap:6px;">' +
-                  '<span style="font-size:10.5px;font-weight:700;color:#0071E3;background:#EFF6FF;border:1px solid #93C5FD;padding:1px 7px;border-radius:10px;">👁️ Ver Relatório</span>' +
-                  '<span class="tag ' + (isNC ? 'tag-y' : 'tag-g') + '">' + escapeHTML(r.status || 'Conforme') + '</span>' +
-                '</div>' +
-              '</div>' +
-              (descRelLimpa ? '<div style="font-size:11px;color:var(--txt2);">' + escapeHTML(descRelLimpa) + '</div>' : '') +
-            '</div>';
-        });
-        histListaEl.innerHTML = htmlItens;
-      }
+      dadosDetTransmissaoAtual = { ocs: histOcs, rels: histRels };
+      filtroDetTransmissaoAtual = 'todos';
+      renderHistoricoDetTransmissao();
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
     abrirPopup('popup-detalhes-transmissao');

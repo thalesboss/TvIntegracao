@@ -28,63 +28,7 @@
       });
     });
   }
-  function carregarMidiaIDB(id) {
-    return openMediaDB().then(function(db) {
-      if (!db) return null;
-      return new Promise(function(resolve) {
-        try {
-          var tx = db.transaction(IDB_STORE, 'readonly');
-          var store = tx.objectStore(IDB_STORE);
-          var req = store.get(id);
-          req.onsuccess = function(e) { resolve(e.target.result ? e.target.result.data : null); };
-          req.onerror = function() { resolve(null); };
-        } catch (e) { resolve(null); }
-      });
-    });
-  }
-  window.carregarMidiaIDB = carregarMidiaIDB;
   var uploadedFilesStore = {};
-  function uploadArquivoParaStorage(anexo) {
-    if (!anexo) return Promise.resolve(null);
-    if (anexo.url && anexo.url.startsWith('http')) return Promise.resolve(anexo);
-    if (!anexo.fileObj) return Promise.resolve(anexo);
-    var timestamp = Date.now();
-    var randBytes = new Uint8Array(6);
-    if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(randBytes);
-    var randHex = Array.prototype.map.call(randBytes, function(b) { return ('00' + b.toString(16)).slice(-2); }).join('');
-    var cleanName = (anexo.name || 'arquivo').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
-    var filePath = timestamp + '_' + randHex + '_' + cleanName;
-    var uploadUrl = SUPABASE_URL.replace(/\/$/, '') + '/storage/v1/object/anexos/' + filePath;
-    return fetch(uploadUrl, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-        'Content-Type': anexo.type || 'application/octet-stream',
-        'x-upsert': 'false'
-      },
-      body: anexo.fileObj
-    })
-    .then(function(res) {
-      if (res.ok) {
-        var publicUrl = SUPABASE_URL.replace(/\/$/, '') + '/storage/v1/object/public/anexos/' + filePath;
-        return {
-          id: anexo.id,
-          name: anexo.name,
-          type: anexo.type,
-          size: anexo.size,
-          url: publicUrl,
-          dataUrl: anexo.dataUrl
-        };
-      }
-      return anexo;
-    })
-    .catch(function(err) {
-      console.warn('[Storage Upload Fallback]', err);
-      return anexo;
-    });
-  }
-  window.uploadArquivoParaStorage = uploadArquivoParaStorage;
   function comprimirImagemSeNecessario(file, callback) {
     if (!file || !file.type || !file.type.startsWith('image/') || file.type === 'image/svg+xml') {
       if (file && file.type && file.type.startsWith('video/')) {
@@ -281,7 +225,7 @@
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.renderPreviewsForContainer = renderPreviewsForContainer;
-  ['req', 'rec', 'rec1', 'rec2', 'nova', 'edit-oc', 'resolver'].forEach(function(prefix) {
+  ['req', 'rec', 'nova', 'edit-oc', 'resolver'].forEach(function(prefix) {
     var area  = document.getElementById(prefix + '-upload-area');
     var file  = document.getElementById(prefix + '-arquivos');
     if (area && file) {

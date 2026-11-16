@@ -402,18 +402,37 @@
   </div>
 </div>
 <div class="overlay" id="popup-entrada" hidden role="dialog" aria-modal="true" aria-labelledby="ent-title">
-  <div class="modal">
+  <div class="modal" style="max-width: 580px; width: 95vw;">
     <div class="modal-header">
       <div class="modal-icon icon-blue">
         <i data-lucide="clipboard" style="width:17px;height:17px;color:#fff;stroke-width:2;"></i>
       </div>
       <div>
         <h2 id="ent-title">Orientações de Entrada</h2>
-        <p>Sessão de trabalho &nbsp;·&nbsp; Leia antes de iniciar</p>
+        <p>Selecione seu turno de trabalho e leia as pendências antes de iniciar</p>
       </div>
     </div>
-    <div class="modal-body">
-      <div class="info-group">
+    <div class="modal-body" style="max-height:70vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px;">
+      <div class="info-group" style="margin-bottom:0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+          <div class="info-label" style="margin-bottom:0;">Seu Turno de Hoje</div>
+          <div class="pills pills-sm" role="tablist" aria-label="Escala de horário">
+            <button type="button" id="pill-escala-semana" class="pill on" onclick="alternarEscalaTurnoEntrada('semana')">Seg a Sex (Normal)</button>
+            <button type="button" id="pill-escala-plantao" class="pill" onclick="alternarEscalaTurnoEntrada('plantao')">Plantão (Sáb/Dom/Feriado)</button>
+          </div>
+        </div>
+        <div id="entrada-turnos-grid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(235px, 1fr));gap:7px;"></div>
+        <div id="entrada-turno-flex-box" style="display:none;margin-top:8px;padding:10px 12px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <label for="entrada-turno-flex-hora" style="font-size:12px;font-weight:700;color:#1E3A8A;margin:0;">Entrada hoje:</label>
+            <input type="time" id="entrada-turno-flex-hora" value="07:30" oninput="recalcularHorarioTurnoFlexivel(this.value)" style="padding:4px 8px;font-size:12.5px;font-weight:700;border:1px solid #93C5FD;border-radius:6px;background:#FFFFFF;color:#0F172A;" />
+          </div>
+          <div id="entrada-turno-flex-resumo" style="font-size:11.5px;font-weight:700;color:#0071E3;">
+            07:30 ~ 11:00 / 11:15 ~ 13:45
+          </div>
+        </div>
+      </div>
+      <div class="info-group" style="margin-bottom:0;">
         <div class="info-label">Pendências Recentes do Turno</div>
         <div id="popup-entrada-pendencias">
         </div>
@@ -679,12 +698,32 @@
           <span class="res-pill-label">Parcialmente resolvido</span>
           <span class="res-pill-sub">Requer acompanhamento</span>
         </div>
-        <div class="res-pill" id="pill-enc" onclick="selecionarStatus('Resolvida e Arquivada')">
-          <span class="res-pill-label">Resolvida e Arquivada</span>
-          <span class="res-pill-sub">Verificação do próximo turno</span>
+        <div class="res-pill" id="pill-enc" onclick="selecionarStatus('Em Observação')">
+          <span class="res-pill-label">Resolvido (Em Observação)</span>
+          <span class="res-pill-sub">Vigiar nos próximos turnos</span>
         </div>
       </div>
       <input type="hidden" id="resolver-status" value="Resolvido"/>
+      <div id="resolver-obs-tempo-box" style="display:none;margin-top:10px;padding:10px 12px;background:#EEF2FF;border:1px solid #C7D2FE;border-radius:10px;">
+        <label for="resolver-obs-horas" style="font-size:12px;font-weight:700;color:#3730A3;display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+          <i data-lucide="eye" style="width:13px;height:13px;"></i> Período de Observação
+        </label>
+        <select id="resolver-obs-horas" onchange="toggleInputObsPersonalizado(this.value)" style="width:100%;padding:7px 10px;border:1px solid #A5B4FC;border-radius:8px;background:#FFFFFF;font-size:12.5px;font-weight:600;color:#1E1B4B;">
+          <option value="12">12 horas</option>
+          <option value="24" selected>24 horas</option>
+          <option value="48">48 horas</option>
+          <option value="72">72 horas</option>
+          <option value="168">7 dias (168 horas)</option>
+          <option value="custom">Personalizado...</option>
+        </select>
+        <div id="resolver-obs-custom-wrap" style="display:none;margin-top:8px;gap:8px;align-items:center;">
+          <input type="number" id="resolver-obs-custom-val" min="1" max="720" value="36" placeholder="Ex: 36" style="width:110px;padding:6px 10px;border:1px solid #A5B4FC;border-radius:8px;background:#FFFFFF;font-size:12.5px;font-weight:600;color:#1E1B4B;" />
+          <select id="resolver-obs-custom-unit" style="padding:6px 10px;border:1px solid #A5B4FC;border-radius:8px;background:#FFFFFF;font-size:12.5px;font-weight:600;color:#1E1B4B;">
+            <option value="horas" selected>Horas</option>
+            <option value="dias">Dias</option>
+          </select>
+        </div>
+      </div>
       <div class="frow" style="margin-top:14px;">
         <label for="resolver-desc">O que foi resolvido? </label>
         <textarea id="resolver-desc" placeholder="Descreva o que foi realizado para resolver ou arquivar a ocorrência..." style="min-height:88px;"></textarea>
@@ -1020,10 +1059,26 @@
         </div>
       </div>
       <div>
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">
-          Histórico Operacional & Ocorrências Recentes
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:6px;">
+            <i data-lucide="history" style="width:13px;height:13px;color:var(--blue);"></i>
+            <span>Histórico Operacional &amp; Ocorrências Recentes</span>
+          </div>
+          <div class="pills pills-sm" role="tablist" aria-label="Filtrar histórico do item">
+            <button type="button" id="btn-det-trans-todos" data-filter="todos" class="pill on" onclick="filtrarHistoricoDetTransmissao('todos')">
+              Todos (<span id="det-trans-cnt-todos">0</span>)
+            </button>
+            <button type="button" id="btn-det-trans-oc" data-filter="ocorrencia" class="pill" onclick="filtrarHistoricoDetTransmissao('ocorrencia')">
+              <i data-lucide="wrench" style="width:11px;height:11px;"></i>
+              Ocorrências (<span id="det-trans-cnt-oc">0</span>)
+            </button>
+            <button type="button" id="btn-det-trans-rel" data-filter="relatorio" class="pill" onclick="filtrarHistoricoDetTransmissao('relatorio')">
+              <i data-lucide="radio" style="width:11px;height:11px;"></i>
+              Relatórios (<span id="det-trans-cnt-rel">0</span>)
+            </button>
+          </div>
         </div>
-        <div id="det-trans-historico-lista" style="display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto;">
+        <div id="det-trans-historico-lista" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;padding-right:2px;">
         </div>
       </div>
     </div>
@@ -1210,9 +1265,24 @@
         </div>
       </div>
       <div>
-        <div style="font-size:11.5px;font-weight:700;color:var(--txt);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
-          <i data-lucide="history" style="width:14px;height:14px;color:var(--blue);"></i>
-          Histórico de Ocorrências e Intervenções deste Equipamento
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+          <div style="font-size:11.5px;font-weight:700;color:var(--txt);text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:6px;">
+            <i data-lucide="history" style="width:14px;height:14px;color:var(--blue);"></i>
+            <span>Histórico de Ocorrências e Intervenções deste Equipamento</span>
+          </div>
+          <div class="pills pills-sm" role="tablist" aria-label="Filtrar histórico do equipamento">
+            <button type="button" id="btn-ficha-eq-todos" data-filter="todos" class="pill on" onclick="filtrarTimelineFichaEquipamento('todos')">
+              Todos (<span id="ficha-eq-cnt-todos">0</span>)
+            </button>
+            <button type="button" id="btn-ficha-eq-oc" data-filter="ocorrencia" class="pill" onclick="filtrarTimelineFichaEquipamento('ocorrencia')">
+              <i data-lucide="wrench" style="width:11px;height:11px;"></i>
+              Ocorrências (<span id="ficha-eq-cnt-oc">0</span>)
+            </button>
+            <button type="button" id="btn-ficha-eq-rel" data-filter="relatorio" class="pill" onclick="filtrarTimelineFichaEquipamento('relatorio')">
+              <i data-lucide="radio" style="width:11px;height:11px;"></i>
+              Relatórios (<span id="ficha-eq-cnt-rel">0</span>)
+            </button>
+          </div>
         </div>
         <div id="ficha-eq-timeline" style="display:flex;flex-direction:column;gap:8px;"></div>
       </div>
@@ -1465,8 +1535,9 @@
       <span class="s-label">Relatório de Tecnologia</span>
     </div>
     <div class="s-btn" onclick="irPara('arquivados',this)" role="button" tabindex="0">
-      <i data-lucide="archive" style="width:15px;height:15px;stroke-width:2;"></i>
-      <span class="s-label">Arquivados</span>
+      <i data-lucide="eye" style="width:15px;height:15px;stroke-width:2;"></i>
+      <span class="s-label">Em Observação</span>
+      <span class="arquivados-badge" style="display:none;margin-left:auto;background:#EEF2FF;color:#4F46E5;border:1px solid #C7D2FE;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:10px;">0</span>
     </div>
     <div class="s-btn" onclick="irPara('historico',this)" role="button" tabindex="0">
       <i data-lucide="clock" style="width:15px;height:15px;stroke-width:2;"></i>
@@ -1535,17 +1606,20 @@
         <span class="up-label">Status:</span>
         <span class="up-val status-online"><span class="online-dot"></span> Online</span>
       </div>
-      <div class="up-info-row">
-        <span class="up-label">Tempo logado:</span>
-        <span class="up-val" id="up-timer">00h 00m 00s</span>
+      <div class="up-info-row" style="align-items:center;gap:6px;">
+        <span class="up-label" style="white-space:nowrap;">Turno atual:</span>
+        <span class="up-val" id="up-turno" style="text-align:right;font-size:10.5px;font-weight:700;color:var(--blue);white-space:nowrap;">Não selecionado</span>
       </div>
       <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);">
+        <button class="btn btn-ghost btn-xs" onclick="abrirSeletorTurnoRapido()" style="width:100%;justify-content:center;color:var(--blue);gap:6px;font-size:11.5px;padding:5px 8px;margin-bottom:4px;">
+          <i data-lucide="clock" style="width:12px;height:12px;"></i> Alterar Turno de Hoje
+        </button>
         <button class="btn btn-ghost btn-xs" onclick="confirmarLogout()" style="width:100%;justify-content:center;color:#ef4444;gap:6px;font-size:11.5px;padding:5px 8px;">
           <i data-lucide="log-out" style="width:12px;height:12px;"></i> Sair / Trocar Operador
         </button>
       </div>
     </div>
-    <div class="s-user-block" id="s-user-block" onclick="toggleUserPopover(event)" title="Clique para ver detalhes do usuário">
+    <div class="s-user-block" id="s-user-block" onclick="toggleUserPopover(event)" title="Clique para ver detalhes do usuário e turno">
       <div class="s-avatar" aria-hidden="true">OP</div>
       <div style="flex:1;min-width:0;">
         <div class="s-user-name">Operador</div>
@@ -1560,7 +1634,7 @@
 <div class="main">
   <header class="topbar">
     <h1 class="topbar-title" id="page-title">Ocorrências</h1>
-    <span class="chip" id="page-chip">Logado há: 00h 00m 00s</span>
+    <span class="chip" id="page-chip">Gestão e acompanhamento de ocorrências</span>
     <div id="topbar-praca-badge" class="praca-badge" title="Praça de operação ativa">
       <span>📍</span> <span id="topbar-praca-nome">Juiz de Fora</span>
     </div>
@@ -3117,19 +3191,20 @@
       </div>
     </div>
   </main>
-  <main class="page" id="page-arquivados" aria-label="Ocorrências Arquivadas">
+  <main class="page" id="page-arquivados" aria-label="Em Observação">
     <div class="rel-layout">
       <div class="rel-center">
-        <div class="sec-header" style="margin-bottom:14px;">
-          <div>
-            <h2 style="font-size:16px;font-weight:700;margin:0;">Ocorrências Arquivadas</h2>
-            <p style="font-size:12px;color:var(--muted);margin:2px 0 0 0;">Ocorrências resolvidas mantidas para verificação e acompanhamento dos próximos turnos.</p>
+        <div class="sec-header" style="margin-bottom:14px;gap:14px;flex-wrap:wrap;">
+          <div style="min-width:220px;flex:1;">
+            <h2 style="font-size:16px;font-weight:700;margin:0;">Em Observação</h2>
+            <p style="font-size:12px;color:var(--muted);margin:2px 0 0 0;">Ocorrências resolvidas mantidas em monitoramento pós-reparo entre turnos.</p>
           </div>
-          <div class="pills" role="group" aria-label="Filtros Arquivados">
-            <button class="pill on" onclick="filtrarArquivados(this, 'todas')">Todas</button>
-            <button class="pill"    onclick="filtrarArquivados(this, 'alta')">Alta</button>
-            <button class="pill"    onclick="filtrarArquivados(this, 'media')">Média</button>
-            <button class="pill"    onclick="filtrarArquivados(this, 'baixa')">Baixa</button>
+          <div class="pills" role="group" aria-label="Filtros Em Observação" style="flex-shrink:0;">
+            <button class="pill on" style="white-space:nowrap;" onclick="filtrarArquivados(this, 'todas')">Todas</button>
+            <button class="pill"    style="white-space:nowrap;" onclick="filtrarArquivados(this, 'prontas')">Prontas</button>
+            <button class="pill"    style="white-space:nowrap;" onclick="filtrarArquivados(this, 'alta')">Alta</button>
+            <button class="pill"    style="white-space:nowrap;" onclick="filtrarArquivados(this, 'media')">Média</button>
+            <button class="pill"    style="white-space:nowrap;" onclick="filtrarArquivados(this, 'baixa')">Baixa</button>
           </div>
         </div>
         <div id="arquivados-list" class="oc-list" style="display:flex;flex-direction:column;gap:10px;">
@@ -3193,7 +3268,7 @@
           <div class="stat-icon-capsule sc-y"><i data-lucide="alert-triangle" style="width:18px;height:18px;"></i></div>
           <div class="stat-info">
             <div id="eq-kpi-atencao" class="stat-num sn-y">0</div>
-            <div class="stat-lbl">Com Ocorrência / Em Manutenção</div>
+            <div class="stat-lbl">Com Ocorrência / Em Observação</div>
           </div>
         </div>
       </div>
@@ -3223,9 +3298,9 @@
   // Pacote Criptografado Global (AES-256-GCM + PBKDF2 250k)
   // Descriptografado exclusivamente mediante digitação da Chave de Acesso da Estação
   window.ENCRYPTED_TV_CREDENTIALS = {
-    salt: '9f6ca6650ad6670436a478d785b65dbd',
-    iv: '289b276d312c24f6a3d6102e',
-    data: '9c1e2b61b20cc9d3596ad6bb98944e2acce2ffeaab2e2e43c669d3a2a6918f761be4d464e984b4255195293aaa0d6cf993381959d332101d0d01bec6a89f08421d11a8e26be003711dd3602b37cad059ef6eefd47bc0615a9b26b050bcc25ca36a98cb18b46541aeb86b07cf32206a4e8699adaa0f8493e124'
+    salt: 'f37eefee9195919adb5b14e12f9bb900',
+    iv: 'b0e029893d4f1f0ee49d624b',
+    data: '8eeb4d7fd875a35c8abad781fcbe3e75f0dd0ed777735a5f79619486690b4a1c48951c48f6f7ee6d277195ada6873a13314618584d00b688c8e4096a39f687d74c7b815644a7e8e01497277b761991442ff16fdf10cf0722b1cfdb621a400ae045bbbfc5131d46e18539a6e2af19c2c8741a8a5bc48860751a'
   };
 </script>
 <script src="config.js" onerror="window.ENV_CONFIG=window.ENV_CONFIG||{};"></script>
@@ -3241,18 +3316,34 @@
     var pills = [
       { id: 'pill-ok', val: 'Resolvido', cls: 'selected-ok' },
       { id: 'pill-parcial', val: 'Parcialmente resolvido', cls: 'selected-warn' },
-      { id: 'pill-enc', val: 'Resolvida e Arquivada', cls: 'selected-fwd' }
+      { id: 'pill-enc', val: 'Em Observação', cls: 'selected-fwd' }
     ];
+    var isObs = (valor === 'Em Observação' || valor === 'Resolvida e Arquivada' || valor === 'Encaminhado');
     pills.forEach(function(p) {
       var el = document.getElementById(p.id);
       if (!el) return;
       el.classList.remove('selected-ok', 'selected-warn', 'selected-fwd');
-      if (p.val === valor || (p.id === 'pill-enc' && (valor === 'Resolvida e Arquivada' || valor === 'Encaminhado'))) {
+      if (p.val === valor || (p.id === 'pill-enc' && isObs)) {
         el.classList.add(p.cls);
       }
     });
+    var boxTempo = document.getElementById('resolver-obs-tempo-box');
+    if (boxTempo) {
+      boxTempo.style.display = isObs ? 'block' : 'none';
+    }
   }
   window.selecionarStatus = selecionarStatus;
+  function toggleInputObsPersonalizado(val) {
+    var wrap = document.getElementById('resolver-obs-custom-wrap');
+    if (wrap) {
+      wrap.style.display = (val === 'custom') ? 'flex' : 'none';
+      if (val === 'custom') {
+        var inp = document.getElementById('resolver-obs-custom-val');
+        if (inp) setTimeout(function() { inp.focus(); inp.select(); }, 50);
+      }
+    }
+  }
+  window.toggleInputObsPersonalizado = toggleInputObsPersonalizado;
 </script>
 </body>
 </html>

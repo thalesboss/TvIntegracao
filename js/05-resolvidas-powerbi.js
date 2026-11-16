@@ -152,11 +152,12 @@
     var container = document.getElementById('popup-entrada-pendencias');
     if (!container) return;
     var abertas = getAbertas();
-    if (abertas.length === 0) {
-      container.innerHTML = '<div class="info-item blue"><div class="ii-dot blue"></div><div><strong>Sem Pendências</strong>Nenhuma ocorrência pendente no momento.</div></div>';
+    var emObs = (typeof getArquivadas === 'function') ? getArquivadas() : [];
+    if (abertas.length === 0 && emObs.length === 0) {
+      container.innerHTML = '<div class="info-item blue"><div class="ii-dot blue"></div><div><strong>Sem Pendências</strong>Nenhuma ocorrência pendente ou em observação no momento.</div></div>';
       return;
     }
-    container.innerHTML = abertas.slice(0, 4).map(function(oc) {
+    var htmlAbertas = abertas.slice(0, 4).map(function(oc) {
       var isVencida = isOcorrenciaVencida(oc);
       var corClass = (oc.prio === 'Alta' || isVencida) ? 'red' : 'blue';
       var tagTexto = isVencida ? 'Prazo Expirado' : ((oc.prio || 'Média') + ' Prioridade');
@@ -170,6 +171,25 @@
         '</div>'
       );
     }).join('');
+    var htmlObs = '';
+    if (emObs.length > 0) {
+      htmlObs =
+        '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);">' +
+          '<div style="font-size:11px;font-weight:700;color:#4F46E5;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">👁️ Equipamentos / Sistemas em Observação (' + emObs.length + ')</div>' +
+          emObs.slice(0, 3).map(function(oc) {
+            return (
+              '<div class="info-item" style="background:#EEF2FF;border:1px solid #C7D2FE;border-radius:8px;padding:7px 10px;margin-bottom:5px;">' +
+                '<div class="ii-dot" style="background:#4F46E5;"></div>' +
+                '<div style="color:#1E1B4B;">' +
+                  '<strong>' + escapeHTML(oc.equipamento || oc.local || oc.cat || 'Sistema') + ' — ⏳ Em observação</strong>' +
+                  escapeHTML(oc.titulo || 'Ocorrência') + ' <span style="color:#4338CA;font-weight:600;">(validar neste turno)</span>' +
+                '</div>' +
+              '</div>'
+            );
+          }).join('') +
+        '</div>';
+    }
+    container.innerHTML = htmlAbertas + htmlObs;
   }
   function renderPopupLogout() {
     var container = document.getElementById('popup-logout-checklist');

@@ -48,18 +48,12 @@
       if (!sel) return;
       var curVal = sel.value;
       var html = '<option value="">Sem equipamento específico</option>';
-      if (isUberlandia) {
-        equips.forEach(function(eq) {
-          html += '<option value="' + escapeHTML(eq) + '">' + escapeHTML(eq) + '</option>';
-        });
-      } else {
-        if (equips.length === 0) {
-          equips = ['LIVE U1', 'LIVE U2', 'LIVE U3', 'LIVE U4', 'LIVE U SMART', 'REDAÇÃO', 'KMJ', 'NET PRAÇA', 'NET PORTARIA', 'FORMATOS NET', 'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR'];
-        }
-        equips.forEach(function(eq) {
-          html += '<option value="' + escapeHTML(eq) + '">' + escapeHTML(eq) + '</option>';
-        });
+      if (!isUberlandia && equips.length === 0) {
+        equips = ['LIVE U1', 'LIVE U2', 'LIVE U3', 'LIVE U4', 'LIVE U SMART', 'REDAÇÃO', 'KMJ', 'NET PRAÇA', 'NET PORTARIA', 'FORMATOS NET', 'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR'];
       }
+      equips.forEach(function(eq) {
+        html += '<option value="' + escapeHTML(eq) + '">' + escapeHTML(eq) + '</option>';
+      });
       html += '<option value="__novo__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo Equipamento...</option>';
       sel.innerHTML = html;
       if (curVal && curVal !== '__novo__') sel.value = curVal;
@@ -212,6 +206,16 @@
     uploadedFilesStore['resolver-previews'] = [];
     if (resolverCounter) { resolverCounter.textContent = 'Mínimo 10 caracteres'; resolverCounter.className = 'char-count'; }
     document.getElementById('resolver-status').value = 'Resolvido';
+    var obsHorasEl = document.getElementById('resolver-obs-horas');
+    if (obsHorasEl) obsHorasEl.value = '24';
+    var obsCustomWrap = document.getElementById('resolver-obs-custom-wrap');
+    if (obsCustomWrap) obsCustomWrap.style.display = 'none';
+    var obsCustomVal = document.getElementById('resolver-obs-custom-val');
+    if (obsCustomVal) obsCustomVal.value = '36';
+    var obsCustomUnit = document.getElementById('resolver-obs-custom-unit');
+    if (obsCustomUnit) obsCustomUnit.value = 'horas';
+    var obsBoxEl = document.getElementById('resolver-obs-tempo-box');
+    if (obsBoxEl) obsBoxEl.style.display = 'none';
     if (typeof selecionarStatus === 'function') selecionarStatus('Resolvido');
     validarResolver();
     abrirPopup('popup-resolver');

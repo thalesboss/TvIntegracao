@@ -2,11 +2,6 @@
   var NOTIF_DISMISSED_KEY = 'tv_notificacoes_dismissed_v2';
   var notificacoesStore = [];
   var notificacoesDispensadas = [];
-  var INITIAL_NOTIFICACOES_SEED = [];
-  function getNotifDBCredentials() {
-    if (typeof getDBCredentials === 'function') return getDBCredentials();
-    return { url: '', key: '' };
-  }
   function salvarDispensadas() {
     window.notificacoesDispensadas = notificacoesDispensadas;
     try {
@@ -41,7 +36,7 @@
     atualizarBadgesNotificacoes();
   }
   function sincronizarNotificacoesNuvem() {
-    var db = getNotifDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key) return;
     fetch(db.url + '/rest/v1/notificacoes?select=*&order=id.desc&limit=50', {
       headers: {
@@ -66,7 +61,7 @@
   }
   window.sincronizarNotificacoesNuvem = sincronizarNotificacoesNuvem;
   function salvarNotificacaoNuvem(notif) {
-    var db = getNotifDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key || !notif) return;
     fetch(db.url + '/rest/v1/notificacoes', {
       method: 'POST',
@@ -81,7 +76,7 @@
   }
   window.salvarNotificacaoNuvem = salvarNotificacaoNuvem;
   function marcarTodasLidasNuvem() {
-    var db = getNotifDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key) return;
     fetch(db.url + '/rest/v1/notificacoes?lida=eq.false', {
       method: 'PATCH',
@@ -96,7 +91,7 @@
   }
   window.marcarTodasLidasNuvem = marcarTodasLidasNuvem;
   function deletarNotificacaoNuvem(id) {
-    var db = getNotifDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key || !id) return;
     fetch(db.url + '/rest/v1/notificacoes?id=eq.' + encodeURIComponent(id), {
       method: 'DELETE',
@@ -109,7 +104,7 @@
   }
   window.deletarNotificacaoNuvem = deletarNotificacaoNuvem;
   function deletarTodasNotificacoesNuvem() {
-    var db = getNotifDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key) return;
     var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     fetch(db.url + '/rest/v1/notificacoes?praca=eq.' + encodeURIComponent(pracaAtiva), {
@@ -226,8 +221,8 @@
     var arquivadas = getArquivadas().filter(function(oc){ return !String(oc.id).startsWith('oc_init_') && !idsNaLixeira.includes(oc.id); });
     if (arquivadas.length > 0) {
       var chaveArq = 'arq_status_' + arquivadas.map(function(a){ return a.id; }).sort().join('_');
-      var titArq = '📦 Ocorrências Arquivadas para o Turno';
-      var msgArq = 'Existem ' + arquivadas.length + ' ocorrência(s) arquivada(s) aguardando verificação e acompanhamento da equipe.';
+      var titArq = '👁️ Equipamentos em Observação no Turno';
+      var msgArq = 'Existem ' + arquivadas.length + ' ocorrência(s) em observação pós-reparo aguardando teste e validação da equipe.';
       adicionarNotificacao(titArq, msgArq, 'info', false, chaveArq);
     }
   }

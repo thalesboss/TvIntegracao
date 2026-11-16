@@ -3,7 +3,6 @@
   try { if (typeof aplicarModoPraca === 'function') aplicarModoPraca(); } catch(e) {}
   try { carregarFotoPerfilSalva(); } catch(e) {}
   try { loadNotificacoes(); } catch(e) {}
-  try { carregarCredenciaisSupabaseConfig(); } catch(e) {}
   try { if (typeof atualizarUIStatusBancoConfig === 'function') atualizarUIStatusBancoConfig(); } catch(e) {}
   try { carregarRascunhoRelatorioTV(); } catch(e) {}
   try { carregarRascunhoRecebimento(); } catch(e) {}
@@ -40,25 +39,12 @@
   var savedUserName = localStorage.getItem(USER_NAME_STORAGE_KEY);
   try { if (typeof carregarOperadoresSugeridos === 'function') carregarOperadoresSugeridos(); } catch(e) {}
   try { if (typeof atualizarUIIdentificacaoOperador === 'function') atualizarUIIdentificacaoOperador(); } catch(e) {}
-  var identPracaSelect = document.getElementById('ident-operador-praca');
-  if (identPracaSelect) {
-    if (typeof getPracaAtual === 'function') {
-      identPracaSelect.value = getPracaAtual();
-    }
-    identPracaSelect.addEventListener('change', function() {
-      if (typeof setPracaAtual === 'function') {
-        setPracaAtual(this.value);
-      }
-    });
-  }
   var estacaoConectadaInit = (typeof isEstacaoConectadaTV === 'function') ? isEstacaoConectadaTV() : true;
   if (!estacaoConectadaInit || !savedUserName || !savedUserName.trim() || savedUserName.trim() === 'Operador') {
     abrirPopup('popup-identificacao-operador');
     var identEmail = document.getElementById('ident-operador-email');
-    var identInput = document.getElementById('ident-operador-nome');
     setTimeout(function() {
       if (identEmail && identEmail.offsetParent !== null) identEmail.focus();
-      else if (identInput) identInput.focus();
     }, 180);
   } else {
     atualizarNomeOperadorUI(savedUserName.trim());

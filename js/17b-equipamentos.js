@@ -18,10 +18,6 @@
   var catalogoEquipamentos = [];
   var filtroEquipamentoTag = 'todos';
   var tagsSelecionadasModalEq = [];
-  function getEquipamentosDBCredentials() {
-    if (typeof getDBCredentials === 'function') return getDBCredentials();
-    return { url: '', key: '' };
-  }
   function normalizarTagsEquipamento(tagsRaw) {
     if (!Array.isArray(tagsRaw)) return [];
     var vistos = {};
@@ -243,7 +239,7 @@
   }
   window.carregarEquipamentosStore = carregarEquipamentosStore;
   function sincronizarEquipamentosPostgreSQL() {
-    var db = getEquipamentosDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key) return;
     fetch(db.url + '/rest/v1/equipamentos?select=*&order=criado_em.asc', {
       headers: {
@@ -299,7 +295,7 @@
   }
   window.sincronizarEquipamentosPostgreSQL = sincronizarEquipamentosPostgreSQL;
   function salvarEquipamentoPostgreSQL(eq) {
-    var db = getEquipamentosDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key || !eq) return;
     var payload = {
       id: eq.id,
@@ -356,7 +352,10 @@
     if (eq.status_operacional === 'manutencao') return 'manutencao';
     var ocs = obterOcorrenciasDoEquipamento(eq);
     var temAberta = ocs.some(function(o) { return o.status === 'aberta'; });
-    return temAberta ? 'atencao' : 'operacional';
+    if (temAberta) return 'atencao';
+    var temObs = ocs.some(function(o) { return o.status === 'arquivada'; });
+    if (temObs) return 'observacao';
+    return 'operacional';
   }
   function filtrarEquipamentosPorTag(tag, btn) {
     filtroEquipamentoTag = tag ? String(tag).replace(/^#+/, '').trim() : 'todos';
@@ -386,7 +385,7 @@
     doCatalogoPraca.forEach(function(eq) {
       var st = calcularStatusEquipamentoDinamico(eq);
       if (st === 'manutencao') totManut++;
-      else if (st === 'atencao') totAtencao++;
+      else if (st === 'atencao' || st === 'observacao') totAtencao++;
       else totOp++;
     });
     var kpiTot = document.getElementById('eq-kpi-total');
@@ -433,11 +432,15 @@
         ? '<span class="tag tag-r">🔴 Em Manutenção</span>'
         : st === 'atencao'
         ? '<span class="tag tag-y">🟡 ' + abertasCount + ' Ocorrência(s)</span>'
+        : st === 'observacao'
+        ? '<span class="tag" style="background:#EEF2FF;color:#4F46E5;border:1px solid #C7D2FE;font-weight:700;display:inline-flex;align-items:center;gap:4px;"><i data-lucide="eye" style="width:11px;height:11px;stroke-width:2.2;"></i>Em Observação</span>'
         : '<span class="tag tag-g">🟢 Operacional</span>';
       var borderStyle = st === 'atencao'
         ? 'border-color:#FDE68A;background:#FFFBEB;'
         : st === 'manutencao'
         ? 'border-color:#FECACA;background:#FEF2F2;'
+        : st === 'observacao'
+        ? 'border-color:#C7D2FE;background:#F8FAFF;'
         : '';
       var tagsHTML = (Array.isArray(eq.tags) && eq.tags.length > 0)
         ? eq.tags.map(function(t) {
@@ -931,6 +934,40 @@
     }
   }
   window.abrirOcorrenciaDiretaEquipamento = abrirOcorrenciaDiretaEquipamento;
+  var filtroFichaEqAtual = 'todos';
+  var dadosTimelineFichaEqAtual = { ocs: [], rels: [] };
+  function renderTimelineFichaEquipamento() {
+    var elTimeline = document.getElementById('ficha-eq-timeline');
+    if (!elTimeline) return;
+    var ocs = dadosTimelineFichaEqAtual.ocs || [];
+    var rels = dadosTimelineFichaEqAtual.rels || [];
+    if (typeof atualizarBotoesFiltroTimelineModal === 'function') {
+      atualizarBotoesFiltroTimelineModal(
+        {
+          cntTodos: 'ficha-eq-cnt-todos',
+          cntOc: 'ficha-eq-cnt-oc',
+          cntRel: 'ficha-eq-cnt-rel',
+          btnTodos: 'btn-ficha-eq-todos',
+          btnOc: 'btn-ficha-eq-oc',
+          btnRel: 'btn-ficha-eq-rel'
+        },
+        filtroFichaEqAtual,
+        ocs.length + rels.length,
+        ocs.length,
+        rels.length
+      );
+    }
+    var emptyAll = 'Nenhuma ocorrência ou relatório registrado no histórico de vida deste equipamento.';
+    elTimeline.innerHTML = (typeof renderCardsTimelineMistaHTML === 'function')
+      ? renderCardsTimelineMistaHTML(ocs, rels, filtroFichaEqAtual, 'popup-ficha-vida-equipamento', (ocs.length === 0 && rels.length === 0) ? emptyAll : '')
+      : '';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+  function filtrarTimelineFichaEquipamento(filtro) {
+    filtroFichaEqAtual = filtro || 'todos';
+    renderTimelineFichaEquipamento();
+  }
+  window.filtrarTimelineFichaEquipamento = filtrarTimelineFichaEquipamento;
   function abrirFichaVidaEquipamento(idOuNome) {
     var eq = (catalogoEquipamentos || []).find(function(e) {
       return e.status_operacional !== 'lixeira' && (e.id === idOuNome || e.nome === idOuNome);
@@ -1014,66 +1051,9 @@
         if (h.equipamento && String(h.equipamento).toUpperCase().indexOf(nomeEqUp) !== -1) return true;
         return false;
       });
-      if (ocs.length === 0 && relsEq.length === 0) {
-        elTimeline.innerHTML =
-          '<div style="text-align:center;padding:24px 14px;background:#F8FAFC;border:1px dashed var(--border);border-radius:10px;color:var(--muted);font-size:12px;">' +
-            'Nenhuma ocorrência ou relatório registrado no histórico de vida deste equipamento.' +
-          '</div>';
-      } else {
-        var htmlOcs = ocs.map(function(oc) {
-          var isRes = oc.status !== 'aberta';
-          var corBorda = isRes ? '#10B981' : '#EF4444';
-          var tagSt = isRes
-            ? '<span class="tag tag-g">✓ Resolvida</span>'
-            : '<span class="tag tag-r">● Em Aberto</span>';
-          var descLimpa = String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
-          var descResLimpa = (oc.resolucao && oc.resolucao.descRes)
-            ? String(oc.resolucao.descRes).replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim()
-            : '';
-          var descRes = descResLimpa
-            ? '<div style="margin-top:6px;padding:6px 10px;background:#F0FDF4;border-radius:6px;font-size:11.5px;color:#166534;"><strong>Solução aplicada:</strong> ' + escapeHTML(descResLimpa) + '</div>'
-            : '';
-          var temPreviewOc = !!(oc.htmlRelatorio || oc.dadosCTRS || (oc.desc && String(oc.desc).indexOf('<!--CTRS_JSON:') !== -1));
-          var previewBtn = temPreviewOc
-            ? '<span style="font-size:10.5px;font-weight:700;color:#0071E3;background:#EFF6FF;border:1px solid #BFDBFE;padding:2px 8px;border-radius:10px;">👁️ Ver Relatório na Descrição</span>'
-            : '';
-          return (
-            '<div onclick=\"fecharPopup(\'popup-ficha-vida-equipamento\'); verDetalhesOcorrencia(\'' + oc.id + '\')\" style=\"background:#FFFFFF;border:1px solid var(--border-lt);border-left:3.5px solid ' + corBorda + ';border-radius:8px;padding:10px 14px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'var(--blue)\';\" onmouseout=\"this.style.borderColor=\'var(--border-lt)\';\" title=\"Clique para abrir a ocorrência completa com o preview do relatório\">' +
-              '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
-                '<strong style="font-size:12.5px;color:var(--txt);">' + escapeHTML(oc.titulo) + '</strong>' +
-                '<div style="display:flex;align-items:center;gap:6px;">' + previewBtn + tagSt + '</div>' +
-              '</div>' +
-              '<div style="font-size:11.5px;color:var(--txt2);margin-top:4px;">' + escapeHTML(descLimpa) + '</div>' +
-              descRes +
-              '<div style="font-size:10.5px;color:var(--muted);margin-top:6px;display:flex;gap:12px;">' +
-                '<span>📅 ' + escapeHTML(oc.dataCriacao || '') + '</span>' +
-                '<span>👤 Resp: ' + escapeHTML(oc.resp || 'Equipe') + '</span>' +
-              '</div>' +
-            '</div>'
-          );
-        }).join('');
-        var htmlRels = relsEq.map(function(r) {
-          var descRelLimpa = String(r.descCriacao || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
-          var isNC = r.status && String(r.status).toLowerCase().indexOf('não conform') !== -1;
-          return (
-            '<div onclick=\"fecharPopup(\'popup-ficha-vida-equipamento\'); verDetalhesHistoricoDirect(\'' + r.id + '\')\" style=\"background:#F8FAFC;border:1px solid #BFDBFE;border-left:3.5px solid #0071E3;border-radius:8px;padding:10px 14px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'#0071E3\';\" onmouseout=\"this.style.borderColor=\'#BFDBFE\';\" title=\"Clique para abrir o Preview Completo do Relatório CTRS\">' +
-              '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
-                '<strong style="font-size:12.5px;color:#1E3A8A;">📄 ' + escapeHTML(r.titulo) + '</strong>' +
-                '<div style="display:flex;align-items:center;gap:6px;">' +
-                  '<span style="font-size:10.5px;font-weight:700;color:#0071E3;background:#EFF6FF;border:1px solid #93C5FD;padding:2px 8px;border-radius:10px;">👁️ Ver Preview CTRS</span>' +
-                  '<span class="tag ' + (isNC ? 'tag-y' : 'tag-g') + '">' + escapeHTML(r.status || 'Conforme') + '</span>' +
-                '</div>' +
-              '</div>' +
-              '<div style="font-size:11.5px;color:var(--txt2);margin-top:4px;">' + escapeHTML(descRelLimpa) + '</div>' +
-              '<div style="font-size:10.5px;color:var(--muted);margin-top:6px;display:flex;gap:12px;">' +
-                '<span>📅 ' + escapeHTML(r.dataCriacao || '') + '</span>' +
-                '<span>👤 Emitido por: ' + escapeHTML(r.criadoPor || 'Operador') + '</span>' +
-              '</div>' +
-            '</div>'
-          );
-        }).join('');
-        elTimeline.innerHTML = htmlOcs + htmlRels;
-      }
+      dadosTimelineFichaEqAtual = { ocs: ocs, rels: relsEq };
+      filtroFichaEqAtual = 'todos';
+      renderTimelineFichaEquipamento();
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
     abrirPopup('popup-ficha-vida-equipamento');

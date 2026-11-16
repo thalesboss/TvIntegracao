@@ -7,7 +7,7 @@
     var obs = document.getElementById('obs-logout');
     fecharPopup('popup-logout');
     if (obs) obs.value = '';
-    loginTime = Date.now();
+    limparTurnoSessaoAtual();
     try {
       localStorage.removeItem(USER_NAME_STORAGE_KEY);
     } catch(e) {}
@@ -20,14 +20,8 @@
     fecharPopup('popup-entrada');
     var identEmail = document.getElementById('ident-operador-email');
     if (identEmail) identEmail.value = '';
-    var identInput = document.getElementById('ident-operador-nome');
-    if (identInput) {
-      identInput.value = '';
-    }
-    var chaveInput = document.getElementById('ident-chave-acesso');
-    if (chaveInput) {
-      chaveInput.value = '';
-    }
+    var chaveEstInput = document.getElementById('ident-chave-estacao-input');
+    if (chaveEstInput) chaveEstInput.value = '';
     if (typeof resetarFluxoEmailIdentificacao === 'function') {
       resetarFluxoEmailIdentificacao();
     }
@@ -37,36 +31,273 @@
     abrirPopup('popup-identificacao-operador');
     setTimeout(function() {
       if (identEmail && identEmail.offsetParent !== null) identEmail.focus();
-      else if (identInput) identInput.focus();
     }, 150);
   }
   window.confirmarLogout = confirmarLogout;
-  var loginTime = Date.now();
-  function pad(n) { return n < 10 ? '0' + n : n; }
-  function getTempoLogadoStr() {
-    var diff = Math.floor((Date.now() - loginTime) / 1000);
-    if (diff < 0) diff = 0;
-    var h = Math.floor(diff / 3600);
-    var m = Math.floor((diff % 3600) / 60);
-    var s = diff % 60;
-    return pad(h) + 'h ' + pad(m) + 'm ' + pad(s) + 's';
+  function pad(n) { return n < 10 ? '0' + n : String(n); }
+  var TURNO_ATUAL_STORAGE_KEY = 'tv_turno_ativo_v1';
+  var TURNOS_OFICIAIS_TV = [
+    { id: 'T1',     escala: 'semana',  codigo: '1',   horario: '00:00 ~ 03:00 / 03:15 ~ 06:15', inicioMin: 0,    fimMin: 375,  flexivel: false },
+    { id: 'T2',     escala: 'semana',  codigo: '2',   horario: '06:00 ~ 09:00 / 09:15 ~ 12:15', inicioMin: 360,  fimMin: 735,  flexivel: false },
+    { id: 'T2_AST', escala: 'semana',  codigo: '2*',  horario: '06:00 ~ 10:00 / 11:00 ~ 13:00', inicioMin: 360,  fimMin: 780,  flexivel: false },
+    { id: 'T3_M',   escala: 'semana',  codigo: '3',   horario: '08:00 ~ 11:00 / 11:15 ~ 14:15', inicioMin: 480,  fimMin: 855,  flexivel: false },
+    { id: 'T3_T',   escala: 'semana',  codigo: '3',   horario: '11:45 ~ 13:45 / 14:00 ~ 18:00', inicioMin: 705,  fimMin: 1080, flexivel: false },
+    { id: 'T4',     escala: 'semana',  codigo: '4',   horario: '17:45 ~ 20:45 / 21:00 ~ 00:00', inicioMin: 1065, fimMin: 1440, flexivel: false },
+    { id: 'A1',     escala: 'semana',  codigo: 'A1',  horario: '07:30 ~ 11:00 / 11:15 ~ 13:45', inicioMin: 450,  fimMin: 825,  flexivel: true, inicioPadrao: '07:30', p1Min: 210, intMin: 15, p2Min: 150 },
+    { id: 'A2',     escala: 'semana',  codigo: 'A2',  horario: '13:45 ~ 16:45 / 17:00 ~ 20:00', inicioMin: 825,  fimMin: 1200, flexivel: true, inicioPadrao: '13:45', p1Min: 180, intMin: 15, p2Min: 180 },
+    { id: 'PL1',    escala: 'plantao', codigo: 'PL1', horario: '00:00 ~ 05:00 / 06:00 ~ 08:00', inicioMin: 0,    fimMin: 480,  flexivel: false },
+    { id: 'PL2',    escala: 'plantao', codigo: 'PL2', horario: '08:00 ~ 13:00 / 14:00 ~ 16:00', inicioMin: 480,  fimMin: 960,  flexivel: false },
+    { id: 'PL3',    escala: 'plantao', codigo: 'PL3', horario: '16:00 ~ 20:00 / 21:00 ~ 00:00', inicioMin: 960,  fimMin: 1440, flexivel: false },
+    { id: 'PA',     escala: 'plantao', codigo: 'PA',  horario: '11:00 ~ 13:30 / 14:30 ~ 20:00', inicioMin: 660,  fimMin: 1200, flexivel: false }
+  ];
+  var escalaTurnoEntradaAtiva = 'semana';
+  var turnoSelecionadoEntradaId = 'T2';
+  var horaEntradaFlexPorTurno = { A1: '07:30', A2: '13:45' };
+  var turnoAtivoSessao = null;
+  function getDateKeyHoje() {
+    var d = new Date();
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
   }
-  function atualizarTimerLogin() {
-    try {
-      var timeStr = getTempoLogadoStr();
-      var upTimer = document.getElementById('up-timer');
-      if (upTimer) upTimer.textContent = timeStr;
-      var pageChip = document.getElementById('page-chip');
-      var activePage = document.querySelector('.page.active');
-      if (pageChip && activePage && activePage.id === 'page-dashboard') {
-        pageChip.textContent = 'Logado há: ' + timeStr;
-      }
-    } catch(err) {
-      console.warn('Erro ao atualizar timer de login:', err);
+  function ehFimDeSemanaHoje() {
+    var dia = new Date().getDay();
+    return dia === 0 || dia === 6;
+  }
+  function minutosParaHHMM(totalMin) {
+    var mNorm = ((Math.round(totalMin) % 1440) + 1440) % 1440;
+    return pad(Math.floor(mNorm / 60)) + ':' + pad(mNorm % 60);
+  }
+  function calcularFaixaHorarioFlexivel(turnoObj, horaEntradaStr) {
+    if (!turnoObj) return '';
+    if (!turnoObj.flexivel) return turnoObj.horario;
+    var raw = String(horaEntradaStr || turnoObj.inicioPadrao || '').trim();
+    var m = raw.match(/^(\d{1,2}):(\d{2})$/);
+    var hh = m ? parseInt(m[1], 10) : parseInt(String(turnoObj.inicioPadrao || '07:30').split(':')[0], 10);
+    var mm = m ? parseInt(m[2], 10) : parseInt(String(turnoObj.inicioPadrao || '07:30').split(':')[1], 10);
+    if (isNaN(hh) || isNaN(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) {
+      return turnoObj.horario;
+    }
+    var mIni = hh * 60 + mm;
+    var mP1Fim = mIni + (turnoObj.p1Min || 210);
+    var mP2Ini = mP1Fim + (turnoObj.intMin || 15);
+    var mFim = mP2Ini + (turnoObj.p2Min || 150);
+    return minutosParaHHMM(mIni) + ' ~ ' + minutosParaHHMM(mP1Fim) + ' / ' + minutosParaHHMM(mP2Ini) + ' ~ ' + minutosParaHHMM(mFim);
+  }
+  function sugerirTurnoPorEscala(escala) {
+    var lista = TURNOS_OFICIAIS_TV.filter(function(t) { return t.escala === escala; });
+    if (lista.length === 0) return null;
+    var agora = new Date();
+    var nowMin = agora.getHours() * 60 + agora.getMinutes();
+    var dentro = lista.filter(function(t) {
+      return nowMin >= t.inicioMin && nowMin < t.fimMin;
+    });
+    if (dentro.length > 0) {
+      dentro.sort(function(a, b) {
+        if (!!a.flexivel !== !!b.flexivel) return a.flexivel ? 1 : -1;
+        return Math.abs(nowMin - a.inicioMin) - Math.abs(nowMin - b.inicioMin);
+      });
+      return dentro[0];
+    }
+    var ordenado = lista.slice().sort(function(a, b) {
+      return Math.abs(nowMin - a.inicioMin) - Math.abs(nowMin - b.inicioMin);
+    });
+    return ordenado[0];
+  }
+  function atualizarBoxTurnoFlexivel() {
+    var boxEl = document.getElementById('entrada-turno-flex-box');
+    var inputEl = document.getElementById('entrada-turno-flex-hora');
+    var resumoEl = document.getElementById('entrada-turno-flex-resumo');
+    if (!boxEl) return;
+    var turnoObj = TURNOS_OFICIAIS_TV.find(function(t) { return t.id === turnoSelecionadoEntradaId; });
+    if (!turnoObj || !turnoObj.flexivel) {
+      boxEl.style.display = 'none';
+      return;
+    }
+    var horaAtual = horaEntradaFlexPorTurno[turnoObj.id] || turnoObj.inicioPadrao || '07:30';
+    boxEl.style.display = 'flex';
+    if (inputEl && inputEl.value !== horaAtual) {
+      inputEl.value = horaAtual;
+    }
+    if (resumoEl) {
+      resumoEl.textContent = calcularFaixaHorarioFlexivel(turnoObj, horaAtual);
     }
   }
-  setInterval(atualizarTimerLogin, 1000);
-  atualizarTimerLogin();
+  function renderGridTurnosEntrada() {
+    var grid = document.getElementById('entrada-turnos-grid');
+    if (!grid) return;
+    var lista = TURNOS_OFICIAIS_TV.filter(function(t) { return t.escala === escalaTurnoEntradaAtiva; });
+    var agora = new Date();
+    var nowMin = agora.getHours() * 60 + agora.getMinutes();
+    var isPlantao = (escalaTurnoEntradaAtiva === 'plantao');
+    grid.innerHTML = lista.map(function(t) {
+      var ativo = (t.id === turnoSelecionadoEntradaId);
+      var proximo = (nowMin >= (t.inicioMin - 30) && nowMin < t.fimMin);
+      var horarioExibir = t.flexivel
+        ? calcularFaixaHorarioFlexivel(t, horaEntradaFlexPorTurno[t.id] || t.inicioPadrao)
+        : t.horario;
+      var corAcento = isPlantao ? '#DC2626' : '#0071E3';
+      var bgCard = ativo ? (isPlantao ? '#FEF2F2' : '#EFF6FF') : '#FFFFFF';
+      var bdrCard = ativo ? ('2px solid ' + corAcento) : '1px solid #E2E8F0';
+      var badgeBg = isPlantao
+        ? (ativo ? '#DC2626' : '#FEE2E2')
+        : (ativo ? '#0071E3' : '#DBEAFE');
+      var badgeTxt = ativo ? '#FFFFFF' : (isPlantao ? '#B91C1C' : '#1D4ED8');
+      var extras = '';
+      if (t.flexivel) {
+        extras += '<span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:999px;background:#EEF2FF;color:#4338CA;border:1px solid #C7D2FE;">Horário flexível</span>';
+      } else if (proximo) {
+        extras += '<span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:999px;background:#ECFDF5;color:#047857;border:1px solid #A7F3D0;">Horário atual</span>';
+      }
+      return (
+        '<button type="button" onclick="selecionarTurnoEntrada(\'' + t.id + '\')" style="text-align:left;padding:9px 11px;border-radius:10px;border:' + bdrCard + ';background:' + bgCard + ';cursor:pointer;display:flex;align-items:center;gap:10px;transition:all 0.14s ease;width:100%;">' +
+          '<span style="min-width:34px;height:28px;padding:0 7px;border-radius:7px;background:' + badgeBg + ';color:' + badgeTxt + ';font-size:12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+            escapeHTML(t.codigo) +
+          '</span>' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px;flex-wrap:wrap;">' +
+              '<span style="font-size:11.5px;font-weight:700;color:#0F172A;" id="turno-card-hor-' + t.id + '">' + escapeHTML(horarioExibir) + '</span>' +
+            '</div>' +
+            (extras ? '<div style="margin-top:3px;display:flex;gap:4px;">' + extras + '</div>' : '') +
+          '</div>' +
+        '</button>'
+      );
+    }).join('');
+    atualizarBoxTurnoFlexivel();
+  }
+  function atualizarPillsEscalaEntrada() {
+    var pillSem = document.getElementById('pill-escala-semana');
+    var pillPla = document.getElementById('pill-escala-plantao');
+    if (pillSem) pillSem.classList.toggle('on', escalaTurnoEntradaAtiva === 'semana');
+    if (pillPla) pillPla.classList.toggle('on', escalaTurnoEntradaAtiva === 'plantao');
+    if (typeof atualizarTodosGlidersPills === 'function') {
+      requestAnimationFrame(function() { atualizarTodosGlidersPills(true); });
+    }
+  }
+  function alternarEscalaTurnoEntrada(escala) {
+    escalaTurnoEntradaAtiva = (escala === 'plantao') ? 'plantao' : 'semana';
+    var atualPertence = TURNOS_OFICIAIS_TV.some(function(t) {
+      return t.id === turnoSelecionadoEntradaId && t.escala === escalaTurnoEntradaAtiva;
+    });
+    if (!atualPertence) {
+      var sug = sugerirTurnoPorEscala(escalaTurnoEntradaAtiva);
+      if (sug) turnoSelecionadoEntradaId = sug.id;
+    }
+    atualizarPillsEscalaEntrada();
+    renderGridTurnosEntrada();
+  }
+  window.alternarEscalaTurnoEntrada = alternarEscalaTurnoEntrada;
+  function selecionarTurnoEntrada(idTurno) {
+    var t = TURNOS_OFICIAIS_TV.find(function(x) { return x.id === idTurno; });
+    if (!t) return;
+    turnoSelecionadoEntradaId = t.id;
+    escalaTurnoEntradaAtiva = t.escala;
+    renderGridTurnosEntrada();
+  }
+  window.selecionarTurnoEntrada = selecionarTurnoEntrada;
+  function recalcularHorarioTurnoFlexivel(horaStr) {
+    var t = TURNOS_OFICIAIS_TV.find(function(x) { return x.id === turnoSelecionadoEntradaId; });
+    if (!t || !t.flexivel) return;
+    if (horaStr) horaEntradaFlexPorTurno[t.id] = horaStr;
+    var faixa = calcularFaixaHorarioFlexivel(t, horaEntradaFlexPorTurno[t.id] || t.inicioPadrao);
+    var resumoEl = document.getElementById('entrada-turno-flex-resumo');
+    if (resumoEl) resumoEl.textContent = faixa;
+    var cardHorEl = document.getElementById('turno-card-hor-' + t.id);
+    if (cardHorEl) cardHorEl.textContent = faixa;
+  }
+  window.recalcularHorarioTurnoFlexivel = recalcularHorarioTurnoFlexivel;
+  function inicializarSeletorTurnoEntrada() {
+    var hojeKey = getDateKeyHoje();
+    var restaurado = false;
+    try {
+      var raw = localStorage.getItem(TURNO_ATUAL_STORAGE_KEY);
+      if (raw) {
+        var obj = JSON.parse(raw);
+        if (obj && obj.dateKey === hojeKey && obj.id) {
+          var tObj = TURNOS_OFICIAIS_TV.find(function(x) { return x.id === obj.id; });
+          if (tObj) {
+            escalaTurnoEntradaAtiva = tObj.escala;
+            turnoSelecionadoEntradaId = tObj.id;
+            if (tObj.flexivel && obj.entradaFlex) {
+              horaEntradaFlexPorTurno[tObj.id] = obj.entradaFlex;
+            }
+            restaurado = true;
+          }
+        }
+      }
+    } catch (e) {}
+    if (!restaurado) {
+      escalaTurnoEntradaAtiva = ehFimDeSemanaHoje() ? 'plantao' : 'semana';
+      var sug = sugerirTurnoPorEscala(escalaTurnoEntradaAtiva);
+      if (sug) turnoSelecionadoEntradaId = sug.id;
+    }
+    atualizarPillsEscalaEntrada();
+    renderGridTurnosEntrada();
+  }
+  window.inicializarSeletorTurnoEntrada = inicializarSeletorTurnoEntrada;
+  function atualizarUITurnoAtivo() {
+    var upTurno = document.getElementById('up-turno');
+    if (!upTurno) return;
+    if (!turnoAtivoSessao) {
+      upTurno.textContent = 'Não selecionado';
+      upTurno.style.color = 'var(--blue)';
+      upTurno.removeAttribute('title');
+      return;
+    }
+    var prefixo = turnoAtivoSessao.escala === 'plantao' ? 'Plantão ' : 'Turno ';
+    upTurno.textContent = turnoAtivoSessao.horario;
+    upTurno.style.color = turnoAtivoSessao.escala === 'plantao' ? '#DC2626' : 'var(--blue)';
+    upTurno.setAttribute('title', prefixo + turnoAtivoSessao.codigo + ' (' + turnoAtivoSessao.horario + ')');
+  }
+  function salvarTurnoSessaoAtual() {
+    var tObj = TURNOS_OFICIAIS_TV.find(function(x) { return x.id === turnoSelecionadoEntradaId; }) || sugerirTurnoPorEscala(escalaTurnoEntradaAtiva);
+    if (!tObj) return;
+    var entradaFlex = tObj.flexivel ? (horaEntradaFlexPorTurno[tObj.id] || tObj.inicioPadrao) : '';
+    var horarioFinal = tObj.flexivel ? calcularFaixaHorarioFlexivel(tObj, entradaFlex) : tObj.horario;
+    turnoAtivoSessao = {
+      dateKey: getDateKeyHoje(),
+      id: tObj.id,
+      escala: tObj.escala,
+      codigo: tObj.codigo,
+      horario: horarioFinal,
+      entradaFlex: entradaFlex
+    };
+    try {
+      localStorage.setItem(TURNO_ATUAL_STORAGE_KEY, JSON.stringify(turnoAtivoSessao));
+    } catch (e) {}
+    atualizarUITurnoAtivo();
+  }
+  window.salvarTurnoSessaoAtual = salvarTurnoSessaoAtual;
+  function limparTurnoSessaoAtual() {
+    turnoAtivoSessao = null;
+    try { localStorage.removeItem(TURNO_ATUAL_STORAGE_KEY); } catch (e) {}
+    atualizarUITurnoAtivo();
+  }
+  function obterLabelTurnoAtivoCurto() {
+    if (!turnoAtivoSessao) return '';
+    var prefixo = turnoAtivoSessao.escala === 'plantao' ? 'Plantão ' : 'Turno ';
+    return prefixo + turnoAtivoSessao.codigo + ' (' + turnoAtivoSessao.horario + ')';
+  }
+  window.obterLabelTurnoAtivoCurto = obterLabelTurnoAtivoCurto;
+  function abrirSeletorTurnoRapido() {
+    var popover = document.getElementById('user-popover');
+    if (popover) popover.setAttribute('hidden', '');
+    var chk = document.getElementById('chk-entrada');
+    if (chk) {
+      chk.checked = true;
+      if (typeof toggleBtnIniciarSessao === 'function') toggleBtnIniciarSessao(true);
+    }
+    abrirPopup('popup-entrada');
+  }
+  window.abrirSeletorTurnoRapido = abrirSeletorTurnoRapido;
+  try {
+    var rawTurnoBoot = localStorage.getItem(TURNO_ATUAL_STORAGE_KEY);
+    if (rawTurnoBoot) {
+      var parsedTurnoBoot = JSON.parse(rawTurnoBoot);
+      if (parsedTurnoBoot && parsedTurnoBoot.dateKey === getDateKeyHoje() && parsedTurnoBoot.id) {
+        turnoAtivoSessao = parsedTurnoBoot;
+        atualizarUITurnoAtivo();
+      }
+    }
+  } catch (eTurnoBoot) {}
   function toggleUserPopover(e) {
     if (e) e.stopPropagation();
     var popover = document.getElementById('user-popover');
@@ -74,7 +305,7 @@
     var isHidden = popover.hasAttribute('hidden');
     if (isHidden) {
       popover.removeAttribute('hidden');
-      atualizarTimerLogin();
+      atualizarUITurnoAtivo();
     } else {
       popover.setAttribute('hidden', '');
     }
@@ -91,12 +322,10 @@
   });
   var pageMap = {
     recebimento:  { page:'page-recebimento',  title:'Recebimento de Materiais',                 chip:'Registro patrimonial e anexo de fotos/vídeos' },
-    recebimento1: { page:'page-recebimento',  title:'Recebimento de Materiais',                 chip:'Registro patrimonial e anexo de fotos/vídeos' },
-    recebimento2: { page:'page-recebimento',  title:'Recebimento de Materiais',                 chip:'Registro patrimonial e anexo de fotos/vídeos' },
-    dashboard:    { page:'page-dashboard',    title:'Ocorrências',                              chip: function() { return 'Logado há: ' + getTempoLogadoStr(); } },
+    dashboard:    { page:'page-dashboard',    title:'Ocorrências',                              chip:'Gestão e acompanhamento de ocorrências' },
     checklist:    { page:'page-checklist',    title:'Rotinas & Lembretes',                      chip:'Monitoramento preventivo e rotinas do turno' },
     ctrs:         { page:'page-ctrs',         title:'Relatório de Transmissões',                chip:'Preencher após cada jornal' },
-    arquivados:   { page:'page-arquivados',   title:'Ocorrências Arquivadas',                   chip:'Verificação e acompanhamento do próximo turno' },
+    arquivados:   { page:'page-arquivados',   title:'Em Observação — Monitoramento Pós-Reparo', chip:'Validação de estabilidade entre turnos' },
     historico:    { page:'page-historico',    title:'Histórico Geral de Registros',             chip:'Ocorrências, Relatórios e Recebimentos' },
     lixeira:      { page:'page-lixeira',      title:'Lixeira',                                  chip:'Itens excluídos retidos por 7 dias' },
     resolvidas:   { page:'page-resolvidas',   title:'Dashboard Ocorrências — Resolução & Desempenho (Power BI)', chip:'Dashboard de Métricas e Indicadores' },
@@ -119,7 +348,6 @@
     document.getElementById('page-chip').textContent  = chipText;
     if (el) el.classList.add('active');
     if (name === 'config') {
-      try { carregarCredenciaisSupabaseConfig(); } catch(e) {}
       try { if (typeof atualizarUIStatusBancoConfig === 'function') atualizarUIStatusBancoConfig(); } catch(e) {}
     }
     if (name === 'ctrs' || name === 'relatorio') {
@@ -245,8 +473,6 @@
     }
     var cfgPraca = document.getElementById('cfg-praca');
     if (cfgPraca) cfgPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
-    var identPraca = document.getElementById('ident-operador-praca');
-    if (identPraca) identPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
     var ctrsPraca = document.getElementById('ctrs-praca');
     if (ctrsPraca) ctrsPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
     var reqPraca = document.getElementById('req-praca');

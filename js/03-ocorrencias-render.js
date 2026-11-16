@@ -128,7 +128,9 @@
         tagsHTML += '<span class="tag" style="background:#F8FAFC;color:#475569;border:1px solid #E2E8F0;font-weight:600;">Nova</span>';
       }
       (oc.tags || []).forEach(function(t) {
-        if (t !== 'Nova' && t !== 'Atrasada' && t !== 'Turno anterior' && t !== 'Parcialmente Resolvida' && t !== 'Só para você' && t !== 'Dia Anterior') {
+        if (t === 'Reincidente') {
+          tagsHTML += '<span class="tag tag-r" style="font-weight:700;display:inline-flex;align-items:center;gap:3px;"><i data-lucide="rotate-ccw" style="width:11px;height:11px;stroke-width:2.4;"></i>Reincidente</span>';
+        } else if (t !== 'Nova' && t !== 'Atrasada' && t !== 'Turno anterior' && t !== 'Parcialmente Resolvida' && t !== 'Só para você' && t !== 'Dia Anterior' && t !== 'Em Observação' && t !== 'Arquivada') {
           tagsHTML += '<span class="tag tag-y">' + escapeHTML(t) + '</span>';
         }
       });

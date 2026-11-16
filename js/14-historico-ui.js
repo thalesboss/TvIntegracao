@@ -37,32 +37,72 @@
     }
     function renderCardHistoricoHTML(item) {
       var eMeu = isItemDoUsuario(item);
-      var isParcial = (item.status === 'Parcialmente resolvido') ||
+      var stItemLow = String(item.status || '').toLowerCase();
+      var isReaberta = (item.tipo === 'ocorrencia') && (
+        stItemLow.indexOf('reaberta') !== -1 ||
+        stItemLow === 'aberta' ||
+        (stItemLow.indexOf('reincidente') !== -1 && stItemLow.indexOf('resolvido') === -1)
+      );
+      var isParcial = !isReaberta && (
+                      (item.status === 'Parcialmente resolvido') ||
                       (item.status === 'Parcialmente Resolvida') ||
                       (item.subtipo && String(item.subtipo).toLowerCase().includes('parcial')) ||
                       (item.tags && item.tags.indexOf('Parcialmente Resolvida') !== -1) ||
-                      (item.descResolucao && String(item.descResolucao).toLowerCase().includes('parcialmente resolvido'));
-      var isArquivado = (item.status === 'Resolvida e Arquivada') ||
+                      (item.descResolucao && String(item.descResolucao).toLowerCase().includes('parcialmente resolvido'))
+      );
+      var isArquivado = !isReaberta && (
+                        (item.status === 'Em Observação') ||
+                        (item.status === 'Resolvida e Arquivada') ||
                         (item.status === 'arquivada') ||
-                        (item.tags && item.tags.indexOf('Arquivada') !== -1);
+                        (item.tags && (item.tags.indexOf('Em Observação') !== -1 || item.tags.indexOf('Arquivada') !== -1))
+      );
+      var isValidadaPosReparo = !isReaberta && !isArquivado && (
+        stItemLow.indexOf('validado') !== -1 ||
+        (item.tags && item.tags.indexOf('Validada Pós-Reparo') !== -1) ||
+        !!item.concluidoObservacaoPor
+      );
       var tagMeu = eMeu ? '<span class="tag tag-ind">Seu Registro / Resolução</span>' : '';
       var tagTipo = getTagTipoBadge(item);
-      if (isParcial) {
-        tagTipo += ' <span class="tag tag-y" style="font-weight:600;">Parcialmente Resolvida</span>';
-      }
-      if (isArquivado) {
-        tagTipo += ' <span class="tag tag-gray-soft" style="font-weight:600;">Arquivado</span>';
+      if (item.tipo === 'relatorio') {
+        if (item.status) {
+          var isNCRel = String(item.status).toLowerCase().indexOf('não conform') !== -1;
+          tagTipo += ' <span class="tag ' + (isNCRel ? 'tag-y' : 'tag-g') + '" style="font-weight:600;display:inline-flex;align-items:center;gap:3px;"><i data-lucide="' + (isNCRel ? 'alert-triangle' : 'check-circle-2') + '" style="width:11px;height:11px;stroke-width:2.2;"></i>' + escapeHTML(item.status) + '</span>';
+        }
+      } else if (item.tipo === 'ocorrencia') {
+        if (isReaberta) {
+          tagTipo += ' <span class="tag tag-r" style="font-weight:600;display:inline-flex;align-items:center;gap:3px;"><i data-lucide="alert-triangle" style="width:11px;height:11px;stroke-width:2.2;"></i>Reaberta (Reincidente)</span>';
+        } else if (isParcial) {
+          tagTipo += ' <span class="tag tag-y" style="font-weight:600;">Parcialmente Resolvida</span>';
+        } else if (isArquivado) {
+          tagTipo += ' <span class="tag tag-ind" style="font-weight:600;display:inline-flex;align-items:center;gap:3px;"><i data-lucide="eye" style="width:11px;height:11px;stroke-width:2.2;"></i>Em Observação</span>';
+        } else if (isValidadaPosReparo) {
+          tagTipo += ' <span class="tag tag-g" style="font-weight:600;display:inline-flex;align-items:center;gap:3px;"><i data-lucide="shield-check" style="width:11px;height:11px;stroke-width:2.2;"></i>Validada Pós-Reparo</span>';
+        } else {
+          tagTipo += ' <span class="tag tag-g" style="font-weight:600;display:inline-flex;align-items:center;gap:3px;"><i data-lucide="check-circle-2" style="width:11px;height:11px;stroke-width:2.2;"></i>Resolvida</span>';
+        }
       }
       var isSel = (itemHistoricoSelecionado && itemHistoricoSelecionado.id === item.id);
       var cardClasses = 'oc-card';
-      if (isParcial) {
-        cardClasses += ' parcialmente-resolvida';
+      var plClass = 'pl-g';
+      if (item.tipo === 'relatorio') {
+        cardClasses += ' hist-card-rel';
+        plClass = 'pl-b';
+      } else if (item.tipo === 'recebimento') {
+        cardClasses += ' hist-card-rec';
+        plClass = 'pl-y';
+      } else if (isReaberta) {
+        cardClasses += ' hist-card-oc-aberta';
+        plClass = 'pl-r';
       } else if (isArquivado) {
-        cardClasses += ' arquivada';
-      } else if (eMeu) {
-        cardClasses += ' mine';
+        cardClasses += ' hist-card-oc-obs';
+        plClass = 'pl-ind';
+      } else if (isParcial) {
+        cardClasses += ' hist-card-oc-parc';
+        plClass = 'pl-y';
+      } else {
+        cardClasses += ' hist-card-oc-res';
+        plClass = 'pl-g';
       }
-      var plClass = isArquivado ? 'pl-gray' : (isParcial ? 'pl-y' : (item.tipo==='ocorrencia'?'pl-r':item.tipo==='relatorio'?'pl-g':'pl-y'));
       var isRelatorioCTRS = (item.tipo === 'relatorio') && (
         item.subtipo === 'CTRS Transmissão' ||
         item.subtipo === 'Relatório Transmissão' ||
@@ -74,21 +114,54 @@
       var textoRes = String(textoResRaw).replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim();
       if (isRelatorioCTRS) {
         resolucaoBox =
-          '<div style="margin-top:8px;padding:7px 11px;background:#EFF6FF;border:1px solid #BFDBFE;border-left:3px solid #0071E3;border-radius:6px;font-size:11.5px;color:#1E3A8A;display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
+          '<div style="margin-top:8px;padding:7px 11px;background:#FFFFFF;border:1px solid #93C5FD;border-left:3px solid #0071E3;border-radius:6px;font-size:11.5px;color:#1E3A8A;display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
             '<span style="display:inline-flex;align-items:center;gap:6px;font-weight:700;">' +
               '<i data-lucide="file-text" style="width:13px;height:13px;color:#0071E3;"></i>' +
               'Formulário CTRS — Clique para abrir a visualização completa do relatório' +
             '</span>' +
-            '<span style="font-size:11px;font-weight:700;color:#0071E3;white-space:nowrap;">👁️ Ver Preview →</span>' +
+            '<span style="font-size:11px;font-weight:700;color:#0071E3;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;"><i data-lucide="eye" style="width:12px;height:12px;"></i>Ver Preview</span>' +
           '</div>';
       } else if (textoRes) {
+        var resBoxBorda = isReaberta ? '#EF4444' : (isArquivado ? '#4F46E5' : (isParcial ? '#F59E0B' : 'var(--green)'));
+        var resBoxTituloCor = isReaberta ? '#B91C1C' : (isArquivado ? '#3730A3' : (isParcial ? '#B45309' : 'var(--green-dk)'));
         resolucaoBox =
-          '<div style="margin-top:6px;padding:6px 10px;background:rgba(16,185,129,0.06);border-left:2.5px solid var(--green);border-radius:4px;font-size:11.5px;color:var(--txt2);line-height:1.4;">' +
-            '<strong style="color:var(--green-dk);display:flex;align-items:center;gap:4px;font-size:11px;margin-bottom:2px;">' +
+          '<div style="margin-top:6px;padding:6px 10px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.06);border-left:3px solid ' + resBoxBorda + ';border-radius:6px;font-size:11.5px;color:var(--txt2);line-height:1.4;">' +
+            '<strong style="color:' + resBoxTituloCor + ';display:flex;align-items:center;gap:4px;font-size:11px;margin-bottom:2px;">' +
               '<i data-lucide="check-circle-2" style="width:11px;height:11px;"></i> Resolução / Fechamento:' +
             '</strong>' +
             '<span style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + escapeHTML(textoRes) + '</span>' +
           '</div>';
+      }
+      var observacaoLogsHTML = '';
+      if (item.tipo === 'ocorrencia') {
+        var valsTurno = Array.isArray(item.validacoesTurno) ? item.validacoesTurno : [];
+        var reincArr = Array.isArray(item.reincidencias) ? item.reincidencias : [];
+        if (valsTurno.length > 0 || item.concluidoObservacaoPor || reincArr.length > 0) {
+          observacaoLogsHTML = '<div style="margin-top:6px;display:flex;flex-direction:column;gap:4px;">';
+          valsTurno.forEach(function(v) {
+            var turnoHistTxt = v.turno ? (' (' + escapeHTML(v.turno) + ')') : '';
+            observacaoLogsHTML +=
+              '<div style="font-size:11px;color:#047857;background:#FFFFFF;border:1px solid #A7F3D0;border-left:3px solid #10B981;border-radius:6px;padding:4px 8px;display:flex;align-items:center;gap:5px;">' +
+                '<i data-lucide="shield-check" style="width:12px;height:12px;stroke-width:2.3;flex-shrink:0;"></i>' +
+                '<span>Avaliado no turno' + turnoHistTxt + ' por <strong>' + escapeHTML(v.operador || 'Operador') + '</strong> (' + escapeHTML(v.dataHora || '') + ')</span>' +
+              '</div>';
+          });
+          if (item.concluidoObservacaoPor) {
+            observacaoLogsHTML +=
+              '<div style="font-size:11px;color:#065F46;background:#ECFDF5;border:1px solid #6EE7B7;border-left:3px solid #059669;border-radius:6px;padding:4px 8px;display:flex;align-items:center;gap:5px;">' +
+                '<i data-lucide="check-circle-2" style="width:12px;height:12px;stroke-width:2.3;flex-shrink:0;"></i>' +
+                '<span>Observação concluída definitivamente por <strong>' + escapeHTML(item.concluidoObservacaoPor) + '</strong> (' + escapeHTML(item.concluidoObservacaoEm || '') + ')</span>' +
+              '</div>';
+          }
+          reincArr.forEach(function(rc) {
+            observacaoLogsHTML +=
+              '<div style="font-size:11px;color:#B91C1C;background:#FFFFFF;border:1px solid #FECACA;border-left:3px solid #EF4444;border-radius:6px;padding:4px 8px;display:flex;align-items:center;gap:5px;">' +
+                '<i data-lucide="alert-triangle" style="width:12px;height:12px;stroke-width:2.3;flex-shrink:0;"></i>' +
+                '<span>Voltou a falhar por <strong>' + escapeHTML(rc.operador || 'Operador') + '</strong> (' + escapeHTML(rc.dataHora || '') + '): ' + escapeHTML(rc.motivo || '') + '</span>' +
+              '</div>';
+          });
+          observacaoLogsHTML += '</div>';
+        }
       }
       var metaFooterHTML = isRelatorioCTRS
         ? (
@@ -110,6 +183,7 @@
             '<div class="oc-header"><h3>' + escapeHTML(item.titulo || 'Sem título') + '</h3>' + tagTipo + tagMeu + '</div>' +
             '<p class="oc-desc" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + escapeHTML(String(item.descCriacao || item.desc || 'Sem descrição').replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim()) + '</p>' +
             resolucaoBox +
+            observacaoLogsHTML +
             '<div class="oc-meta" style="margin-top:8px;gap:14px;flex-wrap:wrap;display:flex;align-items:center;font-size:11.5px;">' +
               metaFooterHTML +
             '</div>' +
@@ -145,7 +219,7 @@
           criadoPor:     (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual()),
           resp:          (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
           descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
-          status:        (oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : (oc.status === 'arquivada' ? 'Resolvida e Arquivada' : 'Resolvido'),
+          status:        (oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : (oc.status === 'arquivada' ? 'Em Observação' : 'Resolvido'),
           dataResolucao: (oc.resolucao && oc.resolucao.data) ? formatDataHoraLocal(oc.resolucao.data) : formatDataHoraLocal(),
           resolvidoPor:  (oc.resolucao && oc.resolucao.resolvidoPor) ? oc.resolucao.resolvidoPor : getUsuarioAtual(),
           descResolucao: (oc.resolucao && oc.resolucao.descRes) ? oc.resolucao.descRes : (oc.desc || 'Ocorrência resolvida pela equipe técnica.'),
@@ -300,17 +374,23 @@
         '</div>';
     } else {
       html += relacionados.slice(0, 6).map(function(rel) {
-        var eMeu = isItemDoUsuario(rel);
-        var statusTexto = rel.status || (rel.resolucao && rel.resolucao.statusRes) || 'Resolvido';
+        var stRel = obterEstiloSemanticoHistoricoItem(rel);
+        var statusTexto = rel.status || (rel.resolucao && rel.resolucao.statusRes) || stRel.statusLabel;
         var dataFmt = (rel.dataResolucao || rel.dataCriacao || '').substring(0, 10);
         var respFmt = rel.resolvidoPor || rel.criadoPor || 'Sistema';
+        var tipoMiniBadge = rel.tipo === 'relatorio'
+          ? '<span style="font-size:9px;font-weight:700;color:#1D4ED8;background:#DBEAFE;border:1px solid #93C5FD;padding:1px 6px;border-radius:999px;white-space:nowrap;">Relatório</span>'
+          : (rel.tipo === 'recebimento'
+              ? '<span style="font-size:9px;font-weight:700;color:#B45309;background:#FEF3C7;border:1px solid #FDE68A;padding:1px 6px;border-radius:999px;white-space:nowrap;">Recebimento</span>'
+              : '<span style="font-size:9px;font-weight:700;color:#B91C1C;background:#FEE2E2;border:1px solid #FECACA;padding:1px 6px;border-radius:999px;white-space:nowrap;">Ocorrência</span>');
         return (
-          '<div class="mini-oc' + (eMeu ? ' mine' : '') + '" onclick="verDetalhesHistorico(\'' + rel.id + '\')" style="margin-bottom:8px;padding:10px 12px;border-radius:var(--r-md);border:1px solid var(--border-lt);background:var(--surface);cursor:pointer;transition:all 0.15s ease;" onmouseover="this.style.borderColor=\'var(--blue)\';this.style.boxShadow=\'0 2px 8px rgba(0,113,227,0.08)\';" onmouseout="this.style.borderColor=\'var(--border-lt)\';this.style.boxShadow=\'none\';">' +
+          '<div class="mini-oc" onclick="verDetalhesHistorico(\'' + rel.id + '\')" style="margin-bottom:8px;padding:10px 12px;border-radius:var(--r-md);border:1px solid ' + stRel.border + ';border-left:3.5px solid ' + stRel.left + ';background:' + stRel.bg + ';cursor:pointer;transition:all 0.15s ease;" onmouseover="this.style.borderColor=\'' + stRel.hover + '\';this.style.boxShadow=\'0 2px 8px rgba(0,113,227,0.10)\';" onmouseout="this.style.borderColor=\'' + stRel.border + '\';this.style.boxShadow=\'none\';">' +
             '<div class="mini-top" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px;">' +
-              '<span class="mini-title" style="font-weight:600;font-size:12px;color:var(--txt);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;">' + escapeHTML(rel.titulo || '') + '</span>' +
-              '<span class="tag tag-g" style="font-size:9.5px;padding:1px 6px;white-space:nowrap;">' + escapeHTML(statusTexto) + '</span>' +
+              tipoMiniBadge +
+              '<span class="tag ' + stRel.tagCls + '" style="font-size:9.5px;padding:1px 6px;white-space:nowrap;">' + escapeHTML(statusTexto) + '</span>' +
             '</div>' +
-            '<div style="font-size:11px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;margin-top:4px;">' +
+            '<div class="mini-title" style="font-weight:700;font-size:12px;color:' + stRel.tituloColor + ';display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:4px;">' + escapeHTML(rel.titulo || '') + '</div>' +
+            '<div style="font-size:10.5px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;">' +
               '<span><i data-lucide="calendar" style="width:10px;height:10px;vertical-align:-1px;"></i> ' + escapeHTML(dataFmt) + '</span>' +
               '<span>Por: ' + escapeHTML(respFmt) + '</span>' +
             '</div>' +
@@ -364,7 +444,7 @@
             criadoPor:     (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual()),
             resp:          (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
             descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
-            status:        (oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : (oc.status === 'arquivada' ? 'Resolvida e Arquivada' : 'Resolvido'),
+            status:        (oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : (oc.status === 'arquivada' ? 'Em Observação' : 'Resolvido'),
             dataResolucao: resFmt,
             resolvidoPor:  resPor,
             descResolucao: resDesc,
@@ -377,7 +457,7 @@
     }
     if (!item) return;
     itemDetalhesAtual = item;
-    var targetOcId = (item.id || '').replace(/^h_oc_/, '');
+    var targetOcId = item.ocId || (item.id || '').replace(/^h_oc_/, '');
     var ocFound = ocorrencias.find(function(o){
       if (!o || !o.id) return false;
       return o.id === item.id || o.id === targetOcId || ('h_oc_' + o.id) === item.id;
@@ -402,8 +482,9 @@
     var modalBody  = document.getElementById('hist-det-body');
     if (modalTitle) modalTitle.textContent = item.titulo;
     if (modalTags) {
+      var stDet = obterEstiloSemanticoHistoricoItem(item);
       var tagMeu = isItemDoUsuario(item) ? '<span class="tag tag-ind">Seu Registro / Resolução</span>' : '';
-      modalTags.innerHTML = getTagTipoBadge(item) + ' <span class="tag tag-g">' + escapeHTML(statusFinal) + '</span> ' + tagMeu;
+      modalTags.innerHTML = getTagTipoBadge(item) + ' <span class="tag ' + stDet.tagCls + '">' + escapeHTML(statusFinal) + '</span> ' + tagMeu;
     }
     var anexos = (item.anexos && Array.isArray(item.anexos) && item.anexos.length > 0)
       ? item.anexos
@@ -617,6 +698,21 @@
               '</div>';
           }
         }
+        var valsObsDet = Array.isArray(item.validacoesTurno)
+          ? item.validacoesTurno
+          : ((ocFound && ocFound.resolucao && Array.isArray(ocFound.resolucao.validacoesTurno)) ? ocFound.resolucao.validacoesTurno : []);
+        var concObsPorDet = item.concluidoObservacaoPor || (ocFound && ocFound.resolucao && ocFound.resolucao.concluidoObservacaoPor) || '';
+        var concObsEmDet = item.concluidoObservacaoEm || (ocFound && ocFound.resolucao && ocFound.resolucao.concluidoObservacaoEm) || '';
+        var obsDetHTML = '';
+        if (valsObsDet.length > 0 || concObsPorDet) {
+          obsDetHTML = '<div style="margin-top:10px;display:flex;flex-direction:column;gap:5px;">' +
+            valsObsDet.map(function(v) {
+              var turnoDetTxt = v.turno ? (' [' + escapeHTML(v.turno) + ']') : '';
+              return '<div style="font-size:11.5px;color:#047857;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:6px;padding:6px 10px;display:flex;align-items:center;gap:6px;"><i data-lucide="shield-check" style="width:13px;height:13px;flex-shrink:0;"></i><span>Avaliado no turno' + turnoDetTxt + ' por <strong>' + escapeHTML(v.operador || 'Operador') + '</strong> (' + escapeHTML(v.dataHora || '') + ')</span></div>';
+            }).join('') +
+            (concObsPorDet ? '<div style="font-size:11.5px;color:#065F46;background:#D1FAE5;border:1px solid #6EE7B7;border-radius:6px;padding:6px 10px;display:flex;align-items:center;gap:6px;"><i data-lucide="check-circle-2" style="width:13px;height:13px;flex-shrink:0;"></i><span>Observação concluída definitivamente por <strong>' + escapeHTML(concObsPorDet) + '</strong> (' + escapeHTML(concObsEmDet) + ')</span></div>' : '') +
+          '</div>';
+        }
         modalBody.innerHTML =
           '<div class="form-card" style="margin-bottom:12px;background:var(--bg);border:1px solid var(--border-lt);">' +
             '<h4 style="font-size:12.5px;font-weight:700;color:var(--txt);margin-bottom:8px;display:flex;align-items:center;gap:6px;">' +
@@ -653,6 +749,7 @@
               '<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:var(--r-md);border:1px solid var(--border-lt);overflow-wrap:anywhere;word-break:break-word;">' +
                 '<strong>O que foi realizado:</strong><br/>' + (typeof formatarTextoComLinks === 'function' ? formatarTextoComLinks(descRes, false) : escapeHTML(descRes)) +
               '</div>' +
+              obsDetHTML +
             '</div>' +
           '</div>';
       }
@@ -690,7 +787,7 @@
           criadoPor:     (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual()),
           resp:          (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
           descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
-          status:        (oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : (oc.status === 'arquivada' ? 'Resolvida e Arquivada' : 'Resolvido'),
+          status:        (oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : (oc.status === 'arquivada' ? 'Em Observação' : 'Resolvido'),
           dataResolucao: resFmt,
           resolvidoPor:  resPor,
           descResolucao: resDesc,

@@ -8,6 +8,13 @@ function abrirPopup(id) {
   if ((id === 'popup-nova-oc' || id === 'popup-editar-oc') && typeof atualizarSelectEquipamentosNovaOc === 'function') {
     atualizarSelectEquipamentosNovaOc();
   }
+  if (id === 'popup-entrada' && typeof inicializarSeletorTurnoEntrada === 'function') {
+    inicializarSeletorTurnoEntrada();
+  }
+  if (typeof atualizarTodosGlidersPills === 'function') {
+    requestAnimationFrame(function() { atualizarTodosGlidersPills(false); });
+    setTimeout(function() { atualizarTodosGlidersPills(false); }, 40);
+  }
 }
 function fecharPopup(id) {
   var el = document.getElementById(id);
@@ -40,8 +47,8 @@ function iniciarSessao() {
     pop.style.setProperty('display', 'none', 'important');
     pop.style.pointerEvents = 'none';
   }
-  if (typeof atualizarTimerLogin === 'function') {
-    atualizarTimerLogin();
+  if (typeof salvarTurnoSessaoAtual === 'function') {
+    salvarTurnoSessaoAtual();
   }
   if (typeof lucide !== 'undefined') {
     lucide.createIcons();

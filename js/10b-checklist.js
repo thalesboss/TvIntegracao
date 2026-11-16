@@ -110,8 +110,6 @@
       var concU = pessoalItems.filter(function(i){ return i.concluido; }).length;
       bPessoal.textContent = concU + '/' + pessoalItems.length;
     }
-    var listPadraoEl = document.getElementById('reminders-list-padrao');
-    var listPessoalEl = document.getElementById('reminders-list-pessoal');
     function renderizarLista(itens, targetEl, emptyMsg) {
       if (!targetEl) return;
       var filtrados = itens.filter(function(it) {
@@ -316,21 +314,6 @@
     }
   }
   window.removerItemChecklist = removerItemChecklist;
-  function reiniciarRotinaDiaria() {
-    if (!confirm('Deseja reiniciar a rotina diária para o início de um novo turno? Os itens padrão serão desmarcados.')) {
-      return;
-    }
-    checklistItems.forEach(function(it) {
-      it.concluido = false;
-      it.concluidoEm = null;
-    });
-    salvarChecklistStore();
-    renderChecklist();
-    if (typeof mostrarToast === 'function') {
-      mostrarToast('Rotina Reiniciada', 'O checklist está pronto para o novo turno.', 'info');
-    }
-  }
-  window.reiniciarRotinaDiaria = reiniciarRotinaDiaria;
   function criarOcorrenciaDoChecklist(id) {
     var item = checklistItems.find(function(it) { return it.id === id; });
     if (!item) return;
@@ -381,18 +364,6 @@
   }
   window.criarOcorrenciaDoChecklist = criarOcorrenciaDoChecklist;
   var operadoresMap = {}; // nome -> id (UUID)
-  function getDBCredentials() {
-    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
-    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
-    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
-      url = window.ENV_CONFIG.SUPABASE_URL;
-    }
-    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
-      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
-    }
-    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
-  }
-  window.getDBCredentials = getDBCredentials;
   function carregarOperadoresSugeridos() {
     var datalist = document.getElementById('lista-operadores-sugeridos');
     var db = getDBCredentials();

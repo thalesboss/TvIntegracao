@@ -8,10 +8,6 @@
   var orcamentoSeedData = [];
   var filtroOrcamentoAtivo = 'todos';
   var ORCAMENTO_STORAGE_KEY = 'tv_orcamento_seed_v2';
-  function getOrcamentoDBCredentials() {
-    if (typeof getDBCredentials === 'function') return getDBCredentials();
-    return { url: '', key: '' };
-  }
   function filtrarOrcamentoTipo(tipo, btn) {
     filtroOrcamentoAtivo = tipo || 'todos';
     if (btn && btn.closest('.pills')) {
@@ -24,46 +20,22 @@
   function formatarMoeda(val) {
     return 'R$ ' + Number(val || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
-  function limparDescricao(desc, id) {
-    if (!desc || typeof desc !== 'string') {
-      if (id === 'orc_init_1') return 'Aquisição de Switcher de Vídeo SDI 12G 4K';
-      if (id === 'orc_init_2') return 'Manutenção Preventiva de Geradores e Nobreaks';
-      return '';
-    }
+  function limparDescricao(desc) {
+    if (!desc || typeof desc !== 'string') return '';
     var trimmed = desc.trim();
-    if (trimmed.toLowerCase() === 'undefined' || trimmed.toLowerCase() === 'null') {
-      if (id === 'orc_init_1') return 'Aquisição de Switcher de Vídeo SDI 12G 4K';
-      if (id === 'orc_init_2') return 'Manutenção Preventiva de Geradores e Nobreaks';
-      return '';
-    }
+    if (trimmed.toLowerCase() === 'undefined' || trimmed.toLowerCase() === 'null') return '';
     return trimmed;
   }
-  function limparPrioridade(prio, id) {
-    if (!prio || typeof prio !== 'string') {
-      if (id === 'orc_init_1') return 'Alta';
-      if (id === 'orc_init_2') return 'Média';
-      return 'Média';
-    }
+  function limparPrioridade(prio) {
+    if (!prio || typeof prio !== 'string') return 'Média';
     var trimmed = prio.trim();
-    if (trimmed.toLowerCase() === 'undefined' || trimmed.toLowerCase() === 'null' || !trimmed) {
-      if (id === 'orc_init_1') return 'Alta';
-      if (id === 'orc_init_2') return 'Média';
-      return 'Média';
-    }
+    if (trimmed.toLowerCase() === 'undefined' || trimmed.toLowerCase() === 'null' || !trimmed) return 'Média';
     return trimmed;
   }
-  function limparJustificativa(just, id) {
-    if (!just || typeof just !== 'string') {
-      if (id === 'orc_init_1') return 'Modernização do controle mestre e suporte a sinais HD/4K de alta taxa de quadros.';
-      if (id === 'orc_init_2') return 'Contrato de revisão trimestral das baterias e banco de carga da torre de transmissão.';
-      return '';
-    }
+  function limparJustificativa(just) {
+    if (!just || typeof just !== 'string') return '';
     var trimmed = just.trim();
-    if (trimmed.toLowerCase() === 'undefined' || trimmed.toLowerCase() === 'null') {
-      if (id === 'orc_init_1') return 'Modernização do controle mestre e suporte a sinais HD/4K de alta taxa de quadros.';
-      if (id === 'orc_init_2') return 'Contrato de revisão trimestral das baterias e banco de carga da torre de transmissão.';
-      return '';
-    }
+    if (trimmed.toLowerCase() === 'undefined' || trimmed.toLowerCase() === 'null') return '';
     return trimmed;
   }
   function limparPraca(praca) {
@@ -418,7 +390,7 @@
   }
   window.carregarOrcamentoStore = carregarOrcamentoStore;
   function sincronizarOrcamentoNuvem() {
-    var db = getOrcamentoDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key) return;
     var endpoint = db.url + '/rest/v1/orcamentos?select=*&order=id.asc';
     fetch(endpoint, {
@@ -471,7 +443,7 @@
   }
   window.sincronizarOrcamentoNuvem = sincronizarOrcamentoNuvem;
   function salvarItemOrcamentoNuvem(item) {
-    var db = getOrcamentoDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key) return;
     var cleanDesc = limparDescricao(item.desc || item.descricao, item.id);
     var cleanPrio = limparPrioridade(item.prio || item.prioridade, item.id);
@@ -518,7 +490,7 @@
   }
   window.salvarItemOrcamentoNuvem = salvarItemOrcamentoNuvem;
   function excluirItemOrcamentoNuvem(id) {
-    var db = getOrcamentoDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key || !id) return;
     var endpoint = db.url + '/rest/v1/orcamentos?id=eq.' + encodeURIComponent(id);
     fetch(endpoint, {
@@ -548,7 +520,3 @@
     alert('Plano Orçamentário de ' + anoOrcamento + ' salvo com sucesso no banco de dados!');
   }
   window.salvarOrcamento = salvarOrcamento;
-  function exportarOrcamentoExcel() {
-    alert('Relatório de Orçamento ' + anoOrcamento + ' exportado com sucesso em formato consolidado (CAPEX/OPEX).');
-  }
-  window.exportarOrcamentoExcel = exportarOrcamentoExcel;

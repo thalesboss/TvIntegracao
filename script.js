@@ -8,6 +8,13 @@ function abrirPopup(id) {
   if ((id === 'popup-nova-oc' || id === 'popup-editar-oc') && typeof atualizarSelectEquipamentosNovaOc === 'function') {
     atualizarSelectEquipamentosNovaOc();
   }
+  if (id === 'popup-entrada' && typeof inicializarSeletorTurnoEntrada === 'function') {
+    inicializarSeletorTurnoEntrada();
+  }
+  if (typeof atualizarTodosGlidersPills === 'function') {
+    requestAnimationFrame(function() { atualizarTodosGlidersPills(false); });
+    setTimeout(function() { atualizarTodosGlidersPills(false); }, 40);
+  }
 }
 function fecharPopup(id) {
   var el = document.getElementById(id);
@@ -40,8 +47,8 @@ function iniciarSessao() {
     pop.style.setProperty('display', 'none', 'important');
     pop.style.pointerEvents = 'none';
   }
-  if (typeof atualizarTimerLogin === 'function') {
-    atualizarTimerLogin();
+  if (typeof salvarTurnoSessaoAtual === 'function') {
+    salvarTurnoSessaoAtual();
   }
   if (typeof lucide !== 'undefined') {
     lucide.createIcons();
@@ -88,7 +95,6 @@ document.addEventListener('click', function(e) {
     fecharPopup(e.target.id);
   }
 });
-
 document.addEventListener('DOMContentLoaded', function () {
   var USER_NAME_STORAGE_KEY    = 'tv_user_name_v1';
   var PHOTO_STORAGE_KEY        = 'tv_user_photo_v1';
@@ -312,9 +318,9 @@ document.addEventListener('DOMContentLoaded', function () {
   };
   window.TVCrypto = TVCrypto;
   window.ENCRYPTED_TV_CREDENTIALS = window.ENCRYPTED_TV_CREDENTIALS || (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS) || {
-    salt: '9f6ca6650ad6670436a478d785b65dbd',
-    iv: '289b276d312c24f6a3d6102e',
-    data: '9c1e2b61b20cc9d3596ad6bb98944e2acce2ffeaab2e2e43c669d3a2a6918f761be4d464e984b4255195293aaa0d6cf993381959d332101d0d01bec6a89f08421d11a8e26be003711dd3602b37cad059ef6eefd47bc0615a9b26b050bcc25ca36a98cb18b46541aeb86b07cf32206a4e8699adaa0f8493e124'
+    salt: 'f37eefee9195919adb5b14e12f9bb900',
+    iv: 'b0e029893d4f1f0ee49d624b',
+    data: '8eeb4d7fd875a35c8abad781fcbe3e75f0dd0ed777735a5f79619486690b4a1c48951c48f6f7ee6d277195ada6873a13314618584d00b688c8e4096a39f687d74c7b815644a7e8e01497277b761991442ff16fdf10cf0722b1cfdb621a400ae045bbbfc5131d46e18539a6e2af19c2c8741a8a5bc48860751a'
   };
   function isEstacaoConectadaTV() {
     var u = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
@@ -327,30 +333,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var boxChaveLogin = document.getElementById('ident-box-chave-estacao');
     if (boxChaveLogin) {
       boxChaveLogin.style.display = conectada ? 'none' : 'block';
-    }
-    var group = document.getElementById('ident-chave-group');
-    var label = document.getElementById('ident-chave-label');
-    var hint  = document.getElementById('ident-chave-hint');
-    var input = document.getElementById('ident-chave-acesso');
-    var msg   = document.getElementById('ident-chave-msg');
-    if (!group) return;
-    var conectada = isEstacaoConectadaTV();
-    var pack = window.ENCRYPTED_TV_CREDENTIALS || (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS);
-    if (conectada) {
-      if (label) label.innerHTML = 'Chave de Acesso <span style="font-weight:400;color:var(--muted);font-size:11px;">(Opcional neste computador)</span>';
-      if (hint)  hint.innerHTML  = '';
-      if (input) input.placeholder = 'Deixe em branco para manter a sessão';
-      if (msg)   msg.style.display = 'none';
-    } else if (pack && pack.data) {
-      if (label) label.innerHTML = 'Chave de Acesso *';
-      if (hint)  hint.textContent = 'Senha de acesso';
-      if (input) input.placeholder = 'Digite sua chave de acesso...';
-      if (msg)   msg.style.display = 'none';
-    } else {
-      if (label) label.innerHTML = 'Chave de Acesso <span style="font-weight:400;color:var(--muted);font-size:11px;">(Opcional)</span>';
-      if (hint)  hint.textContent = '';
-      if (input) input.placeholder = 'Digite sua chave ou deixe em branco';
-      if (msg)   msg.style.display = 'none';
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
@@ -376,9 +358,6 @@ document.addEventListener('DOMContentLoaded', function () {
       localStorage.setItem('tv_supabase_url', creds.url);
       localStorage.setItem('tv_supabase_key', creds.key);
       updateCloudStatus(true);
-      if (typeof carregarCredenciaisSupabaseConfig === 'function') {
-        carregarCredenciaisSupabaseConfig();
-      }
       if (typeof DBService.syncRemote === 'function') {
         await DBService.syncRemote(true);
       }
@@ -504,6 +483,11 @@ document.addEventListener('DOMContentLoaded', function () {
       if (item.criadoPor) {
         resObj.criadoPor = item.criadoPor;
       }
+      if (item.equipamento) resObj.equipamento = item.equipamento;
+      if (item.equipamento_id) resObj.equipamento_id = item.equipamento_id;
+      if (item.telejornal) resObj.telejornal = item.telejornal;
+      if (item.ultimaEdicaoPor) resObj.ultimaEdicaoPor = item.ultimaEdicaoPor;
+      if (item.ultimaEdicaoEm) resObj.ultimaEdicaoEm = item.ultimaEdicaoEm;
       return {
         id: item.id,
         titulo: item.titulo,
@@ -1028,9 +1012,9 @@ document.addEventListener('DOMContentLoaded', function () {
       status: o.status || 'aberta',
       criado: o.criado || Date.now(),
       dataCriacao: o.dataCriacao || formatDataHoraLocal(o.criado),
-      equipamento: o.equipamento || null,
-      equipamento_id: o.equipamento_id || '',
-      telejornal: o.telejornal || null,
+      equipamento: o.equipamento || (res && res.equipamento) || null,
+      equipamento_id: o.equipamento_id || (res && res.equipamento_id) || '',
+      telejornal: o.telejornal || (res && res.telejornal) || null,
       historicoEdicoes: Array.isArray(o.historicoEdicoes) ? o.historicoEdicoes : ((res && Array.isArray(res.historicoEdicoes)) ? res.historicoEdicoes : []),
       ultimaEdicaoPor: o.ultimaEdicaoPor || (res && res.ultimaEdicaoPor) || null,
       ultimaEdicaoEm: o.ultimaEdicaoEm || (res && res.ultimaEdicaoEm) || null,
@@ -1066,9 +1050,9 @@ document.addEventListener('DOMContentLoaded', function () {
           }
         } catch (eSync) {}
       } else {
-        var localResolvida = (l.status === 'resolvida' && r.status !== 'resolvida');
+        var localStatusAvancado = ((l.status === 'resolvida' || l.status === 'arquivada') && r.status === 'aberta');
         var editLocalRecente = (l.ultimaEdicaoEm && (!r.ultimaEdicaoEm || l.ultimaEdicaoEm > r.ultimaEdicaoEm));
-        if (localResolvida || editLocalRecente) {
+        if (localStatusAvancado || editLocalRecente) {
           mapa[l.id] = Object.assign({}, r, l);
         }
       }
@@ -1115,7 +1099,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   window.save = save;
-  var INITIAL_OCORRENCIAS_SEED = [];
   var ocorrencias = (function() {
     try {
       var rawCache = localStorage.getItem(OCORRENCIAS_CACHE_KEY);
@@ -1148,7 +1131,6 @@ document.addEventListener('DOMContentLoaded', function () {
   window.getAbertas = getAbertas;
   window.getArquivadas = getArquivadas;
   window.getResolvidas = getResolvidas;
-
   function formatDataHoraLocal(dateInput) {
     var d;
     if (dateInput) {
@@ -1279,7 +1261,9 @@ document.addEventListener('DOMContentLoaded', function () {
         tagsHTML += '<span class="tag" style="background:#F8FAFC;color:#475569;border:1px solid #E2E8F0;font-weight:600;">Nova</span>';
       }
       (oc.tags || []).forEach(function(t) {
-        if (t !== 'Nova' && t !== 'Atrasada' && t !== 'Turno anterior' && t !== 'Parcialmente Resolvida' && t !== 'Só para você' && t !== 'Dia Anterior') {
+        if (t === 'Reincidente') {
+          tagsHTML += '<span class="tag tag-r" style="font-weight:700;display:inline-flex;align-items:center;gap:3px;"><i data-lucide="rotate-ccw" style="width:11px;height:11px;stroke-width:2.4;"></i>Reincidente</span>';
+        } else if (t !== 'Nova' && t !== 'Atrasada' && t !== 'Turno anterior' && t !== 'Parcialmente Resolvida' && t !== 'Só para você' && t !== 'Dia Anterior' && t !== 'Em Observação' && t !== 'Arquivada') {
           tagsHTML += '<span class="tag tag-y">' + escapeHTML(t) + '</span>';
         }
       });
@@ -1438,7 +1422,6 @@ document.addEventListener('DOMContentLoaded', function () {
       abertasHTML +
       resolvidasHTML;
   }
-
   var HISTORICO_LOCAL_STORAGE_KEY = 'tv_historico_seed_v2';
   var historicoSeedData = [];
   try {
@@ -1468,54 +1451,138 @@ document.addEventListener('DOMContentLoaded', function () {
     var mapa = {};
     var lista = [];
     var idsNaLixeira = (lixeiraData || []).map(function(item){ return item.id; });
-    (historicoSeedData || []).forEach(function(item) {
-      if (item && item.id) {
-        if (item.status === 'lixeira' || idsNaLixeira.includes(item.id)) return;
-        if (typeof pertenceAPracaAtiva === 'function' && !pertenceAPracaAtiva(item)) return;
-        mapa[item.id] = true;
-        lista.push(item);
+    var ocPorId = {};
+    var ocPorSig = {};
+    function normSigOc(titulo, desc) {
+      var t = String(titulo || '').trim().toLowerCase();
+      var d = String(desc || '').replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim().toLowerCase();
+      return t + '||' + d;
+    }
+    (ocorrencias || []).forEach(function(oc) {
+      if (!oc || !oc.id) return;
+      if (oc.status === 'lixeira' || idsNaLixeira.includes(oc.id)) return;
+      ocPorId[oc.id] = oc;
+      ocPorId['h_oc_' + oc.id] = oc;
+      var sig = normSigOc(oc.titulo, oc.desc);
+      if (!ocPorSig[sig]) ocPorSig[sig] = [];
+      ocPorSig[sig].push(oc);
+    });
+    function mesclarOcNoItemHist(item, oc) {
+      if (!oc) return item;
+      var res = oc.resolucao || {};
+      var statusMerged = item.status || 'Resolvido';
+      if (oc.status === 'arquivada') {
+        statusMerged = 'Em Observação';
+      } else if (oc.status === 'aberta') {
+        if ((Array.isArray(res.reincidencias) && res.reincidencias.length > 0) || (Array.isArray(oc.tags) && oc.tags.indexOf('Reincidente') !== -1)) {
+          statusMerged = 'Reaberta (Reincidente)';
+        } else if (Array.isArray(oc.tags) && oc.tags.indexOf('Parcialmente Resolvida') !== -1) {
+          statusMerged = 'Parcialmente resolvido';
+        } else if (res.statusRes) {
+          statusMerged = res.statusRes;
+        }
+      } else if (res.statusRes) {
+        statusMerged = res.statusRes;
       }
+      var resFmt = res.data ? formatDataHoraLocal(res.data) : (item.dataResolucao || '');
+      return Object.assign({}, item, {
+        ocId:                    oc.id,
+        titulo:                  oc.titulo || item.titulo,
+        descCriacao:             oc.desc || item.descCriacao,
+        status:                  statusMerged,
+        dataResolucao:           resFmt,
+        resolvidoPor:            res.resolvidoPor || item.resolvidoPor,
+        descResolucao:           res.descRes || item.descResolucao,
+        tags:                    Array.isArray(oc.tags) ? oc.tags : (item.tags || []),
+        historicoEdicoes:        oc.historicoEdicoes || res.historicoEdicoes || item.historicoEdicoes || [],
+        validacoesTurno:         Array.isArray(res.validacoesTurno) ? res.validacoesTurno : (item.validacoesTurno || []),
+        metaHorasObservacao:     res.metaHorasObservacao || item.metaHorasObservacao || 24,
+        inicioObservacao:        res.inicioObservacao || item.inicioObservacao || null,
+        concluidoObservacaoPor:  res.concluidoObservacaoPor || item.concluidoObservacaoPor || '',
+        concluidoObservacaoEm:   res.concluidoObservacaoEm || item.concluidoObservacaoEm || '',
+        reincidencias:           Array.isArray(res.reincidencias) ? res.reincidencias : (item.reincidencias || [])
+      });
+    }
+    (historicoSeedData || []).forEach(function(item) {
+      if (!item || !item.id) return;
+      if (item.status === 'lixeira' || idsNaLixeira.includes(item.id)) return;
+      if (item.ocId && (idsNaLixeira.includes(item.ocId))) return;
+      if (typeof pertenceAPracaAtiva === 'function' && !pertenceAPracaAtiva(item)) return;
+      var ocMatch = null;
+      if (item.tipo === 'ocorrencia') {
+        var cleanId = String(item.id).replace(/^h_oc_/, '');
+        ocMatch = (item.ocId && ocPorId[item.ocId]) || ocPorId[item.id] || ocPorId[cleanId] || null;
+        if (!ocMatch && /^h_oc_\d+$/.test(String(item.id))) {
+          var candidatos = ocPorSig[normSigOc(item.titulo, item.descCriacao)];
+          if (candidatos && candidatos.length > 0) {
+            ocMatch = candidatos.find(function(c) {
+              var resC = (c.resolucao && c.resolucao.descRes) ? String(c.resolucao.descRes).trim() : '';
+              return !item.descResolucao || !resC || resC === String(item.descResolucao).trim();
+            }) || candidatos[0];
+          }
+        }
+      }
+      var canonKey = ocMatch ? ('oc:' + ocMatch.id) : (item.ocId ? ('oc:' + item.ocId) : null);
+      if (mapa[item.id] || (canonKey && mapa[canonKey])) return;
+      if (ocMatch && typeof pertenceAPracaAtiva === 'function' && !pertenceAPracaAtiva(ocMatch)) return;
+      mapa[item.id] = true;
+      if (canonKey) {
+        mapa[canonKey] = true;
+        mapa[canonKey.slice(3)] = true;
+        mapa['h_oc_' + canonKey.slice(3)] = true;
+      }
+      lista.push(ocMatch ? mesclarOcNoItemHist(item, ocMatch) : item);
     });
     (ocorrencias || []).forEach(function(oc) {
       if (!oc || !oc.id) return;
       if (oc.status === 'lixeira' || idsNaLixeira.includes(oc.id)) return;
       if (typeof pertenceAPracaAtiva === 'function' && !pertenceAPracaAtiva(oc)) return;
-      var isResolvidaOuArquivada = (oc.status === 'resolvida' || oc.status === 'arquivada' || (oc.resolucao && oc.resolucao.statusRes));
+      var isResolvidaOuArquivada = (oc.status === 'resolvida' || oc.status === 'arquivada' || (oc.resolucao && (oc.resolucao.statusRes && oc.resolucao.statusRes !== 'Aberta')));
       if (isResolvidaOuArquivada) {
         var histId = 'h_oc_' + oc.id;
-        if (!mapa[oc.id] && !mapa[histId]) {
-          var statusLabel = (oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : (oc.status === 'arquivada' ? 'Resolvida e Arquivada' : 'Resolvido');
+        if (!mapa[oc.id] && !mapa[histId] && !mapa['oc:' + oc.id]) {
+          var res = oc.resolucao || {};
+          var statusLabel = res.statusRes ? res.statusRes : (oc.status === 'arquivada' ? 'Em Observação' : 'Resolvido');
           var nowFmt = formatDataHoraLocal(oc.dataCriacao || oc.criado);
-          var resFmt = (oc.resolucao && oc.resolucao.data) ? formatDataHoraLocal(oc.resolucao.data) : nowFmt;
-          var resPor = (oc.resolucao && oc.resolucao.resolvidoPor) ? oc.resolucao.resolvidoPor : (oc.resp || getUsuarioAtual());
-          var resDesc = (oc.resolucao && oc.resolucao.descRes) ? oc.resolucao.descRes : (oc.desc || 'Ocorrência resolvida pela equipe técnica.');
+          var resFmt = res.data ? formatDataHoraLocal(res.data) : nowFmt;
+          var resPor = res.resolvidoPor || (oc.resp || getUsuarioAtual());
+          var resDesc = res.descRes || (oc.desc || 'Ocorrência resolvida pela equipe técnica.');
           var anexosLista = (oc.anexos && Array.isArray(oc.anexos) && oc.anexos.length > 0)
             ? oc.anexos
-            : ((oc.resolucao && Array.isArray(oc.resolucao.anexos)) ? oc.resolucao.anexos : []);
+            : (Array.isArray(res.anexos) ? res.anexos : []);
           var itemOcHist = {
-            id:            oc.id,
-            tipo:          'ocorrencia',
-            subtipo:       oc.cat || 'Equipamento',
-            titulo:        oc.titulo,
-            equipamento:   oc.equipamento || (oc.tags && oc.tags[1]) || '',
-            categoria:     oc.cat || 'Equipamento',
-            local:         oc.local || (oc.praca || 'Central Técnica'),
-            dataCriacao:   nowFmt,
-            criadoPor:     (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual()),
-            resp:          (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
-            descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
-            status:        statusLabel,
-            dataResolucao: resFmt,
-            resolvidoPor:  resPor,
-            descResolucao: resDesc,
-            tags:          oc.tags || [],
-            anexos:        anexosLista,
-            praca:         (typeof normalizarPracaOcorrencia === 'function')
+            id:                      oc.id,
+            ocId:                    oc.id,
+            tipo:                    'ocorrencia',
+            subtipo:                 oc.cat || 'Equipamento',
+            titulo:                  oc.titulo,
+            equipamento:             oc.equipamento || (oc.tags && oc.tags[1]) || '',
+            categoria:               oc.cat || 'Equipamento',
+            local:                   oc.local || (oc.praca || 'Central Técnica'),
+            dataCriacao:             nowFmt,
+            criadoPor:               (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual()),
+            resp:                    (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
+            descCriacao:             oc.desc || 'Ocorrência registrada no sistema.',
+            status:                  statusLabel,
+            dataResolucao:           resFmt,
+            resolvidoPor:            resPor,
+            descResolucao:           resDesc,
+            historicoEdicoes:        oc.historicoEdicoes || res.historicoEdicoes || [],
+            validacoesTurno:         Array.isArray(res.validacoesTurno) ? res.validacoesTurno : [],
+            metaHorasObservacao:     res.metaHorasObservacao || 24,
+            inicioObservacao:        res.inicioObservacao || null,
+            concluidoObservacaoPor:  res.concluidoObservacaoPor || '',
+            concluidoObservacaoEm:   res.concluidoObservacaoEm || '',
+            reincidencias:           Array.isArray(res.reincidencias) ? res.reincidencias : [],
+            tags:                    oc.tags || [],
+            anexos:                  anexosLista,
+            praca:                   (typeof normalizarPracaOcorrencia === 'function')
               ? normalizarPracaOcorrencia(oc.praca, oc.local, oc.titulo, oc.equipamento || (oc.tags && oc.tags[1]))
               : (oc.praca || 'Juiz de Fora')
           };
           mapa[oc.id] = true;
           mapa[histId] = true;
+          mapa['oc:' + oc.id] = true;
           lista.push(itemOcHist);
         }
       }
@@ -1543,16 +1610,190 @@ document.addEventListener('DOMContentLoaded', function () {
     return criado.includes(usuarioAtual) || resolvido.includes(usuarioAtual);
   }
   function getTagTipoBadge(item) {
-    if (item.tipo === 'ocorrencia') {
-      return '<span class="tag tag-blue-soft">Ocorrência</span>';
-    } else if (item.tipo === 'relatorio') {
-      return '<span class="tag tag-teal-soft">' + escapeHTML(item.subtipo || 'Relatório') + '</span>';
-    } else if (item.tipo === 'recebimento') {
-      return '<span class="tag tag-yellow-soft">' + escapeHTML(item.subtipo || 'Recebimento') + '</span>';
+    if (item && item.tipo === 'ocorrencia') {
+      return '<span class="tag" style="background:#FEE2E2;color:#B91C1C;border:1px solid #FECACA;font-weight:700;display:inline-flex;align-items:center;gap:4px;"><i data-lucide="wrench" style="width:11px;height:11px;stroke-width:2.2;"></i>Ocorrência</span>';
+    } else if (item && item.tipo === 'relatorio') {
+      return '<span class="tag" style="background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;font-weight:700;display:inline-flex;align-items:center;gap:4px;"><i data-lucide="radio" style="width:11px;height:11px;stroke-width:2.2;"></i>' + escapeHTML(item.subtipo || 'Relatório CTRS') + '</span>';
+    } else if (item && item.tipo === 'recebimento') {
+      return '<span class="tag" style="background:#FEF3C7;color:#B45309;border:1px solid #FDE68A;font-weight:700;display:inline-flex;align-items:center;gap:4px;"><i data-lucide="package" style="width:11px;height:11px;stroke-width:2.2;"></i>' + escapeHTML(item.subtipo || 'Recebimento') + '</span>';
     }
     return '<span class="tag tag-blue-soft">Registro</span>';
   }
-
+  function extrairTimestampTimeline(item) {
+    if (!item) return 0;
+    if (typeof item.criado === 'number' && !isNaN(item.criado)) return item.criado;
+    var raw = item.dataResolucao || item.dataCriacao || '';
+    if (typeof raw === 'string' && raw.trim()) {
+      var s = raw.trim();
+      var mBr = s.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
+      if (mBr) {
+        return new Date(Number(mBr[3]), Number(mBr[2]) - 1, Number(mBr[1]), Number(mBr[4] || 0), Number(mBr[5] || 0)).getTime() || 0;
+      }
+      var parsed = new Date(s.replace(' ', 'T')).getTime();
+      if (!isNaN(parsed)) return parsed;
+    }
+    return 0;
+  }
+  function obterEstiloSemanticoHistoricoItem(item) {
+    if (!item) {
+      return { bg: '#FFFFFF', border: 'var(--border-lt)', left: 'var(--border)', hover: 'var(--blue)', tituloColor: 'var(--txt)', tagCls: 'tag-blue-soft', statusLabel: 'Registro', statusIcon: 'file-text' };
+    }
+    if (item.tipo === 'relatorio') {
+      var isNC = item.status && String(item.status).toLowerCase().indexOf('não conform') !== -1;
+      return {
+        bg: '#F0F7FF',
+        border: '#BFDBFE',
+        left: '#0071E3',
+        hover: '#0071E3',
+        tituloColor: '#1E3A8A',
+        tagCls: isNC ? 'tag-y' : 'tag-g',
+        statusLabel: item.status || 'Conforme',
+        statusIcon: isNC ? 'alert-triangle' : 'check-circle-2'
+      };
+    }
+    if (item.tipo === 'recebimento') {
+      return {
+        bg: '#FFFBEB',
+        border: '#FDE68A',
+        left: '#D97706',
+        hover: '#D97706',
+        tituloColor: 'var(--txt)',
+        tagCls: 'tag-y',
+        statusLabel: item.status || 'Recebido',
+        statusIcon: 'package'
+      };
+    }
+    var stLow = String(item.status || (item.resolucao && item.resolucao.statusRes) || '').toLowerCase();
+    var isObs = stLow === 'arquivada' || stLow.indexOf('observa') !== -1 || stLow.indexOf('arquiv') !== -1;
+    var isParc = stLow.indexOf('parcial') !== -1;
+    var isAberta = stLow === 'aberta' || stLow.indexOf('reaberta') !== -1 || stLow.indexOf('reincidente') !== -1;
+    if (isObs) {
+      return { bg: '#EEF2FF', border: '#C7D2FE', left: '#4F46E5', hover: '#4F46E5', tituloColor: '#312E81', tagCls: 'tag-ind', statusLabel: 'Em Observação', statusIcon: 'eye' };
+    }
+    if (isParc) {
+      return { bg: '#FFFBEB', border: '#FDE68A', left: '#F59E0B', hover: '#F59E0B', tituloColor: '#92400E', tagCls: 'tag-y', statusLabel: 'Parcialmente Resolvida', statusIcon: 'clock' };
+    }
+    if (isAberta) {
+      return { bg: '#FEF2F2', border: '#FECACA', left: '#EF4444', hover: '#EF4444', tituloColor: '#991B1B', tagCls: 'tag-r', statusLabel: 'Em Aberto', statusIcon: 'alert-triangle' };
+    }
+    return { bg: '#F0FDF4', border: '#BBF7D0', left: '#10B981', hover: '#10B981', tituloColor: '#14532D', tagCls: 'tag-g', statusLabel: 'Resolvida', statusIcon: 'check-circle-2' };
+  }
+  function atualizarBotoesFiltroTimelineModal(ids, activeFilter, cntTodos, cntOc, cntRel) {
+    if (!ids) return;
+    var elTodos = document.getElementById(ids.cntTodos);
+    var elOc    = document.getElementById(ids.cntOc);
+    var elRel   = document.getElementById(ids.cntRel);
+    if (elTodos) elTodos.textContent = String(cntTodos || 0);
+    if (elOc)    elOc.textContent    = String(cntOc || 0);
+    if (elRel)   elRel.textContent   = String(cntRel || 0);
+    [
+      { id: ids.btnTodos, val: 'todos' },
+      { id: ids.btnOc,    val: 'ocorrencia' },
+      { id: ids.btnRel,   val: 'relatorio' }
+    ].forEach(function(item) {
+      var btn = document.getElementById(item.id);
+      if (!btn) return;
+      if (item.val === activeFilter) btn.classList.add('on');
+      else btn.classList.remove('on');
+    });
+    if (typeof atualizarTodosGlidersPills === 'function') {
+      requestAnimationFrame(function() {
+        atualizarTodosGlidersPills(true);
+      });
+    }
+  }
+  function renderCardsTimelineMistaHTML(ocs, rels, filtro, popupParaFechar, emptyMsg) {
+    var listaOcs = Array.isArray(ocs) ? ocs : [];
+    var listaRels = Array.isArray(rels) ? rels : [];
+    var combinados = [];
+    if (filtro === 'todos' || filtro === 'ocorrencia') {
+      listaOcs.forEach(function(o) {
+        combinados.push({ kind: 'ocorrencia', ts: extrairTimestampTimeline(o), obj: o });
+      });
+    }
+    if (filtro === 'todos' || filtro === 'relatorio') {
+      listaRels.forEach(function(r) {
+        combinados.push({ kind: 'relatorio', ts: extrairTimestampTimeline(r), obj: r });
+      });
+    }
+    if (combinados.length === 0) {
+      var msg = emptyMsg || (
+        filtro === 'ocorrencia'
+          ? 'Nenhuma ocorrência técnica registrada para este item.'
+          : (filtro === 'relatorio'
+              ? 'Nenhum relatório CTRS encontrado para este item.'
+              : 'Nenhuma ocorrência ou relatório registrado para este item no momento.')
+      );
+      return (
+        '<div style="background:#F8FAFC;border:1px dashed var(--border);border-radius:10px;padding:18px 14px;text-align:center;font-size:12px;color:var(--muted);">' +
+          escapeHTML(msg) +
+        '</div>'
+      );
+    }
+    combinados.sort(function(a, b) { return b.ts - a.ts; });
+    return combinados.map(function(entry) {
+      if (entry.kind === 'ocorrencia') {
+        var o = entry.obj;
+        var st = obterEstiloSemanticoHistoricoItem({ tipo: 'ocorrencia', status: o.status, resolucao: o.resolucao });
+        var safeOcId = (typeof sanitizeIdAttr === 'function') ? sanitizeIdAttr(o.id) : escapeHTML(o.id);
+        var descLimpa = String(o.desc || '').replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim();
+        var descResLimpa = (o.resolucao && o.resolucao.descRes)
+          ? String(o.resolucao.descRes).replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim()
+          : '';
+        var solucaoBox = (o.status !== 'aberta' && descResLimpa)
+          ? '<div style="margin-top:6px;padding:6px 10px;background:#FFFFFF;border:1px solid ' + st.border + ';border-left:3px solid ' + st.left + ';border-radius:6px;font-size:11.5px;color:#1E293B;"><strong>Solução aplicada:</strong> ' + escapeHTML(descResLimpa) + '</div>'
+          : '';
+        var temPreviewOc = !!(o.htmlRelatorio || o.dadosCTRS || (o.desc && String(o.desc).indexOf('<!--CTRS_JSON:') !== -1));
+        var previewChip = temPreviewOc
+          ? '<span style="font-size:10.5px;font-weight:700;color:#0071E3;background:#FFFFFF;border:1px solid #BFDBFE;padding:2px 8px;border-radius:10px;display:inline-flex;align-items:center;gap:4px;"><i data-lucide="eye" style="width:11px;height:11px;"></i>Ver Relatório</span>'
+          : '';
+        return (
+          '<div onclick="fecharPopup(\'' + popupParaFechar + '\'); verDetalhesOcorrencia(\'' + safeOcId + '\')" style="background:' + st.bg + ';border:1px solid ' + st.border + ';border-left:4px solid ' + st.left + ';border-radius:8px;padding:10px 13px;cursor:pointer;transition:all .15s ease;" onmouseover="this.style.borderColor=\'' + st.hover + '\';" onmouseout="this.style.borderColor=\'' + st.border + '\';" title="Clique para abrir os detalhes completos desta ocorrência">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
+              '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0;">' +
+                '<span class="tag" style="background:#FEE2E2;color:#B91C1C;border:1px solid #FECACA;font-weight:700;font-size:10px;padding:1px 7px;display:inline-flex;align-items:center;gap:4px;"><i data-lucide="wrench" style="width:10px;height:10px;stroke-width:2.3;"></i>OCORRÊNCIA</span>' +
+                '<strong style="font-size:12.5px;color:' + st.tituloColor + ';">' + escapeHTML(o.titulo || 'Ocorrência Técnica') + '</strong>' +
+              '</div>' +
+              '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">' +
+                previewChip +
+                '<span class="tag ' + st.tagCls + '" style="display:inline-flex;align-items:center;gap:4px;"><i data-lucide="' + st.statusIcon + '" style="width:11px;height:11px;stroke-width:2.2;"></i>' + escapeHTML(st.statusLabel) + '</span>' +
+              '</div>' +
+            '</div>' +
+            (descLimpa ? '<div style="font-size:11.5px;color:var(--txt2);margin-top:5px;line-height:1.45;">' + escapeHTML(descLimpa) + '</div>' : '') +
+            solucaoBox +
+            '<div style="font-size:10.5px;color:var(--muted);margin-top:6px;display:flex;gap:12px;flex-wrap:wrap;">' +
+              '<span style="display:inline-flex;align-items:center;gap:4px;"><i data-lucide="calendar" style="width:11px;height:11px;"></i>' + escapeHTML(o.dataCriacao || '') + '</span>' +
+              '<span style="display:inline-flex;align-items:center;gap:4px;"><i data-lucide="user" style="width:11px;height:11px;"></i>Resp: ' + escapeHTML(o.resp || 'Equipe') + '</span>' +
+            '</div>' +
+          '</div>'
+        );
+      }
+      var r = entry.obj;
+      var stRel = obterEstiloSemanticoHistoricoItem(r);
+      var safeRelId = (typeof sanitizeIdAttr === 'function') ? sanitizeIdAttr(r.id) : escapeHTML(r.id);
+      var descRelLimpa = String(r.descCriacao || '').replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim();
+      var badgeRel = escapeHTML((r.subtipo || 'Relatório CTRS').toUpperCase());
+      return (
+        '<div onclick="fecharPopup(\'' + popupParaFechar + '\'); verDetalhesHistoricoDirect(\'' + safeRelId + '\')" style="background:' + stRel.bg + ';border:1px solid ' + stRel.border + ';border-left:4px solid ' + stRel.left + ';border-radius:8px;padding:10px 13px;cursor:pointer;transition:all .15s ease;" onmouseover="this.style.borderColor=\'' + stRel.hover + '\';" onmouseout="this.style.borderColor=\'' + stRel.border + '\';" title="Clique para abrir a visualização completa do relatório">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
+            '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0;">' +
+              '<span class="tag" style="background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;font-weight:700;font-size:10px;padding:1px 7px;display:inline-flex;align-items:center;gap:4px;"><i data-lucide="radio" style="width:10px;height:10px;stroke-width:2.3;"></i>' + badgeRel + '</span>' +
+              '<strong style="font-size:12.5px;color:' + stRel.tituloColor + ';">' + escapeHTML(r.titulo || 'Relatório de Transmissão') + '</strong>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">' +
+              '<span style="font-size:10.5px;font-weight:700;color:#0071E3;background:#FFFFFF;border:1px solid #93C5FD;padding:2px 8px;border-radius:10px;display:inline-flex;align-items:center;gap:4px;"><i data-lucide="eye" style="width:11px;height:11px;"></i>Ver Relatório</span>' +
+              '<span class="tag ' + stRel.tagCls + '" style="display:inline-flex;align-items:center;gap:4px;"><i data-lucide="' + stRel.statusIcon + '" style="width:11px;height:11px;stroke-width:2.2;"></i>' + escapeHTML(stRel.statusLabel) + '</span>' +
+            '</div>' +
+          '</div>' +
+          (descRelLimpa ? '<div style="font-size:11.5px;color:var(--txt2);margin-top:5px;line-height:1.45;">' + escapeHTML(descRelLimpa) + '</div>' : '') +
+          '<div style="font-size:10.5px;color:var(--muted);margin-top:6px;display:flex;gap:12px;flex-wrap:wrap;">' +
+            '<span style="display:inline-flex;align-items:center;gap:4px;"><i data-lucide="calendar" style="width:11px;height:11px;"></i>' + escapeHTML(r.dataCriacao || '') + '</span>' +
+            '<span style="display:inline-flex;align-items:center;gap:4px;"><i data-lucide="user" style="width:11px;height:11px;"></i>Emitido por: ' + escapeHTML(r.criadoPor || 'Operador') + '</span>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+  }
   var resolvidasFiltro = 'todas';
   function filtrarResolvidas(filtro, el) {
     resolvidasFiltro = filtro;
@@ -1707,11 +1948,12 @@ document.addEventListener('DOMContentLoaded', function () {
     var container = document.getElementById('popup-entrada-pendencias');
     if (!container) return;
     var abertas = getAbertas();
-    if (abertas.length === 0) {
-      container.innerHTML = '<div class="info-item blue"><div class="ii-dot blue"></div><div><strong>Sem Pendências</strong>Nenhuma ocorrência pendente no momento.</div></div>';
+    var emObs = (typeof getArquivadas === 'function') ? getArquivadas() : [];
+    if (abertas.length === 0 && emObs.length === 0) {
+      container.innerHTML = '<div class="info-item blue"><div class="ii-dot blue"></div><div><strong>Sem Pendências</strong>Nenhuma ocorrência pendente ou em observação no momento.</div></div>';
       return;
     }
-    container.innerHTML = abertas.slice(0, 4).map(function(oc) {
+    var htmlAbertas = abertas.slice(0, 4).map(function(oc) {
       var isVencida = isOcorrenciaVencida(oc);
       var corClass = (oc.prio === 'Alta' || isVencida) ? 'red' : 'blue';
       var tagTexto = isVencida ? 'Prazo Expirado' : ((oc.prio || 'Média') + ' Prioridade');
@@ -1725,6 +1967,25 @@ document.addEventListener('DOMContentLoaded', function () {
         '</div>'
       );
     }).join('');
+    var htmlObs = '';
+    if (emObs.length > 0) {
+      htmlObs =
+        '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);">' +
+          '<div style="font-size:11px;font-weight:700;color:#4F46E5;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">👁️ Equipamentos / Sistemas em Observação (' + emObs.length + ')</div>' +
+          emObs.slice(0, 3).map(function(oc) {
+            return (
+              '<div class="info-item" style="background:#EEF2FF;border:1px solid #C7D2FE;border-radius:8px;padding:7px 10px;margin-bottom:5px;">' +
+                '<div class="ii-dot" style="background:#4F46E5;"></div>' +
+                '<div style="color:#1E1B4B;">' +
+                  '<strong>' + escapeHTML(oc.equipamento || oc.local || oc.cat || 'Sistema') + ' — ⏳ Em observação</strong>' +
+                  escapeHTML(oc.titulo || 'Ocorrência') + ' <span style="color:#4338CA;font-weight:600;">(validar neste turno)</span>' +
+                '</div>' +
+              '</div>'
+            );
+          }).join('') +
+        '</div>';
+    }
+    container.innerHTML = htmlAbertas + htmlObs;
   }
   function renderPopupLogout() {
     var container = document.getElementById('popup-logout-checklist');
@@ -1796,7 +2057,6 @@ document.addEventListener('DOMContentLoaded', function () {
     page.addEventListener('change', acao);
   }
   window.registrarAutosaveListener = registrarAutosaveListener;
-
   function markDone(id, el) {
     var item = document.getElementById(id);
     if (item && el) item.classList.toggle('done', el.checked);
@@ -1806,7 +2066,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var obs = document.getElementById('obs-logout');
     fecharPopup('popup-logout');
     if (obs) obs.value = '';
-    loginTime = Date.now();
+    limparTurnoSessaoAtual();
     try {
       localStorage.removeItem(USER_NAME_STORAGE_KEY);
     } catch(e) {}
@@ -1819,14 +2079,8 @@ document.addEventListener('DOMContentLoaded', function () {
     fecharPopup('popup-entrada');
     var identEmail = document.getElementById('ident-operador-email');
     if (identEmail) identEmail.value = '';
-    var identInput = document.getElementById('ident-operador-nome');
-    if (identInput) {
-      identInput.value = '';
-    }
-    var chaveInput = document.getElementById('ident-chave-acesso');
-    if (chaveInput) {
-      chaveInput.value = '';
-    }
+    var chaveEstInput = document.getElementById('ident-chave-estacao-input');
+    if (chaveEstInput) chaveEstInput.value = '';
     if (typeof resetarFluxoEmailIdentificacao === 'function') {
       resetarFluxoEmailIdentificacao();
     }
@@ -1836,36 +2090,273 @@ document.addEventListener('DOMContentLoaded', function () {
     abrirPopup('popup-identificacao-operador');
     setTimeout(function() {
       if (identEmail && identEmail.offsetParent !== null) identEmail.focus();
-      else if (identInput) identInput.focus();
     }, 150);
   }
   window.confirmarLogout = confirmarLogout;
-  var loginTime = Date.now();
-  function pad(n) { return n < 10 ? '0' + n : n; }
-  function getTempoLogadoStr() {
-    var diff = Math.floor((Date.now() - loginTime) / 1000);
-    if (diff < 0) diff = 0;
-    var h = Math.floor(diff / 3600);
-    var m = Math.floor((diff % 3600) / 60);
-    var s = diff % 60;
-    return pad(h) + 'h ' + pad(m) + 'm ' + pad(s) + 's';
+  function pad(n) { return n < 10 ? '0' + n : String(n); }
+  var TURNO_ATUAL_STORAGE_KEY = 'tv_turno_ativo_v1';
+  var TURNOS_OFICIAIS_TV = [
+    { id: 'T1',     escala: 'semana',  codigo: '1',   horario: '00:00 ~ 03:00 / 03:15 ~ 06:15', inicioMin: 0,    fimMin: 375,  flexivel: false },
+    { id: 'T2',     escala: 'semana',  codigo: '2',   horario: '06:00 ~ 09:00 / 09:15 ~ 12:15', inicioMin: 360,  fimMin: 735,  flexivel: false },
+    { id: 'T2_AST', escala: 'semana',  codigo: '2*',  horario: '06:00 ~ 10:00 / 11:00 ~ 13:00', inicioMin: 360,  fimMin: 780,  flexivel: false },
+    { id: 'T3_M',   escala: 'semana',  codigo: '3',   horario: '08:00 ~ 11:00 / 11:15 ~ 14:15', inicioMin: 480,  fimMin: 855,  flexivel: false },
+    { id: 'T3_T',   escala: 'semana',  codigo: '3',   horario: '11:45 ~ 13:45 / 14:00 ~ 18:00', inicioMin: 705,  fimMin: 1080, flexivel: false },
+    { id: 'T4',     escala: 'semana',  codigo: '4',   horario: '17:45 ~ 20:45 / 21:00 ~ 00:00', inicioMin: 1065, fimMin: 1440, flexivel: false },
+    { id: 'A1',     escala: 'semana',  codigo: 'A1',  horario: '07:30 ~ 11:00 / 11:15 ~ 13:45', inicioMin: 450,  fimMin: 825,  flexivel: true, inicioPadrao: '07:30', p1Min: 210, intMin: 15, p2Min: 150 },
+    { id: 'A2',     escala: 'semana',  codigo: 'A2',  horario: '13:45 ~ 16:45 / 17:00 ~ 20:00', inicioMin: 825,  fimMin: 1200, flexivel: true, inicioPadrao: '13:45', p1Min: 180, intMin: 15, p2Min: 180 },
+    { id: 'PL1',    escala: 'plantao', codigo: 'PL1', horario: '00:00 ~ 05:00 / 06:00 ~ 08:00', inicioMin: 0,    fimMin: 480,  flexivel: false },
+    { id: 'PL2',    escala: 'plantao', codigo: 'PL2', horario: '08:00 ~ 13:00 / 14:00 ~ 16:00', inicioMin: 480,  fimMin: 960,  flexivel: false },
+    { id: 'PL3',    escala: 'plantao', codigo: 'PL3', horario: '16:00 ~ 20:00 / 21:00 ~ 00:00', inicioMin: 960,  fimMin: 1440, flexivel: false },
+    { id: 'PA',     escala: 'plantao', codigo: 'PA',  horario: '11:00 ~ 13:30 / 14:30 ~ 20:00', inicioMin: 660,  fimMin: 1200, flexivel: false }
+  ];
+  var escalaTurnoEntradaAtiva = 'semana';
+  var turnoSelecionadoEntradaId = 'T2';
+  var horaEntradaFlexPorTurno = { A1: '07:30', A2: '13:45' };
+  var turnoAtivoSessao = null;
+  function getDateKeyHoje() {
+    var d = new Date();
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
   }
-  function atualizarTimerLogin() {
-    try {
-      var timeStr = getTempoLogadoStr();
-      var upTimer = document.getElementById('up-timer');
-      if (upTimer) upTimer.textContent = timeStr;
-      var pageChip = document.getElementById('page-chip');
-      var activePage = document.querySelector('.page.active');
-      if (pageChip && activePage && activePage.id === 'page-dashboard') {
-        pageChip.textContent = 'Logado há: ' + timeStr;
-      }
-    } catch(err) {
-      console.warn('Erro ao atualizar timer de login:', err);
+  function ehFimDeSemanaHoje() {
+    var dia = new Date().getDay();
+    return dia === 0 || dia === 6;
+  }
+  function minutosParaHHMM(totalMin) {
+    var mNorm = ((Math.round(totalMin) % 1440) + 1440) % 1440;
+    return pad(Math.floor(mNorm / 60)) + ':' + pad(mNorm % 60);
+  }
+  function calcularFaixaHorarioFlexivel(turnoObj, horaEntradaStr) {
+    if (!turnoObj) return '';
+    if (!turnoObj.flexivel) return turnoObj.horario;
+    var raw = String(horaEntradaStr || turnoObj.inicioPadrao || '').trim();
+    var m = raw.match(/^(\d{1,2}):(\d{2})$/);
+    var hh = m ? parseInt(m[1], 10) : parseInt(String(turnoObj.inicioPadrao || '07:30').split(':')[0], 10);
+    var mm = m ? parseInt(m[2], 10) : parseInt(String(turnoObj.inicioPadrao || '07:30').split(':')[1], 10);
+    if (isNaN(hh) || isNaN(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) {
+      return turnoObj.horario;
+    }
+    var mIni = hh * 60 + mm;
+    var mP1Fim = mIni + (turnoObj.p1Min || 210);
+    var mP2Ini = mP1Fim + (turnoObj.intMin || 15);
+    var mFim = mP2Ini + (turnoObj.p2Min || 150);
+    return minutosParaHHMM(mIni) + ' ~ ' + minutosParaHHMM(mP1Fim) + ' / ' + minutosParaHHMM(mP2Ini) + ' ~ ' + minutosParaHHMM(mFim);
+  }
+  function sugerirTurnoPorEscala(escala) {
+    var lista = TURNOS_OFICIAIS_TV.filter(function(t) { return t.escala === escala; });
+    if (lista.length === 0) return null;
+    var agora = new Date();
+    var nowMin = agora.getHours() * 60 + agora.getMinutes();
+    var dentro = lista.filter(function(t) {
+      return nowMin >= t.inicioMin && nowMin < t.fimMin;
+    });
+    if (dentro.length > 0) {
+      dentro.sort(function(a, b) {
+        if (!!a.flexivel !== !!b.flexivel) return a.flexivel ? 1 : -1;
+        return Math.abs(nowMin - a.inicioMin) - Math.abs(nowMin - b.inicioMin);
+      });
+      return dentro[0];
+    }
+    var ordenado = lista.slice().sort(function(a, b) {
+      return Math.abs(nowMin - a.inicioMin) - Math.abs(nowMin - b.inicioMin);
+    });
+    return ordenado[0];
+  }
+  function atualizarBoxTurnoFlexivel() {
+    var boxEl = document.getElementById('entrada-turno-flex-box');
+    var inputEl = document.getElementById('entrada-turno-flex-hora');
+    var resumoEl = document.getElementById('entrada-turno-flex-resumo');
+    if (!boxEl) return;
+    var turnoObj = TURNOS_OFICIAIS_TV.find(function(t) { return t.id === turnoSelecionadoEntradaId; });
+    if (!turnoObj || !turnoObj.flexivel) {
+      boxEl.style.display = 'none';
+      return;
+    }
+    var horaAtual = horaEntradaFlexPorTurno[turnoObj.id] || turnoObj.inicioPadrao || '07:30';
+    boxEl.style.display = 'flex';
+    if (inputEl && inputEl.value !== horaAtual) {
+      inputEl.value = horaAtual;
+    }
+    if (resumoEl) {
+      resumoEl.textContent = calcularFaixaHorarioFlexivel(turnoObj, horaAtual);
     }
   }
-  setInterval(atualizarTimerLogin, 1000);
-  atualizarTimerLogin();
+  function renderGridTurnosEntrada() {
+    var grid = document.getElementById('entrada-turnos-grid');
+    if (!grid) return;
+    var lista = TURNOS_OFICIAIS_TV.filter(function(t) { return t.escala === escalaTurnoEntradaAtiva; });
+    var agora = new Date();
+    var nowMin = agora.getHours() * 60 + agora.getMinutes();
+    var isPlantao = (escalaTurnoEntradaAtiva === 'plantao');
+    grid.innerHTML = lista.map(function(t) {
+      var ativo = (t.id === turnoSelecionadoEntradaId);
+      var proximo = (nowMin >= (t.inicioMin - 30) && nowMin < t.fimMin);
+      var horarioExibir = t.flexivel
+        ? calcularFaixaHorarioFlexivel(t, horaEntradaFlexPorTurno[t.id] || t.inicioPadrao)
+        : t.horario;
+      var corAcento = isPlantao ? '#DC2626' : '#0071E3';
+      var bgCard = ativo ? (isPlantao ? '#FEF2F2' : '#EFF6FF') : '#FFFFFF';
+      var bdrCard = ativo ? ('2px solid ' + corAcento) : '1px solid #E2E8F0';
+      var badgeBg = isPlantao
+        ? (ativo ? '#DC2626' : '#FEE2E2')
+        : (ativo ? '#0071E3' : '#DBEAFE');
+      var badgeTxt = ativo ? '#FFFFFF' : (isPlantao ? '#B91C1C' : '#1D4ED8');
+      var extras = '';
+      if (t.flexivel) {
+        extras += '<span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:999px;background:#EEF2FF;color:#4338CA;border:1px solid #C7D2FE;">Horário flexível</span>';
+      } else if (proximo) {
+        extras += '<span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:999px;background:#ECFDF5;color:#047857;border:1px solid #A7F3D0;">Horário atual</span>';
+      }
+      return (
+        '<button type="button" onclick="selecionarTurnoEntrada(\'' + t.id + '\')" style="text-align:left;padding:9px 11px;border-radius:10px;border:' + bdrCard + ';background:' + bgCard + ';cursor:pointer;display:flex;align-items:center;gap:10px;transition:all 0.14s ease;width:100%;">' +
+          '<span style="min-width:34px;height:28px;padding:0 7px;border-radius:7px;background:' + badgeBg + ';color:' + badgeTxt + ';font-size:12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+            escapeHTML(t.codigo) +
+          '</span>' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px;flex-wrap:wrap;">' +
+              '<span style="font-size:11.5px;font-weight:700;color:#0F172A;" id="turno-card-hor-' + t.id + '">' + escapeHTML(horarioExibir) + '</span>' +
+            '</div>' +
+            (extras ? '<div style="margin-top:3px;display:flex;gap:4px;">' + extras + '</div>' : '') +
+          '</div>' +
+        '</button>'
+      );
+    }).join('');
+    atualizarBoxTurnoFlexivel();
+  }
+  function atualizarPillsEscalaEntrada() {
+    var pillSem = document.getElementById('pill-escala-semana');
+    var pillPla = document.getElementById('pill-escala-plantao');
+    if (pillSem) pillSem.classList.toggle('on', escalaTurnoEntradaAtiva === 'semana');
+    if (pillPla) pillPla.classList.toggle('on', escalaTurnoEntradaAtiva === 'plantao');
+    if (typeof atualizarTodosGlidersPills === 'function') {
+      requestAnimationFrame(function() { atualizarTodosGlidersPills(true); });
+    }
+  }
+  function alternarEscalaTurnoEntrada(escala) {
+    escalaTurnoEntradaAtiva = (escala === 'plantao') ? 'plantao' : 'semana';
+    var atualPertence = TURNOS_OFICIAIS_TV.some(function(t) {
+      return t.id === turnoSelecionadoEntradaId && t.escala === escalaTurnoEntradaAtiva;
+    });
+    if (!atualPertence) {
+      var sug = sugerirTurnoPorEscala(escalaTurnoEntradaAtiva);
+      if (sug) turnoSelecionadoEntradaId = sug.id;
+    }
+    atualizarPillsEscalaEntrada();
+    renderGridTurnosEntrada();
+  }
+  window.alternarEscalaTurnoEntrada = alternarEscalaTurnoEntrada;
+  function selecionarTurnoEntrada(idTurno) {
+    var t = TURNOS_OFICIAIS_TV.find(function(x) { return x.id === idTurno; });
+    if (!t) return;
+    turnoSelecionadoEntradaId = t.id;
+    escalaTurnoEntradaAtiva = t.escala;
+    renderGridTurnosEntrada();
+  }
+  window.selecionarTurnoEntrada = selecionarTurnoEntrada;
+  function recalcularHorarioTurnoFlexivel(horaStr) {
+    var t = TURNOS_OFICIAIS_TV.find(function(x) { return x.id === turnoSelecionadoEntradaId; });
+    if (!t || !t.flexivel) return;
+    if (horaStr) horaEntradaFlexPorTurno[t.id] = horaStr;
+    var faixa = calcularFaixaHorarioFlexivel(t, horaEntradaFlexPorTurno[t.id] || t.inicioPadrao);
+    var resumoEl = document.getElementById('entrada-turno-flex-resumo');
+    if (resumoEl) resumoEl.textContent = faixa;
+    var cardHorEl = document.getElementById('turno-card-hor-' + t.id);
+    if (cardHorEl) cardHorEl.textContent = faixa;
+  }
+  window.recalcularHorarioTurnoFlexivel = recalcularHorarioTurnoFlexivel;
+  function inicializarSeletorTurnoEntrada() {
+    var hojeKey = getDateKeyHoje();
+    var restaurado = false;
+    try {
+      var raw = localStorage.getItem(TURNO_ATUAL_STORAGE_KEY);
+      if (raw) {
+        var obj = JSON.parse(raw);
+        if (obj && obj.dateKey === hojeKey && obj.id) {
+          var tObj = TURNOS_OFICIAIS_TV.find(function(x) { return x.id === obj.id; });
+          if (tObj) {
+            escalaTurnoEntradaAtiva = tObj.escala;
+            turnoSelecionadoEntradaId = tObj.id;
+            if (tObj.flexivel && obj.entradaFlex) {
+              horaEntradaFlexPorTurno[tObj.id] = obj.entradaFlex;
+            }
+            restaurado = true;
+          }
+        }
+      }
+    } catch (e) {}
+    if (!restaurado) {
+      escalaTurnoEntradaAtiva = ehFimDeSemanaHoje() ? 'plantao' : 'semana';
+      var sug = sugerirTurnoPorEscala(escalaTurnoEntradaAtiva);
+      if (sug) turnoSelecionadoEntradaId = sug.id;
+    }
+    atualizarPillsEscalaEntrada();
+    renderGridTurnosEntrada();
+  }
+  window.inicializarSeletorTurnoEntrada = inicializarSeletorTurnoEntrada;
+  function atualizarUITurnoAtivo() {
+    var upTurno = document.getElementById('up-turno');
+    if (!upTurno) return;
+    if (!turnoAtivoSessao) {
+      upTurno.textContent = 'Não selecionado';
+      upTurno.style.color = 'var(--blue)';
+      upTurno.removeAttribute('title');
+      return;
+    }
+    var prefixo = turnoAtivoSessao.escala === 'plantao' ? 'Plantão ' : 'Turno ';
+    upTurno.textContent = turnoAtivoSessao.horario;
+    upTurno.style.color = turnoAtivoSessao.escala === 'plantao' ? '#DC2626' : 'var(--blue)';
+    upTurno.setAttribute('title', prefixo + turnoAtivoSessao.codigo + ' (' + turnoAtivoSessao.horario + ')');
+  }
+  function salvarTurnoSessaoAtual() {
+    var tObj = TURNOS_OFICIAIS_TV.find(function(x) { return x.id === turnoSelecionadoEntradaId; }) || sugerirTurnoPorEscala(escalaTurnoEntradaAtiva);
+    if (!tObj) return;
+    var entradaFlex = tObj.flexivel ? (horaEntradaFlexPorTurno[tObj.id] || tObj.inicioPadrao) : '';
+    var horarioFinal = tObj.flexivel ? calcularFaixaHorarioFlexivel(tObj, entradaFlex) : tObj.horario;
+    turnoAtivoSessao = {
+      dateKey: getDateKeyHoje(),
+      id: tObj.id,
+      escala: tObj.escala,
+      codigo: tObj.codigo,
+      horario: horarioFinal,
+      entradaFlex: entradaFlex
+    };
+    try {
+      localStorage.setItem(TURNO_ATUAL_STORAGE_KEY, JSON.stringify(turnoAtivoSessao));
+    } catch (e) {}
+    atualizarUITurnoAtivo();
+  }
+  window.salvarTurnoSessaoAtual = salvarTurnoSessaoAtual;
+  function limparTurnoSessaoAtual() {
+    turnoAtivoSessao = null;
+    try { localStorage.removeItem(TURNO_ATUAL_STORAGE_KEY); } catch (e) {}
+    atualizarUITurnoAtivo();
+  }
+  function obterLabelTurnoAtivoCurto() {
+    if (!turnoAtivoSessao) return '';
+    var prefixo = turnoAtivoSessao.escala === 'plantao' ? 'Plantão ' : 'Turno ';
+    return prefixo + turnoAtivoSessao.codigo + ' (' + turnoAtivoSessao.horario + ')';
+  }
+  window.obterLabelTurnoAtivoCurto = obterLabelTurnoAtivoCurto;
+  function abrirSeletorTurnoRapido() {
+    var popover = document.getElementById('user-popover');
+    if (popover) popover.setAttribute('hidden', '');
+    var chk = document.getElementById('chk-entrada');
+    if (chk) {
+      chk.checked = true;
+      if (typeof toggleBtnIniciarSessao === 'function') toggleBtnIniciarSessao(true);
+    }
+    abrirPopup('popup-entrada');
+  }
+  window.abrirSeletorTurnoRapido = abrirSeletorTurnoRapido;
+  try {
+    var rawTurnoBoot = localStorage.getItem(TURNO_ATUAL_STORAGE_KEY);
+    if (rawTurnoBoot) {
+      var parsedTurnoBoot = JSON.parse(rawTurnoBoot);
+      if (parsedTurnoBoot && parsedTurnoBoot.dateKey === getDateKeyHoje() && parsedTurnoBoot.id) {
+        turnoAtivoSessao = parsedTurnoBoot;
+        atualizarUITurnoAtivo();
+      }
+    }
+  } catch (eTurnoBoot) {}
   function toggleUserPopover(e) {
     if (e) e.stopPropagation();
     var popover = document.getElementById('user-popover');
@@ -1873,7 +2364,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var isHidden = popover.hasAttribute('hidden');
     if (isHidden) {
       popover.removeAttribute('hidden');
-      atualizarTimerLogin();
+      atualizarUITurnoAtivo();
     } else {
       popover.setAttribute('hidden', '');
     }
@@ -1890,12 +2381,10 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   var pageMap = {
     recebimento:  { page:'page-recebimento',  title:'Recebimento de Materiais',                 chip:'Registro patrimonial e anexo de fotos/vídeos' },
-    recebimento1: { page:'page-recebimento',  title:'Recebimento de Materiais',                 chip:'Registro patrimonial e anexo de fotos/vídeos' },
-    recebimento2: { page:'page-recebimento',  title:'Recebimento de Materiais',                 chip:'Registro patrimonial e anexo de fotos/vídeos' },
-    dashboard:    { page:'page-dashboard',    title:'Ocorrências',                              chip: function() { return 'Logado há: ' + getTempoLogadoStr(); } },
+    dashboard:    { page:'page-dashboard',    title:'Ocorrências',                              chip:'Gestão e acompanhamento de ocorrências' },
     checklist:    { page:'page-checklist',    title:'Rotinas & Lembretes',                      chip:'Monitoramento preventivo e rotinas do turno' },
     ctrs:         { page:'page-ctrs',         title:'Relatório de Transmissões',                chip:'Preencher após cada jornal' },
-    arquivados:   { page:'page-arquivados',   title:'Ocorrências Arquivadas',                   chip:'Verificação e acompanhamento do próximo turno' },
+    arquivados:   { page:'page-arquivados',   title:'Em Observação — Monitoramento Pós-Reparo', chip:'Validação de estabilidade entre turnos' },
     historico:    { page:'page-historico',    title:'Histórico Geral de Registros',             chip:'Ocorrências, Relatórios e Recebimentos' },
     lixeira:      { page:'page-lixeira',      title:'Lixeira',                                  chip:'Itens excluídos retidos por 7 dias' },
     resolvidas:   { page:'page-resolvidas',   title:'Dashboard Ocorrências — Resolução & Desempenho (Power BI)', chip:'Dashboard de Métricas e Indicadores' },
@@ -1918,7 +2407,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('page-chip').textContent  = chipText;
     if (el) el.classList.add('active');
     if (name === 'config') {
-      try { carregarCredenciaisSupabaseConfig(); } catch(e) {}
       try { if (typeof atualizarUIStatusBancoConfig === 'function') atualizarUIStatusBancoConfig(); } catch(e) {}
     }
     if (name === 'ctrs' || name === 'relatorio') {
@@ -2044,8 +2532,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     var cfgPraca = document.getElementById('cfg-praca');
     if (cfgPraca) cfgPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
-    var identPraca = document.getElementById('ident-operador-praca');
-    if (identPraca) identPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
     var ctrsPraca = document.getElementById('ctrs-praca');
     if (ctrsPraca) ctrsPraca.value = isUberlandia ? 'Uberlândia' : 'Juiz de Fora';
     var reqPraca = document.getElementById('req-praca');
@@ -2284,7 +2770,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     atualizarLuzEspecularLiquidGL();
     atualizarTodosGlidersPills(false);
   }, 80);
-
   var IDB_NAME = 'SistemaTV_MediaDB';
   var IDB_STORE = 'midias';
   function openMediaDB() {
@@ -2315,63 +2800,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       });
     });
   }
-  function carregarMidiaIDB(id) {
-    return openMediaDB().then(function(db) {
-      if (!db) return null;
-      return new Promise(function(resolve) {
-        try {
-          var tx = db.transaction(IDB_STORE, 'readonly');
-          var store = tx.objectStore(IDB_STORE);
-          var req = store.get(id);
-          req.onsuccess = function(e) { resolve(e.target.result ? e.target.result.data : null); };
-          req.onerror = function() { resolve(null); };
-        } catch (e) { resolve(null); }
-      });
-    });
-  }
-  window.carregarMidiaIDB = carregarMidiaIDB;
   var uploadedFilesStore = {};
-  function uploadArquivoParaStorage(anexo) {
-    if (!anexo) return Promise.resolve(null);
-    if (anexo.url && anexo.url.startsWith('http')) return Promise.resolve(anexo);
-    if (!anexo.fileObj) return Promise.resolve(anexo);
-    var timestamp = Date.now();
-    var randBytes = new Uint8Array(6);
-    if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(randBytes);
-    var randHex = Array.prototype.map.call(randBytes, function(b) { return ('00' + b.toString(16)).slice(-2); }).join('');
-    var cleanName = (anexo.name || 'arquivo').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
-    var filePath = timestamp + '_' + randHex + '_' + cleanName;
-    var uploadUrl = SUPABASE_URL.replace(/\/$/, '') + '/storage/v1/object/anexos/' + filePath;
-    return fetch(uploadUrl, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-        'Content-Type': anexo.type || 'application/octet-stream',
-        'x-upsert': 'false'
-      },
-      body: anexo.fileObj
-    })
-    .then(function(res) {
-      if (res.ok) {
-        var publicUrl = SUPABASE_URL.replace(/\/$/, '') + '/storage/v1/object/public/anexos/' + filePath;
-        return {
-          id: anexo.id,
-          name: anexo.name,
-          type: anexo.type,
-          size: anexo.size,
-          url: publicUrl,
-          dataUrl: anexo.dataUrl
-        };
-      }
-      return anexo;
-    })
-    .catch(function(err) {
-      console.warn('[Storage Upload Fallback]', err);
-      return anexo;
-    });
-  }
-  window.uploadArquivoParaStorage = uploadArquivoParaStorage;
   function comprimirImagemSeNecessario(file, callback) {
     if (!file || !file.type || !file.type.startsWith('image/') || file.type === 'image/svg+xml') {
       if (file && file.type && file.type.startsWith('video/')) {
@@ -2568,7 +2997,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.renderPreviewsForContainer = renderPreviewsForContainer;
-  ['req', 'rec', 'rec1', 'rec2', 'nova', 'edit-oc', 'resolver'].forEach(function(prefix) {
+  ['req', 'rec', 'nova', 'edit-oc', 'resolver'].forEach(function(prefix) {
     var area  = document.getElementById(prefix + '-upload-area');
     var file  = document.getElementById(prefix + '-arquivos');
     if (area && file) {
@@ -2580,7 +3009,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       };
     }
   });
-
   function adicionarLinhaMaterial(tabelaId) {
     var tbody = document.querySelector('#' + (tabelaId || 'tb-rec') + ' tbody');
     if (!tbody) return;
@@ -2798,7 +3226,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-recebimento', salvarRascunhoRecebimento);
   }
-
   function adicionarLinhaItemCompra() {
     var tbody = document.getElementById('req-itens-tbody');
     if (!tbody) return;
@@ -3032,7 +3459,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-compras', salvarRascunhoCompra);
   }
-
   function salvarRascunhoRelatorioTV(silencioso) {
     try {
       var dataEl  = document.getElementById('ctrs-data');
@@ -3359,19 +3785,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     abrirPopup('popup-novo-profissional');
   }
   window.abrirModalNovoProfissional = abrirModalNovoProfissional;
-  function obterCredenciaisDB() {
-    if (typeof getDBCredentials === 'function') return getDBCredentials();
-    if (typeof window !== 'undefined' && typeof window.getDBCredentials === 'function') return window.getDBCredentials();
-    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
-    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
-    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
-      url = window.ENV_CONFIG.SUPABASE_URL;
-    }
-    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
-      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
-    }
-    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
-  }
   async function salvarNovoProfissionalEquipe() {
     var tipoEl = document.getElementById('novo-prof-tipo');
     var nomeEl = document.getElementById('novo-prof-nome');
@@ -3409,7 +3822,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
         targetSelect.value = nome;
       } catch(e) {}
     }
-    var db = obterCredenciaisDB();
+    var db = getDBCredentials();
     if (db && db.url && db.key) {
       try {
         var payload = {
@@ -3441,42 +3854,8 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     }
   }
   window.salvarNovoProfissionalEquipe = salvarNovoProfissionalEquipe;
-  function removerProfissionalEquipe(id, tipo, nome, praca) {
-    praca = normalizarPracaEquipe(praca || (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora'));
-    if (!confirm('Deseja realmente remover "' + nome + '" de ' + praca + '?')) {
-      return;
-    }
-    var equipe = carregarEquipeLocal();
-    var chaveLista = (tipo === 'rc') ? 'rcs' : 'reporteres';
-    if (equipe[praca]) {
-      equipe[praca][chaveLista] = equipe[praca][chaveLista].filter(function(item) {
-        var itemId = typeof item === 'string' ? item : (item.id || item.nome);
-        return itemId !== id && item.nome !== nome;
-      });
-    }
-    salvarEquipeLocal(equipe);
-    atualizarSelectsProfissionaisCTRS();
-    if (typeof mostrarToast === 'function') {
-      mostrarToast('Profissional Removido', nome + ' foi removido da equipe.', 'info');
-    }
-    var db = obterCredenciaisDB();
-    if (db && db.url && db.key && id) {
-      try {
-        fetch(db.url.replace(/\/$/, '') + '/rest/v1/checklist_itens?id=eq.' + encodeURIComponent(id), {
-          method: 'DELETE',
-          headers: {
-            'apikey': db.key,
-            'Authorization': 'Bearer ' + db.key
-          }
-        }).catch(function(err) { console.error('[Equipe Nuvem] Erro ao excluir:', err); });
-      } catch(eDel) {
-        console.warn('[Equipe Nuvem] Falha ao excluir na nuvem:', eDel);
-      }
-    }
-  }
-  window.removerProfissionalEquipe = removerProfissionalEquipe;
   async function sincronizarEquipeNuvem() {
-    var db = obterCredenciaisDB();
+    var db = getDBCredentials();
     if (!db || !db.url || !db.key) return;
     try {
       var url = db.url.replace(/\/$/, '') + '/rest/v1/checklist_itens?select=id,titulo,categoria,operador_nome&categoria=in.(reporter,rc)&order=titulo.asc&limit=1000';
@@ -4353,7 +4732,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   if (typeof registrarAutosaveListener === 'function') {
     registrarAutosaveListener('page-ctrs', salvarRascunhoRelatorioTV);
   }
-
   var checklistFiltroAtual = 'todos';
   var checklistItems = [];
   var checklistUltimaDataVerificada = new Date().toISOString().slice(0, 10);
@@ -4466,8 +4844,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       var concU = pessoalItems.filter(function(i){ return i.concluido; }).length;
       bPessoal.textContent = concU + '/' + pessoalItems.length;
     }
-    var listPadraoEl = document.getElementById('reminders-list-padrao');
-    var listPessoalEl = document.getElementById('reminders-list-pessoal');
     function renderizarLista(itens, targetEl, emptyMsg) {
       if (!targetEl) return;
       var filtrados = itens.filter(function(it) {
@@ -4672,21 +5048,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     }
   }
   window.removerItemChecklist = removerItemChecklist;
-  function reiniciarRotinaDiaria() {
-    if (!confirm('Deseja reiniciar a rotina diária para o início de um novo turno? Os itens padrão serão desmarcados.')) {
-      return;
-    }
-    checklistItems.forEach(function(it) {
-      it.concluido = false;
-      it.concluidoEm = null;
-    });
-    salvarChecklistStore();
-    renderChecklist();
-    if (typeof mostrarToast === 'function') {
-      mostrarToast('Rotina Reiniciada', 'O checklist está pronto para o novo turno.', 'info');
-    }
-  }
-  window.reiniciarRotinaDiaria = reiniciarRotinaDiaria;
   function criarOcorrenciaDoChecklist(id) {
     var item = checklistItems.find(function(it) { return it.id === id; });
     if (!item) return;
@@ -4737,18 +5098,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   }
   window.criarOcorrenciaDoChecklist = criarOcorrenciaDoChecklist;
   var operadoresMap = {}; // nome -> id (UUID)
-  function getDBCredentials() {
-    var url = (typeof DBService !== 'undefined' && DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
-    var key = (typeof DBService !== 'undefined' && DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
-    if ((!url || url.indexOf('seu-projeto') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_URL && window.ENV_CONFIG.SUPABASE_URL.indexOf('seu-projeto') === -1) {
-      url = window.ENV_CONFIG.SUPABASE_URL;
-    }
-    if ((!key || key.indexOf('sua-chave') !== -1) && typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SUPABASE_ANON_KEY && window.ENV_CONFIG.SUPABASE_ANON_KEY.indexOf('sua-chave') === -1) {
-      key = window.ENV_CONFIG.SUPABASE_ANON_KEY;
-    }
-    return { url: url ? url.replace(/\/+$/, '') : '', key: key };
-  }
-  window.getDBCredentials = getDBCredentials;
   function carregarOperadoresSugeridos() {
     var datalist = document.getElementById('lista-operadores-sugeridos');
     var db = getDBCredentials();
@@ -5230,7 +5579,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     verificarReseteMeiaNoite();
     verificarRecorrenciasChecklist();
   });
-
 (function () {
   var RONDA_DRAFT_KEY = 'tv_rascunho_ronda_udi_v1';
   var RONDA_ITEMS = [
@@ -6284,7 +6632,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   window.exportarFormularioTurnoIndividual = exportarFormularioTurnoIndividual;
   window.exportarVisaoGeralFormsPdf = exportarVisaoGeralFormsPdf;
 })();
-
   var novaTitulo  = document.getElementById('nova-titulo');
   var novaDesc    = document.getElementById('nova-desc');
   var novaCounter = document.getElementById('nova-counter');
@@ -6335,18 +6682,12 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       if (!sel) return;
       var curVal = sel.value;
       var html = '<option value="">Sem equipamento específico</option>';
-      if (isUberlandia) {
-        equips.forEach(function(eq) {
-          html += '<option value="' + escapeHTML(eq) + '">' + escapeHTML(eq) + '</option>';
-        });
-      } else {
-        if (equips.length === 0) {
-          equips = ['LIVE U1', 'LIVE U2', 'LIVE U3', 'LIVE U4', 'LIVE U SMART', 'REDAÇÃO', 'KMJ', 'NET PRAÇA', 'NET PORTARIA', 'FORMATOS NET', 'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR'];
-        }
-        equips.forEach(function(eq) {
-          html += '<option value="' + escapeHTML(eq) + '">' + escapeHTML(eq) + '</option>';
-        });
+      if (!isUberlandia && equips.length === 0) {
+        equips = ['LIVE U1', 'LIVE U2', 'LIVE U3', 'LIVE U4', 'LIVE U SMART', 'REDAÇÃO', 'KMJ', 'NET PRAÇA', 'NET PORTARIA', 'FORMATOS NET', 'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR'];
       }
+      equips.forEach(function(eq) {
+        html += '<option value="' + escapeHTML(eq) + '">' + escapeHTML(eq) + '</option>';
+      });
       html += '<option value="__novo__" style="color:var(--blue);font-weight:700;">➕ Cadastrar Novo Equipamento...</option>';
       sel.innerHTML = html;
       if (curVal && curVal !== '__novo__') sel.value = curVal;
@@ -6499,6 +6840,16 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     uploadedFilesStore['resolver-previews'] = [];
     if (resolverCounter) { resolverCounter.textContent = 'Mínimo 10 caracteres'; resolverCounter.className = 'char-count'; }
     document.getElementById('resolver-status').value = 'Resolvido';
+    var obsHorasEl = document.getElementById('resolver-obs-horas');
+    if (obsHorasEl) obsHorasEl.value = '24';
+    var obsCustomWrap = document.getElementById('resolver-obs-custom-wrap');
+    if (obsCustomWrap) obsCustomWrap.style.display = 'none';
+    var obsCustomVal = document.getElementById('resolver-obs-custom-val');
+    if (obsCustomVal) obsCustomVal.value = '36';
+    var obsCustomUnit = document.getElementById('resolver-obs-custom-unit');
+    if (obsCustomUnit) obsCustomUnit.value = 'horas';
+    var obsBoxEl = document.getElementById('resolver-obs-tempo-box');
+    if (obsBoxEl) obsBoxEl.style.display = 'none';
     if (typeof selecionarStatus === 'function') selecionarStatus('Resolvido');
     validarResolver();
     abrirPopup('popup-resolver');
@@ -6671,12 +7022,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   }
   window.salvarEdicaoOcorrencia = salvarEdicaoOcorrencia;
   var itemDetalhesAtual = null;
-
   var lixeiraData = [];
-  function getLixeiraDBCredentials() {
-    if (typeof getDBCredentials === 'function') return getDBCredentials();
-    return { url: '', key: '' };
-  }
   function loadLixeira() {
     sincronizarLixeiraNuvem();
     return lixeiraData;
@@ -6689,7 +7035,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   }
   window.saveLixeira = saveLixeira;
   function sincronizarLixeiraNuvem() {
-    var db = getLixeiraDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key) return;
     fetch(db.url + '/rest/v1/lixeira?select=*&order=dataExclusao.desc&limit=50', {
       headers: {
@@ -6713,7 +7059,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   }
   window.sincronizarLixeiraNuvem = sincronizarLixeiraNuvem;
   function salvarItemLixeiraNuvem(item) {
-    var db = getLixeiraDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key || !item) return Promise.resolve(false);
     return fetch(db.url + '/rest/v1/lixeira', {
       method: 'POST',
@@ -6735,7 +7081,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   }
   window.salvarItemLixeiraNuvem = salvarItemLixeiraNuvem;
   function excluirItemLixeiraNuvem(id) {
-    var db = getLixeiraDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key || !id) return;
     fetch(db.url + '/rest/v1/lixeira?id=eq.' + encodeURIComponent(id), {
       method: 'DELETE',
@@ -6838,16 +7184,17 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       d.transmissoes.forEach(function(tx) {
         if (!tx) return;
         var temNC = (tx.audioQ === 'NC' || tx.videoQ === 'NC' || tx.statusTx === 'NC');
+        var temCanc = !temNC && (tx.statusTx === 'NA' || tx.statusTx === 'CA' || tx.audioQ === 'NA' || tx.videoQ === 'NA');
         listaMet.push({
           telejornal: cj,
           equipamento: tx.infra || '',
-          status: temNC ? 'nc' : 'conf'
+          status: temNC ? 'nc' : (temCanc ? 'canc' : 'conf')
         });
       });
     }
     if (listaMet.length === 0) return;
     listaMet.forEach(function(m) {
-      var campo = (m.status === 'nc') ? 'nc' : 'conf';
+      var campo = (m.status === 'nc') ? 'nc' : ((m.status === 'canc') ? 'canc' : 'conf');
       if (m.telejornal && dashboardMetrics.telejornal && dashboardMetrics.telejornal[m.telejornal]) {
         var atualTj = dashboardMetrics.telejornal[m.telejornal][campo] || 0;
         dashboardMetrics.telejornal[m.telejornal][campo] = Math.max(0, atualTj + delta);
@@ -6866,8 +7213,9 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   }
   function excluirOcorrencia(id) {
     var targetId = id;
-    var oc = ocorrencias.find(function(o){ return o && o.id === targetId; });
-    var hist = historicoSeedData.find(function(h){ return h && h.id === targetId; });
+    var cleanOcId = String(targetId || '').replace(/^h_oc_/, '');
+    var oc = ocorrencias.find(function(o){ return o && (o.id === targetId || o.id === cleanOcId); });
+    var hist = historicoSeedData.find(function(h){ return h && (h.id === targetId || h.id === ('h_oc_' + cleanOcId) || h.ocId === cleanOcId); });
     var titulo = oc ? (oc.titulo || 'esta ocorrência') : (hist ? hist.titulo : 'esta ocorrência');
     if (confirm('Mover a ocorrência "' + titulo + '" para a Lixeira?\n\nEla ficará retida por 7 dias na Lixeira como backup antes da exclusão permanente.')) {
       var idParaSalvar = oc ? oc.id : (hist ? hist.id : targetId);
@@ -6883,12 +7231,13 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
         notificado24h: false,
         praca: itemPraca
       };
-      lixeiraData = [itemLixeira].concat(lixeiraData.filter(function(i){ return i.id !== idParaSalvar; }));
+      lixeiraData = [itemLixeira].concat(lixeiraData.filter(function(i){ return i.id !== idParaSalvar && i.id !== targetId; }));
       saveLixeira(lixeiraData);
       salvarItemLixeiraNuvem(itemLixeira).then(function() {
         if (typeof DBService !== 'undefined' && DBService && typeof DBService.deleteRemote === 'function' && idParaSalvar) {
-          DBService.deleteRemote('ocorrencias', idParaSalvar);
+          DBService.deleteRemote('ocorrencias', cleanOcId);
           DBService.deleteRemote('historico', idParaSalvar);
+          DBService.deleteRemote('historico', 'h_oc_' + cleanOcId);
         }
       });
       var idsOcsVinculadasRelatorio = [];
@@ -6906,13 +7255,13 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       }
       ocorrencias = ocorrencias.filter(function(o){
         if (!o) return false;
-        if (o.id === idParaSalvar || o.id === targetId) return false;
+        if (o.id === idParaSalvar || o.id === targetId || o.id === cleanOcId) return false;
         if (idsOcsVinculadasRelatorio.indexOf(o.id) !== -1) return false;
         return true;
       });
       historicoSeedData = historicoSeedData.filter(function(h){
         if (!h) return false;
-        if (h.id === idParaSalvar || h.id === targetId) return false;
+        if (h.id === idParaSalvar || h.id === targetId || h.id === ('h_oc_' + cleanOcId) || h.ocId === cleanOcId) return false;
         return true;
       });
       save(ocorrencias);
@@ -7026,6 +7375,134 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   }
   window.renderLixeira = renderLixeira;
   var filtroArquivadosAtivo = 'todas';
+  function calcularProgressoObservacao(oc) {
+    var res = (oc && oc.resolucao) ? oc.resolucao : {};
+    var inicio = Number(res.inicioObservacao || res.data || (oc && oc.criado) || Date.now());
+    if (isNaN(inicio) || inicio <= 0) inicio = Date.now();
+    var metaHoras = Number(res.metaHorasObservacao) || 24;
+    var decorridoMs = Math.max(0, Date.now() - inicio);
+    var decorridoHoras = decorridoMs / (1000 * 60 * 60);
+    var pct = Math.min(100, Math.round((decorridoHoras / metaHoras) * 100));
+    var cumprida = decorridoHoras >= metaHoras;
+    var tempoLabel = decorridoHoras < 1
+      ? (Math.max(1, Math.round(decorridoHoras * 60)) + ' min')
+      : (Math.floor(decorridoHoras) + 'h');
+    return {
+      inicio: inicio,
+      metaHoras: metaHoras,
+      decorridoHoras: decorridoHoras,
+      pct: pct,
+      cumprida: cumprida,
+      tempoLabel: tempoLabel,
+      validacoes: Array.isArray(res.validacoesTurno) ? res.validacoesTurno : []
+    };
+  }
+  window.calcularProgressoObservacao = calcularProgressoObservacao;
+  function sincronizarOcorrenciaNoHistorico(oc) {
+    if (!oc || !oc.id) return null;
+    var histId = 'h_oc_' + oc.id;
+    var res = oc.resolucao || {};
+    var descLimpaOc = String(oc.desc || 'Ocorrência registrada no sistema.').replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim();
+    var nowFmt = formatDataHoraLocal(oc.dataCriacao || oc.criado);
+    var resFmt = res.data ? formatDataHoraLocal(res.data) : formatDataHoraLocal();
+    var usuarioLogado = getUsuarioAtual();
+    var statusFinal = oc.status === 'arquivada'
+      ? 'Em Observação'
+      : (res.statusRes || 'Resolvido');
+    var anexosHist = (oc.anexos && Array.isArray(oc.anexos) && oc.anexos.length > 0)
+      ? oc.anexos
+      : (Array.isArray(res.anexos) ? res.anexos : []);
+    var existente = (historicoSeedData || []).find(function(h) {
+      return h && (h.id === histId || h.id === oc.id || h.ocId === oc.id);
+    });
+    var idsDuplicadosRemovidos = [];
+    historicoSeedData = (historicoSeedData || []).filter(function(h) {
+      if (!h || !h.id) return false;
+      var mesmoId = (h.id === histId || h.id === oc.id || h.ocId === oc.id);
+      var mesmoLegado = false;
+      if (!mesmoId && h.tipo === 'ocorrencia' && /^h_oc_\d+$/.test(String(h.id))) {
+        var descH = String(h.descCriacao || '').replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim();
+        if (String(h.titulo || '').trim().toLowerCase() === String(oc.titulo || '').trim().toLowerCase() && descH.toLowerCase() === descLimpaOc.toLowerCase()) {
+          mesmoLegado = true;
+        }
+      }
+      if (mesmoId || mesmoLegado) {
+        if (h.id !== histId) idsDuplicadosRemovidos.push(h.id);
+        return false;
+      }
+      return true;
+    });
+    var itemHist = {
+      id:                      histId,
+      ocId:                    oc.id,
+      tipo:                    'ocorrencia',
+      subtipo:                 oc.cat || 'Equipamento',
+      titulo:                  oc.titulo,
+      equipamento:             oc.equipamento || (oc.local ? (oc.local + ' — ' + (oc.cat || 'Equipamento')) : (oc.cat || oc.titulo)),
+      categoria:               oc.cat || 'Equipamento',
+      local:                   oc.local || 'Central Técnica',
+      dataCriacao:             (existente && existente.dataCriacao) ? existente.dataCriacao : nowFmt,
+      criadoPor:               (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || usuarioLogado),
+      resp:                    (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
+      descCriacao:             oc.desc || 'Ocorrência registrada no sistema.',
+      status:                  statusFinal,
+      dataResolucao:           resFmt,
+      resolvidoPor:            res.resolvidoPor || usuarioLogado,
+      descResolucao:           res.descRes || '',
+      historicoEdicoes:        oc.historicoEdicoes || res.historicoEdicoes || [],
+      validacoesTurno:         Array.isArray(res.validacoesTurno) ? res.validacoesTurno : [],
+      metaHorasObservacao:     res.metaHorasObservacao || 24,
+      inicioObservacao:        res.inicioObservacao || null,
+      concluidoObservacaoPor:  res.concluidoObservacaoPor || '',
+      concluidoObservacaoEm:   res.concluidoObservacaoEm || '',
+      reincidencias:           Array.isArray(res.reincidencias) ? res.reincidencias : [],
+      htmlRelatorio:           oc.htmlRelatorio || null,
+      dadosCTRS:               oc.dadosCTRS || null,
+      link:                    oc.link || res.link || '',
+      tags:                    Array.isArray(oc.tags) ? oc.tags : [],
+      anexos:                  anexosHist,
+      praca:                   (typeof normalizarPracaOcorrencia === 'function')
+        ? normalizarPracaOcorrencia(oc.praca, oc.local, oc.titulo, oc.equipamento || (oc.tags && oc.tags[1]))
+        : (oc.praca || (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora'))
+    };
+    historicoSeedData = [itemHist].concat(historicoSeedData);
+    window.historicoSeedData = historicoSeedData;
+    saveHistorico(historicoSeedData, itemHist);
+    if (typeof DBService !== 'undefined' && DBService && typeof DBService.deleteRemote === 'function') {
+      idsDuplicadosRemovidos.forEach(function(dupId) {
+        DBService.deleteRemote('historico', dupId);
+      });
+    }
+    return itemHist;
+  }
+  function registrarCheckObservacaoTurno(id) {
+    var idx = ocorrencias.findIndex(function(o){ return o && o.id === id; });
+    if (idx === -1) return;
+    var oc = ocorrencias[idx];
+    var usuario = getUsuarioAtual();
+    var agoraFmt = formatDataHoraLocal();
+    var resAtual = Object.assign({}, oc.resolucao || {});
+    var validacoes = Array.isArray(resAtual.validacoesTurno) ? resAtual.validacoesTurno.slice() : [];
+    validacoes.push({
+      operador: usuario,
+      dataHora: agoraFmt,
+      turno: (typeof obterLabelTurnoAtivoCurto === 'function') ? obterLabelTurnoAtivoCurto() : '',
+      timestamp: Date.now()
+    });
+    resAtual.validacoesTurno = validacoes;
+    ocorrencias[idx] = Object.assign({}, oc, {
+      resolucao: resAtual,
+      ultimaEdicaoPor: usuario,
+      ultimaEdicaoEm: agoraFmt
+    });
+    sincronizarOcorrenciaNoHistorico(ocorrencias[idx]);
+    save(ocorrencias, ocorrencias[idx], false);
+    renderAll(true);
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Check de Turno Registrado', 'Estabilidade validada neste turno por ' + usuario + '.', 'success');
+    }
+  }
+  window.registrarCheckObservacaoTurno = registrarCheckObservacaoTurno;
   function filtrarArquivados(elOrTipo, tipo) {
     var el = (elOrTipo && typeof elOrTipo === 'object' && elOrTipo.nodeType) ? elOrTipo : null;
     var tipoFinal = typeof elOrTipo === 'string' ? elOrTipo : tipo;
@@ -7053,26 +7530,27 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     var idx = ocorrencias.findIndex(function(o){ return o && o.id === id; });
     if (idx === -1) return;
     var oc = ocorrencias[idx];
-    var tagsAtuais = (oc.tags || []).slice();
-    if (!tagsAtuais.includes('Arquivada')) tagsAtuais.push('Arquivada');
+    var usuario = getUsuarioAtual();
+    var agoraFmt = formatDataHoraLocal();
+    var tagsAtuais = (oc.tags || []).filter(function(t){ return t !== 'Arquivada' && t !== 'Em Observação'; });
+    if (!tagsAtuais.includes('Validada Pós-Reparo')) tagsAtuais.push('Validada Pós-Reparo');
+    var resAtual = Object.assign({}, oc.resolucao || {}, {
+      statusRes: 'Resolvido (Validado Pós-Reparo)',
+      concluidoObservacaoPor: usuario,
+      concluidoObservacaoEm: agoraFmt
+    });
     ocorrencias[idx] = Object.assign({}, oc, {
       status: 'resolvida',
-      tags: tagsAtuais
+      tags: tagsAtuais,
+      resolucao: resAtual,
+      ultimaEdicaoPor: usuario,
+      ultimaEdicaoEm: agoraFmt
     });
-    save(ocorrencias);
-    var histIdx = historicoSeedData.findIndex(function(h){ return h && (h.id === id || h.id === ('h_oc_' + id)); });
-    if (histIdx !== -1) {
-      var histTags = (historicoSeedData[histIdx].tags || []).slice();
-      if (!histTags.includes('Arquivada')) histTags.push('Arquivada');
-      historicoSeedData[histIdx] = Object.assign({}, historicoSeedData[histIdx], {
-        status: 'Resolvida e Arquivada',
-        tags: histTags
-      });
-      saveHistorico(historicoSeedData);
-    }
-    renderAll();
+    sincronizarOcorrenciaNoHistorico(ocorrencias[idx]);
+    save(ocorrencias, ocorrencias[idx], false);
+    renderAll(true);
     if (typeof mostrarToast === 'function') {
-      mostrarToast('Verificação Concluída', '"' + (oc.titulo || 'Ocorrência') + '" foi verificada e arquivada no histórico.', 'success');
+      mostrarToast('Observação Concluída', '"' + (oc.titulo || 'Ocorrência') + '" cumpriu o período de testes e foi concluída definitivamente.', 'success');
     }
   }
   window.concluirVerificacaoArquivado = concluirVerificacaoArquivado;
@@ -7080,14 +7558,61 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     var idx = ocorrencias.findIndex(function(o){ return o && o.id === id; });
     if (idx === -1) return;
     var oc = ocorrencias[idx];
+    var motivo = prompt('⚠️ O equipamento ou sistema voltou a apresentar problema?\n\nDescreva brevemente o que ocorreu neste turno (ou deixe em branco para apenas reabrir):', '');
+    if (motivo === null) return;
+    var motivoLimpo = String(motivo || '').trim();
+    var usuario = getUsuarioAtual();
+    var agoraFmt = formatDataHoraLocal();
+    var tagsNovas = (oc.tags || []).filter(function(t){ return t !== 'Arquivada' && t !== 'Em Observação' && t !== 'Validada Pós-Reparo'; });
+    if (tagsNovas.indexOf('Reincidente') === -1) tagsNovas.push('Reincidente');
+    var resAtual = Object.assign({}, oc.resolucao || {}, {
+      statusRes: 'Reaberta (Reincidente)'
+    });
+    var reincList = Array.isArray(resAtual.reincidencias) ? resAtual.reincidencias.slice() : [];
+    reincList.push({
+      operador: usuario,
+      dataHora: agoraFmt,
+      motivo: motivoLimpo || 'Voltou a apresentar falha durante período de observação'
+    });
+    resAtual.reincidencias = reincList;
+    var edicoes = Array.isArray(oc.historicoEdicoes) ? oc.historicoEdicoes.slice() : ((resAtual.historicoEdicoes && Array.isArray(resAtual.historicoEdicoes)) ? resAtual.historicoEdicoes.slice() : []);
+    edicoes.unshift({
+      autor: usuario,
+      dataHora: agoraFmt,
+      mudancas: [{
+        campo: 'Reincidência em Observação',
+        antes: 'Em Observação',
+        depois: motivoLimpo || 'Voltou a apresentar falha'
+      }]
+    });
+    resAtual.historicoEdicoes = edicoes;
+    var descAtual = String(oc.desc || '');
+    var ctrsMarker = '';
+    var mCtrs = descAtual.match(/(<!--CTRS_JSON:[^>]+-->)/);
+    if (mCtrs && mCtrs[1]) {
+      ctrsMarker = mCtrs[1];
+      descAtual = descAtual.replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
+    }
+    if (motivoLimpo) {
+      descAtual = (descAtual ? descAtual + '\n\n' : '') + '[⚠️ Reincidência em ' + agoraFmt + ' por ' + usuario + ']: ' + motivoLimpo;
+    }
+    if (ctrsMarker) {
+      descAtual = descAtual + ctrsMarker;
+    }
     ocorrencias[idx] = Object.assign({}, oc, {
       status: 'aberta',
-      tags: (oc.tags || []).filter(function(t){ return t !== 'Arquivada'; })
+      desc: descAtual,
+      tags: tagsNovas,
+      resolucao: resAtual,
+      historicoEdicoes: edicoes,
+      ultimaEdicaoPor: usuario,
+      ultimaEdicaoEm: agoraFmt
     });
-    save(ocorrencias);
-    renderAll();
+    sincronizarOcorrenciaNoHistorico(ocorrencias[idx]);
+    save(ocorrencias, ocorrencias[idx], false);
+    renderAll(true);
     if (typeof mostrarToast === 'function') {
-      mostrarToast('Ocorrência Restaurada', '"' + (oc.titulo || 'Ocorrência') + '" retornou para as ocorrências ativas.', 'info');
+      mostrarToast('Voltou a Falhar (Reaberta)', '"' + (oc.titulo || 'Ocorrência') + '" voltou para Ocorrências Abertas marcada como Reincidente.', 'warning');
     }
   }
   window.restaurarArquivadoParaAbertas = restaurarArquivadoParaAbertas;
@@ -7104,7 +7629,9 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       }
     }
     if (!container) return;
-    if (filtroArquivadosAtivo === 'alta') {
+    if (filtroArquivadosAtivo === 'prontas') {
+      lista = lista.filter(function(o) { return calcularProgressoObservacao(o).cumprida; });
+    } else if (filtroArquivadosAtivo === 'alta') {
       lista = lista.filter(function(o) { return (o.prio || '').toLowerCase() === 'alta'; });
     } else if (filtroArquivadosAtivo === 'media') {
       lista = lista.filter(function(o) { return (o.prio || '').toLowerCase() === 'média' || (o.prio || '').toLowerCase() === 'media'; });
@@ -7114,15 +7641,16 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     if (lista.length === 0) {
       container.innerHTML =
         '<div style="text-align:center;padding:48px 16px;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);">' +
-          '<i data-lucide="archive" style="width:36px;height:36px;color:var(--muted);stroke-width:1.5;margin-bottom:10px;"></i>' +
-          '<p style="color:var(--txt);font-size:14px;font-weight:600;">Nenhuma ocorrência arquivada</p>' +
-          '<p style="color:var(--muted);font-size:12px;margin-top:3px;">As ocorrências arquivadas para verificação do próximo turno aparecerão aqui.</p>' +
+          '<i data-lucide="eye" style="width:36px;height:36px;color:var(--muted);stroke-width:1.5;margin-bottom:10px;"></i>' +
+          '<p style="color:var(--txt);font-size:14px;font-weight:600;">Nenhuma ocorrência em observação</p>' +
+          '<p style="color:var(--muted);font-size:12px;margin-top:3px;">Quando uma ocorrência for resolvida na opção \'Resolvido (Em Observação)\', ela ficará aqui para acompanhamento dos próximos turnos.</p>' +
         '</div>';
       if (typeof lucide !== 'undefined') lucide.createIcons();
       return;
     }
     function renderCardArquivadoHTML(oc) {
       var plClass = prioLine(oc.prio);
+      var prog = calcularProgressoObservacao(oc);
       var timeRel = formatDataRelativa(oc.criado || oc.dataCriacao);
       var timeH = timeRel ? '<span class="oc-meta-item" style="color:var(--muted);"><i data-lucide="clock" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + timeRel + '</span>' : '';
       var localH = oc.local ? '<span class="oc-meta-item"><i data-lucide="map-pin" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + escapeHTML(oc.local) + '</span>' : '';
@@ -7130,34 +7658,73 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       var respArq = (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)');
       var respH = '<span class="oc-meta-item"><i data-lucide="user-check" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--blue);"></i>Criado por: <strong style="color:var(--txt);">' + escapeHTML(criadorArq) + '</strong></span>' +
                   '<span class="oc-meta-item"><i data-lucide="users" style="width:11.5px;height:11.5px;stroke-width:2;color:var(--dim);"></i>' + escapeHTML(respArq) + '</span>';
-      var resolucaoH = (oc.resolucao && oc.resolucao.descRes) ? ('<p style="font-size:12px;color:var(--green-dk);background:#F0FDF4;padding:6px 10px;border-radius:6px;border:1px solid #BBF7D0;margin-top:6px;"><strong>Resolução:</strong> ' + escapeHTML(oc.resolucao.descRes) + '</p>') : '';
+      var resolucaoH = (oc.resolucao && oc.resolucao.descRes) ? ('<p style="font-size:12px;color:var(--green-dk);background:#F0FDF4;padding:6px 10px;border-radius:6px;border:1px solid #BBF7D0;margin-top:6px;"><strong>Solução Aplicada:</strong> ' + escapeHTML(oc.resolucao.descRes) + '</p>') : '';
+      var progCor = prog.cumprida ? '#10B981' : '#6366F1';
+      var progBg  = prog.cumprida ? '#ECFDF5' : '#EEF2FF';
+      var progBdr = prog.cumprida ? '#A7F3D0' : '#C7D2FE';
+      var progTxt = prog.cumprida ? '#065F46' : '#3730A3';
+      var progressoObsH =
+        '<div style="margin-top:8px;padding:8px 10px;background:' + progBg + ';border:1px solid ' + progBdr + ';border-radius:8px;">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;font-weight:700;color:' + progTxt + ';margin-bottom:5px;">' +
+            '<span style="display:inline-flex;align-items:center;gap:5px;">' +
+              (prog.cumprida
+                ? '<i data-lucide="check-circle-2" style="width:13px;height:13px;stroke-width:2.3;"></i> Meta de observação cumprida — Pronto para concluir!'
+                : ('<i data-lucide="clock" style="width:13px;height:13px;stroke-width:2.2;"></i> Em observação há ' + prog.tempoLabel + ' (Meta: ' + prog.metaHoras + 'h sem falhas)')) +
+            '</span>' +
+            '<span>' + prog.pct + '%</span>' +
+          '</div>' +
+          '<div style="width:100%;height:6px;background:rgba(255,255,255,0.75);border-radius:99px;overflow:hidden;">' +
+            '<div style="width:' + prog.pct + '%;height:100%;background:' + progCor + ';border-radius:99px;transition:width .3s ease;"></div>' +
+          '</div>' +
+        '</div>';
+      var carimbosH = '';
+      if (prog.validacoes.length > 0) {
+        carimbosH =
+          '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;">' +
+            prog.validacoes.map(function(v) {
+              var turnoTxt = v.turno ? (' [' + escapeHTML(v.turno) + ']') : '';
+              return '<div style="font-size:11px;color:#047857;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:6px;padding:4px 8px;display:flex;align-items:center;gap:5px;">' +
+                '<i data-lucide="check" style="width:12px;height:12px;stroke-width:2.5;flex-shrink:0;"></i>' +
+                '<span>Estável no turno' + turnoTxt + ' — verificado por <strong>' + escapeHTML(v.operador || 'Operador') + '</strong> (' + escapeHTML(v.dataHora || '') + ')</span>' +
+              '</div>';
+            }).join('') +
+          '</div>';
+      }
       var safeArqId = typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(oc.id) : escapeHTML(oc.id);
+      var cardBorderStyle = prog.cumprida ? 'background:#FFFFFF;border-color:#A7F3D0;cursor:pointer;margin-bottom:10px;' : 'background:#FFFFFF;cursor:pointer;margin-bottom:10px;';
       return (
-        '<article class="oc-card" tabindex="0" role="button" style="background:#FFFFFF;cursor:pointer;margin-bottom:10px;" onclick="verDetalhesHistoricoDirect(\'' + safeArqId + '\')">' +
+        '<article class="oc-card" tabindex="0" role="button" style="' + cardBorderStyle + '" onclick="verDetalhesHistoricoDirect(\'' + safeArqId + '\')">' +
           '<div class="prio-line ' + plClass + '"></div>' +
           '<div class="oc-body">' +
             '<div class="oc-header">' +
               '<h3>' + escapeHTML(oc.titulo || 'Ocorrência') + '</h3>' +
               '<span class="tag ' + tagClass(oc.prio) + '">' + escapeHTML(oc.prio || 'Média') + '</span>' +
+              '<span class="tag tag-ind" style="font-weight:600;display:inline-flex;align-items:center;gap:4px;"><i data-lucide="eye" style="width:11px;height:11px;stroke-width:2.2;"></i> Em Observação</span>' +
               '<span class="tag tag-teal-soft">' + escapeHTML(oc.cat || 'Equipamento') + '</span>' +
+              (oc.equipamento ? '<span class="tag tag-blue-soft">' + escapeHTML(oc.equipamento) + '</span>' : '') +
             '</div>' +
             '<p class="oc-desc">' + (typeof formatarTextoComLinks === 'function' ? formatarTextoComLinks(String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim(), true) : escapeHTML(String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim())) + '</p>' +
             ((oc.link || (oc.resolucao && oc.resolucao.link)) && typeof renderBotaoLinkExterno === 'function'
               ? '<div style="margin-top:4px;margin-bottom:6px;">' + renderBotaoLinkExterno(oc.link || (oc.resolucao && oc.resolucao.link), null, true) + '</div>'
               : '') +
             resolucaoH +
+            progressoObsH +
+            carimbosH +
             '<div class="oc-meta" style="margin-top:8px;">' +
               respH +
               localH +
               timeH +
             '</div>' +
           '</div>' +
-          '<div class="oc-actions" style="justify-content:center;gap:8px;" onclick="event.stopPropagation();">' +
-            '<button class="btn-card-action btn-card-resolve" onclick="event.stopPropagation(); concluirVerificacaoArquivado(\'' + safeArqId + '\');" title="Concluir verificação do turno">' +
-              '<i data-lucide="check" style="width:12px;height:12px;stroke-width:2.5;"></i> Concluir / Verificado' +
+          '<div class="oc-actions" style="flex-direction:column;align-items:stretch;justify-content:center;gap:6px;" onclick="event.stopPropagation();">' +
+            '<button class="btn-card-action btn-card-resolve" onclick="event.stopPropagation(); concluirVerificacaoArquivado(\'' + safeArqId + '\');" title="Encerrar observação e concluir definitivamente">' +
+              '<i data-lucide="check-circle-2" style="width:13px;height:13px;stroke-width:2.2;"></i> Concluir' +
             '</button>' +
-            '<button class="btn-card-action btn-card-restore" onclick="event.stopPropagation(); restaurarArquivadoParaAbertas(\'' + safeArqId + '\');" title="Restaurar para Ocorrências Abertas">' +
-              '<i data-lucide="rotate-ccw" style="width:12px;height:12px;stroke-width:2.2;"></i> Restaurar' +
+            '<button class="btn-card-action btn-card-restore" onclick="event.stopPropagation(); registrarCheckObservacaoTurno(\'' + safeArqId + '\');" title="Confirmar que foi testado e operou sem falhas neste turno">' +
+              '<i data-lucide="shield-check" style="width:13px;height:13px;stroke-width:2.2;"></i> Testado no Turno' +
+            '</button>' +
+            '<button class="btn-card-action" style="background:#FEF2F2;color:#DC2626;border-color:#FECACA;" onclick="event.stopPropagation(); restaurarArquivadoParaAbertas(\'' + safeArqId + '\');" title="O problema retornou — reabrir ocorrência como Reincidente">' +
+              '<i data-lucide="alert-triangle" style="width:13px;height:13px;stroke-width:2.2;"></i> Voltou a Falhar' +
             '</button>' +
           '</div>' +
         '</article>'
@@ -7170,10 +7737,10 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   window.renderArquivados = renderArquivados;
   function editarOcorrenciaDoModalDetalhes() {
     if (!itemDetalhesAtual) return;
-    var targetId = itemDetalhesAtual.id;
+    var targetId = itemDetalhesAtual.ocId || String(itemDetalhesAtual.id || '').replace(/^h_oc_/, '');
     var targetTitulo = itemDetalhesAtual.titulo;
     fecharPopup('popup-detalhes-historico');
-    var oc = ocorrencias.find(function(o){ return o && (o.id === targetId || o.titulo === targetTitulo); });
+    var oc = ocorrencias.find(function(o){ return o && (o.id === targetId || o.id === itemDetalhesAtual.id || o.titulo === targetTitulo); });
     if (oc) {
       abrirEditarOcorrencia(oc.id);
     } else {
@@ -7183,7 +7750,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   window.editarOcorrenciaDoModalDetalhes = editarOcorrenciaDoModalDetalhes;
   function excluirOcorrenciaDoModalDetalhes() {
     if (!itemDetalhesAtual) return;
-    var targetId = itemDetalhesAtual.id;
+    var targetId = itemDetalhesAtual.ocId || itemDetalhesAtual.id;
     fecharPopup('popup-detalhes-historico');
     excluirOcorrencia(targetId);
   }
@@ -7212,12 +7779,24 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     var nowStr = formatDataHoraLocal();
     var usuarioLogado = getUsuarioAtual();
     var isParcial = (statusEscolhido === 'Parcialmente resolvido');
-    var isArquivada = (statusEscolhido === 'Resolvida e Arquivada');
-    var updatedTags = (oc.tags || []).filter(function(t){ return t !== 'Parcialmente Resolvida' && t !== 'Arquivada'; });
+    var isArquivada = (statusEscolhido === 'Em Observação' || statusEscolhido === 'Resolvida e Arquivada');
+    var horasObsEl = document.getElementById('resolver-obs-horas');
+    var metaHorasObs = 24;
+    if (horasObsEl) {
+      if (horasObsEl.value === 'custom') {
+        var cValEl = document.getElementById('resolver-obs-custom-val');
+        var cUnitEl = document.getElementById('resolver-obs-custom-unit');
+        var numVal = cValEl ? Math.max(1, parseInt(cValEl.value, 10) || 1) : 24;
+        metaHorasObs = (cUnitEl && cUnitEl.value === 'dias') ? (numVal * 24) : numVal;
+      } else {
+        metaHorasObs = parseInt(horasObsEl.value, 10) || 24;
+      }
+    }
+    var updatedTags = (oc.tags || []).filter(function(t){ return t !== 'Parcialmente Resolvida' && t !== 'Arquivada' && t !== 'Em Observação' && t !== 'Validada Pós-Reparo'; });
     if (isParcial) {
       updatedTags.push('Parcialmente Resolvida');
     } else if (isArquivada) {
-      updatedTags.push('Arquivada');
+      updatedTags.push('Em Observação');
     }
     var novoStatus = 'resolvida';
     if (isParcial) novoStatus = 'aberta';
@@ -7225,61 +7804,40 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     var anexosNovos = (uploadedFilesStore['resolver-previews'] || []).slice();
     var anexosAntigos = (oc.anexos && Array.isArray(oc.anexos)) ? oc.anexos : ((oc.resolucao && Array.isArray(oc.resolucao.anexos)) ? oc.resolucao.anexos : []);
     var anexosCombinados = anexosAntigos.concat(anexosNovos);
+    var resObjFinal = {
+      statusRes: statusEscolhido,
+      descRes:   descResolucao,
+      data:      Date.now(),
+      resolvidoPor: usuarioLogado,
+      criadoPor: (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || usuarioLogado),
+      link:      oc.link || (oc.resolucao && oc.resolucao.link) || '',
+      anexos:    anexosCombinados,
+      historicoEdicoes: oc.historicoEdicoes || (oc.resolucao && oc.resolucao.historicoEdicoes) || []
+    };
+    if (isArquivada) {
+      resObjFinal.inicioObservacao = Date.now();
+      resObjFinal.metaHorasObservacao = metaHorasObs;
+      resObjFinal.validacoesTurno = (oc.resolucao && Array.isArray(oc.resolucao.validacoesTurno)) ? oc.resolucao.validacoesTurno : [];
+    }
     ocorrencias[idx] = Object.assign({}, oc, {
       status: novoStatus,
       tags: updatedTags,
       anexos: anexosCombinados,
-      resolucao: {
-        statusRes: statusEscolhido,
-        descRes:   descResolucao,
-        data:      Date.now(),
-        resolvidoPor: usuarioLogado,
-        criadoPor: (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || usuarioLogado),
-        link:      oc.link || (oc.resolucao && oc.resolucao.link) || '',
-        anexos:    anexosCombinados,
-        historicoEdicoes: oc.historicoEdicoes || (oc.resolucao && oc.resolucao.historicoEdicoes) || []
-      }
+      resolucao: resObjFinal,
+      ultimaEdicaoPor: usuarioLogado,
+      ultimaEdicaoEm: nowStr
     });
     window.ocorrencias = ocorrencias;
-    var tagsHist = isArquivada ? ['Arquivada'] : [];
-    var novoItemHist = {
-      id:            'h_oc_' + Date.now(),
-      tipo:          'ocorrencia',
-      subtipo:       oc.cat || 'Equipamento',
-      titulo:        oc.titulo,
-      equipamento:   oc.local ? (oc.local + ' — ' + (oc.cat || 'Equipamento')) : (oc.cat || oc.titulo),
-      categoria:     oc.cat || 'Equipamento',
-      local:         oc.local || 'Central Técnica',
-      dataCriacao:   nowStr,
-      criadoPor:     (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || usuarioLogado),
-      resp:          (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
-      descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
-      status:        statusEscolhido,
-      dataResolucao: nowStr,
-      resolvidoPor:  usuarioLogado,
-      descResolucao: descResolucao,
-      historicoEdicoes: oc.historicoEdicoes || (oc.resolucao && oc.resolucao.historicoEdicoes) || [],
-      htmlRelatorio: oc.htmlRelatorio || null,
-      dadosCTRS:     oc.dadosCTRS || null,
-      link:          oc.link || (oc.resolucao && oc.resolucao.link) || '',
-      tags:          tagsHist,
-      anexos:        anexosCombinados,
-      praca:         (typeof normalizarPracaOcorrencia === 'function')
-        ? normalizarPracaOcorrencia(oc.praca, oc.local, oc.titulo, oc.equipamento || (oc.tags && oc.tags[1]))
-        : (oc.praca || (typeof getPracaAtual === 'function' ? getPracaAtual() : 'Juiz de Fora'))
-    };
-    historicoSeedData = [novoItemHist].concat(historicoSeedData);
-    window.historicoSeedData = historicoSeedData;
-    saveHistorico(historicoSeedData, novoItemHist);
+    sincronizarOcorrenciaNoHistorico(ocorrencias[idx]);
     save(ocorrencias, ocorrencias[idx], false);
     fecharPopup('popup-resolver');
-    renderAll();
+    renderAll(true);
     resolverAtualId = null;
     if (typeof mostrarToast === 'function') {
       if (isParcial) {
         mostrarToast('Parcialmente Resolvida', 'A ocorrência foi registrada no histórico e continua ativa para acompanhamento.', 'warning');
       } else if (isArquivada) {
-        mostrarToast('Ocorrência Arquivada', 'A ocorrência foi arquivada para verificação do próximo turno e salva no histórico.', 'info');
+        mostrarToast('Em Observação', 'Ocorrência enviada para monitoramento pós-reparo (' + metaHorasObs + 'h) nos próximos turnos.', 'info');
       } else {
         mostrarToast('Ocorrência Concluída', 'A ocorrência foi resolvida e registrada no histórico geral.', 'success');
       }
@@ -7289,7 +7847,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   if (btnConfirmar) {
     btnConfirmar.addEventListener('click', confirmarResolucao);
   }
-
   function iniciais(nome) {
     var partes = nome.trim().split(/\s+/);
     var ini = partes[0] ? partes[0][0] : '';
@@ -7469,28 +8026,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     }
   }
   window.resetarFluxoEmailIdentificacao = resetarFluxoEmailIdentificacao;
-  function alternarModoLoginManual() {
-    var wrapEmail  = document.getElementById('ident-step-email-wrap');
-    var wrapManual = document.getElementById('ident-step-manual-wrap');
-    var linkEl     = document.getElementById('link-alternar-modo-login');
-    var msgEl      = document.getElementById('ident-chave-msg');
-    var btn        = document.getElementById('btn-confirmar-identificacao');
-    if (!wrapEmail || !wrapManual) return;
-    var indoParaManual = (wrapManual.style.display === 'none');
-    wrapEmail.style.display  = indoParaManual ? 'none' : 'flex';
-    wrapManual.style.display = indoParaManual ? 'flex' : 'none';
-    if (msgEl) msgEl.style.display = 'none';
-    if (indoParaManual) {
-      if (linkEl) linkEl.textContent = 'Voltar para Login por E-mail Corporativo';
-      if (btn) btn.textContent = 'Salvar e Continuar';
-      var nomeIn = document.getElementById('ident-operador-nome');
-      if (nomeIn) setTimeout(function() { nomeIn.focus(); }, 100);
-    } else {
-      if (linkEl) linkEl.textContent = 'Entrar com Chave da Estação (Sem e-mail)';
-      resetarFluxoEmailIdentificacao();
-    }
-  }
-  window.alternarModoLoginManual = alternarModoLoginManual;
   function exibirMsgLogin(msgEl, texto, tipo) {
     if (!msgEl) return;
     msgEl.style.display = 'block';
@@ -7537,31 +8072,10 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     }
     return { ok: false };
   }
-  async function confirmarIdentificacaoOperador(entrarModoLocal) {
-    var wrapManual = document.getElementById('ident-step-manual-wrap');
-    var modoManualAtivo = wrapManual && wrapManual.style.display !== 'none';
+  async function confirmarIdentificacaoOperador() {
     var msgEl = document.getElementById('ident-chave-msg');
     var btn   = document.getElementById('btn-confirmar-identificacao');
-    if (entrarModoLocal) {
-      var nomeOff = (document.getElementById('ident-operador-nome') && document.getElementById('ident-operador-nome').value.trim())
-        || (document.getElementById('ident-operador-email') && document.getElementById('ident-operador-email').value.split('@')[0])
-        || 'Operador';
-      localStorage.removeItem('tv_supabase_url');
-      localStorage.removeItem('tv_supabase_key');
-      if (typeof DBService !== 'undefined' && DBService) {
-        DBService.url = '';
-        DBService.key = '';
-        DBService.mode = 'local';
-      }
-      if (typeof updateCloudStatus === 'function') updateCloudStatus(false, 'Modo Local');
-      localStorage.setItem(USER_NAME_STORAGE_KEY, nomeOff);
-      atualizarNomeOperadorUI(nomeOff);
-      fecharPopup('popup-identificacao-operador');
-      abrirPopup('popup-entrada');
-      return;
-    }
-    if (!modoManualAtivo) {
-      var emailInput = document.getElementById('ident-operador-email');
+    var emailInput = document.getElementById('ident-operador-email');
       var emailRaw = (emailInput ? emailInput.value : '').trim().toLowerCase();
       var email = emailRaw.replace(/[%*\s]/g, '');
       if (!email || !/^[a-z0-9._+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(email)) {
@@ -7603,7 +8117,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
           if (!Array.isArray(listaOp) || listaOp.length === 0) {
             exibirMsgLogin(
               msgEl,
-              '❌ O e-mail <strong>' + escapeHTML(email) + '</strong> ainda não está cadastrado na tabela <code>operadores</code> do banco.<br><span style="font-size:11px;">Solicite o cadastro à TI/Administração ou use "Entrar com Chave da Estação" abaixo.</span>',
+              '❌ O e-mail <strong>' + escapeHTML(email) + '</strong> ainda não está cadastrado na tabela <code>operadores</code> do banco.<br><span style="font-size:11px;">Solicite o cadastro do seu e-mail à TI/Administração.</span>',
               'erro'
             );
             if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
@@ -7765,43 +8279,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       }
       if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
       return;
-    }
-    var input = document.getElementById('ident-operador-nome');
-    var chaveInput = document.getElementById('ident-chave-acesso');
-    var nome = input ? input.value.trim() : '';
-    if (!nome) {
-      alert('Por favor, informe seu nome completo para continuar.');
-      if (input) input.focus();
-      return;
-    }
-    var pracaEl = document.getElementById('ident-operador-praca');
-    if (pracaEl && pracaEl.value && typeof setPracaAtual === 'function') {
-      setPracaAtual(pracaEl.value);
-    }
-    var chave = chaveInput ? chaveInput.value.trim() : '';
-    var pack = window.ENCRYPTED_TV_CREDENTIALS || (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS);
-    var estacaoJaConectada = typeof isEstacaoConectadaTV === 'function' ? isEstacaoConectadaTV() : false;
-    if (chave) {
-      if (btn) { btn.disabled = true; btn.textContent = 'Validando...'; }
-      var res = await conectarComChaveTV(chave);
-      if (!res.ok) {
-        exibirMsgLogin(msgEl, res.error || 'Chave de acesso incorreta.', 'erro');
-        if (btn) { btn.disabled = false; btn.textContent = 'Salvar e Continuar'; }
-        return;
-      }
-    } else if (!estacaoJaConectada && pack && pack.data) {
-      exibirMsgLogin(msgEl, 'Digite a Chave de Acesso da Estação ou clique em "Trabalhar Offline".', 'erro');
-      return;
-    }
-    localStorage.setItem(USER_NAME_STORAGE_KEY, nome);
-    atualizarNomeOperadorUI(nome);
-    if (typeof DBService !== 'undefined' && typeof DBService.syncRemote === 'function') {
-      await DBService.syncRemote(true);
-    }
-    if (typeof renderAll === 'function') renderAll(true);
-    fecharPopup('popup-identificacao-operador');
-    abrirPopup('popup-entrada');
-    if (btn) { btn.disabled = false; btn.textContent = 'Salvar e Continuar'; }
   }
   window.confirmarIdentificacaoOperador = confirmarIdentificacaoOperador;
   function mutarNotificacoes(mutado) {
@@ -7810,6 +8287,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     if (dot)   dot.style.display   = mutado ? 'none' : '';
     if (badge) badge.style.display = mutado ? 'none' : '';
   }
+  window.mutarNotificacoes = mutarNotificacoes;
   function abrirModalConectarBanco() {
     var input = document.getElementById('conectar-banco-chave');
     var msg = document.getElementById('conectar-banco-msg');
@@ -7916,30 +8394,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     }
   }
   window.executarConexaoBanco = executarConexaoBanco;
-  function desconectarBancoModoLocal(confirmar) {
-    if (confirmar && !confirm('Deseja realmente desconectar e trabalhar offline?\n\nOs novos registros ficarão salvos com segurança neste computador até você reconectar.')) {
-      return;
-    }
-    try {
-      localStorage.removeItem('tv_supabase_url');
-      localStorage.removeItem('tv_supabase_key');
-      if (typeof DBService !== 'undefined' && DBService) {
-        DBService.url = '';
-        DBService.key = '';
-        DBService.mode = 'local';
-      }
-      if (typeof updateCloudStatus === 'function') {
-        updateCloudStatus(false, 'Modo Offline');
-      }
-      atualizarUIStatusBancoConfig();
-      if (typeof mostrarToast === 'function') {
-        mostrarToast('Modo Offline Ativado', 'Estação desconectada da rede. Operando localmente neste computador.', 'info');
-      }
-    } catch(e) {
-      console.warn('Erro ao desconectar banco:', e);
-    }
-  }
-  window.desconectarBancoModoLocal = desconectarBancoModoLocal;
   function atualizarUIStatusBancoConfig() {
     var dotEl = document.getElementById('cfg-db-status-dot');
     var textEl = document.getElementById('cfg-db-status-text');
@@ -7973,190 +8427,8 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.atualizarUIStatusBancoConfig = atualizarUIStatusBancoConfig;
-  function carregarCredenciaisSupabaseConfig() {
-    var urlInput = document.getElementById('cfg-supabase-url');
-    var keyInput = document.getElementById('cfg-supabase-key');
-    var badgeEl  = document.getElementById('cfg-db-status-badge');
-    var currentUrl = (DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
-    var currentKey = (DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
-    if (urlInput && !urlInput.value) urlInput.value = currentUrl;
-    if (keyInput && !keyInput.value) keyInput.value = currentKey;
-    if (badgeEl) {
-      if (currentUrl && currentKey) {
-        badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#10B981;"></span> Conectado ao Supabase';
-        badgeEl.style.color = '#059669';
-      } else {
-        badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#EF4444;"></span> Desconectado (Modo Local)';
-        badgeEl.style.color = '#DC2626';
-      }
-    }
-  }
-  window.carregarCredenciaisSupabaseConfig = carregarCredenciaisSupabaseConfig;
-  function toggleMostrarChaveSupabase() {
-    var keyInput = document.getElementById('cfg-supabase-key');
-    var ico = document.getElementById('ico-toggle-key');
-    if (!keyInput) return;
-    if (keyInput.type === 'password') {
-      keyInput.type = 'text';
-      if (ico) ico.setAttribute('data-lucide', 'eye-off');
-    } else {
-      keyInput.type = 'password';
-      if (ico) ico.setAttribute('data-lucide', 'eye');
-    }
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-  }
-  window.toggleMostrarChaveSupabase = toggleMostrarChaveSupabase;
-  async function testarConexaoSupabaseConfig(silencioso) {
-    var urlInput = document.getElementById('cfg-supabase-url');
-    var keyInput = document.getElementById('cfg-supabase-key');
-    var url = urlInput ? urlInput.value.trim().replace(/\/+$/, '') : '';
-    var key = keyInput ? keyInput.value.trim() : '';
-    var badgeEl = document.getElementById('cfg-db-status-badge');
-    if (!url || !key) {
-      if (!silencioso && typeof mostrarToast === 'function') {
-        mostrarToast('Campos Vazios', 'Informe a URL e a Chave do Supabase para testar.', 'warning');
-      }
-      return { ok: false, status: 0, message: 'Campos vazios' };
-    }
-    if (badgeEl) {
-      badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#F59E0B;"></span> Testando conexão...';
-      badgeEl.style.color = '#D97706';
-    }
-    try {
-      var res = await fetch(url + '/rest/v1/ocorrencias?select=id&limit=1', {
-        headers: {
-          'apikey': key,
-          'Authorization': 'Bearer ' + key,
-          'Cache-Control': 'no-cache'
-        }
-      });
-      if (res.ok) {
-        if (badgeEl) {
-          badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#10B981;"></span> Conexão bem-sucedida!';
-          badgeEl.style.color = '#059669';
-        }
-        if (!silencioso && typeof mostrarToast === 'function') {
-          mostrarToast('Conexão Estabelecida', 'Autenticado com sucesso no banco de dados Supabase.', 'success');
-        }
-        return { ok: true, status: res.status };
-      }
-      var erroTexto = '';
-      try {
-        var errBody = await res.json();
-        erroTexto = errBody.message || errBody.error || errBody.msg || JSON.stringify(errBody);
-      } catch(e) {
-        try { erroTexto = await res.text(); } catch(e2) {}
-      }
-      if (res.status === 402) {
-        var msg402 = 'Projeto Pausado no Supabase (Erro 402). Acesse supabase.com/dashboard e clique em "Restore project" para reativar o banco.';
-        if (badgeEl) {
-          badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#EF4444;"></span> Projeto Pausado no Supabase (402)';
-          badgeEl.style.color = '#DC2626';
-        }
-        if (!silencioso && typeof mostrarToast === 'function') {
-          mostrarToast('Projeto Pausado (402)', 'O seu projeto do Supabase está pausado por inatividade. Basta entrar em supabase.com/dashboard e clicar em "Restore project".', 'warning');
-        }
-        return { ok: false, status: 402, message: msg402, details: erroTexto };
-      } else if (res.status === 401 || res.status === 403) {
-        var msg401 = 'Chave Inválida (Erro ' + res.status + '). Verifique a anon/public key copiada do Supabase.';
-        if (badgeEl) {
-          badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#EF4444;"></span> Chave Não Autorizada (' + res.status + ')';
-          badgeEl.style.color = '#DC2626';
-        }
-        if (!silencioso && typeof mostrarToast === 'function') {
-          mostrarToast('Chave Inválida (' + res.status + ')', 'A chave do Supabase não foi aceita.', 'danger');
-        }
-        return { ok: false, status: res.status, message: msg401, details: erroTexto };
-      } else if (res.status === 404) {
-        try {
-          var resRoot = await fetch(url + '/rest/v1/', {
-            headers: { 'apikey': key, 'Authorization': 'Bearer ' + key }
-          });
-          if (resRoot.ok || resRoot.status === 200) {
-            var msg404 = 'Conectado ao Supabase com sucesso, mas a tabela "ocorrencias" ainda não foi criada no schema do banco.';
-            if (badgeEl) {
-              badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#F59E0B;"></span> Conectado (Tabela Ocorrências pendente)';
-              badgeEl.style.color = '#D97706';
-            }
-            if (!silencioso && typeof mostrarToast === 'function') {
-              mostrarToast('Conexão OK', msg404, 'warning');
-            }
-            return { ok: true, tabelaAusente: true, status: 404, message: msg404 };
-          }
-        } catch(e404) {}
-      }
-      var msgGen = 'Falha na conexão (Status ' + res.status + (erroTexto ? ': ' + erroTexto : '') + ')';
-      if (badgeEl) {
-        badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#EF4444;"></span> ' + msgGen;
-        badgeEl.style.color = '#DC2626';
-      }
-      if (!silencioso && typeof mostrarToast === 'function') {
-        mostrarToast('Erro de Conexão', msgGen, 'danger');
-      }
-      return { ok: false, status: res.status, message: msgGen, details: erroTexto };
-    } catch(err) {
-      var msgErr = 'Falha na conexão (' + err.message + ')';
-      if (badgeEl) {
-        badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#EF4444;"></span> ' + msgErr;
-        badgeEl.style.color = '#DC2626';
-      }
-      if (!silencioso && typeof mostrarToast === 'function') {
-        mostrarToast('Erro de Conexão', 'Não foi possível contatar o Supabase. Verifique a URL e sua conexão.', 'danger');
-      }
-      return { ok: false, status: 0, message: msgErr };
-    }
-  }
-  window.testarConexaoSupabaseConfig = testarConexaoSupabaseConfig;
-  async function salvarCredenciaisSupabaseConfig() {
-    var urlInput = document.getElementById('cfg-supabase-url');
-    var keyInput = document.getElementById('cfg-supabase-key');
-    var url = urlInput ? urlInput.value.trim().replace(/\/+$/, '') : '';
-    var key = keyInput ? keyInput.value.trim() : '';
-    if (!url || !key) {
-      if (typeof mostrarToast === 'function') mostrarToast('Atenção', 'Preencha a URL e a Chave do Supabase.', 'warning');
-      return;
-    }
-    var badgeEl = document.getElementById('cfg-db-status-badge');
-    if (badgeEl) {
-      badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#F59E0B;"></span> Verificando conexão antes de salvar...';
-      badgeEl.style.color = '#D97706';
-    }
-    var teste = await testarConexaoSupabaseConfig(true);
-    if (!teste.ok) {
-      if (teste.status === 402) {
-        if (typeof mostrarToast === 'function') {
-          mostrarToast('Projeto Pausado no Supabase (402)', 'O seu projeto está pausado no Supabase. Acesse supabase.com/dashboard e clique em "Restore project" para reativá-lo.', 'danger');
-        }
-      } else {
-        if (typeof mostrarToast === 'function') {
-          mostrarToast('Falha na Conexão (' + (teste.status || 'Erro') + ')', teste.message || 'Verifique suas credenciais antes de salvar.', 'danger');
-        }
-      }
-      return;
-    }
-    localStorage.setItem('tv_supabase_url', url);
-    localStorage.setItem('tv_supabase_key', key);
-    DBService.url = url;
-    DBService.key = key;
-    DBService.mode = 'supabase';
-    if (badgeEl) {
-      badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#10B981;"></span> Conectado e Sincronizando...';
-      badgeEl.style.color = '#059669';
-    }
-    if (typeof mostrarToast === 'function') {
-      mostrarToast('Banco Conectado', 'Credenciais verificadas e ativas! Sincronizando dados com o Supabase...', 'success');
-    }
-    if (typeof DBService.init === 'function') DBService.init();
-    if (typeof DBService.syncRemote === 'function') DBService.syncRemote();
-  }
-  window.salvarCredenciaisSupabaseConfig = salvarCredenciaisSupabaseConfig;
   function salvarConfiguracoes() {
     var btn = event && event.currentTarget;
-    var urlEl = document.getElementById('cfg-supabase-url');
-    var keyEl = document.getElementById('cfg-supabase-key');
-    if (urlEl && keyEl && urlEl.value.trim() && keyEl.value.trim()) {
-      salvarCredenciaisSupabaseConfig();
-    }
     if (!btn) return;
     var textoOriginal = btn.textContent;
     btn.textContent = 'Salvo!';
@@ -8167,112 +8439,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     }, 1400);
   }
   window.salvarConfiguracoes = salvarConfiguracoes;
-  function usarCredenciaisPreenchidasParaGerador() {
-    var urlEl = document.getElementById('cfg-supabase-url');
-    var keyEl = document.getElementById('cfg-supabase-key');
-    var url = urlEl ? urlEl.value.trim() : '';
-    var key = keyEl ? keyEl.value.trim() : '';
-    if (!url || !key) {
-      if (typeof mostrarToast === 'function') {
-        mostrarToast('Atenção', 'Preencha a URL e a Publishable Key no card acima primeiro.', 'warning');
-      } else {
-        alert('Preencha a URL e a Publishable Key no card acima primeiro.');
-      }
-      return;
-    }
-    if (typeof mostrarToast === 'function') {
-      mostrarToast('Dados Prontos', 'URL e Chave do Supabase preparadas para a criptografia.', 'info');
-    }
-  }
-  window.usarCredenciaisPreenchidasParaGerador = usarCredenciaisPreenchidasParaGerador;
-  var ultimoBlocoGerado = null;
-  async function executarGeradorChaveSegura() {
-    if (typeof verificarPermissaoPerfil === 'function' && !verificarPermissaoPerfil(['TI/ADM', 'Gestor'], 'gerar pacote criptografado da estação')) {
-      return;
-    }
-    var urlEl = document.getElementById('cfg-supabase-url');
-    var keyEl = document.getElementById('cfg-supabase-key');
-    var passEl = document.getElementById('gen-chave-passphrase');
-    var btn = document.getElementById('btn-executar-gerador');
-    var outArea = document.getElementById('gen-resultado-area');
-    var outPre = document.getElementById('gen-codigo-output');
-    var url = urlEl ? urlEl.value.trim() : '';
-    var key = keyEl ? keyEl.value.trim() : '';
-    var pass = passEl ? passEl.value.trim() : '';
-    if (!url || !key) {
-      alert('Por favor, informe a URL do Supabase e a API Key no card de Conexão com o Banco acima.');
-      if (urlEl) urlEl.focus();
-      return;
-    }
-    if (!pass) {
-      alert('Por favor, defina uma Chave de Acesso para a equipe (ex: TvIntegracao@2026).');
-      if (passEl) passEl.focus();
-      return;
-    }
-    if (pass.length < 6) {
-      alert('A chave de acesso deve ter pelo menos 6 caracteres para garantir segurança máxima contra ataques.');
-      if (passEl) passEl.focus();
-      return;
-    }
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-right:6px;vertical-align:middle;"></span> Criptografando (PBKDF2 250k)...';
-    }
-    try {
-      if (!window.TVCrypto) {
-        throw new Error('Módulo TVCrypto indisponível.');
-      }
-      var payload = { url: url, key: key };
-      var encPack = await window.TVCrypto.encrypt(pass, payload);
-      ultimoBlocoGerado = encPack;
-      window.ultimoBlocoGerado = encPack;
-      window.ENCRYPTED_TV_CREDENTIALS = encPack;
-      var snippet = '// Cole no config.js ou no script.js\n' +
-        'window.ENCRYPTED_TV_CREDENTIALS = ' + JSON.stringify(encPack, null, 2) + ';';
-      if (outPre) outPre.textContent = snippet;
-      if (outArea) outArea.style.display = 'block';
-      if (typeof mostrarToast === 'function') {
-        mostrarToast('Código Gerado!', 'Bloco AES-256-GCM gerado. Nunca inclua a senha em comentários ou no código enviado ao GitHub!', 'success');
-      }
-    } catch (e) {
-      alert('Erro ao criptografar: ' + e.message);
-    } finally {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<i data-lucide="lock" style="width:14px;height:14px;"></i> Gerar Bloco Criptografado Seguro';
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-      }
-    }
-  }
-  window.executarGeradorChaveSegura = executarGeradorChaveSegura;
-  function copiarCodigoCriptografadoGerado() {
-    var outPre = document.getElementById('gen-codigo-output');
-    if (!outPre || !outPre.textContent) return;
-    navigator.clipboard.writeText(outPre.textContent).then(function() {
-      if (typeof mostrarToast === 'function') {
-        mostrarToast('Copiado!', 'Código criptografado copiado para a área de transferência.', 'success');
-      } else {
-        alert('Código copiado com sucesso!');
-      }
-    }).catch(function() {
-      alert('Selecione e copie o texto manualmente.');
-    });
-  }
-  window.copiarCodigoCriptografadoGerado = copiarCodigoCriptografadoGerado;
-  function aplicarCodigoCriptografadoAgora() {
-    if (!ultimoBlocoGerado) {
-      alert('Gere o código primeiro clicando no botão acima.');
-      return;
-    }
-    window.ENCRYPTED_TV_CREDENTIALS = ultimoBlocoGerado;
-    if (typeof mostrarToast === 'function') {
-      mostrarToast('Ativado!', 'Pacote criptografado ativado na memória deste navegador.', 'success');
-    } else {
-      alert('Pacote ativado com sucesso neste navegador!');
-    }
-  }
-  window.aplicarCodigoCriptografadoAgora = aplicarCodigoCriptografadoAgora;
-
   function renderHistorico() {
     var container = document.getElementById('hist-list');
     if (!container) return;
@@ -8312,32 +8478,72 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     }
     function renderCardHistoricoHTML(item) {
       var eMeu = isItemDoUsuario(item);
-      var isParcial = (item.status === 'Parcialmente resolvido') ||
+      var stItemLow = String(item.status || '').toLowerCase();
+      var isReaberta = (item.tipo === 'ocorrencia') && (
+        stItemLow.indexOf('reaberta') !== -1 ||
+        stItemLow === 'aberta' ||
+        (stItemLow.indexOf('reincidente') !== -1 && stItemLow.indexOf('resolvido') === -1)
+      );
+      var isParcial = !isReaberta && (
+                      (item.status === 'Parcialmente resolvido') ||
                       (item.status === 'Parcialmente Resolvida') ||
                       (item.subtipo && String(item.subtipo).toLowerCase().includes('parcial')) ||
                       (item.tags && item.tags.indexOf('Parcialmente Resolvida') !== -1) ||
-                      (item.descResolucao && String(item.descResolucao).toLowerCase().includes('parcialmente resolvido'));
-      var isArquivado = (item.status === 'Resolvida e Arquivada') ||
+                      (item.descResolucao && String(item.descResolucao).toLowerCase().includes('parcialmente resolvido'))
+      );
+      var isArquivado = !isReaberta && (
+                        (item.status === 'Em Observação') ||
+                        (item.status === 'Resolvida e Arquivada') ||
                         (item.status === 'arquivada') ||
-                        (item.tags && item.tags.indexOf('Arquivada') !== -1);
+                        (item.tags && (item.tags.indexOf('Em Observação') !== -1 || item.tags.indexOf('Arquivada') !== -1))
+      );
+      var isValidadaPosReparo = !isReaberta && !isArquivado && (
+        stItemLow.indexOf('validado') !== -1 ||
+        (item.tags && item.tags.indexOf('Validada Pós-Reparo') !== -1) ||
+        !!item.concluidoObservacaoPor
+      );
       var tagMeu = eMeu ? '<span class="tag tag-ind">Seu Registro / Resolução</span>' : '';
       var tagTipo = getTagTipoBadge(item);
-      if (isParcial) {
-        tagTipo += ' <span class="tag tag-y" style="font-weight:600;">Parcialmente Resolvida</span>';
-      }
-      if (isArquivado) {
-        tagTipo += ' <span class="tag tag-gray-soft" style="font-weight:600;">Arquivado</span>';
+      if (item.tipo === 'relatorio') {
+        if (item.status) {
+          var isNCRel = String(item.status).toLowerCase().indexOf('não conform') !== -1;
+          tagTipo += ' <span class="tag ' + (isNCRel ? 'tag-y' : 'tag-g') + '" style="font-weight:600;display:inline-flex;align-items:center;gap:3px;"><i data-lucide="' + (isNCRel ? 'alert-triangle' : 'check-circle-2') + '" style="width:11px;height:11px;stroke-width:2.2;"></i>' + escapeHTML(item.status) + '</span>';
+        }
+      } else if (item.tipo === 'ocorrencia') {
+        if (isReaberta) {
+          tagTipo += ' <span class="tag tag-r" style="font-weight:600;display:inline-flex;align-items:center;gap:3px;"><i data-lucide="alert-triangle" style="width:11px;height:11px;stroke-width:2.2;"></i>Reaberta (Reincidente)</span>';
+        } else if (isParcial) {
+          tagTipo += ' <span class="tag tag-y" style="font-weight:600;">Parcialmente Resolvida</span>';
+        } else if (isArquivado) {
+          tagTipo += ' <span class="tag tag-ind" style="font-weight:600;display:inline-flex;align-items:center;gap:3px;"><i data-lucide="eye" style="width:11px;height:11px;stroke-width:2.2;"></i>Em Observação</span>';
+        } else if (isValidadaPosReparo) {
+          tagTipo += ' <span class="tag tag-g" style="font-weight:600;display:inline-flex;align-items:center;gap:3px;"><i data-lucide="shield-check" style="width:11px;height:11px;stroke-width:2.2;"></i>Validada Pós-Reparo</span>';
+        } else {
+          tagTipo += ' <span class="tag tag-g" style="font-weight:600;display:inline-flex;align-items:center;gap:3px;"><i data-lucide="check-circle-2" style="width:11px;height:11px;stroke-width:2.2;"></i>Resolvida</span>';
+        }
       }
       var isSel = (itemHistoricoSelecionado && itemHistoricoSelecionado.id === item.id);
       var cardClasses = 'oc-card';
-      if (isParcial) {
-        cardClasses += ' parcialmente-resolvida';
+      var plClass = 'pl-g';
+      if (item.tipo === 'relatorio') {
+        cardClasses += ' hist-card-rel';
+        plClass = 'pl-b';
+      } else if (item.tipo === 'recebimento') {
+        cardClasses += ' hist-card-rec';
+        plClass = 'pl-y';
+      } else if (isReaberta) {
+        cardClasses += ' hist-card-oc-aberta';
+        plClass = 'pl-r';
       } else if (isArquivado) {
-        cardClasses += ' arquivada';
-      } else if (eMeu) {
-        cardClasses += ' mine';
+        cardClasses += ' hist-card-oc-obs';
+        plClass = 'pl-ind';
+      } else if (isParcial) {
+        cardClasses += ' hist-card-oc-parc';
+        plClass = 'pl-y';
+      } else {
+        cardClasses += ' hist-card-oc-res';
+        plClass = 'pl-g';
       }
-      var plClass = isArquivado ? 'pl-gray' : (isParcial ? 'pl-y' : (item.tipo==='ocorrencia'?'pl-r':item.tipo==='relatorio'?'pl-g':'pl-y'));
       var isRelatorioCTRS = (item.tipo === 'relatorio') && (
         item.subtipo === 'CTRS Transmissão' ||
         item.subtipo === 'Relatório Transmissão' ||
@@ -8349,21 +8555,54 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
       var textoRes = String(textoResRaw).replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim();
       if (isRelatorioCTRS) {
         resolucaoBox =
-          '<div style="margin-top:8px;padding:7px 11px;background:#EFF6FF;border:1px solid #BFDBFE;border-left:3px solid #0071E3;border-radius:6px;font-size:11.5px;color:#1E3A8A;display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
+          '<div style="margin-top:8px;padding:7px 11px;background:#FFFFFF;border:1px solid #93C5FD;border-left:3px solid #0071E3;border-radius:6px;font-size:11.5px;color:#1E3A8A;display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
             '<span style="display:inline-flex;align-items:center;gap:6px;font-weight:700;">' +
               '<i data-lucide="file-text" style="width:13px;height:13px;color:#0071E3;"></i>' +
               'Formulário CTRS — Clique para abrir a visualização completa do relatório' +
             '</span>' +
-            '<span style="font-size:11px;font-weight:700;color:#0071E3;white-space:nowrap;">👁️ Ver Preview →</span>' +
+            '<span style="font-size:11px;font-weight:700;color:#0071E3;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;"><i data-lucide="eye" style="width:12px;height:12px;"></i>Ver Preview</span>' +
           '</div>';
       } else if (textoRes) {
+        var resBoxBorda = isReaberta ? '#EF4444' : (isArquivado ? '#4F46E5' : (isParcial ? '#F59E0B' : 'var(--green)'));
+        var resBoxTituloCor = isReaberta ? '#B91C1C' : (isArquivado ? '#3730A3' : (isParcial ? '#B45309' : 'var(--green-dk)'));
         resolucaoBox =
-          '<div style="margin-top:6px;padding:6px 10px;background:rgba(16,185,129,0.06);border-left:2.5px solid var(--green);border-radius:4px;font-size:11.5px;color:var(--txt2);line-height:1.4;">' +
-            '<strong style="color:var(--green-dk);display:flex;align-items:center;gap:4px;font-size:11px;margin-bottom:2px;">' +
+          '<div style="margin-top:6px;padding:6px 10px;background:#FFFFFF;border:1px solid rgba(0,0,0,0.06);border-left:3px solid ' + resBoxBorda + ';border-radius:6px;font-size:11.5px;color:var(--txt2);line-height:1.4;">' +
+            '<strong style="color:' + resBoxTituloCor + ';display:flex;align-items:center;gap:4px;font-size:11px;margin-bottom:2px;">' +
               '<i data-lucide="check-circle-2" style="width:11px;height:11px;"></i> Resolução / Fechamento:' +
             '</strong>' +
             '<span style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + escapeHTML(textoRes) + '</span>' +
           '</div>';
+      }
+      var observacaoLogsHTML = '';
+      if (item.tipo === 'ocorrencia') {
+        var valsTurno = Array.isArray(item.validacoesTurno) ? item.validacoesTurno : [];
+        var reincArr = Array.isArray(item.reincidencias) ? item.reincidencias : [];
+        if (valsTurno.length > 0 || item.concluidoObservacaoPor || reincArr.length > 0) {
+          observacaoLogsHTML = '<div style="margin-top:6px;display:flex;flex-direction:column;gap:4px;">';
+          valsTurno.forEach(function(v) {
+            var turnoHistTxt = v.turno ? (' (' + escapeHTML(v.turno) + ')') : '';
+            observacaoLogsHTML +=
+              '<div style="font-size:11px;color:#047857;background:#FFFFFF;border:1px solid #A7F3D0;border-left:3px solid #10B981;border-radius:6px;padding:4px 8px;display:flex;align-items:center;gap:5px;">' +
+                '<i data-lucide="shield-check" style="width:12px;height:12px;stroke-width:2.3;flex-shrink:0;"></i>' +
+                '<span>Avaliado no turno' + turnoHistTxt + ' por <strong>' + escapeHTML(v.operador || 'Operador') + '</strong> (' + escapeHTML(v.dataHora || '') + ')</span>' +
+              '</div>';
+          });
+          if (item.concluidoObservacaoPor) {
+            observacaoLogsHTML +=
+              '<div style="font-size:11px;color:#065F46;background:#ECFDF5;border:1px solid #6EE7B7;border-left:3px solid #059669;border-radius:6px;padding:4px 8px;display:flex;align-items:center;gap:5px;">' +
+                '<i data-lucide="check-circle-2" style="width:12px;height:12px;stroke-width:2.3;flex-shrink:0;"></i>' +
+                '<span>Observação concluída definitivamente por <strong>' + escapeHTML(item.concluidoObservacaoPor) + '</strong> (' + escapeHTML(item.concluidoObservacaoEm || '') + ')</span>' +
+              '</div>';
+          }
+          reincArr.forEach(function(rc) {
+            observacaoLogsHTML +=
+              '<div style="font-size:11px;color:#B91C1C;background:#FFFFFF;border:1px solid #FECACA;border-left:3px solid #EF4444;border-radius:6px;padding:4px 8px;display:flex;align-items:center;gap:5px;">' +
+                '<i data-lucide="alert-triangle" style="width:12px;height:12px;stroke-width:2.3;flex-shrink:0;"></i>' +
+                '<span>Voltou a falhar por <strong>' + escapeHTML(rc.operador || 'Operador') + '</strong> (' + escapeHTML(rc.dataHora || '') + '): ' + escapeHTML(rc.motivo || '') + '</span>' +
+              '</div>';
+          });
+          observacaoLogsHTML += '</div>';
+        }
       }
       var metaFooterHTML = isRelatorioCTRS
         ? (
@@ -8385,6 +8624,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
             '<div class="oc-header"><h3>' + escapeHTML(item.titulo || 'Sem título') + '</h3>' + tagTipo + tagMeu + '</div>' +
             '<p class="oc-desc" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + escapeHTML(String(item.descCriacao || item.desc || 'Sem descrição').replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim()) + '</p>' +
             resolucaoBox +
+            observacaoLogsHTML +
             '<div class="oc-meta" style="margin-top:8px;gap:14px;flex-wrap:wrap;display:flex;align-items:center;font-size:11.5px;">' +
               metaFooterHTML +
             '</div>' +
@@ -8420,7 +8660,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
           criadoPor:     (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual()),
           resp:          (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
           descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
-          status:        (oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : (oc.status === 'arquivada' ? 'Resolvida e Arquivada' : 'Resolvido'),
+          status:        (oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : (oc.status === 'arquivada' ? 'Em Observação' : 'Resolvido'),
           dataResolucao: (oc.resolucao && oc.resolucao.data) ? formatDataHoraLocal(oc.resolucao.data) : formatDataHoraLocal(),
           resolvidoPor:  (oc.resolucao && oc.resolucao.resolvidoPor) ? oc.resolucao.resolvidoPor : getUsuarioAtual(),
           descResolucao: (oc.resolucao && oc.resolucao.descRes) ? oc.resolucao.descRes : (oc.desc || 'Ocorrência resolvida pela equipe técnica.'),
@@ -8575,17 +8815,23 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
         '</div>';
     } else {
       html += relacionados.slice(0, 6).map(function(rel) {
-        var eMeu = isItemDoUsuario(rel);
-        var statusTexto = rel.status || (rel.resolucao && rel.resolucao.statusRes) || 'Resolvido';
+        var stRel = obterEstiloSemanticoHistoricoItem(rel);
+        var statusTexto = rel.status || (rel.resolucao && rel.resolucao.statusRes) || stRel.statusLabel;
         var dataFmt = (rel.dataResolucao || rel.dataCriacao || '').substring(0, 10);
         var respFmt = rel.resolvidoPor || rel.criadoPor || 'Sistema';
+        var tipoMiniBadge = rel.tipo === 'relatorio'
+          ? '<span style="font-size:9px;font-weight:700;color:#1D4ED8;background:#DBEAFE;border:1px solid #93C5FD;padding:1px 6px;border-radius:999px;white-space:nowrap;">Relatório</span>'
+          : (rel.tipo === 'recebimento'
+              ? '<span style="font-size:9px;font-weight:700;color:#B45309;background:#FEF3C7;border:1px solid #FDE68A;padding:1px 6px;border-radius:999px;white-space:nowrap;">Recebimento</span>'
+              : '<span style="font-size:9px;font-weight:700;color:#B91C1C;background:#FEE2E2;border:1px solid #FECACA;padding:1px 6px;border-radius:999px;white-space:nowrap;">Ocorrência</span>');
         return (
-          '<div class="mini-oc' + (eMeu ? ' mine' : '') + '" onclick="verDetalhesHistorico(\'' + rel.id + '\')" style="margin-bottom:8px;padding:10px 12px;border-radius:var(--r-md);border:1px solid var(--border-lt);background:var(--surface);cursor:pointer;transition:all 0.15s ease;" onmouseover="this.style.borderColor=\'var(--blue)\';this.style.boxShadow=\'0 2px 8px rgba(0,113,227,0.08)\';" onmouseout="this.style.borderColor=\'var(--border-lt)\';this.style.boxShadow=\'none\';">' +
+          '<div class="mini-oc" onclick="verDetalhesHistorico(\'' + rel.id + '\')" style="margin-bottom:8px;padding:10px 12px;border-radius:var(--r-md);border:1px solid ' + stRel.border + ';border-left:3.5px solid ' + stRel.left + ';background:' + stRel.bg + ';cursor:pointer;transition:all 0.15s ease;" onmouseover="this.style.borderColor=\'' + stRel.hover + '\';this.style.boxShadow=\'0 2px 8px rgba(0,113,227,0.10)\';" onmouseout="this.style.borderColor=\'' + stRel.border + '\';this.style.boxShadow=\'none\';">' +
             '<div class="mini-top" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px;">' +
-              '<span class="mini-title" style="font-weight:600;font-size:12px;color:var(--txt);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;">' + escapeHTML(rel.titulo || '') + '</span>' +
-              '<span class="tag tag-g" style="font-size:9.5px;padding:1px 6px;white-space:nowrap;">' + escapeHTML(statusTexto) + '</span>' +
+              tipoMiniBadge +
+              '<span class="tag ' + stRel.tagCls + '" style="font-size:9.5px;padding:1px 6px;white-space:nowrap;">' + escapeHTML(statusTexto) + '</span>' +
             '</div>' +
-            '<div style="font-size:11px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;margin-top:4px;">' +
+            '<div class="mini-title" style="font-weight:700;font-size:12px;color:' + stRel.tituloColor + ';display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:4px;">' + escapeHTML(rel.titulo || '') + '</div>' +
+            '<div style="font-size:10.5px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;">' +
               '<span><i data-lucide="calendar" style="width:10px;height:10px;vertical-align:-1px;"></i> ' + escapeHTML(dataFmt) + '</span>' +
               '<span>Por: ' + escapeHTML(respFmt) + '</span>' +
             '</div>' +
@@ -8639,7 +8885,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
             criadoPor:     (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual()),
             resp:          (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
             descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
-            status:        (oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : (oc.status === 'arquivada' ? 'Resolvida e Arquivada' : 'Resolvido'),
+            status:        (oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : (oc.status === 'arquivada' ? 'Em Observação' : 'Resolvido'),
             dataResolucao: resFmt,
             resolvidoPor:  resPor,
             descResolucao: resDesc,
@@ -8652,7 +8898,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     }
     if (!item) return;
     itemDetalhesAtual = item;
-    var targetOcId = (item.id || '').replace(/^h_oc_/, '');
+    var targetOcId = item.ocId || (item.id || '').replace(/^h_oc_/, '');
     var ocFound = ocorrencias.find(function(o){
       if (!o || !o.id) return false;
       return o.id === item.id || o.id === targetOcId || ('h_oc_' + o.id) === item.id;
@@ -8677,8 +8923,9 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     var modalBody  = document.getElementById('hist-det-body');
     if (modalTitle) modalTitle.textContent = item.titulo;
     if (modalTags) {
+      var stDet = obterEstiloSemanticoHistoricoItem(item);
       var tagMeu = isItemDoUsuario(item) ? '<span class="tag tag-ind">Seu Registro / Resolução</span>' : '';
-      modalTags.innerHTML = getTagTipoBadge(item) + ' <span class="tag tag-g">' + escapeHTML(statusFinal) + '</span> ' + tagMeu;
+      modalTags.innerHTML = getTagTipoBadge(item) + ' <span class="tag ' + stDet.tagCls + '">' + escapeHTML(statusFinal) + '</span> ' + tagMeu;
     }
     var anexos = (item.anexos && Array.isArray(item.anexos) && item.anexos.length > 0)
       ? item.anexos
@@ -8892,6 +9139,21 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
               '</div>';
           }
         }
+        var valsObsDet = Array.isArray(item.validacoesTurno)
+          ? item.validacoesTurno
+          : ((ocFound && ocFound.resolucao && Array.isArray(ocFound.resolucao.validacoesTurno)) ? ocFound.resolucao.validacoesTurno : []);
+        var concObsPorDet = item.concluidoObservacaoPor || (ocFound && ocFound.resolucao && ocFound.resolucao.concluidoObservacaoPor) || '';
+        var concObsEmDet = item.concluidoObservacaoEm || (ocFound && ocFound.resolucao && ocFound.resolucao.concluidoObservacaoEm) || '';
+        var obsDetHTML = '';
+        if (valsObsDet.length > 0 || concObsPorDet) {
+          obsDetHTML = '<div style="margin-top:10px;display:flex;flex-direction:column;gap:5px;">' +
+            valsObsDet.map(function(v) {
+              var turnoDetTxt = v.turno ? (' [' + escapeHTML(v.turno) + ']') : '';
+              return '<div style="font-size:11.5px;color:#047857;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:6px;padding:6px 10px;display:flex;align-items:center;gap:6px;"><i data-lucide="shield-check" style="width:13px;height:13px;flex-shrink:0;"></i><span>Avaliado no turno' + turnoDetTxt + ' por <strong>' + escapeHTML(v.operador || 'Operador') + '</strong> (' + escapeHTML(v.dataHora || '') + ')</span></div>';
+            }).join('') +
+            (concObsPorDet ? '<div style="font-size:11.5px;color:#065F46;background:#D1FAE5;border:1px solid #6EE7B7;border-radius:6px;padding:6px 10px;display:flex;align-items:center;gap:6px;"><i data-lucide="check-circle-2" style="width:13px;height:13px;flex-shrink:0;"></i><span>Observação concluída definitivamente por <strong>' + escapeHTML(concObsPorDet) + '</strong> (' + escapeHTML(concObsEmDet) + ')</span></div>' : '') +
+          '</div>';
+        }
         modalBody.innerHTML =
           '<div class="form-card" style="margin-bottom:12px;background:var(--bg);border:1px solid var(--border-lt);">' +
             '<h4 style="font-size:12.5px;font-weight:700;color:var(--txt);margin-bottom:8px;display:flex;align-items:center;gap:6px;">' +
@@ -8928,6 +9190,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
               '<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:var(--r-md);border:1px solid var(--border-lt);overflow-wrap:anywhere;word-break:break-word;">' +
                 '<strong>O que foi realizado:</strong><br/>' + (typeof formatarTextoComLinks === 'function' ? formatarTextoComLinks(descRes, false) : escapeHTML(descRes)) +
               '</div>' +
+              obsDetHTML +
             '</div>' +
           '</div>';
       }
@@ -8965,7 +9228,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
           criadoPor:     (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual()),
           resp:          (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
           descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
-          status:        (oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : (oc.status === 'arquivada' ? 'Resolvida e Arquivada' : 'Resolvido'),
+          status:        (oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : (oc.status === 'arquivada' ? 'Em Observação' : 'Resolvido'),
           dataResolucao: resFmt,
           resolvidoPor:  resPor,
           descResolucao: resDesc,
@@ -9047,16 +9310,10 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     w.document.close();
   }
   window.imprimirPreviewRelatorioHistorico = imprimirPreviewRelatorioHistorico;
-
   var NOTIF_STORAGE_KEY = 'tv_notificacoes_v2';
   var NOTIF_DISMISSED_KEY = 'tv_notificacoes_dismissed_v2';
   var notificacoesStore = [];
   var notificacoesDispensadas = [];
-  var INITIAL_NOTIFICACOES_SEED = [];
-  function getNotifDBCredentials() {
-    if (typeof getDBCredentials === 'function') return getDBCredentials();
-    return { url: '', key: '' };
-  }
   function salvarDispensadas() {
     window.notificacoesDispensadas = notificacoesDispensadas;
     try {
@@ -9091,7 +9348,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     atualizarBadgesNotificacoes();
   }
   function sincronizarNotificacoesNuvem() {
-    var db = getNotifDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key) return;
     fetch(db.url + '/rest/v1/notificacoes?select=*&order=id.desc&limit=50', {
       headers: {
@@ -9116,7 +9373,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   }
   window.sincronizarNotificacoesNuvem = sincronizarNotificacoesNuvem;
   function salvarNotificacaoNuvem(notif) {
-    var db = getNotifDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key || !notif) return;
     fetch(db.url + '/rest/v1/notificacoes', {
       method: 'POST',
@@ -9131,7 +9388,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   }
   window.salvarNotificacaoNuvem = salvarNotificacaoNuvem;
   function marcarTodasLidasNuvem() {
-    var db = getNotifDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key) return;
     fetch(db.url + '/rest/v1/notificacoes?lida=eq.false', {
       method: 'PATCH',
@@ -9146,7 +9403,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   }
   window.marcarTodasLidasNuvem = marcarTodasLidasNuvem;
   function deletarNotificacaoNuvem(id) {
-    var db = getNotifDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key || !id) return;
     fetch(db.url + '/rest/v1/notificacoes?id=eq.' + encodeURIComponent(id), {
       method: 'DELETE',
@@ -9159,7 +9416,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   }
   window.deletarNotificacaoNuvem = deletarNotificacaoNuvem;
   function deletarTodasNotificacoesNuvem() {
-    var db = getNotifDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key) return;
     var pracaAtiva = (typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora';
     fetch(db.url + '/rest/v1/notificacoes?praca=eq.' + encodeURIComponent(pracaAtiva), {
@@ -9276,8 +9533,8 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     var arquivadas = getArquivadas().filter(function(oc){ return !String(oc.id).startsWith('oc_init_') && !idsNaLixeira.includes(oc.id); });
     if (arquivadas.length > 0) {
       var chaveArq = 'arq_status_' + arquivadas.map(function(a){ return a.id; }).sort().join('_');
-      var titArq = '📦 Ocorrências Arquivadas para o Turno';
-      var msgArq = 'Existem ' + arquivadas.length + ' ocorrência(s) arquivada(s) aguardando verificação e acompanhamento da equipe.';
+      var titArq = '👁️ Equipamentos em Observação no Turno';
+      var msgArq = 'Existem ' + arquivadas.length + ' ocorrência(s) em observação pós-reparo aguardando teste e validação da equipe.';
       adicionarNotificacao(titArq, msgArq, 'info', false, chaveArq);
     }
   }
@@ -9378,7 +9635,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     }
   }
   window.limparTodasNotificacoes = limparTodasNotificacoes;
-
   function atualizarResumoPowerBI() {
     var select = document.getElementById('pbi-periodo');
     var titleEl = document.getElementById('pbi-preview-title');
@@ -9474,6 +9730,40 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   }
   window.abrirModalOcDashboardContextual = abrirModalOcDashboardContextual;
   var itemTransmissaoDetalhesAtual = { nome: '', tipo: '' };
+  var filtroDetTransmissaoAtual = 'todos';
+  var dadosDetTransmissaoAtual = { ocs: [], rels: [] };
+  function renderHistoricoDetTransmissao() {
+    var histListaEl = document.getElementById('det-trans-historico-lista');
+    if (!histListaEl) return;
+    var ocs = dadosDetTransmissaoAtual.ocs || [];
+    var rels = dadosDetTransmissaoAtual.rels || [];
+    if (typeof atualizarBotoesFiltroTimelineModal === 'function') {
+      atualizarBotoesFiltroTimelineModal(
+        {
+          cntTodos: 'det-trans-cnt-todos',
+          cntOc: 'det-trans-cnt-oc',
+          cntRel: 'det-trans-cnt-rel',
+          btnTodos: 'btn-det-trans-todos',
+          btnOc: 'btn-det-trans-oc',
+          btnRel: 'btn-det-trans-rel'
+        },
+        filtroDetTransmissaoAtual,
+        ocs.length + rels.length,
+        ocs.length,
+        rels.length
+      );
+    }
+    var emptyAll = 'Nenhuma ocorrência ou relatório registrado para este item no momento. Sistema estável e operando normalmente.';
+    histListaEl.innerHTML = (typeof renderCardsTimelineMistaHTML === 'function')
+      ? renderCardsTimelineMistaHTML(ocs, rels, filtroDetTransmissaoAtual, 'popup-detalhes-transmissao', (ocs.length === 0 && rels.length === 0) ? emptyAll : '')
+      : '';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+  function filtrarHistoricoDetTransmissao(filtro) {
+    filtroDetTransmissaoAtual = filtro || 'todos';
+    renderHistoricoDetTransmissao();
+  }
+  window.filtrarHistoricoDetTransmissao = filtrarHistoricoDetTransmissao;
   function abrirDetalhesTransmissao(nome, tipo) {
     if (!nome) return;
     tipo = (tipo === 'equipamento' || tipo === 'equipamentos') ? 'equipamento' : 'telejornal';
@@ -9556,45 +9846,9 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
         }
         return false;
       });
-      if (histOcs.length === 0 && histRels.length === 0) {
-        histListaEl.innerHTML =
-          '<div style="background:#FFFFFF;border:1px solid var(--border-lt);border-radius:var(--r-sm);padding:8px 10px;font-size:11.5px;color:var(--muted);">' +
-            'Nenhuma ocorrência ou relatório registrado para este item no momento. Sistema estável e operando normalmente.' +
-          '</div>';
-      } else {
-        var htmlItens = '';
-        histOcs.forEach(function(o) {
-          var descLimpa = String(o.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
-          var temPreview = !!(o.htmlRelatorio || o.dadosCTRS || (o.desc && String(o.desc).indexOf('<!--CTRS_JSON:') !== -1) || (o.tags && o.tags.indexOf('Relatório TV') !== -1));
-          htmlItens +=
-            '<div onclick=\"fecharPopup(\'popup-detalhes-transmissao\'); verDetalhesOcorrencia(\'' + (typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(o.id) : escapeHTML(o.id)) + '\')\" style=\"background:#FFFFFF;border:1px solid var(--border-lt);border-left:3px solid ' + (o.status === 'resolvida' ? '#10B981' : '#EF4444') + ';border-radius:var(--r-sm);padding:8px 10px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'var(--blue)\';\" onmouseout=\"this.style.borderColor=\'var(--border-lt)\';\" title=\"Clique para abrir os detalhes e o preview do relatório na descrição\">' +
-              '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
-                '<div><strong style="color:var(--txt);">' + escapeHTML(o.titulo) + '</strong> <span style="color:var(--muted);">· ' + escapeHTML(o.dataCriacao || o.resp || '') + '</span></div>' +
-                '<div style="display:flex;align-items:center;gap:6px;">' +
-                  (temPreview ? '<span style="font-size:10.5px;font-weight:700;color:#0071E3;background:#EFF6FF;border:1px solid #BFDBFE;padding:1px 7px;border-radius:10px;">👁️ Preview CTRS</span>' : '') +
-                  '<span class="tag ' + (o.status === 'resolvida' ? 'tag-g' : 'tag-r') + '">' + (o.status === 'resolvida' ? 'Resolvida' : 'Em Aberto') + '</span>' +
-                '</div>' +
-              '</div>' +
-              (descLimpa ? '<div style="font-size:11px;color:var(--txt2);">' + escapeHTML(descLimpa) + '</div>' : '') +
-            '</div>';
-        });
-        histRels.forEach(function(r) {
-          var descRelLimpa = String(r.descCriacao || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
-          var isNC = r.status && String(r.status).toLowerCase().indexOf('não conform') !== -1;
-          htmlItens +=
-            '<div onclick=\"fecharPopup(\'popup-detalhes-transmissao\'); verDetalhesHistoricoDirect(\'' + (typeof sanitizeIdAttr === 'function' ? sanitizeIdAttr(r.id) : escapeHTML(r.id)) + '\')\" style=\"background:#F8FAFC;border:1px solid #BFDBFE;border-left:3px solid #0071E3;border-radius:var(--r-sm);padding:8px 10px;display:flex;flex-direction:column;gap:4px;font-size:11.5px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'#0071E3\';\" onmouseout=\"this.style.borderColor=\'#BFDBFE\';\" title=\"Clique para abrir o Preview Completo do Relatório CTRS\">' +
-              '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
-                '<div><strong style="color:#1E3A8A;">📄 ' + escapeHTML(r.titulo) + '</strong> <span style="color:var(--muted);">· ' + escapeHTML(r.dataCriacao || '') + '</span></div>' +
-                '<div style="display:flex;align-items:center;gap:6px;">' +
-                  '<span style="font-size:10.5px;font-weight:700;color:#0071E3;background:#EFF6FF;border:1px solid #93C5FD;padding:1px 7px;border-radius:10px;">👁️ Ver Relatório</span>' +
-                  '<span class="tag ' + (isNC ? 'tag-y' : 'tag-g') + '">' + escapeHTML(r.status || 'Conforme') + '</span>' +
-                '</div>' +
-              '</div>' +
-              (descRelLimpa ? '<div style="font-size:11px;color:var(--txt2);">' + escapeHTML(descRelLimpa) + '</div>' : '') +
-            '</div>';
-        });
-        histListaEl.innerHTML = htmlItens;
-      }
+      dadosDetTransmissaoAtual = { ocs: histOcs, rels: histRels };
+      filtroDetTransmissaoAtual = 'todos';
+      renderHistoricoDetTransmissao();
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
     abrirPopup('popup-detalhes-transmissao');
@@ -10042,7 +10296,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     if (barCancEq) barCancEq.style.height = eqTotal > 0 ? Math.max(eqPctCanc * 0.85, 4) + '%' : '4px';
   }
   window.renderResumoTransmissoesGerais = renderResumoTransmissoesGerais;
-
   var anoOrcamento = new Date().getFullYear() + 1;
   function syncAnoOrcamentoUI() {
     anoOrcamento = new Date().getFullYear() + 1;
@@ -10053,10 +10306,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   var orcamentoSeedData = [];
   var filtroOrcamentoAtivo = 'todos';
   var ORCAMENTO_STORAGE_KEY = 'tv_orcamento_seed_v2';
-  function getOrcamentoDBCredentials() {
-    if (typeof getDBCredentials === 'function') return getDBCredentials();
-    return { url: '', key: '' };
-  }
   function filtrarOrcamentoTipo(tipo, btn) {
     filtroOrcamentoAtivo = tipo || 'todos';
     if (btn && btn.closest('.pills')) {
@@ -10069,46 +10318,22 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   function formatarMoeda(val) {
     return 'R$ ' + Number(val || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
-  function limparDescricao(desc, id) {
-    if (!desc || typeof desc !== 'string') {
-      if (id === 'orc_init_1') return 'Aquisição de Switcher de Vídeo SDI 12G 4K';
-      if (id === 'orc_init_2') return 'Manutenção Preventiva de Geradores e Nobreaks';
-      return '';
-    }
+  function limparDescricao(desc) {
+    if (!desc || typeof desc !== 'string') return '';
     var trimmed = desc.trim();
-    if (trimmed.toLowerCase() === 'undefined' || trimmed.toLowerCase() === 'null') {
-      if (id === 'orc_init_1') return 'Aquisição de Switcher de Vídeo SDI 12G 4K';
-      if (id === 'orc_init_2') return 'Manutenção Preventiva de Geradores e Nobreaks';
-      return '';
-    }
+    if (trimmed.toLowerCase() === 'undefined' || trimmed.toLowerCase() === 'null') return '';
     return trimmed;
   }
-  function limparPrioridade(prio, id) {
-    if (!prio || typeof prio !== 'string') {
-      if (id === 'orc_init_1') return 'Alta';
-      if (id === 'orc_init_2') return 'Média';
-      return 'Média';
-    }
+  function limparPrioridade(prio) {
+    if (!prio || typeof prio !== 'string') return 'Média';
     var trimmed = prio.trim();
-    if (trimmed.toLowerCase() === 'undefined' || trimmed.toLowerCase() === 'null' || !trimmed) {
-      if (id === 'orc_init_1') return 'Alta';
-      if (id === 'orc_init_2') return 'Média';
-      return 'Média';
-    }
+    if (trimmed.toLowerCase() === 'undefined' || trimmed.toLowerCase() === 'null' || !trimmed) return 'Média';
     return trimmed;
   }
-  function limparJustificativa(just, id) {
-    if (!just || typeof just !== 'string') {
-      if (id === 'orc_init_1') return 'Modernização do controle mestre e suporte a sinais HD/4K de alta taxa de quadros.';
-      if (id === 'orc_init_2') return 'Contrato de revisão trimestral das baterias e banco de carga da torre de transmissão.';
-      return '';
-    }
+  function limparJustificativa(just) {
+    if (!just || typeof just !== 'string') return '';
     var trimmed = just.trim();
-    if (trimmed.toLowerCase() === 'undefined' || trimmed.toLowerCase() === 'null') {
-      if (id === 'orc_init_1') return 'Modernização do controle mestre e suporte a sinais HD/4K de alta taxa de quadros.';
-      if (id === 'orc_init_2') return 'Contrato de revisão trimestral das baterias e banco de carga da torre de transmissão.';
-      return '';
-    }
+    if (trimmed.toLowerCase() === 'undefined' || trimmed.toLowerCase() === 'null') return '';
     return trimmed;
   }
   function limparPraca(praca) {
@@ -10463,7 +10688,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   }
   window.carregarOrcamentoStore = carregarOrcamentoStore;
   function sincronizarOrcamentoNuvem() {
-    var db = getOrcamentoDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key) return;
     var endpoint = db.url + '/rest/v1/orcamentos?select=*&order=id.asc';
     fetch(endpoint, {
@@ -10516,7 +10741,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   }
   window.sincronizarOrcamentoNuvem = sincronizarOrcamentoNuvem;
   function salvarItemOrcamentoNuvem(item) {
-    var db = getOrcamentoDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key) return;
     var cleanDesc = limparDescricao(item.desc || item.descricao, item.id);
     var cleanPrio = limparPrioridade(item.prio || item.prioridade, item.id);
@@ -10563,7 +10788,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   }
   window.salvarItemOrcamentoNuvem = salvarItemOrcamentoNuvem;
   function excluirItemOrcamentoNuvem(id) {
-    var db = getOrcamentoDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key || !id) return;
     var endpoint = db.url + '/rest/v1/orcamentos?id=eq.' + encodeURIComponent(id);
     fetch(endpoint, {
@@ -10593,11 +10818,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     alert('Plano Orçamentário de ' + anoOrcamento + ' salvo com sucesso no banco de dados!');
   }
   window.salvarOrcamento = salvarOrcamento;
-  function exportarOrcamentoExcel() {
-    alert('Relatório de Orçamento ' + anoOrcamento + ' exportado com sucesso em formato consolidado (CAPEX/OPEX).');
-  }
-  window.exportarOrcamentoExcel = exportarOrcamentoExcel;
-
   var EQUIPAMENTOS_STORAGE_KEY = 'tv_equipamentos_catalogo_v1';
   var TAGS_PADRAO_EQUIPAMENTOS = ['LiveU', 'Transmissão', 'Estúdio', 'Áudio', 'Vídeo', 'RF', 'Rede/Fibra', 'Satélite', 'Energia'];
   var EQUIPAMENTOS_SEED_JF = [
@@ -10618,10 +10838,6 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   var catalogoEquipamentos = [];
   var filtroEquipamentoTag = 'todos';
   var tagsSelecionadasModalEq = [];
-  function getEquipamentosDBCredentials() {
-    if (typeof getDBCredentials === 'function') return getDBCredentials();
-    return { url: '', key: '' };
-  }
   function normalizarTagsEquipamento(tagsRaw) {
     if (!Array.isArray(tagsRaw)) return [];
     var vistos = {};
@@ -10843,7 +11059,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   }
   window.carregarEquipamentosStore = carregarEquipamentosStore;
   function sincronizarEquipamentosPostgreSQL() {
-    var db = getEquipamentosDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key) return;
     fetch(db.url + '/rest/v1/equipamentos?select=*&order=criado_em.asc', {
       headers: {
@@ -10899,7 +11115,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   }
   window.sincronizarEquipamentosPostgreSQL = sincronizarEquipamentosPostgreSQL;
   function salvarEquipamentoPostgreSQL(eq) {
-    var db = getEquipamentosDBCredentials();
+    var db = getDBCredentials();
     if (!db.url || !db.key || !eq) return;
     var payload = {
       id: eq.id,
@@ -10956,7 +11172,10 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     if (eq.status_operacional === 'manutencao') return 'manutencao';
     var ocs = obterOcorrenciasDoEquipamento(eq);
     var temAberta = ocs.some(function(o) { return o.status === 'aberta'; });
-    return temAberta ? 'atencao' : 'operacional';
+    if (temAberta) return 'atencao';
+    var temObs = ocs.some(function(o) { return o.status === 'arquivada'; });
+    if (temObs) return 'observacao';
+    return 'operacional';
   }
   function filtrarEquipamentosPorTag(tag, btn) {
     filtroEquipamentoTag = tag ? String(tag).replace(/^#+/, '').trim() : 'todos';
@@ -10986,7 +11205,7 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     doCatalogoPraca.forEach(function(eq) {
       var st = calcularStatusEquipamentoDinamico(eq);
       if (st === 'manutencao') totManut++;
-      else if (st === 'atencao') totAtencao++;
+      else if (st === 'atencao' || st === 'observacao') totAtencao++;
       else totOp++;
     });
     var kpiTot = document.getElementById('eq-kpi-total');
@@ -11033,11 +11252,15 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
         ? '<span class="tag tag-r">🔴 Em Manutenção</span>'
         : st === 'atencao'
         ? '<span class="tag tag-y">🟡 ' + abertasCount + ' Ocorrência(s)</span>'
+        : st === 'observacao'
+        ? '<span class="tag" style="background:#EEF2FF;color:#4F46E5;border:1px solid #C7D2FE;font-weight:700;display:inline-flex;align-items:center;gap:4px;"><i data-lucide="eye" style="width:11px;height:11px;stroke-width:2.2;"></i>Em Observação</span>'
         : '<span class="tag tag-g">🟢 Operacional</span>';
       var borderStyle = st === 'atencao'
         ? 'border-color:#FDE68A;background:#FFFBEB;'
         : st === 'manutencao'
         ? 'border-color:#FECACA;background:#FEF2F2;'
+        : st === 'observacao'
+        ? 'border-color:#C7D2FE;background:#F8FAFF;'
         : '';
       var tagsHTML = (Array.isArray(eq.tags) && eq.tags.length > 0)
         ? eq.tags.map(function(t) {
@@ -11531,6 +11754,40 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     }
   }
   window.abrirOcorrenciaDiretaEquipamento = abrirOcorrenciaDiretaEquipamento;
+  var filtroFichaEqAtual = 'todos';
+  var dadosTimelineFichaEqAtual = { ocs: [], rels: [] };
+  function renderTimelineFichaEquipamento() {
+    var elTimeline = document.getElementById('ficha-eq-timeline');
+    if (!elTimeline) return;
+    var ocs = dadosTimelineFichaEqAtual.ocs || [];
+    var rels = dadosTimelineFichaEqAtual.rels || [];
+    if (typeof atualizarBotoesFiltroTimelineModal === 'function') {
+      atualizarBotoesFiltroTimelineModal(
+        {
+          cntTodos: 'ficha-eq-cnt-todos',
+          cntOc: 'ficha-eq-cnt-oc',
+          cntRel: 'ficha-eq-cnt-rel',
+          btnTodos: 'btn-ficha-eq-todos',
+          btnOc: 'btn-ficha-eq-oc',
+          btnRel: 'btn-ficha-eq-rel'
+        },
+        filtroFichaEqAtual,
+        ocs.length + rels.length,
+        ocs.length,
+        rels.length
+      );
+    }
+    var emptyAll = 'Nenhuma ocorrência ou relatório registrado no histórico de vida deste equipamento.';
+    elTimeline.innerHTML = (typeof renderCardsTimelineMistaHTML === 'function')
+      ? renderCardsTimelineMistaHTML(ocs, rels, filtroFichaEqAtual, 'popup-ficha-vida-equipamento', (ocs.length === 0 && rels.length === 0) ? emptyAll : '')
+      : '';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+  function filtrarTimelineFichaEquipamento(filtro) {
+    filtroFichaEqAtual = filtro || 'todos';
+    renderTimelineFichaEquipamento();
+  }
+  window.filtrarTimelineFichaEquipamento = filtrarTimelineFichaEquipamento;
   function abrirFichaVidaEquipamento(idOuNome) {
     var eq = (catalogoEquipamentos || []).find(function(e) {
       return e.status_operacional !== 'lixeira' && (e.id === idOuNome || e.nome === idOuNome);
@@ -11614,78 +11871,19 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
         if (h.equipamento && String(h.equipamento).toUpperCase().indexOf(nomeEqUp) !== -1) return true;
         return false;
       });
-      if (ocs.length === 0 && relsEq.length === 0) {
-        elTimeline.innerHTML =
-          '<div style="text-align:center;padding:24px 14px;background:#F8FAFC;border:1px dashed var(--border);border-radius:10px;color:var(--muted);font-size:12px;">' +
-            'Nenhuma ocorrência ou relatório registrado no histórico de vida deste equipamento.' +
-          '</div>';
-      } else {
-        var htmlOcs = ocs.map(function(oc) {
-          var isRes = oc.status !== 'aberta';
-          var corBorda = isRes ? '#10B981' : '#EF4444';
-          var tagSt = isRes
-            ? '<span class="tag tag-g">✓ Resolvida</span>'
-            : '<span class="tag tag-r">● Em Aberto</span>';
-          var descLimpa = String(oc.desc || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
-          var descResLimpa = (oc.resolucao && oc.resolucao.descRes)
-            ? String(oc.resolucao.descRes).replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim()
-            : '';
-          var descRes = descResLimpa
-            ? '<div style="margin-top:6px;padding:6px 10px;background:#F0FDF4;border-radius:6px;font-size:11.5px;color:#166534;"><strong>Solução aplicada:</strong> ' + escapeHTML(descResLimpa) + '</div>'
-            : '';
-          var temPreviewOc = !!(oc.htmlRelatorio || oc.dadosCTRS || (oc.desc && String(oc.desc).indexOf('<!--CTRS_JSON:') !== -1));
-          var previewBtn = temPreviewOc
-            ? '<span style="font-size:10.5px;font-weight:700;color:#0071E3;background:#EFF6FF;border:1px solid #BFDBFE;padding:2px 8px;border-radius:10px;">👁️ Ver Relatório na Descrição</span>'
-            : '';
-          return (
-            '<div onclick=\"fecharPopup(\'popup-ficha-vida-equipamento\'); verDetalhesOcorrencia(\'' + oc.id + '\')\" style=\"background:#FFFFFF;border:1px solid var(--border-lt);border-left:3.5px solid ' + corBorda + ';border-radius:8px;padding:10px 14px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'var(--blue)\';\" onmouseout=\"this.style.borderColor=\'var(--border-lt)\';\" title=\"Clique para abrir a ocorrência completa com o preview do relatório\">' +
-              '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
-                '<strong style="font-size:12.5px;color:var(--txt);">' + escapeHTML(oc.titulo) + '</strong>' +
-                '<div style="display:flex;align-items:center;gap:6px;">' + previewBtn + tagSt + '</div>' +
-              '</div>' +
-              '<div style="font-size:11.5px;color:var(--txt2);margin-top:4px;">' + escapeHTML(descLimpa) + '</div>' +
-              descRes +
-              '<div style="font-size:10.5px;color:var(--muted);margin-top:6px;display:flex;gap:12px;">' +
-                '<span>📅 ' + escapeHTML(oc.dataCriacao || '') + '</span>' +
-                '<span>👤 Resp: ' + escapeHTML(oc.resp || 'Equipe') + '</span>' +
-              '</div>' +
-            '</div>'
-          );
-        }).join('');
-        var htmlRels = relsEq.map(function(r) {
-          var descRelLimpa = String(r.descCriacao || '').replace(/<!--CTRS_JSON:[^>]+-->/g, '').trim();
-          var isNC = r.status && String(r.status).toLowerCase().indexOf('não conform') !== -1;
-          return (
-            '<div onclick=\"fecharPopup(\'popup-ficha-vida-equipamento\'); verDetalhesHistoricoDirect(\'' + r.id + '\')\" style=\"background:#F8FAFC;border:1px solid #BFDBFE;border-left:3.5px solid #0071E3;border-radius:8px;padding:10px 14px;cursor:pointer;transition:all .15s ease;\" onmouseover=\"this.style.borderColor=\'#0071E3\';\" onmouseout=\"this.style.borderColor=\'#BFDBFE\';\" title=\"Clique para abrir o Preview Completo do Relatório CTRS\">' +
-              '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
-                '<strong style="font-size:12.5px;color:#1E3A8A;">📄 ' + escapeHTML(r.titulo) + '</strong>' +
-                '<div style="display:flex;align-items:center;gap:6px;">' +
-                  '<span style="font-size:10.5px;font-weight:700;color:#0071E3;background:#EFF6FF;border:1px solid #93C5FD;padding:2px 8px;border-radius:10px;">👁️ Ver Preview CTRS</span>' +
-                  '<span class="tag ' + (isNC ? 'tag-y' : 'tag-g') + '">' + escapeHTML(r.status || 'Conforme') + '</span>' +
-                '</div>' +
-              '</div>' +
-              '<div style="font-size:11.5px;color:var(--txt2);margin-top:4px;">' + escapeHTML(descRelLimpa) + '</div>' +
-              '<div style="font-size:10.5px;color:var(--muted);margin-top:6px;display:flex;gap:12px;">' +
-                '<span>📅 ' + escapeHTML(r.dataCriacao || '') + '</span>' +
-                '<span>👤 Emitido por: ' + escapeHTML(r.criadoPor || 'Operador') + '</span>' +
-              '</div>' +
-            '</div>'
-          );
-        }).join('');
-        elTimeline.innerHTML = htmlOcs + htmlRels;
-      }
+      dadosTimelineFichaEqAtual = { ocs: ocs, rels: relsEq };
+      filtroFichaEqAtual = 'todos';
+      renderTimelineFichaEquipamento();
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
     abrirPopup('popup-ficha-vida-equipamento');
   }
   window.abrirFichaVidaEquipamento = abrirFichaVidaEquipamento;
-
   // Conexão segura: requer Chave de Acesso da Estação no 1º acesso do computador ou config.js local
   try { carregarDashboardMetricsStore(); } catch(e) {}
   try { if (typeof aplicarModoPraca === 'function') aplicarModoPraca(); } catch(e) {}
   try { carregarFotoPerfilSalva(); } catch(e) {}
   try { loadNotificacoes(); } catch(e) {}
-  try { carregarCredenciaisSupabaseConfig(); } catch(e) {}
   try { if (typeof atualizarUIStatusBancoConfig === 'function') atualizarUIStatusBancoConfig(); } catch(e) {}
   try { carregarRascunhoRelatorioTV(); } catch(e) {}
   try { carregarRascunhoRecebimento(); } catch(e) {}
@@ -11722,25 +11920,12 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
   var savedUserName = localStorage.getItem(USER_NAME_STORAGE_KEY);
   try { if (typeof carregarOperadoresSugeridos === 'function') carregarOperadoresSugeridos(); } catch(e) {}
   try { if (typeof atualizarUIIdentificacaoOperador === 'function') atualizarUIIdentificacaoOperador(); } catch(e) {}
-  var identPracaSelect = document.getElementById('ident-operador-praca');
-  if (identPracaSelect) {
-    if (typeof getPracaAtual === 'function') {
-      identPracaSelect.value = getPracaAtual();
-    }
-    identPracaSelect.addEventListener('change', function() {
-      if (typeof setPracaAtual === 'function') {
-        setPracaAtual(this.value);
-      }
-    });
-  }
   var estacaoConectadaInit = (typeof isEstacaoConectadaTV === 'function') ? isEstacaoConectadaTV() : true;
   if (!estacaoConectadaInit || !savedUserName || !savedUserName.trim() || savedUserName.trim() === 'Operador') {
     abrirPopup('popup-identificacao-operador');
     var identEmail = document.getElementById('ident-operador-email');
-    var identInput = document.getElementById('ident-operador-nome');
     setTimeout(function() {
       if (identEmail && identEmail.offsetParent !== null) identEmail.focus();
-      else if (identInput) identInput.focus();
     }, 180);
   } else {
     atualizarNomeOperadorUI(savedUserName.trim());
@@ -11763,4 +11948,3 @@ function gerarMapaSDFBevelLiquidGL(w, h, radiusPx, bevelWidth, bevelDepth, refra
     abrirPopup('popup-entrada');
   }
 });
-

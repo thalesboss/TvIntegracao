@@ -215,6 +215,8 @@
 .pl-r { background: var(--red); }
 .pl-y { background: var(--yellow); }
 .pl-g { background: var(--green); }
+.pl-b { background: #0071E3; }
+.pl-ind { background: #4F46E5; }
 .pl-gray { background: #94A3B8; }
 .oc-body {
   flex: 1;
@@ -319,4 +321,63 @@
   border-color: #93C5FD;
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(37, 99, 235, 0.18);
+}
+.oc-card.hist-card-rel {
+  background: #F0F7FF !important;
+  border: 1px solid #BFDBFE;
+  box-shadow: 0 1px 4px rgba(0, 113, 227, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.oc-card.hist-card-rel:hover {
+  border-color: #0071E3;
+  box-shadow: 0 6px 18px rgba(0, 113, 227, 0.14);
+}
+.oc-card.hist-card-oc-res {
+  background: #F0FDF4 !important;
+  border: 1px solid #BBF7D0;
+  box-shadow: 0 1px 4px rgba(16, 185, 129, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.oc-card.hist-card-oc-res:hover {
+  border-color: #10B981;
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.14);
+}
+.oc-card.hist-card-oc-obs {
+  background: #EEF2FF !important;
+  border: 1px solid #C7D2FE;
+  box-shadow: 0 1px 4px rgba(79, 70, 229, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.oc-card.hist-card-oc-obs:hover {
+  border-color: #4F46E5;
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.14);
+}
+.oc-card.hist-card-oc-aberta {
+  background: #FEF2F2 !important;
+  border: 1px solid #FECACA;
+  box-shadow: 0 1px 4px rgba(239, 68, 68, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.oc-card.hist-card-oc-aberta:hover {
+  border-color: #EF4444;
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.14);
+}
+.oc-card.hist-card-oc-parc,
+.oc-card.hist-card-rec {
+  background: #FFFBEB !important;
+  border: 1px solid #FDE68A;
+  box-shadow: 0 1px 4px rgba(217, 119, 6, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.oc-card.hist-card-oc-parc:hover,
+.oc-card.hist-card-rec:hover {
+  border-color: #F59E0B;
+  box-shadow: 0 6px 18px rgba(217, 119, 6, 0.14);
+}
+.pills.pills-sm {
+  padding: 4px;
+  gap: 2px;
+}
+.pills.pills-sm .pill {
+  padding: 4.5px 12px;
+  font-size: 11px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }

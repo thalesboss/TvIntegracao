@@ -177,28 +177,6 @@
     }
   }
   window.resetarFluxoEmailIdentificacao = resetarFluxoEmailIdentificacao;
-  function alternarModoLoginManual() {
-    var wrapEmail  = document.getElementById('ident-step-email-wrap');
-    var wrapManual = document.getElementById('ident-step-manual-wrap');
-    var linkEl     = document.getElementById('link-alternar-modo-login');
-    var msgEl      = document.getElementById('ident-chave-msg');
-    var btn        = document.getElementById('btn-confirmar-identificacao');
-    if (!wrapEmail || !wrapManual) return;
-    var indoParaManual = (wrapManual.style.display === 'none');
-    wrapEmail.style.display  = indoParaManual ? 'none' : 'flex';
-    wrapManual.style.display = indoParaManual ? 'flex' : 'none';
-    if (msgEl) msgEl.style.display = 'none';
-    if (indoParaManual) {
-      if (linkEl) linkEl.textContent = 'Voltar para Login por E-mail Corporativo';
-      if (btn) btn.textContent = 'Salvar e Continuar';
-      var nomeIn = document.getElementById('ident-operador-nome');
-      if (nomeIn) setTimeout(function() { nomeIn.focus(); }, 100);
-    } else {
-      if (linkEl) linkEl.textContent = 'Entrar com Chave da Estação (Sem e-mail)';
-      resetarFluxoEmailIdentificacao();
-    }
-  }
-  window.alternarModoLoginManual = alternarModoLoginManual;
   function exibirMsgLogin(msgEl, texto, tipo) {
     if (!msgEl) return;
     msgEl.style.display = 'block';
@@ -245,31 +223,10 @@
     }
     return { ok: false };
   }
-  async function confirmarIdentificacaoOperador(entrarModoLocal) {
-    var wrapManual = document.getElementById('ident-step-manual-wrap');
-    var modoManualAtivo = wrapManual && wrapManual.style.display !== 'none';
+  async function confirmarIdentificacaoOperador() {
     var msgEl = document.getElementById('ident-chave-msg');
     var btn   = document.getElementById('btn-confirmar-identificacao');
-    if (entrarModoLocal) {
-      var nomeOff = (document.getElementById('ident-operador-nome') && document.getElementById('ident-operador-nome').value.trim())
-        || (document.getElementById('ident-operador-email') && document.getElementById('ident-operador-email').value.split('@')[0])
-        || 'Operador';
-      localStorage.removeItem('tv_supabase_url');
-      localStorage.removeItem('tv_supabase_key');
-      if (typeof DBService !== 'undefined' && DBService) {
-        DBService.url = '';
-        DBService.key = '';
-        DBService.mode = 'local';
-      }
-      if (typeof updateCloudStatus === 'function') updateCloudStatus(false, 'Modo Local');
-      localStorage.setItem(USER_NAME_STORAGE_KEY, nomeOff);
-      atualizarNomeOperadorUI(nomeOff);
-      fecharPopup('popup-identificacao-operador');
-      abrirPopup('popup-entrada');
-      return;
-    }
-    if (!modoManualAtivo) {
-      var emailInput = document.getElementById('ident-operador-email');
+    var emailInput = document.getElementById('ident-operador-email');
       var emailRaw = (emailInput ? emailInput.value : '').trim().toLowerCase();
       var email = emailRaw.replace(/[%*\s]/g, '');
       if (!email || !/^[a-z0-9._+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(email)) {
@@ -311,7 +268,7 @@
           if (!Array.isArray(listaOp) || listaOp.length === 0) {
             exibirMsgLogin(
               msgEl,
-              '❌ O e-mail <strong>' + escapeHTML(email) + '</strong> ainda não está cadastrado na tabela <code>operadores</code> do banco.<br><span style="font-size:11px;">Solicite o cadastro à TI/Administração ou use "Entrar com Chave da Estação" abaixo.</span>',
+              '❌ O e-mail <strong>' + escapeHTML(email) + '</strong> ainda não está cadastrado na tabela <code>operadores</code> do banco.<br><span style="font-size:11px;">Solicite o cadastro do seu e-mail à TI/Administração.</span>',
               'erro'
             );
             if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
@@ -473,43 +430,6 @@
       }
       if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
       return;
-    }
-    var input = document.getElementById('ident-operador-nome');
-    var chaveInput = document.getElementById('ident-chave-acesso');
-    var nome = input ? input.value.trim() : '';
-    if (!nome) {
-      alert('Por favor, informe seu nome completo para continuar.');
-      if (input) input.focus();
-      return;
-    }
-    var pracaEl = document.getElementById('ident-operador-praca');
-    if (pracaEl && pracaEl.value && typeof setPracaAtual === 'function') {
-      setPracaAtual(pracaEl.value);
-    }
-    var chave = chaveInput ? chaveInput.value.trim() : '';
-    var pack = window.ENCRYPTED_TV_CREDENTIALS || (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ENCRYPTED_CREDENTIALS);
-    var estacaoJaConectada = typeof isEstacaoConectadaTV === 'function' ? isEstacaoConectadaTV() : false;
-    if (chave) {
-      if (btn) { btn.disabled = true; btn.textContent = 'Validando...'; }
-      var res = await conectarComChaveTV(chave);
-      if (!res.ok) {
-        exibirMsgLogin(msgEl, res.error || 'Chave de acesso incorreta.', 'erro');
-        if (btn) { btn.disabled = false; btn.textContent = 'Salvar e Continuar'; }
-        return;
-      }
-    } else if (!estacaoJaConectada && pack && pack.data) {
-      exibirMsgLogin(msgEl, 'Digite a Chave de Acesso da Estação ou clique em "Trabalhar Offline".', 'erro');
-      return;
-    }
-    localStorage.setItem(USER_NAME_STORAGE_KEY, nome);
-    atualizarNomeOperadorUI(nome);
-    if (typeof DBService !== 'undefined' && typeof DBService.syncRemote === 'function') {
-      await DBService.syncRemote(true);
-    }
-    if (typeof renderAll === 'function') renderAll(true);
-    fecharPopup('popup-identificacao-operador');
-    abrirPopup('popup-entrada');
-    if (btn) { btn.disabled = false; btn.textContent = 'Salvar e Continuar'; }
   }
   window.confirmarIdentificacaoOperador = confirmarIdentificacaoOperador;
   function mutarNotificacoes(mutado) {
@@ -518,6 +438,7 @@
     if (dot)   dot.style.display   = mutado ? 'none' : '';
     if (badge) badge.style.display = mutado ? 'none' : '';
   }
+  window.mutarNotificacoes = mutarNotificacoes;
   function abrirModalConectarBanco() {
     var input = document.getElementById('conectar-banco-chave');
     var msg = document.getElementById('conectar-banco-msg');
@@ -624,30 +545,6 @@
     }
   }
   window.executarConexaoBanco = executarConexaoBanco;
-  function desconectarBancoModoLocal(confirmar) {
-    if (confirmar && !confirm('Deseja realmente desconectar e trabalhar offline?\n\nOs novos registros ficarão salvos com segurança neste computador até você reconectar.')) {
-      return;
-    }
-    try {
-      localStorage.removeItem('tv_supabase_url');
-      localStorage.removeItem('tv_supabase_key');
-      if (typeof DBService !== 'undefined' && DBService) {
-        DBService.url = '';
-        DBService.key = '';
-        DBService.mode = 'local';
-      }
-      if (typeof updateCloudStatus === 'function') {
-        updateCloudStatus(false, 'Modo Offline');
-      }
-      atualizarUIStatusBancoConfig();
-      if (typeof mostrarToast === 'function') {
-        mostrarToast('Modo Offline Ativado', 'Estação desconectada da rede. Operando localmente neste computador.', 'info');
-      }
-    } catch(e) {
-      console.warn('Erro ao desconectar banco:', e);
-    }
-  }
-  window.desconectarBancoModoLocal = desconectarBancoModoLocal;
   function atualizarUIStatusBancoConfig() {
     var dotEl = document.getElementById('cfg-db-status-dot');
     var textEl = document.getElementById('cfg-db-status-text');
@@ -681,190 +578,8 @@
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   window.atualizarUIStatusBancoConfig = atualizarUIStatusBancoConfig;
-  function carregarCredenciaisSupabaseConfig() {
-    var urlInput = document.getElementById('cfg-supabase-url');
-    var keyInput = document.getElementById('cfg-supabase-key');
-    var badgeEl  = document.getElementById('cfg-db-status-badge');
-    var currentUrl = (DBService && DBService.url) ? DBService.url : (localStorage.getItem('tv_supabase_url') || '');
-    var currentKey = (DBService && DBService.key) ? DBService.key : (localStorage.getItem('tv_supabase_key') || '');
-    if (urlInput && !urlInput.value) urlInput.value = currentUrl;
-    if (keyInput && !keyInput.value) keyInput.value = currentKey;
-    if (badgeEl) {
-      if (currentUrl && currentKey) {
-        badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#10B981;"></span> Conectado ao Supabase';
-        badgeEl.style.color = '#059669';
-      } else {
-        badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#EF4444;"></span> Desconectado (Modo Local)';
-        badgeEl.style.color = '#DC2626';
-      }
-    }
-  }
-  window.carregarCredenciaisSupabaseConfig = carregarCredenciaisSupabaseConfig;
-  function toggleMostrarChaveSupabase() {
-    var keyInput = document.getElementById('cfg-supabase-key');
-    var ico = document.getElementById('ico-toggle-key');
-    if (!keyInput) return;
-    if (keyInput.type === 'password') {
-      keyInput.type = 'text';
-      if (ico) ico.setAttribute('data-lucide', 'eye-off');
-    } else {
-      keyInput.type = 'password';
-      if (ico) ico.setAttribute('data-lucide', 'eye');
-    }
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-  }
-  window.toggleMostrarChaveSupabase = toggleMostrarChaveSupabase;
-  async function testarConexaoSupabaseConfig(silencioso) {
-    var urlInput = document.getElementById('cfg-supabase-url');
-    var keyInput = document.getElementById('cfg-supabase-key');
-    var url = urlInput ? urlInput.value.trim().replace(/\/+$/, '') : '';
-    var key = keyInput ? keyInput.value.trim() : '';
-    var badgeEl = document.getElementById('cfg-db-status-badge');
-    if (!url || !key) {
-      if (!silencioso && typeof mostrarToast === 'function') {
-        mostrarToast('Campos Vazios', 'Informe a URL e a Chave do Supabase para testar.', 'warning');
-      }
-      return { ok: false, status: 0, message: 'Campos vazios' };
-    }
-    if (badgeEl) {
-      badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#F59E0B;"></span> Testando conexão...';
-      badgeEl.style.color = '#D97706';
-    }
-    try {
-      var res = await fetch(url + '/rest/v1/ocorrencias?select=id&limit=1', {
-        headers: {
-          'apikey': key,
-          'Authorization': 'Bearer ' + key,
-          'Cache-Control': 'no-cache'
-        }
-      });
-      if (res.ok) {
-        if (badgeEl) {
-          badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#10B981;"></span> Conexão bem-sucedida!';
-          badgeEl.style.color = '#059669';
-        }
-        if (!silencioso && typeof mostrarToast === 'function') {
-          mostrarToast('Conexão Estabelecida', 'Autenticado com sucesso no banco de dados Supabase.', 'success');
-        }
-        return { ok: true, status: res.status };
-      }
-      var erroTexto = '';
-      try {
-        var errBody = await res.json();
-        erroTexto = errBody.message || errBody.error || errBody.msg || JSON.stringify(errBody);
-      } catch(e) {
-        try { erroTexto = await res.text(); } catch(e2) {}
-      }
-      if (res.status === 402) {
-        var msg402 = 'Projeto Pausado no Supabase (Erro 402). Acesse supabase.com/dashboard e clique em "Restore project" para reativar o banco.';
-        if (badgeEl) {
-          badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#EF4444;"></span> Projeto Pausado no Supabase (402)';
-          badgeEl.style.color = '#DC2626';
-        }
-        if (!silencioso && typeof mostrarToast === 'function') {
-          mostrarToast('Projeto Pausado (402)', 'O seu projeto do Supabase está pausado por inatividade. Basta entrar em supabase.com/dashboard e clicar em "Restore project".', 'warning');
-        }
-        return { ok: false, status: 402, message: msg402, details: erroTexto };
-      } else if (res.status === 401 || res.status === 403) {
-        var msg401 = 'Chave Inválida (Erro ' + res.status + '). Verifique a anon/public key copiada do Supabase.';
-        if (badgeEl) {
-          badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#EF4444;"></span> Chave Não Autorizada (' + res.status + ')';
-          badgeEl.style.color = '#DC2626';
-        }
-        if (!silencioso && typeof mostrarToast === 'function') {
-          mostrarToast('Chave Inválida (' + res.status + ')', 'A chave do Supabase não foi aceita.', 'danger');
-        }
-        return { ok: false, status: res.status, message: msg401, details: erroTexto };
-      } else if (res.status === 404) {
-        try {
-          var resRoot = await fetch(url + '/rest/v1/', {
-            headers: { 'apikey': key, 'Authorization': 'Bearer ' + key }
-          });
-          if (resRoot.ok || resRoot.status === 200) {
-            var msg404 = 'Conectado ao Supabase com sucesso, mas a tabela "ocorrencias" ainda não foi criada no schema do banco.';
-            if (badgeEl) {
-              badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#F59E0B;"></span> Conectado (Tabela Ocorrências pendente)';
-              badgeEl.style.color = '#D97706';
-            }
-            if (!silencioso && typeof mostrarToast === 'function') {
-              mostrarToast('Conexão OK', msg404, 'warning');
-            }
-            return { ok: true, tabelaAusente: true, status: 404, message: msg404 };
-          }
-        } catch(e404) {}
-      }
-      var msgGen = 'Falha na conexão (Status ' + res.status + (erroTexto ? ': ' + erroTexto : '') + ')';
-      if (badgeEl) {
-        badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#EF4444;"></span> ' + msgGen;
-        badgeEl.style.color = '#DC2626';
-      }
-      if (!silencioso && typeof mostrarToast === 'function') {
-        mostrarToast('Erro de Conexão', msgGen, 'danger');
-      }
-      return { ok: false, status: res.status, message: msgGen, details: erroTexto };
-    } catch(err) {
-      var msgErr = 'Falha na conexão (' + err.message + ')';
-      if (badgeEl) {
-        badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#EF4444;"></span> ' + msgErr;
-        badgeEl.style.color = '#DC2626';
-      }
-      if (!silencioso && typeof mostrarToast === 'function') {
-        mostrarToast('Erro de Conexão', 'Não foi possível contatar o Supabase. Verifique a URL e sua conexão.', 'danger');
-      }
-      return { ok: false, status: 0, message: msgErr };
-    }
-  }
-  window.testarConexaoSupabaseConfig = testarConexaoSupabaseConfig;
-  async function salvarCredenciaisSupabaseConfig() {
-    var urlInput = document.getElementById('cfg-supabase-url');
-    var keyInput = document.getElementById('cfg-supabase-key');
-    var url = urlInput ? urlInput.value.trim().replace(/\/+$/, '') : '';
-    var key = keyInput ? keyInput.value.trim() : '';
-    if (!url || !key) {
-      if (typeof mostrarToast === 'function') mostrarToast('Atenção', 'Preencha a URL e a Chave do Supabase.', 'warning');
-      return;
-    }
-    var badgeEl = document.getElementById('cfg-db-status-badge');
-    if (badgeEl) {
-      badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#F59E0B;"></span> Verificando conexão antes de salvar...';
-      badgeEl.style.color = '#D97706';
-    }
-    var teste = await testarConexaoSupabaseConfig(true);
-    if (!teste.ok) {
-      if (teste.status === 402) {
-        if (typeof mostrarToast === 'function') {
-          mostrarToast('Projeto Pausado no Supabase (402)', 'O seu projeto está pausado no Supabase. Acesse supabase.com/dashboard e clique em "Restore project" para reativá-lo.', 'danger');
-        }
-      } else {
-        if (typeof mostrarToast === 'function') {
-          mostrarToast('Falha na Conexão (' + (teste.status || 'Erro') + ')', teste.message || 'Verifique suas credenciais antes de salvar.', 'danger');
-        }
-      }
-      return;
-    }
-    localStorage.setItem('tv_supabase_url', url);
-    localStorage.setItem('tv_supabase_key', key);
-    DBService.url = url;
-    DBService.key = key;
-    DBService.mode = 'supabase';
-    if (badgeEl) {
-      badgeEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#10B981;"></span> Conectado e Sincronizando...';
-      badgeEl.style.color = '#059669';
-    }
-    if (typeof mostrarToast === 'function') {
-      mostrarToast('Banco Conectado', 'Credenciais verificadas e ativas! Sincronizando dados com o Supabase...', 'success');
-    }
-    if (typeof DBService.init === 'function') DBService.init();
-    if (typeof DBService.syncRemote === 'function') DBService.syncRemote();
-  }
-  window.salvarCredenciaisSupabaseConfig = salvarCredenciaisSupabaseConfig;
   function salvarConfiguracoes() {
     var btn = event && event.currentTarget;
-    var urlEl = document.getElementById('cfg-supabase-url');
-    var keyEl = document.getElementById('cfg-supabase-key');
-    if (urlEl && keyEl && urlEl.value.trim() && keyEl.value.trim()) {
-      salvarCredenciaisSupabaseConfig();
-    }
     if (!btn) return;
     var textoOriginal = btn.textContent;
     btn.textContent = 'Salvo!';
@@ -875,108 +590,3 @@
     }, 1400);
   }
   window.salvarConfiguracoes = salvarConfiguracoes;
-  function usarCredenciaisPreenchidasParaGerador() {
-    var urlEl = document.getElementById('cfg-supabase-url');
-    var keyEl = document.getElementById('cfg-supabase-key');
-    var url = urlEl ? urlEl.value.trim() : '';
-    var key = keyEl ? keyEl.value.trim() : '';
-    if (!url || !key) {
-      if (typeof mostrarToast === 'function') {
-        mostrarToast('Atenção', 'Preencha a URL e a Publishable Key no card acima primeiro.', 'warning');
-      } else {
-        alert('Preencha a URL e a Publishable Key no card acima primeiro.');
-      }
-      return;
-    }
-    if (typeof mostrarToast === 'function') {
-      mostrarToast('Dados Prontos', 'URL e Chave do Supabase preparadas para a criptografia.', 'info');
-    }
-  }
-  window.usarCredenciaisPreenchidasParaGerador = usarCredenciaisPreenchidasParaGerador;
-  var ultimoBlocoGerado = null;
-  async function executarGeradorChaveSegura() {
-    if (typeof verificarPermissaoPerfil === 'function' && !verificarPermissaoPerfil(['TI/ADM', 'Gestor'], 'gerar pacote criptografado da estação')) {
-      return;
-    }
-    var urlEl = document.getElementById('cfg-supabase-url');
-    var keyEl = document.getElementById('cfg-supabase-key');
-    var passEl = document.getElementById('gen-chave-passphrase');
-    var btn = document.getElementById('btn-executar-gerador');
-    var outArea = document.getElementById('gen-resultado-area');
-    var outPre = document.getElementById('gen-codigo-output');
-    var url = urlEl ? urlEl.value.trim() : '';
-    var key = keyEl ? keyEl.value.trim() : '';
-    var pass = passEl ? passEl.value.trim() : '';
-    if (!url || !key) {
-      alert('Por favor, informe a URL do Supabase e a API Key no card de Conexão com o Banco acima.');
-      if (urlEl) urlEl.focus();
-      return;
-    }
-    if (!pass) {
-      alert('Por favor, defina uma Chave de Acesso para a equipe (ex: TvIntegracao@2026).');
-      if (passEl) passEl.focus();
-      return;
-    }
-    if (pass.length < 6) {
-      alert('A chave de acesso deve ter pelo menos 6 caracteres para garantir segurança máxima contra ataques.');
-      if (passEl) passEl.focus();
-      return;
-    }
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-right:6px;vertical-align:middle;"></span> Criptografando (PBKDF2 250k)...';
-    }
-    try {
-      if (!window.TVCrypto) {
-        throw new Error('Módulo TVCrypto indisponível.');
-      }
-      var payload = { url: url, key: key };
-      var encPack = await window.TVCrypto.encrypt(pass, payload);
-      ultimoBlocoGerado = encPack;
-      window.ultimoBlocoGerado = encPack;
-      window.ENCRYPTED_TV_CREDENTIALS = encPack;
-      var snippet = '// Cole no config.js ou no script.js\n' +
-        'window.ENCRYPTED_TV_CREDENTIALS = ' + JSON.stringify(encPack, null, 2) + ';';
-      if (outPre) outPre.textContent = snippet;
-      if (outArea) outArea.style.display = 'block';
-      if (typeof mostrarToast === 'function') {
-        mostrarToast('Código Gerado!', 'Bloco AES-256-GCM gerado. Nunca inclua a senha em comentários ou no código enviado ao GitHub!', 'success');
-      }
-    } catch (e) {
-      alert('Erro ao criptografar: ' + e.message);
-    } finally {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<i data-lucide="lock" style="width:14px;height:14px;"></i> Gerar Bloco Criptografado Seguro';
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-      }
-    }
-  }
-  window.executarGeradorChaveSegura = executarGeradorChaveSegura;
-  function copiarCodigoCriptografadoGerado() {
-    var outPre = document.getElementById('gen-codigo-output');
-    if (!outPre || !outPre.textContent) return;
-    navigator.clipboard.writeText(outPre.textContent).then(function() {
-      if (typeof mostrarToast === 'function') {
-        mostrarToast('Copiado!', 'Código criptografado copiado para a área de transferência.', 'success');
-      } else {
-        alert('Código copiado com sucesso!');
-      }
-    }).catch(function() {
-      alert('Selecione e copie o texto manualmente.');
-    });
-  }
-  window.copiarCodigoCriptografadoGerado = copiarCodigoCriptografadoGerado;
-  function aplicarCodigoCriptografadoAgora() {
-    if (!ultimoBlocoGerado) {
-      alert('Gere o código primeiro clicando no botão acima.');
-      return;
-    }
-    window.ENCRYPTED_TV_CREDENTIALS = ultimoBlocoGerado;
-    if (typeof mostrarToast === 'function') {
-      mostrarToast('Ativado!', 'Pacote criptografado ativado na memória deste navegador.', 'success');
-    } else {
-      alert('Pacote ativado com sucesso neste navegador!');
-    }
-  }
-  window.aplicarCodigoCriptografadoAgora = aplicarCodigoCriptografadoAgora;
