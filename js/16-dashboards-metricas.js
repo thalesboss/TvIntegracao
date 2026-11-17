@@ -251,10 +251,10 @@
             var m = dashboardMetrics.equipamento[eq.nome];
             var mud = !eq.metricas || eq.metricas.conf !== m.conf || eq.metricas.nc !== m.nc || eq.metricas.canc !== m.canc;
             if (mud) {
-              eq.metricas = { conf: m.conf || 0, nc: m.nc || 0, canc: m.canc || 0 };
+              eq.metricas = Object.assign({}, eq.metricas || {}, { conf: m.conf || 0, nc: m.nc || 0, canc: m.canc || 0 });
               if (typeof eq.ordem === 'number') eq.metricas.ordem = eq.ordem;
               if (typeof salvarEquipamentoPostgreSQL === 'function') {
-                salvarEquipamentoPostgreSQL(eq);
+                salvarEquipamentoPostgreSQL(eq, true);
               }
             }
           }

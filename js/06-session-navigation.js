@@ -122,45 +122,67 @@
     }
   }
   function renderGridTurnosEntrada() {
+    var sel = document.getElementById('entrada-turno-select');
     var grid = document.getElementById('entrada-turnos-grid');
-    if (!grid) return;
+    if (!sel && !grid) return;
     var lista = TURNOS_OFICIAIS_TV.filter(function(t) { return t.escala === escalaTurnoEntradaAtiva; });
+    var atualValido = lista.some(function(t) { return t.id === turnoSelecionadoEntradaId; });
+    if (!atualValido) {
+      var sug = sugerirTurnoPorEscala(escalaTurnoEntradaAtiva);
+      if (sug) turnoSelecionadoEntradaId = sug.id;
+    }
     var agora = new Date();
     var nowMin = agora.getHours() * 60 + agora.getMinutes();
     var isPlantao = (escalaTurnoEntradaAtiva === 'plantao');
-    grid.innerHTML = lista.map(function(t) {
-      var ativo = (t.id === turnoSelecionadoEntradaId);
-      var proximo = (nowMin >= (t.inicioMin - 30) && nowMin < t.fimMin);
-      var horarioExibir = t.flexivel
-        ? calcularFaixaHorarioFlexivel(t, horaEntradaFlexPorTurno[t.id] || t.inicioPadrao)
-        : t.horario;
-      var corAcento = isPlantao ? '#DC2626' : '#0071E3';
-      var bgCard = ativo ? (isPlantao ? '#FEF2F2' : '#EFF6FF') : '#FFFFFF';
-      var bdrCard = ativo ? ('2px solid ' + corAcento) : '1px solid #E2E8F0';
-      var badgeBg = isPlantao
-        ? (ativo ? '#DC2626' : '#FEE2E2')
-        : (ativo ? '#0071E3' : '#DBEAFE');
-      var badgeTxt = ativo ? '#FFFFFF' : (isPlantao ? '#B91C1C' : '#1D4ED8');
-      var extras = '';
-      if (t.flexivel) {
-        extras += '<span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:999px;background:#EEF2FF;color:#4338CA;border:1px solid #C7D2FE;">Horário flexível</span>';
-      } else if (proximo) {
-        extras += '<span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:999px;background:#ECFDF5;color:#047857;border:1px solid #A7F3D0;">Horário atual</span>';
-      }
-      return (
-        '<button type="button" onclick="selecionarTurnoEntrada(\'' + t.id + '\')" style="text-align:left;padding:9px 11px;border-radius:10px;border:' + bdrCard + ';background:' + bgCard + ';cursor:pointer;display:flex;align-items:center;gap:10px;transition:all 0.14s ease;width:100%;">' +
-          '<span style="min-width:34px;height:28px;padding:0 7px;border-radius:7px;background:' + badgeBg + ';color:' + badgeTxt + ';font-size:12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">' +
-            escapeHTML(t.codigo) +
-          '</span>' +
-          '<div style="flex:1;min-width:0;">' +
-            '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px;flex-wrap:wrap;">' +
-              '<span style="font-size:11.5px;font-weight:700;color:#0F172A;" id="turno-card-hor-' + t.id + '">' + escapeHTML(horarioExibir) + '</span>' +
+    if (sel) {
+      sel.innerHTML = lista.map(function(t) {
+        var ativo = (t.id === turnoSelecionadoEntradaId);
+        var proximo = (nowMin >= (t.inicioMin - 30) && nowMin < t.fimMin);
+        var horarioExibir = t.flexivel
+          ? calcularFaixaHorarioFlexivel(t, horaEntradaFlexPorTurno[t.id] || t.inicioPadrao)
+          : t.horario;
+        var prefixo = isPlantao ? 'Plantão ' : 'Turno ';
+        var sufixo = t.flexivel ? ' (Horário flexível)' : (proximo ? ' (Horário atual)' : '');
+        return '<option value="' + t.id + '"' + (ativo ? ' selected' : '') + '>' + escapeHTML(prefixo + t.codigo + ' — ' + horarioExibir + sufixo) + '</option>';
+      }).join('');
+      if (turnoSelecionadoEntradaId) sel.value = turnoSelecionadoEntradaId;
+      sel.style.borderColor = isPlantao ? '#FCA5A5' : 'var(--blue-border)';
+    }
+    if (grid) {
+      grid.innerHTML = lista.map(function(t) {
+        var ativo = (t.id === turnoSelecionadoEntradaId);
+        var proximo = (nowMin >= (t.inicioMin - 30) && nowMin < t.fimMin);
+        var horarioExibir = t.flexivel
+          ? calcularFaixaHorarioFlexivel(t, horaEntradaFlexPorTurno[t.id] || t.inicioPadrao)
+          : t.horario;
+        var corAcento = isPlantao ? '#DC2626' : '#0071E3';
+        var bgCard = ativo ? (isPlantao ? '#FEF2F2' : '#EFF6FF') : '#FFFFFF';
+        var bdrCard = ativo ? ('2px solid ' + corAcento) : '1px solid #E2E8F0';
+        var badgeBg = isPlantao
+          ? (ativo ? '#DC2626' : '#FEE2E2')
+          : (ativo ? '#0071E3' : '#DBEAFE');
+        var badgeTxt = ativo ? '#FFFFFF' : (isPlantao ? '#B91C1C' : '#1D4ED8');
+        var extras = '';
+        if (t.flexivel) {
+          extras += '<span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:999px;background:#EEF2FF;color:#4338CA;border:1px solid #C7D2FE;">Horário flexível</span>';
+        } else if (proximo) {
+          extras += '<span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:999px;background:#ECFDF5;color:#047857;border:1px solid #A7F3D0;">Horário atual</span>';
+        }
+        return (
+          '<button type="button" onclick="selecionarTurnoEntrada(\'' + t.id + '\')" style="text-align:left;padding:9px 11px;border-radius:10px;border:' + bdrCard + ';background:' + bgCard + ';cursor:pointer;display:flex;align-items:center;gap:10px;transition:all 0.14s ease;width:100%;">' +
+            '<span style="min-width:34px;height:28px;padding:0 7px;border-radius:7px;background:' + badgeBg + ';color:' + badgeTxt + ';font-size:12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+              escapeHTML(t.codigo) +
+            '</span>' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px;flex-wrap:wrap;">' +
+                '<span style="font-size:11.5px;font-weight:700;color:#0F172A;" id="turno-card-hor-' + t.id + '">' + escapeHTML(horarioExibir) + '</span>' +
+              '</div>' +
+              (extras ? '<div style="margin-top:3px;display:flex;gap:4px;">' + extras + '</div>' : '') +
             '</div>' +
-            (extras ? '<div style="margin-top:3px;display:flex;gap:4px;">' + extras + '</div>' : '') +
-          '</div>' +
-        '</button>'
-      );
-    }).join('');
+          '</button>'
+        );
+      }).join('');
+    }
     atualizarBoxTurnoFlexivel();
   }
   function atualizarPillsEscalaEntrada() {
@@ -202,6 +224,11 @@
     if (resumoEl) resumoEl.textContent = faixa;
     var cardHorEl = document.getElementById('turno-card-hor-' + t.id);
     if (cardHorEl) cardHorEl.textContent = faixa;
+    var selOpt = document.querySelector('#entrada-turno-select option[value="' + t.id + '"]');
+    if (selOpt) {
+      var prefixo = (t.escala === 'plantao') ? 'Plantão ' : 'Turno ';
+      selOpt.textContent = prefixo + t.codigo + ' — ' + faixa + ' (Horário flexível)';
+    }
   }
   window.recalcularHorarioTurnoFlexivel = recalcularHorarioTurnoFlexivel;
   function inicializarSeletorTurnoEntrada() {
@@ -345,7 +372,8 @@
     document.getElementById(cfg.page).classList.add('active');
     document.getElementById('page-title').textContent = cfg.title;
     var chipText = (typeof cfg.chip === 'function') ? cfg.chip() : cfg.chip;
-    document.getElementById('page-chip').textContent  = chipText;
+    var pageChipEl = document.getElementById('page-chip');
+    if (pageChipEl) pageChipEl.textContent = chipText;
     if (el) el.classList.add('active');
     if (name === 'config') {
       try { if (typeof atualizarUIStatusBancoConfig === 'function') atualizarUIStatusBancoConfig(); } catch(e) {}

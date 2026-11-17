@@ -491,6 +491,11 @@ document.addEventListener('DOMContentLoaded', function () {
           descRes = (descRes ? descRes + ' ' : '') + '<!--RONDA_JSON:' + encodeURIComponent(JSON.stringify(h.detalhesRonda)) + '-->';
         } catch (eRonda) {}
       }
+      if (h.dadosRecebimento && typeof h.dadosRecebimento === 'object' && descRes.indexOf('<!--REC_JSON:') === -1) {
+        try {
+          descRes = (descRes ? descRes + ' ' : '') + '<!--REC_JSON:' + encodeURIComponent(JSON.stringify(h.dadosRecebimento)) + '-->';
+        } catch (eRecP) {}
+      }
       return {
         id: h.id,
         tipo: h.tipo || 'relatorio',
@@ -659,6 +664,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (mCtrs && mCtrs[1]) h.dadosCTRS = JSON.parse(decodeURIComponent(mCtrs[1]));
                   } catch (eC) {}
                 }
+                if (h && !h.dadosRecebimento && h.descResolucao && String(h.descResolucao).indexOf('<!--REC_JSON:') !== -1) {
+                  try {
+                    var mRec = String(h.descResolucao).match(/<!--REC_JSON:([^>]+)-->/);
+                    if (mRec && mRec[1]) h.dadosRecebimento = JSON.parse(decodeURIComponent(mRec[1]));
+                  } catch (eRec) {}
+                }
+                if (h && h.dadosRecebimento && Array.isArray(h.dadosRecebimento.anexos) && (!h.anexos || h.anexos.length === 0)) {
+                  h.anexos = h.dadosRecebimento.anexos;
+                }
                 mapHist[h.id] = h;
               });
               (historicoSeedData || []).forEach(function(localH){
@@ -673,6 +687,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (localH.detalhesRonda && !mapHist[localH.id].detalhesRonda) {
                       mapHist[localH.id].detalhesRonda = localH.detalhesRonda;
                     }
+                    if (localH.dadosRecebimento && !mapHist[localH.id].dadosRecebimento) {
+                      mapHist[localH.id].dadosRecebimento = localH.dadosRecebimento;
+                    }
+                    if (localH.anexos && Array.isArray(localH.anexos) && localH.anexos.length > 0 && (!mapHist[localH.id].anexos || mapHist[localH.id].anexos.length === 0)) {
+                      mapHist[localH.id].anexos = localH.anexos;
+                    }
                   } else if (!idsNaLixeira.includes(localH.id) && localH.status !== 'lixeira') {
                     remoteFiltered.push(localH);
                   }
@@ -684,6 +704,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 localStorage.setItem(HISTORICO_LOCAL_STORAGE_KEY, JSON.stringify(historicoSeedData));
               } catch(e) {}
               window._lastHistSyncSig = historicoSeedData.map(function(h){ return h.id + '_' + (h.status || ''); }).join('|');
+              try {
+                if (typeof sincronizarRecebimentosExistentesNoCatalogo === 'function') sincronizarRecebimentosExistentesNoCatalogo(false);
+              } catch(eRecSync) {}
               if (typeof renderAll === 'function') renderAll(true);
             }
           })
@@ -705,6 +728,9 @@ document.addEventListener('DOMContentLoaded', function () {
           try {
             if (typeof sincronizarEquipeNuvem === 'function') sincronizarEquipeNuvem();
           } catch(eEq) {}
+          try {
+            if (typeof sincronizarEquipamentosPostgreSQL === 'function') sincronizarEquipamentosPostgreSQL();
+          } catch(eCatEq) {}
           Promise.all([pOc, pHist]).then(function() {
             if (typeof renderAll === 'function') renderAll(true);
             resolveSync(true);

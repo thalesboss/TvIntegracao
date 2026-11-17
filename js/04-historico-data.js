@@ -31,7 +31,7 @@
     var ocPorSig = {};
     function normSigOc(titulo, desc) {
       var t = String(titulo || '').trim().toLowerCase();
-      var d = String(desc || '').replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim().toLowerCase();
+      var d = String(desc || '').replace(/<!--(?:CTRS|RONDA|REC)_JSON:[^>]+-->/g, '').trim().toLowerCase();
       return t + '||' + d;
     }
     (ocorrencias || []).forEach(function(oc) {
@@ -312,9 +312,9 @@
         var o = entry.obj;
         var st = obterEstiloSemanticoHistoricoItem({ tipo: 'ocorrencia', status: o.status, resolucao: o.resolucao });
         var safeOcId = (typeof sanitizeIdAttr === 'function') ? sanitizeIdAttr(o.id) : escapeHTML(o.id);
-        var descLimpa = String(o.desc || '').replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim();
+        var descLimpa = String(o.desc || '').replace(/<!--(?:CTRS|RONDA|REC)_JSON:[^>]+-->/g, '').trim();
         var descResLimpa = (o.resolucao && o.resolucao.descRes)
-          ? String(o.resolucao.descRes).replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim()
+          ? String(o.resolucao.descRes).replace(/<!--(?:CTRS|RONDA|REC)_JSON:[^>]+-->/g, '').trim()
           : '';
         var solucaoBox = (o.status !== 'aberta' && descResLimpa)
           ? '<div style="margin-top:6px;padding:6px 10px;background:#FFFFFF;border:1px solid ' + st.border + ';border-left:3px solid ' + st.left + ';border-radius:6px;font-size:11.5px;color:#1E293B;"><strong>Solução aplicada:</strong> ' + escapeHTML(descResLimpa) + '</div>'
@@ -347,7 +347,7 @@
       var r = entry.obj;
       var stRel = obterEstiloSemanticoHistoricoItem(r);
       var safeRelId = (typeof sanitizeIdAttr === 'function') ? sanitizeIdAttr(r.id) : escapeHTML(r.id);
-      var descRelLimpa = String(r.descCriacao || '').replace(/<!--(?:CTRS|RONDA)_JSON:[^>]+-->/g, '').trim();
+      var descRelLimpa = String(r.descCriacao || '').replace(/<!--(?:CTRS|RONDA|REC)_JSON:[^>]+-->/g, '').trim();
       var badgeRel = escapeHTML((r.subtipo || 'Relatório CTRS').toUpperCase());
       return (
         '<div onclick="fecharPopup(\'' + popupParaFechar + '\'); verDetalhesHistoricoDirect(\'' + safeRelId + '\')" style="background:' + stRel.bg + ';border:1px solid ' + stRel.border + ';border-left:4px solid ' + stRel.left + ';border-radius:8px;padding:10px 13px;cursor:pointer;transition:all .15s ease;" onmouseover="this.style.borderColor=\'' + stRel.hover + '\';" onmouseout="this.style.borderColor=\'' + stRel.border + '\';" title="Clique para abrir a visualização completa do relatório">' +

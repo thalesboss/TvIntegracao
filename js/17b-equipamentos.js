@@ -18,6 +18,32 @@
   var catalogoEquipamentos = [];
   var filtroEquipamentoTag = 'todos';
   var tagsSelecionadasModalEq = [];
+  var fotoUrlModalEq = '';
+  var dadosTagsModalEq = {};
+  var eqFichaAbertaId = null;
+  var liveuModalTargetEqId = null;
+  var liveuSlotsDraft = [];
+  function normalizarDadosLiveU(raw) {
+    if (!raw || typeof raw !== 'object') {
+      return { chips_modens_tv: '', obs_geral: '', slots: [] };
+    }
+    var slotsArr = Array.isArray(raw.slots) ? raw.slots.map(function(s) {
+      if (!s || typeof s !== 'object') return null;
+      return {
+        operadora: String(s.operadora || 'Vivo').trim(),
+        numero_chip: String(s.numero_chip || '').trim(),
+        telefone: String(s.telefone || '').trim(),
+        imei: String(s.imei || '').trim(),
+        inserido: String(s.inserido || 'Desconhecido').trim(),
+        imagens: Array.isArray(s.imagens) ? s.imagens.filter(Boolean) : []
+      };
+    }).filter(Boolean) : [];
+    return {
+      chips_modens_tv: String(raw.chips_modens_tv || '').trim(),
+      obs_geral: String(raw.obs_geral || '').trim(),
+      slots: slotsArr
+    };
+  }
   function normalizarTagsEquipamento(tagsRaw) {
     if (!Array.isArray(tagsRaw)) return [];
     var vistos = {};
@@ -40,10 +66,31 @@
     var tagsArr = normalizarTagsEquipamento(eq.tags);
     var metRaw = (eq.metricas && typeof eq.metricas === 'object') ? eq.metricas : { conf: 0, nc: 0, canc: 0 };
     var ordemVal = (typeof eq.ordem === 'number') ? eq.ordem : (typeof metRaw.ordem === 'number' ? metRaw.ordem : undefined);
+    var exibirRel = (typeof eq.exibir_nos_relatorios === 'boolean')
+      ? eq.exibir_nos_relatorios
+      : ((typeof metRaw.exibir_nos_relatorios === 'boolean') ? metRaw.exibir_nos_relatorios : true);
+    var fotoVal = String(eq.foto_url || metRaw.foto_url || '').trim();
+    var dadosTagsRaw = (eq.dados_tags && typeof eq.dados_tags === 'object')
+      ? eq.dados_tags
+      : ((metRaw.dados_tags && typeof metRaw.dados_tags === 'object') ? metRaw.dados_tags : {});
+    var dadosTagsClean = {};
+    if (dadosTagsRaw.liveu) {
+      dadosTagsClean.liveu = normalizarDadosLiveU(dadosTagsRaw.liveu);
+    }
+    var histEdRaw = Array.isArray(eq.historico_edicoes)
+      ? eq.historico_edicoes
+      : (Array.isArray(metRaw.historico_edicoes) ? metRaw.historico_edicoes : []);
+    var rawAt = eq.atualizado_em || metRaw.atualizado_em || eq.criado_em || 0;
+    var atualizadoVal = (typeof rawAt === 'number' && !isNaN(rawAt)) ? rawAt : (Date.parse(rawAt) || 0);
     var metObj = {
       conf: metRaw.conf || 0,
       nc: metRaw.nc || 0,
-      canc: metRaw.canc || 0
+      canc: metRaw.canc || 0,
+      exibir_nos_relatorios: exibirRel,
+      foto_url: fotoVal,
+      dados_tags: dadosTagsClean,
+      historico_edicoes: histEdRaw,
+      atualizado_em: atualizadoVal
     };
     if (typeof ordemVal === 'number') {
       metObj.ordem = ordemVal;
@@ -59,6 +106,11 @@
       setor_local: (eq.setor_local || eq.local || 'Central Técnica').trim(),
       tags: tagsArr,
       status_operacional: eq.status_operacional || 'operacional',
+      exibir_nos_relatorios: exibirRel,
+      foto_url: fotoVal,
+      dados_tags: dadosTagsClean,
+      historico_edicoes: histEdRaw,
+      atualizado_em: atualizadoVal,
       obs_tecnicas: (eq.obs_tecnicas || eq.obs || '').trim(),
       ordem: ordemVal,
       metricas: metObj,
@@ -129,16 +181,20 @@
       return (a.criado_em || 0) - (b.criado_em || 0);
     });
   }
-  function obterListaNomesEquipamentosOrdenados(pracaOpcional) {
+  function obterListaNomesEquipamentosOrdenados(pracaOpcional, incluirTodosCatalogo) {
     aplicarOrdemPersonalizadaNoCatalogo();
     var pracaAtiva = pracaOpcional || ((typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora');
     var isUdi = String(pracaAtiva).indexOf('Uber') !== -1;
     var ativos = (catalogoEquipamentos || []).filter(function(eq) {
       if (!eq || eq.status_operacional === 'lixeira') return false;
+      if (!incluirTodosCatalogo && eq.exibir_nos_relatorios === false) return false;
       return isUdi ? (eq.praca === 'Uberlândia') : (eq.praca === 'Juiz de Fora');
     });
     if (ativos.length > 0) {
       return ativos.map(function(eq) { return eq.nome; });
+    }
+    if (!incluirTodosCatalogo && catalogoEquipamentos && catalogoEquipamentos.length > 0) {
+      return [];
     }
     if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics && dashboardMetrics.equipamento) {
       return Object.keys(dashboardMetrics.equipamento);
@@ -150,7 +206,21 @@
     window.catalogoEquipamentos = catalogoEquipamentos;
     try {
       localStorage.setItem(EQUIPAMENTOS_STORAGE_KEY, JSON.stringify(catalogoEquipamentos));
-    } catch (e) {}
+    } catch (e) {
+      console.warn('[Equipamentos] localStorage cheio ao salvar catálogo completo, tentando cache compacto:', e);
+      try {
+        var compacto = (catalogoEquipamentos || []).map(function(eq) {
+          if (!eq) return eq;
+          var copy = Object.assign({}, eq);
+          copy.foto_url = '';
+          if (copy.metricas && typeof copy.metricas === 'object') {
+            copy.metricas = Object.assign({}, copy.metricas, { foto_url: '' });
+          }
+          return copy;
+        });
+        localStorage.setItem(EQUIPAMENTOS_STORAGE_KEY, JSON.stringify(compacto));
+      } catch (e2) {}
+    }
     sincronizarDashboardMetricsComCatalogo();
   }
   function sincronizarDashboardMetricsComCatalogo() {
@@ -166,6 +236,7 @@
     var isUdi = pracaAtiva.indexOf('Uber') !== -1;
     var ativosDaPraca = (catalogoEquipamentos || []).filter(function(eq) {
       if (!eq || eq.status_operacional === 'lixeira') return false;
+      if (eq.exibir_nos_relatorios === false) return false;
       return isUdi ? (eq.praca === 'Uberlândia') : (eq.praca === 'Juiz de Fora');
     });
     var novoMapaEq = {};
@@ -233,11 +304,214 @@
         }
       });
     } catch (eMig) {}
+    sincronizarRecebimentosExistentesNoCatalogo(true);
+    deduplicarEquipamentosCatalogo();
     salvarCatalogoEquipamentosLocal();
     renderCatalogoEquipamentos();
     sincronizarEquipamentosPostgreSQL();
   }
   window.carregarEquipamentosStore = carregarEquipamentosStore;
+  function removerEquipamentoDuplicadoRemoto(idDup) {
+    var db = getDBCredentials();
+    if (!db.url || !db.key || !idDup) return;
+    fetch(db.url + '/rest/v1/equipamentos?id=eq.' + encodeURIComponent(idDup), {
+      method: 'DELETE',
+      headers: {
+        'apikey': db.key,
+        'Authorization': 'Bearer ' + db.key
+      }
+    }).then(function(res) {
+      if (!res.ok) {
+        fetch(db.url + '/rest/v1/equipamentos?id=eq.' + encodeURIComponent(idDup), {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': db.key,
+            'Authorization': 'Bearer ' + db.key
+          },
+          body: JSON.stringify({ status_operacional: 'lixeira' })
+        }).catch(function() {});
+      }
+    }).catch(function() {});
+  }
+  function deduplicarEquipamentosCatalogo() {
+    if (!Array.isArray(catalogoEquipamentos) || catalogoEquipamentos.length === 0) return false;
+    var gruposAtivos = {};
+    var idsParaRemover = {};
+    var removeuAlgo = false;
+    function scoreEquipamento(e) {
+      var s = 0;
+      if (e.foto_url) s += 10;
+      if (e.dados_tags && e.dados_tags.liveu && Array.isArray(e.dados_tags.liveu.slots) && e.dados_tags.liveu.slots.length > 0) s += 10;
+      if (e.codigo_patrimonio) s += 3;
+      if (e.numero_serie) s += 3;
+      if (e.fabricante_modelo) s += 2;
+      if (Array.isArray(e.historico_edicoes) && e.historico_edicoes.length > 0) s += 4;
+      if (String(e.id || '').indexOf('eq_rec_') === 0 && !/^eq_rec_\d{10,}/.test(String(e.id))) s += 5;
+      return s;
+    }
+    catalogoEquipamentos.forEach(function(e) {
+      if (!e || !e.id) return;
+      if (e.status_operacional === 'lixeira') return;
+      var chave = (e.praca || 'Juiz de Fora') + '|' + String(e.nome || '').trim().toUpperCase();
+      if (!gruposAtivos[chave]) {
+        gruposAtivos[chave] = [e];
+      } else {
+        gruposAtivos[chave].push(e);
+      }
+    });
+    Object.keys(gruposAtivos).forEach(function(chave) {
+      var arr = gruposAtivos[chave];
+      if (arr.length <= 1) return;
+      arr.sort(function(a, b) {
+        var diff = scoreEquipamento(b) - scoreEquipamento(a);
+        if (diff !== 0) return diff;
+        return Number(a.criado_em || 0) - Number(b.criado_em || 0);
+      });
+      for (var i = 1; i < arr.length; i++) {
+        idsParaRemover[arr[i].id] = true;
+        removeuAlgo = true;
+        removerEquipamentoDuplicadoRemoto(arr[i].id);
+      }
+    });
+    if (removeuAlgo) {
+      catalogoEquipamentos = catalogoEquipamentos.filter(function(e) {
+        return e && !idsParaRemover[e.id];
+      });
+    }
+    return removeuAlgo;
+  }
+  function registrarMateriaisRecebidosNoCatalogo(materiais, metaRec, silencioso) {
+    if (!Array.isArray(materiais) || materiais.length === 0) return 0;
+    var meta = metaRec || {};
+    var pracaPadrao = meta.praca || ((typeof getPracaAtual === 'function') ? getPracaAtual() : 'Juiz de Fora');
+    var pracaNorm = (String(pracaPadrao).indexOf('Uber') !== -1) ? 'Uberlândia' : 'Juiz de Fora';
+    var adicionados = [];
+    materiais.forEach(function(item) {
+      if (!item || !item.desc) return;
+      var nomeUp = String(item.desc).trim().toUpperCase();
+      if (!nomeUp) return;
+      var plaqLimpa = (item.plaq && String(item.plaq).trim() !== '-') ? String(item.plaq).trim() : '';
+      var serieLimpa = (item.serie && String(item.serie).trim() !== '-') ? String(item.serie).trim() : '';
+      var slugPraca = (pracaNorm.indexOf('Uber') !== -1) ? 'udi' : 'jf';
+      var slugNome = nomeUp.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'item';
+      var slugSerie = serieLimpa ? ('_' + serieLimpa.toLowerCase().replace(/[^a-z0-9]+/g, '')) : '';
+      var idDeterministico = 'eq_rec_' + slugPraca + '_' + slugNome + slugSerie;
+      var jaExiste = (catalogoEquipamentos || []).some(function(e) {
+        if (!e) return false;
+        if (e.id === idDeterministico) return true;
+        if (e.praca !== pracaNorm) return false;
+        if (e.nome === nomeUp) return true;
+        if (serieLimpa && e.numero_serie && String(e.numero_serie).trim().toUpperCase() === serieLimpa.toUpperCase()) return true;
+        return false;
+      });
+      if (jaExiste) return;
+      var exibirRel = (typeof item.exibirNosRelatorios === 'boolean') ? item.exibirNosRelatorios : false;
+      var obsRec = 'Recebido em ' + (meta.dataRecebimento || meta.dataCriacao || formatDataHoraLocal()).split(' ')[0] +
+                   ' · N.F: ' + (meta.nf || 'S/N') +
+                   (meta.remetente ? (' · Remetente: ' + meta.remetente) : '') +
+                   (item.quant && Number(item.quant) > 1 ? (' · Qtd: ' + item.quant) : '');
+      var novoEq = sanitizarEquipamento({
+        id: idDeterministico,
+        nome: nomeUp,
+        codigo_patrimonio: plaqLimpa,
+        numero_serie: serieLimpa,
+        categoria: 'Infraestrutura',
+        fabricante_modelo: '',
+        praca: pracaNorm,
+        setor_local: (item.local && String(item.local).trim()) ? String(item.local).trim() : 'Recebimento / Almoxarifado',
+        status_operacional: 'operacional',
+        exibir_nos_relatorios: exibirRel,
+        obs_tecnicas: obsRec,
+        tags: exibirRel ? ['Transmissão', 'Recebimento'] : ['Recebimento'],
+        criado_por: meta.recebedor || meta.criadoPor || ((typeof getUsuarioAtual === 'function') ? getUsuarioAtual() : 'Sistema'),
+        criado_em: Date.now()
+      });
+      if (novoEq) {
+        catalogoEquipamentos.push(novoEq);
+        adicionados.push(novoEq);
+      }
+    });
+    if (adicionados.length > 0) {
+      salvarCatalogoEquipamentosLocal();
+      adicionados.forEach(function(eq) { salvarEquipamentoPostgreSQL(eq, false); });
+      if (!silencioso) {
+        renderCatalogoEquipamentos();
+        if (typeof renderDashboards === 'function') renderDashboards();
+      }
+    }
+    return adicionados.length;
+  }
+  window.registrarMateriaisRecebidosNoCatalogo = registrarMateriaisRecebidosNoCatalogo;
+  function parseItensLegadoRecebimento(descCriacao) {
+    var txt = String(descCriacao || '');
+    var idxItens = txt.indexOf('Itens:');
+    if (idxItens === -1) return [];
+    var apos = txt.slice(idxItens + 6).trim();
+    var mFimObs = apos.match(/\.\s+(?![0-9A-Za-zÀ-ÿ_-]*\])/);
+    var blocoItens = mFimObs ? apos.slice(0, mFimObs.index) : apos.replace(/\.\s*$/, '');
+    return blocoItens.split(';').map(function(rawItem) {
+      var s = rawItem.trim();
+      if (!s) return null;
+      var qMatch = s.match(/^(\d+)\s*x\s+(.+)$/i);
+      var quant = qMatch ? qMatch[1] : '1';
+      var resto = qMatch ? qMatch[2].trim() : s;
+      var plaq = '';
+      var serie = '';
+      var mP = resto.match(/\[Plaq:\s*([^\]]+)\]/i);
+      if (mP) { plaq = mP[1].trim(); resto = resto.replace(mP[0], '').trim(); }
+      var mS = resto.match(/\[S[eé]rie:\s*([^\]]+)\]/i);
+      if (mS) { serie = mS[1].trim(); resto = resto.replace(mS[0], '').trim(); }
+      if (!resto) return null;
+      return { quant: quant, desc: resto, plaq: plaq, serie: serie, local: '', exibirNosRelatorios: false };
+    }).filter(Boolean);
+  }
+  function sincronizarRecebimentosExistentesNoCatalogo(evitarRender) {
+    var listaHist = (typeof historicoSeedData !== 'undefined' && Array.isArray(historicoSeedData)) ? historicoSeedData : [];
+    var adicionadosTotal = 0;
+    listaHist.forEach(function(h) {
+      if (!h || h.tipo !== 'recebimento' || h.status === 'lixeira') return;
+      var dRec = h.dadosRecebimento || null;
+      if (!dRec && h.descResolucao && String(h.descResolucao).indexOf('<!--REC_JSON:') !== -1) {
+        try {
+          var mR = String(h.descResolucao).match(/<!--REC_JSON:([^>]+)-->/);
+          if (mR && mR[1]) dRec = JSON.parse(decodeURIComponent(mR[1]));
+        } catch (eR) {}
+      }
+      var materiais = (dRec && Array.isArray(dRec.materiais) && dRec.materiais.length > 0)
+        ? dRec.materiais
+        : parseItensLegadoRecebimento(h.descCriacao);
+      if (materiais.length === 0) return;
+      var nfMatch = String(h.titulo || '').match(/N\.?F\s+([^\s—]+)/i);
+      var remMatch = String(h.titulo || '').split('—');
+      var metaRec = dRec || {
+        nf: nfMatch ? nfMatch[1] : 'S/N',
+        remetente: remMatch.length > 1 ? remMatch.slice(1).join('—').trim() : '',
+        praca: h.praca || h.local || 'Juiz de Fora',
+        dataCriacao: h.dataCriacao || '',
+        recebedor: h.criadoPor || ''
+      };
+      adicionadosTotal += registrarMateriaisRecebidosNoCatalogo(materiais, metaRec, true);
+    });
+    if (adicionadosTotal > 0 && !evitarRender) {
+      renderCatalogoEquipamentos();
+      if (typeof renderDashboards === 'function') renderDashboards();
+    }
+  }
+  window.sincronizarRecebimentosExistentesNoCatalogo = sincronizarRecebimentosExistentesNoCatalogo;
+  var _eqPendingSaveIds = {};
+  function calcularAssinaturaListaEquipamentos(lista) {
+    if (!Array.isArray(lista)) return '';
+    return lista.map(function(e) {
+      if (!e) return '';
+      var mLen = e.metricas ? JSON.stringify(e.metricas).length : 0;
+      return [
+        e.id, e.nome, e.status_operacional, e.codigo_patrimonio, e.numero_serie,
+        e.fabricante_modelo, e.categoria, e.setor_local, (e.tags || []).join(','),
+        e.exibir_nos_relatorios, e.atualizado_em || 0, mLen
+      ].join('|');
+    }).join(';;');
+  }
   function sincronizarEquipamentosPostgreSQL() {
     var db = getDBCredentials();
     if (!db.url || !db.key) return;
@@ -248,21 +522,39 @@
         'Cache-Control': 'no-cache'
       }
     })
-    .then(function(res) { return res.ok ? res.json() : null; })
+    .then(function(res) {
+      if (!res.ok) {
+        res.text().then(function(t) { console.error('[PostgreSQL Equipamentos] Erro GET equipamentos:', res.status, t); }).catch(function(){});
+        return null;
+      }
+      return res.json();
+    })
     .then(function(remotos) {
       if (!Array.isArray(remotos)) return;
-      var mapaRemoto = {};
-      var listaRemota = [];
+      console.info('[PostgreSQL Equipamentos] Sincronizados do banco:', remotos.length, 'itens');
+      var mapaLocal = {};
       var mapaLocalOrdem = {};
       (catalogoEquipamentos || []).forEach(function(locEq) {
-        if (locEq && locEq.id && typeof locEq.ordem === 'number') {
-          mapaLocalOrdem[locEq.id] = locEq.ordem;
+        if (locEq && locEq.id) {
+          mapaLocal[locEq.id] = locEq;
+          if (typeof locEq.ordem === 'number') mapaLocalOrdem[locEq.id] = locEq.ordem;
         }
       });
+      var mapaRemoto = {};
+      var listaRemota = [];
+      var agoraMs = Date.now();
       remotos.forEach(function(rawRem) {
         var tinhaHash = Array.isArray(rawRem.tags) && rawRem.tags.some(function(t) { return String(t).indexOf('#') !== -1; });
         var san = sanitizarEquipamento(rawRem);
         if (san) {
+          var pendTs = _eqPendingSaveIds[san.id] || 0;
+          var locExist = mapaLocal[san.id];
+          if (locExist && pendTs && (agoraMs - pendTs) < 10000) {
+            san = locExist;
+          } else if (locExist && Number(locExist.atualizado_em || 0) > Number(san.atualizado_em || 0)) {
+            san = locExist;
+            salvarEquipamentoPostgreSQL(locExist, true);
+          }
           if (typeof san.ordem !== 'number' && typeof mapaLocalOrdem[san.id] === 'number') {
             san.ordem = mapaLocalOrdem[san.id];
             if (!san.metricas || typeof san.metricas !== 'object') san.metricas = { conf: 0, nc: 0, canc: 0 };
@@ -271,7 +563,7 @@
           listaRemota.push(san);
           mapaRemoto[san.id] = san;
           if (tinhaHash) {
-            salvarEquipamentoPostgreSQL(san);
+            salvarEquipamentoPostgreSQL(san, true);
           }
         }
       });
@@ -279,14 +571,24 @@
         return loc && loc.id && !mapaRemoto[loc.id];
       });
       if (pendentesLocais.length > 0) {
-        pendentesLocais.forEach(function(p) { salvarEquipamentoPostgreSQL(p); });
+        pendentesLocais.forEach(function(p) { salvarEquipamentoPostgreSQL(p, false); });
       }
       if (listaRemota.length > 0 || pendentesLocais.length > 0) {
-        catalogoEquipamentos = listaRemota.concat(pendentesLocais);
+        var novaLista = listaRemota.concat(pendentesLocais);
+        var sigAntes = calcularAssinaturaListaEquipamentos(catalogoEquipamentos);
+        catalogoEquipamentos = novaLista;
+        deduplicarEquipamentosCatalogo();
         aplicarOrdemPersonalizadaNoCatalogo();
-        salvarCatalogoEquipamentosLocal();
-        renderCatalogoEquipamentos();
-        if (typeof renderDashboards === 'function') renderDashboards();
+        var sigDepois = calcularAssinaturaListaEquipamentos(catalogoEquipamentos);
+        if (sigAntes !== sigDepois) {
+          salvarCatalogoEquipamentosLocal();
+          renderCatalogoEquipamentos();
+          if (typeof renderDashboards === 'function') renderDashboards();
+          var fichaPop = document.getElementById('popup-ficha-vida-equipamento');
+          if (eqFichaAbertaId && fichaPop && !fichaPop.hasAttribute('hidden')) {
+            abrirFichaVidaEquipamento(eqFichaAbertaId, true);
+          }
+        }
       }
     })
     .catch(function(err) {
@@ -294,10 +596,16 @@
     });
   }
   window.sincronizarEquipamentosPostgreSQL = sincronizarEquipamentosPostgreSQL;
-  function salvarEquipamentoPostgreSQL(eq) {
-    var db = getDBCredentials();
-    if (!db.url || !db.key || !eq) return;
-    var payload = {
+  function montarPayloadEquipamentoPostgreSQL(eq) {
+    var met = (eq.metricas && typeof eq.metricas === 'object') ? Object.assign({}, eq.metricas) : { conf: 0, nc: 0, canc: 0 };
+    met.exibir_nos_relatorios = (eq.exibir_nos_relatorios !== false);
+    met.foto_url = eq.foto_url || '';
+    met.dados_tags = (eq.dados_tags && typeof eq.dados_tags === 'object') ? eq.dados_tags : {};
+    met.historico_edicoes = Array.isArray(eq.historico_edicoes) ? eq.historico_edicoes : [];
+    met.atualizado_em = eq.atualizado_em || Date.now();
+    if (typeof eq.ordem === 'number') met.ordem = eq.ordem;
+    eq.metricas = met;
+    return {
       id: eq.id,
       codigo_patrimonio: eq.codigo_patrimonio || '',
       numero_serie: eq.numero_serie || '',
@@ -309,27 +617,85 @@
       tags: Array.isArray(eq.tags) ? eq.tags : [],
       status_operacional: eq.status_operacional || 'operacional',
       obs_tecnicas: eq.obs_tecnicas || '',
-      metricas: (eq.metricas && typeof eq.metricas === 'object') ? eq.metricas : { conf: 0, nc: 0, canc: 0 },
+      metricas: met,
       criado_por: eq.criado_por || 'Operador',
       criado_em: eq.criado_em || Date.now()
     };
-    fetch(db.url + '/rest/v1/equipamentos', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': db.key,
-        'Authorization': 'Bearer ' + db.key,
-        'Prefer': 'resolution=merge-duplicates'
-      },
-      body: JSON.stringify(payload)
-    })
-    .then(function(res) {
-      if (res.ok) {
-      }
-    })
-    .catch(function(err) {
-      console.warn('[PostgreSQL Equipamentos] Erro ao gravar equipamento:', err);
-    });
+  }
+  function salvarEquipamentoPostgreSQL(eq, isEdicao, callback) {
+    var db = getDBCredentials();
+    if (!db.url || !db.key || !eq) {
+      if (typeof callback === 'function') callback(false);
+      return;
+    }
+    eq.atualizado_em = eq.atualizado_em || Date.now();
+    _eqPendingSaveIds[eq.id] = Date.now();
+    var payload = montarPayloadEquipamentoPostgreSQL(eq);
+    var patchPayload = Object.assign({}, payload);
+    delete patchPayload.id;
+    delete patchPayload.criado_em;
+    var fazerPostUpsert = function() {
+      return fetch(db.url + '/rest/v1/equipamentos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': db.key,
+          'Authorization': 'Bearer ' + db.key,
+          'Prefer': 'resolution=merge-duplicates,return=representation'
+        },
+        body: JSON.stringify(payload)
+      });
+    };
+    var promessa = isEdicao
+      ? fetch(db.url + '/rest/v1/equipamentos?id=eq.' + encodeURIComponent(eq.id), {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': db.key,
+            'Authorization': 'Bearer ' + db.key,
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify(patchPayload)
+        }).then(function(res) {
+          if (!res.ok) {
+            return fazerPostUpsert();
+          }
+          return res.json().then(function(rows) {
+            if (!Array.isArray(rows) || rows.length === 0) {
+              return fazerPostUpsert();
+            }
+            return { ok: true, status: res.status };
+          }).catch(function() { return { ok: true, status: res.status }; });
+        }).catch(function() {
+          return fazerPostUpsert();
+        })
+      : fazerPostUpsert();
+    promessa
+      .then(function(res) {
+        delete _eqPendingSaveIds[eq.id];
+        if (!res || !res.ok) {
+          var stCode = res ? res.status : 'erro';
+          if (res && typeof res.text === 'function') {
+            res.text().then(function(txtErr) {
+              console.error('[PostgreSQL Equipamentos] FALHA ao salvar (' + stCode + '):', eq.id, txtErr);
+              if (typeof mostrarToast === 'function') {
+                mostrarToast('Erro ao Salvar no Banco (' + stCode + ')', 'Equipamento ' + eq.nome + ' não foi gravado no servidor: ' + (txtErr || stCode).slice(0, 120), 'warning');
+              }
+            }).catch(function() {});
+          } else {
+            console.error('[PostgreSQL Equipamentos] FALHA ao salvar (' + stCode + '):', eq.id);
+          }
+          if (typeof callback === 'function') callback(false);
+          return;
+        }
+        console.info('[PostgreSQL Equipamentos] Salvo com sucesso no banco:', eq.id, eq.nome, 'atualizado_em=' + eq.atualizado_em);
+        if (typeof callback === 'function') callback(true);
+      })
+      .catch(function(err) {
+        delete _eqPendingSaveIds[eq.id];
+        console.warn('[PostgreSQL Equipamentos] Erro ao gravar equipamento:', err);
+        if (typeof callback === 'function') callback(false);
+      });
   }
   window.salvarEquipamentoPostgreSQL = salvarEquipamentoPostgreSQL;
   function obterOcorrenciasDoEquipamento(eq) {
@@ -400,6 +766,17 @@
         if (tagsEq.indexOf(filtroEquipamentoTag) === -1 && eq.categoria !== filtroEquipamentoTag) return false;
       }
       if (termo) {
+        var liveuBusca = '';
+        if (eq.dados_tags && eq.dados_tags.liveu) {
+          var lu = eq.dados_tags.liveu;
+          liveuBusca = [
+            lu.chips_modens_tv || '',
+            lu.obs_geral || '',
+            (lu.slots || []).map(function(s) {
+              return [s.operadora, s.numero_chip, s.telefone, s.imei, s.inserido].join(' ');
+            }).join(' ')
+          ].join(' ');
+        }
         var texto = [
           eq.nome,
           eq.codigo_patrimonio,
@@ -407,7 +784,9 @@
           eq.fabricante_modelo,
           eq.categoria,
           eq.setor_local,
-          (eq.tags || []).join(' ')
+          eq.obs_tecnicas,
+          (eq.tags || []).join(' '),
+          liveuBusca
         ].join(' ').toLowerCase();
         return texto.indexOf(termo) !== -1;
       }
@@ -447,6 +826,45 @@
             return '<span style="font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:12px;background:#EFF6FF;color:#0071E3;border:1px solid #BFDBFE;">' + escapeHTML(t) + '</span>';
           }).join('')
         : '<span style="font-size:10.5px;color:var(--muted);">Sem tags</span>';
+      var badgeVisibilidadeRel = (eq.exibir_nos_relatorios === false)
+        ? '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;background:#F1F5F9;color:#475569;border:1px solid #CBD5E1;" title="Este equipamento aparece apenas no Catálogo de Equipamentos">Apenas Catálogo</span>'
+        : '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;background:#ECFDF5;color:#047857;border:1px solid #A7F3D0;" title="Este equipamento aparece nas opções dos relatórios e popups de transmissão">Nos Relatórios</span>';
+      var liveuResumoCardHTML = '';
+      var liveuBlocoCardHTML = '';
+      var isLiveUCard = (Array.isArray(eq.tags) && eq.tags.indexOf('LiveU') !== -1) || (eq.dados_tags && eq.dados_tags.liveu && Array.isArray(eq.dados_tags.liveu.slots) && eq.dados_tags.liveu.slots.length > 0);
+      if (isLiveUCard) {
+        var luObjCard = (eq.dados_tags && eq.dados_tags.liveu) ? normalizarDadosLiveU(eq.dados_tags.liveu) : { chips_modens_tv: '', slots: [] };
+        var luSlots = luObjCard.slots || [];
+        if (luSlots.length > 0) {
+          var cntInt = luSlots.filter(function(s){ return s.inserido === 'Interno'; }).length;
+          var cntExt = luSlots.filter(function(s){ return s.inserido === 'Externo'; }).length;
+          var cntDesc = luSlots.filter(function(s){ return s.inserido !== 'Interno' && s.inserido !== 'Externo'; }).length;
+          liveuResumoCardHTML = '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;background:#EEF2FF;color:#3730A3;border:1px solid #C7D2FE;">' + luSlots.length + ' Chip(s) · ' + cntInt + ' Int / ' + cntExt + ' Ext</span>';
+          if (cntDesc > 0) {
+            liveuResumoCardHTML += '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;background:#FFFBEB;color:#B45309;border:1px solid #FDE68A;">⚠ ' + cntDesc + ' Desconhecido</span>';
+          }
+          var linhasSlotsCard = luSlots.slice(0, 4).map(function(s, sIdx) {
+            var corIns = s.inserido === 'Interno' ? '#047857' : (s.inserido === 'Externo' ? '#1D4ED8' : '#B45309');
+            var infoNum = s.telefone || s.imei || s.numero_chip || 'Sem número';
+            return '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:10.5px;color:#334155;">' +
+              '<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><strong>#' + (sIdx + 1) + ' ' + escapeHTML(s.operadora) + '</strong> · <span style="font-family:monospace;">' + escapeHTML(infoNum) + '</span></span>' +
+              '<span style="font-weight:700;color:' + corIns + ';flex-shrink:0;">' + escapeHTML(s.inserido) + '</span>' +
+            '</div>';
+          }).join('');
+          var maisSlotsTxt = luSlots.length > 4 ? '<div style="font-size:10px;color:#0071E3;font-weight:700;margin-top:2px;">+ ' + (luSlots.length - 4) + ' chip(s) na Ficha de Vida</div>' : '';
+          liveuBlocoCardHTML =
+            '<div style="margin-top:8px;padding:7px 9px;background:rgba(239,246,255,0.7);border:1px solid #BFDBFE;border-radius:8px;display:flex;flex-direction:column;gap:3px;">' +
+              (luObjCard.chips_modens_tv ? '<div style="font-size:10px;font-weight:800;color:#1E3A8A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHTML(luObjCard.chips_modens_tv) + '</div>' : '') +
+              linhasSlotsCard +
+              maisSlotsTxt +
+            '</div>';
+        } else {
+          liveuResumoCardHTML = '<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:12px;background:#F8FAFC;color:#64748B;border:1px dashed #CBD5E1;">LiveU · Sem chips</span>';
+        }
+      }
+      var fotoCardHTML = eq.foto_url
+        ? '<img src="' + eq.foto_url + '" alt="' + escapeHTML(eq.nome) + '" style="width:42px;height:42px;border-radius:9px;object-fit:cover;border:1px solid var(--border);flex-shrink:0;background:#fff;" />'
+        : '<div style="width:42px;height:42px;border-radius:9px;background:#EFF6FF;border:1px solid #BFDBFE;display:flex;align-items:center;justify-content:center;color:#0071E3;flex-shrink:0;"><i data-lucide="' + (isLiveUCard ? 'radio' : 'cpu') + '" style="width:18px;height:18px;"></i></div>';
       return (
         '<div class="dash-card eq-draggable-card" data-eq-id="' + escapeHTML(eq.id) + '" ' +
           'onpointerdown="iniciarArrastoEquipamento(event, \'' + escapeHTML(eq.id) + '\')" ' +
@@ -455,11 +873,12 @@
           'title="Segure e arraste o card para mudar a ordem, ou clique para abrir o Ficheiro de Vida">' +
           '<div>' +
             '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">' +
-              '<div style="display:flex;align-items:flex-start;gap:6px;">' +
-                '<span title="Segure e arraste para reordenar" style="color:var(--muted);cursor:grab;display:inline-flex;align-items:center;margin-top:2px;opacity:0.85;"><i data-lucide="grip-vertical" style="width:15px;height:15px;"></i></span>' +
-                '<div>' +
-                  '<div style="font-size:14px;font-weight:800;color:var(--txt);letter-spacing:-0.01em;">' + escapeHTML(eq.nome) + '</div>' +
-                  '<div style="font-size:11.5px;color:var(--muted);margin-top:1px;">' + escapeHTML(eq.fabricante_modelo || eq.categoria) + '</div>' +
+              '<div style="display:flex;align-items:center;gap:8px;min-width:0;">' +
+                '<span title="Segure e arraste para reordenar" style="color:var(--muted);cursor:grab;display:inline-flex;align-items:center;opacity:0.85;flex-shrink:0;"><i data-lucide="grip-vertical" style="width:15px;height:15px;"></i></span>' +
+                fotoCardHTML +
+                '<div style="min-width:0;">' +
+                  '<div style="font-size:14px;font-weight:800;color:var(--txt);letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHTML(eq.nome) + '</div>' +
+                  '<div style="font-size:11.5px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHTML(eq.fabricante_modelo || eq.categoria) + '</div>' +
                 '</div>' +
               '</div>' +
               badgeStatus +
@@ -469,8 +888,9 @@
               '<div><span style="color:var(--muted);display:block;font-size:10px;">Nº DE SÉRIE</span><strong style="color:var(--txt);font-family:monospace;">' + escapeHTML(eq.numero_serie || 'Não inf.') + '</strong></div>' +
             '</div>' +
             '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px;">' +
-              tagsHTML +
+              tagsHTML + badgeVisibilidadeRel + liveuResumoCardHTML +
             '</div>' +
+            liveuBlocoCardHTML +
           '</div>' +
           '<div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border-lt);font-size:11.5px;" onclick="event.stopPropagation();">' +
             '<button type="button" class="btn btn-ghost btn-xs" onclick="abrirFichaVidaEquipamento(\'' + escapeHTML(eq.id) + '\')" style="color:var(--blue);font-weight:600;padding:4px 8px;display:inline-flex;align-items:center;gap:4px;">' +
@@ -725,6 +1145,92 @@
       mostrarToast('Ordem Atualizada', 'A nova ordem dos equipamentos foi aplicada em todos os menus.', 'info');
     }
   }
+  function comprimirImagemEquipamento(file, maxDim, quality, callback) {
+    if (!file) { callback(''); return; }
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var rawUrl = ev && ev.target ? ev.target.result : '';
+      if (!rawUrl || String(file.type || '').indexOf('svg') !== -1) {
+        callback(rawUrl);
+        return;
+      }
+      var img = new Image();
+      img.onload = function() {
+        try {
+          var w = img.width || maxDim;
+          var h = img.height || maxDim;
+          if (w > maxDim || h > maxDim) {
+            if (w >= h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          var canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          callback(canvas.toDataURL('image/jpeg', quality || 0.8));
+        } catch (eC) {
+          callback(rawUrl);
+        }
+      };
+      img.onerror = function() { callback(rawUrl); };
+      img.src = rawUrl;
+    };
+    reader.onerror = function() { callback(''); };
+    reader.readAsDataURL(file);
+  }
+  function atualizarPreviewFotoModalEq() {
+    var prev = document.getElementById('novo-eq-foto-preview');
+    var btnRem = document.getElementById('btn-remover-foto-eq');
+    if (prev) {
+      if (fotoUrlModalEq) {
+        prev.innerHTML = '<img src="' + fotoUrlModalEq + '" alt="Foto Equipamento" style="width:100%;height:100%;object-fit:cover;cursor:pointer;" onclick="abrirQuickLook(\'' + fotoUrlModalEq + '\', \'Foto do Equipamento\')" />';
+      } else {
+        prev.innerHTML = '<i data-lucide="camera" style="width:22px;height:22px;"></i>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+    }
+    if (btnRem) btnRem.style.display = fotoUrlModalEq ? 'inline-flex' : 'none';
+  }
+  function processarFotoEquipamentoInput(input) {
+    var file = input && input.files && input.files[0];
+    if (!file) return;
+    comprimirImagemEquipamento(file, 640, 0.82, function(dataUrl) {
+      fotoUrlModalEq = dataUrl || '';
+      atualizarPreviewFotoModalEq();
+      if (input) input.value = '';
+    });
+  }
+  window.processarFotoEquipamentoInput = processarFotoEquipamentoInput;
+  function removerFotoEquipamentoModal() {
+    fotoUrlModalEq = '';
+    atualizarPreviewFotoModalEq();
+  }
+  window.removerFotoEquipamentoModal = removerFotoEquipamentoModal;
+  function atualizarBarraTagLiveUNoModal() {
+    var bar = document.getElementById('eq-modal-tag-liveu-bar');
+    var res = document.getElementById('eq-modal-liveu-resumo');
+    if (!bar) return;
+    var temLiveU = tagsSelecionadasModalEq.indexOf('LiveU') !== -1;
+    bar.style.display = temLiveU ? 'flex' : 'none';
+    if (temLiveU && res) {
+      var lu = normalizarDadosLiveU(dadosTagsModalEq && dadosTagsModalEq.liveu);
+      if (lu.slots.length > 0) {
+        var cInt = lu.slots.filter(function(s){ return s.inserido === 'Interno'; }).length;
+        var cExt = lu.slots.filter(function(s){ return s.inserido === 'Externo'; }).length;
+        res.textContent = lu.slots.length + ' chip(s)/modem(s) (' + cInt + ' interno, ' + cExt + ' externo)';
+      } else if (lu.chips_modens_tv) {
+        res.textContent = lu.chips_modens_tv;
+      } else {
+        res.textContent = 'Nenhum chip/modem configurado';
+      }
+    }
+  }
   function renderSeletorTagsModalEq() {
     var container = document.getElementById('eq-modal-tags- selector') || document.getElementById('eq-modal-tags-selector');
     if (!container) return;
@@ -739,6 +1245,7 @@
         '</button>'
       );
     }).join('');
+    atualizarBarraTagLiveUNoModal();
   }
   function toggleTagModalEquipamento(tag) {
     var idx = tagsSelecionadasModalEq.indexOf(tag);
@@ -747,6 +1254,44 @@
     renderSeletorTagsModalEq();
   }
   window.toggleTagModalEquipamento = toggleTagModalEquipamento;
+  function gerarDiffEquipamento(antes, depois) {
+    var mudancas = [];
+    if (!antes || !depois) return mudancas;
+    var campos = [
+      { k: 'nome', label: 'Nome' },
+      { k: 'codigo_patrimonio', label: 'ID / Patrimônio' },
+      { k: 'numero_serie', label: 'Nº de Série' },
+      { k: 'fabricante_modelo', label: 'Fabricante / Modelo' },
+      { k: 'categoria', label: 'Categoria' },
+      { k: 'setor_local', label: 'Setor / Local' },
+      { k: 'status_operacional', label: 'Status Operacional' },
+      { k: 'obs_tecnicas', label: 'Observações Técnicas' }
+    ];
+    campos.forEach(function(c) {
+      var vA = String(antes[c.k] || '').trim() || '—';
+      var vD = String(depois[c.k] || '').trim() || '—';
+      if (vA !== vD) {
+        mudancas.push({ campo: c.label, antes: vA, depois: vD });
+      }
+    });
+    var exA = (antes.exibir_nos_relatorios !== false) ? 'Sim' : 'Não';
+    var exD = (depois.exibir_nos_relatorios !== false) ? 'Sim' : 'Não';
+    if (exA !== exD) mudancas.push({ campo: 'Exibir nos Relatórios', antes: exA, depois: exD });
+    var tA = (antes.tags || []).join(', ') || '—';
+    var tD = (depois.tags || []).join(', ') || '—';
+    if (tA !== tD) mudancas.push({ campo: 'Tags', antes: tA, depois: tD });
+    var fA = antes.foto_url ? 'Com foto' : 'Sem foto';
+    var fD = depois.foto_url ? 'Com foto' : 'Sem foto';
+    if (antes.foto_url !== depois.foto_url) mudancas.push({ campo: 'Foto do Equipamento', antes: fA, depois: fD });
+    var luA = JSON.stringify((antes.dados_tags && antes.dados_tags.liveu) || {});
+    var luD = JSON.stringify((depois.dados_tags && depois.dados_tags.liveu) || {});
+    if (luA !== luD) {
+      var sA = (antes.dados_tags && antes.dados_tags.liveu && Array.isArray(antes.dados_tags.liveu.slots)) ? antes.dados_tags.liveu.slots.length : 0;
+      var sD = (depois.dados_tags && depois.dados_tags.liveu && Array.isArray(depois.dados_tags.liveu.slots)) ? depois.dados_tags.liveu.slots.length : 0;
+      mudancas.push({ campo: 'Ficha LiveU (Chips/Modens)', antes: sA + ' slot(s)', depois: sD + ' slot(s) atualizado(s)' });
+    }
+    return mudancas;
+  }
   function abrirModalCadastroEquipamento(idEdicao) {
     var idEl     = document.getElementById('novo-eq-id');
     var nomeEl   = document.getElementById('novo-eq-nome');
@@ -756,6 +1301,7 @@
     var tipoEl   = document.getElementById('novo-eq-tipo');
     var setorEl  = document.getElementById('novo-eq-setor');
     var statusEl = document.getElementById('novo-eq-status');
+    var exRelEl  = document.getElementById('novo-eq-exibir-relatorios');
     var obsEl    = document.getElementById('novo-eq-obs');
     var titleEl  = document.getElementById('novo-eq-title');
     var eqExistente = idEdicao
@@ -771,8 +1317,11 @@
       if (tipoEl)   tipoEl.value   = eqExistente.categoria || 'Mochilink / LiveU';
       if (setorEl)  setorEl.value  = eqExistente.setor_local || '';
       if (statusEl) statusEl.value = eqExistente.status_operacional || 'operacional';
+      if (exRelEl)  exRelEl.checked = (eqExistente.exibir_nos_relatorios !== false);
       if (obsEl)    obsEl.value    = eqExistente.obs_tecnicas || '';
       tagsSelecionadasModalEq = Array.isArray(eqExistente.tags) ? eqExistente.tags.slice() : ['Transmissão'];
+      fotoUrlModalEq = eqExistente.foto_url || '';
+      dadosTagsModalEq = JSON.parse(JSON.stringify(eqExistente.dados_tags || {}));
     } else {
       if (titleEl)  titleEl.textContent = 'Cadastrar Novo Equipamento';
       if (idEl)     idEl.value     = '';
@@ -783,9 +1332,13 @@
       if (tipoEl)   tipoEl.selectedIndex = 0;
       if (setorEl)  setorEl.value  = 'Estúdio / Central Técnica';
       if (statusEl) statusEl.value = 'operacional';
+      if (exRelEl)  exRelEl.checked = true;
       if (obsEl)    obsEl.value    = '';
       tagsSelecionadasModalEq = ['Transmissão'];
+      fotoUrlModalEq = '';
+      dadosTagsModalEq = {};
     }
+    atualizarPreviewFotoModalEq();
     renderSeletorTagsModalEq();
     abrirPopup('popup-novo-equipamento');
     if (nomeEl) setTimeout(function() { nomeEl.focus(); }, 150);
@@ -801,7 +1354,9 @@
     var tipoEl   = document.getElementById('novo-eq-tipo');
     var setorEl  = document.getElementById('novo-eq-setor');
     var statusEl = document.getElementById('novo-eq-status');
+    var exRelEl  = document.getElementById('novo-eq-exibir-relatorios');
     var obsEl    = document.getElementById('novo-eq-obs');
+    var exibirRelVal = exRelEl ? !!exRelEl.checked : true;
     var idEdicao = idEl ? idEl.value.trim() : '';
     var nome = (nomeEl ? nomeEl.value : '').trim().toUpperCase();
     if (!nome) {
@@ -818,9 +1373,13 @@
       return;
     }
     var itemSalvo = null;
+    var operadorAtual = (typeof getUsuarioAtual === 'function') ? getUsuarioAtual() : 'Operador';
+    var dadosTagsFinal = JSON.parse(JSON.stringify(dadosTagsModalEq || {}));
+    if (dadosTagsFinal.liveu) dadosTagsFinal.liveu = normalizarDadosLiveU(dadosTagsFinal.liveu);
     if (idEdicao) {
       catalogoEquipamentos = catalogoEquipamentos.map(function(e) {
         if (e.id === idEdicao) {
+          var snapshotAntes = JSON.parse(JSON.stringify(e));
           e.nome               = nome;
           e.codigo_patrimonio  = patEl ? patEl.value.trim() : '';
           e.numero_serie       = serieEl ? serieEl.value.trim() : '';
@@ -828,8 +1387,28 @@
           e.categoria          = tipoEl ? tipoEl.value : 'Mochilink / LiveU';
           e.setor_local        = setorEl ? setorEl.value.trim() : '';
           e.status_operacional = statusEl ? statusEl.value : 'operacional';
+          e.exibir_nos_relatorios = exibirRelVal;
+          e.foto_url           = fotoUrlModalEq || '';
+          e.dados_tags         = dadosTagsFinal;
           e.obs_tecnicas       = obsEl ? obsEl.value.trim() : '';
           e.tags               = tagsSelecionadasModalEq.slice();
+          e.atualizado_em      = Date.now();
+          var mudancas = gerarDiffEquipamento(snapshotAntes, e);
+          if (mudancas.length > 0) {
+            if (!Array.isArray(e.historico_edicoes)) e.historico_edicoes = [];
+            e.historico_edicoes.unshift({
+              autor: operadorAtual,
+              dataHora: (typeof formatDataHoraLocal === 'function') ? formatDataHoraLocal() : new Date().toLocaleString('pt-BR'),
+              mudancas: mudancas
+            });
+            if (e.historico_edicoes.length > 30) e.historico_edicoes = e.historico_edicoes.slice(0, 30);
+          }
+          if (!e.metricas || typeof e.metricas !== 'object') e.metricas = { conf: 0, nc: 0, canc: 0 };
+          e.metricas.exibir_nos_relatorios = exibirRelVal;
+          e.metricas.foto_url = e.foto_url;
+          e.metricas.dados_tags = e.dados_tags;
+          e.metricas.historico_edicoes = e.historico_edicoes;
+          e.metricas.atualizado_em = e.atualizado_em;
           itemSalvo = e;
         }
         return e;
@@ -845,16 +1424,21 @@
         praca: praca,
         setor_local: setorEl ? setorEl.value.trim() : 'Central Técnica',
         status_operacional: statusEl ? statusEl.value : 'operacional',
+        exibir_nos_relatorios: exibirRelVal,
+        foto_url: fotoUrlModalEq || '',
+        dados_tags: dadosTagsFinal,
+        historico_edicoes: [],
+        atualizado_em: Date.now(),
         obs_tecnicas: obsEl ? obsEl.value.trim() : '',
         tags: tagsSelecionadasModalEq.slice(),
-        criado_por: (typeof getUsuarioAtual === 'function') ? getUsuarioAtual() : 'Operador',
+        criado_por: operadorAtual,
         criado_em: Date.now()
       });
       catalogoEquipamentos.push(itemSalvo);
     }
     window._ultimoEqAdicionado = nome;
     salvarCatalogoEquipamentosLocal();
-    if (itemSalvo) salvarEquipamentoPostgreSQL(itemSalvo);
+    if (itemSalvo) salvarEquipamentoPostgreSQL(itemSalvo, !!idEdicao);
     if (window._eqTriggeringSelect) {
       try {
         window._eqTriggeringSelect.value = nome;
@@ -864,10 +1448,16 @@
     fecharPopup('popup-novo-equipamento');
     renderCatalogoEquipamentos();
     if (typeof renderDashboards === 'function') renderDashboards();
+    if (eqFichaAbertaId && itemSalvo && eqFichaAbertaId === itemSalvo.id) {
+      var fichaPop = document.getElementById('popup-ficha-vida-equipamento');
+      if (fichaPop && !fichaPop.hasAttribute('hidden')) {
+        abrirFichaVidaEquipamento(itemSalvo.id, true);
+      }
+    }
     if (typeof mostrarToast === 'function') {
       mostrarToast(
         idEdicao ? 'Equipamento Atualizado' : 'Equipamento Cadastrado',
-        nome + ' salvo no banco de dados e integrado aos relatórios.',
+        nome + ' salvo no banco de dados e sincronizado em tempo real.',
         'success'
       );
     }
@@ -880,8 +1470,9 @@
       return;
     }
     eq.status_operacional = 'lixeira';
+    eq.atualizado_em = Date.now();
     salvarCatalogoEquipamentosLocal();
-    salvarEquipamentoPostgreSQL(eq);
+    salvarEquipamentoPostgreSQL(eq, true);
     if (typeof lixeiraData !== 'undefined' && Array.isArray(lixeiraData)) {
       var itemLixeira = {
         id: eq.id,
@@ -921,7 +1512,16 @@
     abrirPopup('popup-nova-oc');
     if (eq) {
       var selEq = document.getElementById('nova-equipamento');
-      if (selEq) selEq.value = eq.nome;
+      if (selEq) {
+        var existeOpt = Array.prototype.some.call(selEq.options || [], function(op) { return op.value === eq.nome; });
+        if (!existeOpt) {
+          var novaOpt = document.createElement('option');
+          novaOpt.value = eq.nome;
+          novaOpt.textContent = eq.nome;
+          selEq.appendChild(novaOpt);
+        }
+        selEq.value = eq.nome;
+      }
       var catEl = document.getElementById('nova-cat');
       if (catEl) catEl.value = 'Equipamento';
       var locEl = document.getElementById('nova-local');
@@ -968,11 +1568,120 @@
     renderTimelineFichaEquipamento();
   }
   window.filtrarTimelineFichaEquipamento = filtrarTimelineFichaEquipamento;
-  function abrirFichaVidaEquipamento(idOuNome) {
+  function renderSecaoLiveUFicha(eq) {
+    var sec = document.getElementById('ficha-eq-liveu-section');
+    if (!sec) return;
+    var temTagLiveU = Array.isArray(eq.tags) && eq.tags.indexOf('LiveU') !== -1;
+    var lu = (eq.dados_tags && eq.dados_tags.liveu) ? normalizarDadosLiveU(eq.dados_tags.liveu) : null;
+    if (!temTagLiveU && (!lu || (!lu.chips_modens_tv && lu.slots.length === 0))) {
+      sec.style.display = 'none';
+      sec.innerHTML = '';
+      return;
+    }
+    var slots = lu ? lu.slots : [];
+    var cntInt = slots.filter(function(s){ return s.inserido === 'Interno'; }).length;
+    var cntExt = slots.filter(function(s){ return s.inserido === 'Externo'; }).length;
+    var cntDesc = slots.filter(function(s){ return s.inserido !== 'Interno' && s.inserido !== 'Externo'; }).length;
+    var slotsHTML = slots.length > 0
+      ? slots.map(function(s, idx) {
+          var badgeIns = s.inserido === 'Interno'
+            ? '<span style="padding:2px 8px;border-radius:999px;background:#ECFDF5;color:#047857;border:1px solid #A7F3D0;font-size:10.5px;font-weight:700;">Interno</span>'
+            : (s.inserido === 'Externo'
+                ? '<span style="padding:2px 8px;border-radius:999px;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;font-size:10.5px;font-weight:700;">Externo</span>'
+                : '<span style="padding:2px 8px;border-radius:999px;background:#FFFBEB;color:#B45309;border:1px solid #FDE68A;font-size:10.5px;font-weight:700;">Desconhecido</span>');
+          var imgsHTML = (s.imagens && s.imagens.length > 0)
+            ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">' +
+                s.imagens.map(function(imgSrc, iIdx) {
+                  return '<img src="' + imgSrc + '" alt="Chip Slot ' + (idx + 1) + '" onclick="abrirQuickLook(\'' + imgSrc + '\', \'Slot ' + (idx + 1) + ' — ' + escapeHTML(s.operadora) + '\')" style="width:54px;height:54px;object-fit:cover;border-radius:7px;border:1px solid #CBD5E1;cursor:pointer;" title="Clique para ampliar imagem do chip/modem" />';
+                }).join('') +
+              '</div>'
+            : '';
+          return (
+            '<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:10px 12px;">' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;flex-wrap:wrap;">' +
+                '<div style="display:flex;align-items:center;gap:8px;">' +
+                  '<span style="font-size:11px;font-weight:800;color:#0071E3;background:#DBEAFE;padding:2px 8px;border-radius:6px;">Slot ' + (idx + 1) + '</span>' +
+                  '<strong style="font-size:12.5px;color:#0F172A;">' + escapeHTML(s.operadora || 'Operadora N/I') + '</strong>' +
+                '</div>' +
+                badgeIns +
+              '</div>' +
+              '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(145px, 1fr));gap:8px;font-size:11.5px;">' +
+                '<div><span style="color:#64748B;font-size:10px;display:block;">Numeração do Chip (ICCID)</span><strong style="font-family:monospace;color:#0F172A;">' + escapeHTML(s.numero_chip || '—') + '</strong></div>' +
+                '<div><span style="color:#64748B;font-size:10px;display:block;">Número de Telefone</span><strong style="font-family:monospace;color:#0F172A;">' + escapeHTML(s.telefone || '—') + '</strong></div>' +
+                '<div><span style="color:#64748B;font-size:10px;display:block;">IMEI Modem</span><strong style="font-family:monospace;color:#0F172A;">' + escapeHTML(s.imei || '—') + '</strong></div>' +
+              '</div>' +
+              imgsHTML +
+            '</div>'
+          );
+        }).join('')
+      : '<div style="padding:12px;text-align:center;font-size:12px;color:#64748B;background:#F8FAFC;border:1px dashed #CBD5E1;border-radius:8px;">Nenhum chip ou modem cadastrado neste LiveU. Clique em <strong>Configurar Chips &amp; Modens</strong> para preencher.</div>';
+    sec.style.display = 'block';
+    sec.innerHTML =
+      '<div style="background:#EFF6FF;padding:10px 14px;border-bottom:1px solid #BFDBFE;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+          '<i data-lucide="radio" style="width:15px;height:15px;color:#0071E3;"></i>' +
+          '<span style="font-size:11.5px;font-weight:800;color:#1E3A8A;text-transform:uppercase;letter-spacing:.04em;">Ficha Técnica LiveU · Chips &amp; Modens</span>' +
+          (slots.length > 0 ? '<span style="font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:#FFFFFF;color:#1D4ED8;border:1px solid #93C5FD;">' + slots.length + ' Slot(s) · ' + cntInt + ' Int / ' + cntExt + ' Ext' + (cntDesc > 0 ? ' / ' + cntDesc + ' Desc' : '') + '</span>' : '') +
+        '</div>' +
+        '<div style="display:flex;gap:6px;">' +
+          '<button type="button" class="btn btn-xs" onclick="copiarDadosLiveUFicha(\'' + escapeHTML(eq.id) + '\')" style="background:#FFFFFF;color:#0071E3;border:1px solid #93C5FD;font-weight:700;padding:4px 9px;font-size:11px;display:inline-flex;align-items:center;gap:4px;">' +
+            '<i data-lucide="copy" style="width:11px;height:11px;"></i> Copiar Chips/IMEIs' +
+          '</button>' +
+          '<button type="button" class="btn btn-xs" onclick="abrirModalTagLiveU(\'' + escapeHTML(eq.id) + '\')" style="background:#0071E3;color:#FFFFFF;border:1px solid #0071E3;font-weight:700;padding:4px 10px;font-size:11px;display:inline-flex;align-items:center;gap:4px;">' +
+            '<i data-lucide="sliders" style="width:11px;height:11px;"></i> Configurar Chips &amp; Modens' +
+          '</button>' +
+        '</div>' +
+      '</div>' +
+      '<div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;">' +
+        ((lu && (lu.chips_modens_tv || lu.obs_geral))
+          ? '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:8px;font-size:11.5px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:8px 12px;">' +
+              '<div><span style="color:#64748B;font-size:10px;display:block;">Chips e Modens TV</span><strong style="color:#0F172A;">' + escapeHTML((lu && lu.chips_modens_tv) || '—') + '</strong></div>' +
+              '<div><span style="color:#64748B;font-size:10px;display:block;">Observações Gerais LiveU</span><strong style="color:#0F172A;">' + escapeHTML((lu && lu.obs_geral) || '—') + '</strong></div>' +
+            '</div>'
+          : '') +
+        slotsHTML +
+      '</div>';
+  }
+  function renderSecaoAuditoriaFicha(eq) {
+    var sec = document.getElementById('ficha-eq-audit-section');
+    if (!sec) return;
+    var hist = Array.isArray(eq.historico_edicoes) ? eq.historico_edicoes : [];
+    if (hist.length === 0) {
+      sec.style.display = 'none';
+      sec.innerHTML = '';
+      return;
+    }
+    sec.style.display = 'block';
+    sec.innerHTML =
+      '<div style="background:#F8FAFC;padding:9px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">' +
+        '<span style="font-size:11px;font-weight:800;color:#334155;text-transform:uppercase;letter-spacing:.04em;display:inline-flex;align-items:center;gap:6px;">' +
+          '<i data-lucide="file-clock" style="width:13px;height:13px;color:#0071E3;"></i>' +
+          'Histórico de Alterações do Equipamento (' + hist.length + ')' +
+        '</span>' +
+      '</div>' +
+      '<div style="padding:10px 14px;max-height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;">' +
+        hist.slice(0, 10).map(function(ed) {
+          var muds = (ed.mudancas || []).map(function(m) {
+            return '<div style="font-size:11px;color:#334155;">• <strong>' + escapeHTML(m.campo || '') + ':</strong> <span style="color:#991B1B;">' + escapeHTML(m.antes || '—') + '</span> → <span style="color:#166534;font-weight:600;">' + escapeHTML(m.depois || '—') + '</span></div>';
+          }).join('');
+          return (
+            '<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:8px;padding:8px 10px;">' +
+              '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;">' +
+                '<strong style="color:#0F172A;">' + escapeHTML(ed.autor || 'Operador') + '</strong>' +
+                '<span style="color:#64748B;">' + escapeHTML(ed.dataHora || '') + '</span>' +
+              '</div>' +
+              muds +
+            '</div>'
+          );
+        }).join('') +
+      '</div>';
+  }
+  function abrirFichaVidaEquipamento(idOuNome, evitarAbrirPopup) {
     var eq = (catalogoEquipamentos || []).find(function(e) {
       return e.status_operacional !== 'lixeira' && (e.id === idOuNome || e.nome === idOuNome);
     });
     if (!eq) return;
+    eqFichaAbertaId = eq.id;
     var ocs = obterOcorrenciasDoEquipamento(eq);
     var abertas = ocs.filter(function(o) { return o.status === 'aberta'; });
     var resolvidas = ocs.filter(function(o) { return o.status !== 'aberta'; });
@@ -984,6 +1693,7 @@
     var txCanc = metricObj ? (metricObj.canc || 0) : 0;
     var txTot  = txConf + txNc + txCanc;
     var saudePct = txTot > 0 ? ((txConf / txTot) * 100).toFixed(1) + '%' : (abertas.length === 0 ? '100%' : 'Atenção');
+    var elFoto   = document.getElementById('ficha-eq-foto-wrap');
     var elNome   = document.getElementById('ficha-eq-nome');
     var elSub    = document.getElementById('ficha-eq-sub');
     var elBadge  = document.getElementById('ficha-eq-status-badge');
@@ -998,6 +1708,17 @@
     var elKpiTx    = document.getElementById('ficha-kpi-tx');
     var elKpiSaude = document.getElementById('ficha-kpi-saude');
     var elTimeline = document.getElementById('ficha-eq-timeline');
+    if (elFoto) {
+      if (eq.foto_url) {
+        elFoto.style.background = '#FFFFFF';
+        elFoto.style.border = '1px solid var(--border)';
+        elFoto.innerHTML = '<img src="' + eq.foto_url + '" alt="' + escapeHTML(eq.nome) + '" onclick="abrirQuickLook(\'' + eq.foto_url + '\', \'' + escapeHTML(eq.nome) + '\')" style="width:100%;height:100%;object-fit:cover;cursor:pointer;" title="Clique para ampliar foto" />';
+      } else {
+        elFoto.style.background = '#0071E3';
+        elFoto.style.border = 'none';
+        elFoto.innerHTML = '<i data-lucide="cpu" style="width:20px;height:20px;color:#fff;stroke-width:2;"></i>';
+      }
+    }
     if (elNome)   elNome.textContent   = eq.nome;
     if (elSub)    elSub.textContent    = (eq.categoria || 'Equipamento') + ' · ' + eq.praca;
     if (elPat)    elPat.textContent    = eq.codigo_patrimonio || 'Não cadastrado';
@@ -1022,6 +1743,9 @@
       var tList = Array.isArray(eq.tags) ? eq.tags : [];
       elTags.innerHTML = tList.length > 0
         ? tList.map(function(t) {
+            if (t === 'LiveU') {
+              return '<button type="button" onclick="abrirModalTagLiveU(\'' + escapeHTML(eq.id) + '\')" title="Clique para gerenciar Chips & Modens LiveU" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:14px;background:#0071E3;color:#FFFFFF;border:1px solid #0071E3;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">LiveU ⚙</button>';
+            }
             return '<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:14px;background:#EFF6FF;color:#0071E3;border:1px solid #BFDBFE;">' + escapeHTML(t) + '</span>';
           }).join('')
         : '<span style="font-size:11.5px;color:var(--muted);">Sem tags associadas</span>';
@@ -1030,10 +1754,20 @@
     if (elKpiRes)   elKpiRes.textContent   = resolvidas.length;
     if (elKpiTx)    elKpiTx.textContent    = txTot;
     if (elKpiSaude) elKpiSaude.textContent = saudePct;
+    renderSecaoLiveUFicha(eq);
+    renderSecaoAuditoriaFicha(eq);
     var btnEdit = document.getElementById('btn-ficha-editar');
+    var btnToggle = document.getElementById('btn-ficha-toggle-status');
     var btnDel  = document.getElementById('btn-ficha-excluir');
     var btnNova = document.getElementById('btn-ficha-nova-oc');
     if (btnEdit) btnEdit.onclick = function() { fecharPopup('popup-ficha-vida-equipamento'); abrirModalCadastroEquipamento(eq.id); };
+    if (btnToggle) {
+      var emManut = (eq.status_operacional === 'manutencao');
+      btnToggle.innerHTML = emManut
+        ? '<i data-lucide="check-circle-2" style="width:13px;height:13px;color:#059669;"></i> Marcar Operacional'
+        : '<i data-lucide="wrench" style="width:13px;height:13px;color:#DC2626;"></i> Colocar em Manutenção';
+      btnToggle.onclick = function() { alternarStatusManutencaoEquipamento(eq.id); };
+    }
     if (btnDel)  btnDel.onclick  = function() { excluirEquipamentoParaLixeira(eq.id); };
     if (btnNova) btnNova.onclick = function() { abrirOcorrenciaDiretaEquipamento(eq.id); };
     if (elTimeline) {
@@ -1056,6 +1790,293 @@
       renderTimelineFichaEquipamento();
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
-    abrirPopup('popup-ficha-vida-equipamento');
+    if (!evitarAbrirPopup) {
+      abrirPopup('popup-ficha-vida-equipamento');
+    }
   }
   window.abrirFichaVidaEquipamento = abrirFichaVidaEquipamento;
+  function alternarStatusManutencaoEquipamento(idEq) {
+    var eq = (catalogoEquipamentos || []).find(function(e) { return e.id === idEq; });
+    if (!eq) return;
+    var antesStatus = eq.status_operacional || 'operacional';
+    var novoStatus = (antesStatus === 'manutencao') ? 'operacional' : 'manutencao';
+    eq.status_operacional = novoStatus;
+    eq.atualizado_em = Date.now();
+    if (!Array.isArray(eq.historico_edicoes)) eq.historico_edicoes = [];
+    eq.historico_edicoes.unshift({
+      autor: (typeof getUsuarioAtual === 'function') ? getUsuarioAtual() : 'Operador',
+      dataHora: (typeof formatDataHoraLocal === 'function') ? formatDataHoraLocal() : new Date().toLocaleString('pt-BR'),
+      mudancas: [{ campo: 'Status Operacional', antes: antesStatus, depois: novoStatus }]
+    });
+    if (eq.historico_edicoes.length > 30) eq.historico_edicoes = eq.historico_edicoes.slice(0, 30);
+    salvarCatalogoEquipamentosLocal();
+    salvarEquipamentoPostgreSQL(eq, true);
+    renderCatalogoEquipamentos();
+    if (typeof renderDashboards === 'function') renderDashboards();
+    abrirFichaVidaEquipamento(eq.id, true);
+    if (typeof mostrarToast === 'function') {
+      mostrarToast('Status Atualizado', eq.nome + ' marcado como ' + (novoStatus === 'manutencao' ? 'Em Manutenção' : 'Operacional') + '.', 'info');
+    }
+  }
+  window.alternarStatusManutencaoEquipamento = alternarStatusManutencaoEquipamento;
+  function renderSlotsLiveUModal() {
+    var cont = document.getElementById('liveu-slots-container');
+    if (!cont) return;
+    if (!Array.isArray(liveuSlotsDraft) || liveuSlotsDraft.length === 0) {
+      cont.innerHTML =
+        '<div style="padding:22px 14px;text-align:center;background:#F8FAFC;border:1px dashed #CBD5E1;border-radius:10px;font-size:12px;color:#64748B;">' +
+          'Nenhum slot adicionado ainda. Clique em <strong>"+ Adicionar Chip / Modem"</strong> acima para cadastrar.' +
+        '</div>';
+      return;
+    }
+    var operadoras = ['Vivo', 'Claro', 'Tim', 'Algar', 'Oi', 'Outra'];
+    var inseridosOpts = ['Interno', 'Externo', 'Desconhecido'];
+    cont.innerHTML = liveuSlotsDraft.map(function(slot, idx) {
+      var opOpts = operadoras.map(function(op) {
+        return '<option value="' + op + '"' + (slot.operadora === op ? ' selected' : '') + '>' + op + '</option>';
+      }).join('');
+      var insOpts = inseridosOpts.map(function(ins) {
+        return '<option value="' + ins + '"' + (slot.inserido === ins ? ' selected' : '') + '>' + ins + '</option>';
+      }).join('');
+      var imgs = Array.isArray(slot.imagens) ? slot.imagens : [];
+      var imgsListHTML = imgs.map(function(src, imgIdx) {
+        return (
+          '<div style="position:relative;width:58px;height:58px;border-radius:8px;overflow:hidden;border:1px solid #CBD5E1;background:#fff;">' +
+            '<img src="' + src + '" alt="Chip" onclick="abrirQuickLook(\'' + src + '\', \'Slot ' + (idx + 1) + '\')" style="width:100%;height:100%;object-fit:cover;cursor:pointer;" />' +
+            '<button type="button" onclick="removerFotoSlotLiveU(' + idx + ',' + imgIdx + ')" title="Remover imagem" style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(15,23,42,0.75);color:#fff;font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>' +
+          '</div>'
+        );
+      }).join('');
+      return (
+        '<div style="background:#F8FAFC;border:1px solid #CBD5E1;border-radius:10px;padding:12px;">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">' +
+            '<span style="font-size:11.5px;font-weight:800;color:#0071E3;background:#DBEAFE;padding:2px 9px;border-radius:6px;">Slot #' + (idx + 1) + '</span>' +
+            '<button type="button" class="btn btn-ghost btn-xs" onclick="removerSlotLiveU(' + idx + ')" style="color:#EF4444;font-weight:600;">Remover Slot</button>' +
+          '</div>' +
+          '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(145px, 1fr));gap:8px;">' +
+            '<div class="frow" style="margin:0;">' +
+              '<label style="font-size:11px;">Operadora Chip</label>' +
+              '<select onchange="atualizarCampoSlotLiveU(' + idx + ',\'operadora\',this.value)">' + opOpts + '</select>' +
+            '</div>' +
+            '<div class="frow" style="margin:0;">' +
+              '<label style="font-size:11px;">Inseridos</label>' +
+              '<select onchange="atualizarCampoSlotLiveU(' + idx + ',\'inserido\',this.value)">' + insOpts + '</select>' +
+            '</div>' +
+            '<div class="frow" style="margin:0;">' +
+              '<label style="font-size:11px;">Número de Telefone</label>' +
+              '<input type="text" value="' + escapeHTML(slot.telefone || '') + '" oninput="atualizarCampoSlotLiveU(' + idx + ',\'telefone\',this.value)" placeholder="(32) 99999-0000" style="font-family:monospace;" />' +
+            '</div>' +
+            '<div class="frow" style="margin:0;">' +
+              '<label style="font-size:11px;">Numeração do Chip (ICCID)</label>' +
+              '<input type="text" value="' + escapeHTML(slot.numero_chip || '') + '" oninput="atualizarCampoSlotLiveU(' + idx + ',\'numero_chip\',this.value)" placeholder="8955..." style="font-family:monospace;" />' +
+            '</div>' +
+            '<div class="frow" style="margin:0;">' +
+              '<label style="font-size:11px;">IMEI Modem</label>' +
+              '<input type="text" value="' + escapeHTML(slot.imei || '') + '" oninput="atualizarCampoSlotLiveU(' + idx + ',\'imei\',this.value)" placeholder="35..." style="font-family:monospace;" />' +
+            '</div>' +
+          '</div>' +
+          '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed #CBD5E1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+            imgsListHTML +
+            '<label style="padding:6px 10px;background:#FFFFFF;border:1px dashed #93C5FD;border-radius:8px;color:#0071E3;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">' +
+              '<input type="file" accept="image/*" multiple hidden onchange="anexarFotoSlotLiveU(' + idx + ', this)" />' +
+              '<i data-lucide="image-plus" style="width:13px;height:13px;"></i> Imagem do Chip / Modem' +
+            '</label>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+  function abrirModalTagLiveU(idEqDireto) {
+    liveuModalTargetEqId = idEqDireto || null;
+    var dados = { chips_modens_tv: '', obs_geral: '', slots: [] };
+    var nomeSub = '';
+    if (liveuModalTargetEqId) {
+      var eq = (catalogoEquipamentos || []).find(function(e) { return e.id === liveuModalTargetEqId; });
+      if (!eq) return;
+      nomeSub = eq.nome;
+      dados = normalizarDadosLiveU(eq.dados_tags && eq.dados_tags.liveu);
+    } else {
+      var nomeInput = document.getElementById('novo-eq-nome');
+      nomeSub = (nomeInput && nomeInput.value.trim()) ? nomeInput.value.trim().toUpperCase() : 'Novo Equipamento';
+      dados = normalizarDadosLiveU(dadosTagsModalEq && dadosTagsModalEq.liveu);
+    }
+    var subEl = document.getElementById('liveu-modal-subtitle');
+    if (subEl) subEl.textContent = nomeSub + ' · Gerencie operadoras, numeração de chips, IMEI dos modens, inserção e fotos';
+    var tvEl = document.getElementById('liveu-chips-modens-tv');
+    var obsEl = document.getElementById('liveu-obs-geral');
+    if (tvEl) tvEl.value = dados.chips_modens_tv || '';
+    if (obsEl) obsEl.value = dados.obs_geral || '';
+    liveuSlotsDraft = JSON.parse(JSON.stringify(dados.slots || []));
+    renderSlotsLiveUModal();
+    abrirPopup('popup-eq-tag-liveu');
+  }
+  window.abrirModalTagLiveU = abrirModalTagLiveU;
+  function adicionarSlotLiveU() {
+    liveuSlotsDraft.push({
+      operadora: 'Vivo',
+      numero_chip: '',
+      telefone: '',
+      imei: '',
+      inserido: 'Interno',
+      imagens: []
+    });
+    renderSlotsLiveUModal();
+  }
+  window.adicionarSlotLiveU = adicionarSlotLiveU;
+  function removerSlotLiveU(idx) {
+    liveuSlotsDraft.splice(idx, 1);
+    renderSlotsLiveUModal();
+  }
+  window.removerSlotLiveU = removerSlotLiveU;
+  function atualizarCampoSlotLiveU(idx, campo, val) {
+    if (!liveuSlotsDraft[idx]) return;
+    liveuSlotsDraft[idx][campo] = val;
+  }
+  window.atualizarCampoSlotLiveU = atualizarCampoSlotLiveU;
+  function anexarFotoSlotLiveU(idx, input) {
+    if (!liveuSlotsDraft[idx] || !input || !input.files) return;
+    var files = Array.prototype.slice.call(input.files);
+    files.forEach(function(f) {
+      comprimirImagemEquipamento(f, 800, 0.8, function(dataUrl) {
+        if (!dataUrl || !liveuSlotsDraft[idx]) return;
+        if (!Array.isArray(liveuSlotsDraft[idx].imagens)) liveuSlotsDraft[idx].imagens = [];
+        liveuSlotsDraft[idx].imagens.push(dataUrl);
+        renderSlotsLiveUModal();
+      });
+    });
+    input.value = '';
+  }
+  window.anexarFotoSlotLiveU = anexarFotoSlotLiveU;
+  function removerFotoSlotLiveU(idx, imgIdx) {
+    if (!liveuSlotsDraft[idx] || !Array.isArray(liveuSlotsDraft[idx].imagens)) return;
+    liveuSlotsDraft[idx].imagens.splice(imgIdx, 1);
+    renderSlotsLiveUModal();
+  }
+  window.removerFotoSlotLiveU = removerFotoSlotLiveU;
+  function salvarDadosModalTagLiveU() {
+    var tvEl = document.getElementById('liveu-chips-modens-tv');
+    var obsEl = document.getElementById('liveu-obs-geral');
+    var novoLiveU = normalizarDadosLiveU({
+      chips_modens_tv: tvEl ? tvEl.value : '',
+      obs_geral: obsEl ? obsEl.value : '',
+      slots: liveuSlotsDraft
+    });
+    if (!dadosTagsModalEq || typeof dadosTagsModalEq !== 'object') dadosTagsModalEq = {};
+    dadosTagsModalEq.liveu = novoLiveU;
+    var idAlvoSalvar = liveuModalTargetEqId;
+    if (!idAlvoSalvar) {
+      var idEdicaoParent = document.getElementById('novo-eq-id');
+      if (idEdicaoParent && idEdicaoParent.value && idEdicaoParent.value.trim()) {
+        idAlvoSalvar = idEdicaoParent.value.trim();
+      }
+    }
+    if (idAlvoSalvar) {
+      var eq = (catalogoEquipamentos || []).find(function(e) { return e.id === idAlvoSalvar; });
+      if (eq) {
+        var snap = JSON.parse(JSON.stringify(eq));
+        if (!eq.dados_tags || typeof eq.dados_tags !== 'object') eq.dados_tags = {};
+        eq.dados_tags.liveu = novoLiveU;
+        eq.atualizado_em = Date.now();
+        var muds = gerarDiffEquipamento(snap, eq);
+        if (muds.length > 0) {
+          if (!Array.isArray(eq.historico_edicoes)) eq.historico_edicoes = [];
+          eq.historico_edicoes.unshift({
+            autor: (typeof getUsuarioAtual === 'function') ? getUsuarioAtual() : 'Operador',
+            dataHora: (typeof formatDataHoraLocal === 'function') ? formatDataHoraLocal() : new Date().toLocaleString('pt-BR'),
+            mudancas: muds
+          });
+          if (eq.historico_edicoes.length > 30) eq.historico_edicoes = eq.historico_edicoes.slice(0, 30);
+        }
+        salvarCatalogoEquipamentosLocal();
+        salvarEquipamentoPostgreSQL(eq, true);
+        renderCatalogoEquipamentos();
+        if (liveuModalTargetEqId) {
+          abrirFichaVidaEquipamento(eq.id, true);
+        }
+        if (typeof mostrarToast === 'function') {
+          mostrarToast('Dados LiveU Salvos', 'Chips e modens de ' + eq.nome + ' atualizados no banco.', 'success');
+        }
+      }
+    }
+    if (!liveuModalTargetEqId) {
+      atualizarBarraTagLiveUNoModal();
+    }
+    fecharPopup('popup-eq-tag-liveu');
+  }
+  window.salvarDadosModalTagLiveU = salvarDadosModalTagLiveU;
+  function copiarTextoEquipamentoHelper(texto, tituloToast) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(function() {
+        if (typeof mostrarToast === 'function') mostrarToast(tituloToast, 'Copiado para a área de transferência.', 'success');
+      }).catch(function() {});
+    }
+  }
+  function copiarDadosLiveUFicha(idEq) {
+    var eq = (catalogoEquipamentos || []).find(function(e) { return e.id === idEq; });
+    if (!eq) return;
+    var lu = normalizarDadosLiveU(eq.dados_tags && eq.dados_tags.liveu);
+    var linhas = [
+      'LIVEU: ' + eq.nome + (eq.codigo_patrimonio ? ' (' + eq.codigo_patrimonio + ')' : ''),
+      lu.chips_modens_tv ? ('Chips e Modens TV: ' + lu.chips_modens_tv) : '',
+      lu.obs_geral ? ('Obs: ' + lu.obs_geral) : ''
+    ].filter(Boolean);
+    lu.slots.forEach(function(s, i) {
+      linhas.push('Slot ' + (i + 1) + ': ' + s.operadora + ' | Tel: ' + (s.telefone || '—') + ' | Chip: ' + (s.numero_chip || '—') + ' | IMEI: ' + (s.imei || '—') + ' | Inserido: ' + s.inserido);
+    });
+    copiarTextoEquipamentoHelper(linhas.join('\n'), 'Dados LiveU Copiados');
+  }
+  window.copiarDadosLiveUFicha = copiarDadosLiveUFicha;
+  function copiarFichaEquipamento() {
+    var eq = (catalogoEquipamentos || []).find(function(e) { return e.id === eqFichaAbertaId; });
+    if (!eq) return;
+    var linhas = [
+      'EQUIPAMENTO: ' + eq.nome,
+      'Categoria: ' + (eq.categoria || '—') + ' | Praça: ' + eq.praca,
+      'Patrimônio: ' + (eq.codigo_patrimonio || '—') + ' | Nº Série: ' + (eq.numero_serie || '—'),
+      'Modelo: ' + (eq.fabricante_modelo || '—') + ' | Local: ' + (eq.setor_local || '—'),
+      'Obs: ' + (eq.obs_tecnicas || '—')
+    ];
+    if (eq.dados_tags && eq.dados_tags.liveu) {
+      var lu = normalizarDadosLiveU(eq.dados_tags.liveu);
+      if (lu.chips_modens_tv) linhas.push('Chips e Modens TV: ' + lu.chips_modens_tv);
+      lu.slots.forEach(function(s, i) {
+        linhas.push('Slot ' + (i + 1) + ' (' + s.operadora + ' / ' + s.inserido + '): Tel ' + (s.telefone || '—') + ' | Chip ' + (s.numero_chip || '—') + ' | IMEI ' + (s.imei || '—'));
+      });
+    }
+    copiarTextoEquipamentoHelper(linhas.join('\n'), 'Ficha Copiada');
+  }
+  window.copiarFichaEquipamento = copiarFichaEquipamento;
+  function imprimirFichaEquipamento() {
+    var eq = (catalogoEquipamentos || []).find(function(e) { return e.id === eqFichaAbertaId; });
+    if (!eq) return;
+    var lu = (eq.dados_tags && eq.dados_tags.liveu) ? normalizarDadosLiveU(eq.dados_tags.liveu) : null;
+    var liveuPrint = '';
+    if (lu && (lu.chips_modens_tv || lu.slots.length > 0)) {
+      var rows = lu.slots.map(function(s, i) {
+        return '<tr><td style="padding:6px;border:1px solid #CBD5E1;">' + (i + 1) + '</td><td style="padding:6px;border:1px solid #CBD5E1;">' + escapeHTML(s.operadora) + '</td><td style="padding:6px;border:1px solid #CBD5E1;font-family:monospace;">' + escapeHTML(s.numero_chip || '—') + '</td><td style="padding:6px;border:1px solid #CBD5E1;font-family:monospace;">' + escapeHTML(s.telefone || '—') + '</td><td style="padding:6px;border:1px solid #CBD5E1;font-family:monospace;">' + escapeHTML(s.imei || '—') + '</td><td style="padding:6px;border:1px solid #CBD5E1;">' + escapeHTML(s.inserido) + '</td></tr>';
+      }).join('');
+      liveuPrint = '<h3 style="margin:16px 0 8px 0;font-size:13px;color:#1E3A8A;">Chips &amp; Modens (LiveU)</h3>' +
+        (lu.chips_modens_tv ? '<p style="font-size:12px;margin:0 0 8px 0;"><strong>Chips e Modens TV:</strong> ' + escapeHTML(lu.chips_modens_tv) + '</p>' : '') +
+        (lu.slots.length > 0 ? '<table style="width:100%;border-collapse:collapse;font-size:11.5px;"><thead><tr style="background:#F1F5F9;"><th style="padding:6px;border:1px solid #CBD5E1;">Slot</th><th style="padding:6px;border:1px solid #CBD5E1;">Operadora</th><th style="padding:6px;border:1px solid #CBD5E1;">Chip (ICCID)</th><th style="padding:6px;border:1px solid #CBD5E1;">Telefone</th><th style="padding:6px;border:1px solid #CBD5E1;">IMEI</th><th style="padding:6px;border:1px solid #CBD5E1;">Inserido</th></tr></thead><tbody>' + rows + '</tbody></table>' : '');
+    }
+    var w = window.open('', '_blank');
+    if (!w) return;
+    w.document.open();
+    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Ficha Técnica — ' + escapeHTML(eq.nome) + '</title><style>@page{size:A4 portrait;margin:14mm;}body{font-family:Segoe UI,Arial,sans-serif;color:#0F172A;}</style></head><body>' +
+      '<div style="background:#0F172A;color:#fff;padding:14px 18px;border-radius:8px;display:flex;align-items:center;gap:14px;">' +
+        (eq.foto_url ? '<img src="' + eq.foto_url + '" style="width:56px;height:56px;border-radius:8px;object-fit:cover;background:#fff;" />' : '') +
+        '<div><div style="font-size:10px;text-transform:uppercase;color:#93C5FD;font-weight:700;">TV Integração · Ficha Técnica de Equipamento</div><div style="font-size:18px;font-weight:800;">' + escapeHTML(eq.nome) + '</div><div style="font-size:12px;color:#CBD5E1;">' + escapeHTML(eq.categoria) + ' · ' + escapeHTML(eq.praca) + '</div></div>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;font-size:12px;">' +
+        '<div style="padding:8px 10px;border:1px solid #E2E8F0;border-radius:6px;"><strong>Patrimônio:</strong> ' + escapeHTML(eq.codigo_patrimonio || '—') + '</div>' +
+        '<div style="padding:8px 10px;border:1px solid #E2E8F0;border-radius:6px;"><strong>Nº de Série:</strong> ' + escapeHTML(eq.numero_serie || '—') + '</div>' +
+        '<div style="padding:8px 10px;border:1px solid #E2E8F0;border-radius:6px;"><strong>Modelo:</strong> ' + escapeHTML(eq.fabricante_modelo || '—') + '</div>' +
+        '<div style="padding:8px 10px;border:1px solid #E2E8F0;border-radius:6px;"><strong>Local:</strong> ' + escapeHTML(eq.setor_local || '—') + '</div>' +
+      '</div>' +
+      (eq.obs_tecnicas ? '<div style="margin-top:10px;padding:10px;border:1px solid #E2E8F0;border-radius:6px;font-size:12px;"><strong>Observações:</strong><br/>' + escapeHTML(eq.obs_tecnicas) + '</div>' : '') +
+      liveuPrint +
+      '<script>setTimeout(function(){window.print();},350);<\/script></body></html>');
+    w.document.close();
+  }
+  window.imprimirFichaEquipamento = imprimirFichaEquipamento;

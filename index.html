@@ -421,7 +421,7 @@
             <button type="button" id="pill-escala-plantao" class="pill" onclick="alternarEscalaTurnoEntrada('plantao')">Plantão (Sáb/Dom/Feriado)</button>
           </div>
         </div>
-        <div id="entrada-turnos-grid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(235px, 1fr));gap:7px;"></div>
+        <select id="entrada-turno-select" onchange="selecionarTurnoEntrada(this.value)" style="width:100%;padding:9px 12px;font-size:13px;font-weight:700;color:var(--txt);background:#FFFFFF;border:1.5px solid var(--blue-border);border-radius:var(--r-md);cursor:pointer;"></select>
         <div id="entrada-turno-flex-box" style="display:none;margin-top:8px;padding:10px 12px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
           <div style="display:flex;align-items:center;gap:8px;">
             <label for="entrada-turno-flex-hora" style="font-size:12px;font-weight:700;color:#1E3A8A;margin:0;">Entrada hoje:</label>
@@ -1143,6 +1143,24 @@
     </div>
     <div class="modal-body" style="display:flex;flex-direction:column;gap:12px;">
       <input type="hidden" id="novo-eq-id" value="" />
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 12px;background:#F8FAFC;border:1px solid var(--border);border-radius:10px;">
+        <div id="novo-eq-foto-preview" style="width:60px;height:60px;border-radius:10px;background:#EFF6FF;border:1px solid #BFDBFE;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;color:var(--blue);">
+          <i data-lucide="camera" style="width:22px;height:22px;"></i>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:12px;font-weight:700;color:var(--txt);">Foto do Equipamento <span class="opt-badge">Opcional</span></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Aparece ao lado do nome no catálogo e na Ficha de Vida</div>
+          <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+            <input type="file" id="novo-eq-foto-input" accept="image/*" hidden onchange="processarFotoEquipamentoInput(this)" />
+            <button type="button" class="btn btn-ghost btn-xs" onclick="document.getElementById('novo-eq-foto-input').click()" style="border:1px solid var(--border);background:#FFFFFF;font-weight:600;display:inline-flex;align-items:center;gap:4px;">
+              <i data-lucide="upload" style="width:12px;height:12px;"></i> Escolher Foto
+            </button>
+            <button type="button" id="btn-remover-foto-eq" class="btn btn-ghost btn-xs" onclick="removerFotoEquipamentoModal()" style="display:none;color:var(--red);font-weight:600;">
+              Remover Foto
+            </button>
+          </div>
+        </div>
+      </div>
       <div class="fg2">
         <div class="frow">
           <label for="novo-eq-nome">Nome / Identificação do Equipamento *</label>
@@ -1179,7 +1197,7 @@
           <label for="novo-eq-setor">Setor / Localização Física</label>
           <input id="novo-eq-setor" type="text" placeholder="Ex: Estúdio Principal, Unidade Móvel..." />
         </div>
-      </div
+      </div>
       <div class="frow">
         <label for="novo-eq-status">Status Operacional Inicial</label>
         <select id="novo-eq-status">
@@ -1188,8 +1206,25 @@
         </select>
       </div>
       <div class="frow">
+        <label style="display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none;padding:9px 12px;background:#F8FAFC;border:1px solid var(--border);border-radius:var(--r-md);">
+          <input type="checkbox" id="novo-eq-exibir-relatorios" checked style="width:15px;height:15px;accent-color:var(--blue);cursor:pointer;flex-shrink:0;" />
+          <div>
+            <span style="font-size:12.5px;font-weight:700;color:var(--txt);display:block;">Exibir nas opções dos Relatórios e Popups de Transmissão</span>
+            <span style="font-size:11px;color:var(--muted);font-weight:400;">Desmarque caso este equipamento deva ficar apenas no Catálogo / Ficha de Vida</span>
+          </div>
+        </label>
+      </div>
+      <div class="frow">
         <label>Tags Padrão do Equipamento <span class="opt-badge">Clique para marcar</span></label>
         <div id="eq-modal-tags-selector" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;"></div>
+        <div id="eq-modal-tag-liveu-bar" style="display:none;margin-top:8px;padding:9px 12px;background:#EFF6FF;border:1px solid #93C5FD;border-radius:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div style="font-size:11.5px;color:#1E3A8A;">
+            <strong>Ficha Técnica LiveU:</strong> <span id="eq-modal-liveu-resumo">Nenhum chip/modem configurado</span>
+          </div>
+          <button type="button" class="btn btn-sm" onclick="abrirModalTagLiveU()" style="background:#0071E3;color:#FFFFFF;border:none;font-weight:700;padding:5px 11px;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;">
+            <i data-lucide="radio" style="width:13px;height:13px;"></i> Configurar Chips &amp; Modens (LiveU)
+          </button>
+        </div>
       </div>
       <div class="frow">
         <label for="novo-eq-obs">Especificações & Observações Técnicas</label>
@@ -1205,8 +1240,8 @@
 <div class="overlay" id="popup-ficha-vida-equipamento" hidden role="dialog" aria-modal="true" aria-labelledby="ficha-eq-nome">
   <div class="modal modal-lg" style="width: 780px; max-width: 95vw;">
     <div class="modal-header">
-      <div class="modal-icon" style="background:#0071E3;">
-        <i data-lucide="cpu" style="width:18px;height:18px;color:#fff;stroke-width:2;"></i>
+      <div id="ficha-eq-foto-wrap" class="modal-icon" style="background:#0071E3;width:46px;height:46px;border-radius:10px;overflow:hidden;flex-shrink:0;">
+        <i data-lucide="cpu" style="width:20px;height:20px;color:#fff;stroke-width:2;"></i>
       </div>
       <div style="flex:1;">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -1218,7 +1253,7 @@
       <button class="modal-close-btn" onclick="fecharPopup('popup-ficha-vida-equipamento')" title="Fechar"><i data-lucide="x" style="width:15px;height:15px;"></i></button>
     </div>
     <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;max-height:72vh;overflow-y:auto;">
-      <div style="background:#F8FAFC;border:1px solid var(--border);border-radius:10px;padding:12px 16px;">
+      <div style="flex-shrink:0;background:#F8FAFC;border:1px solid var(--border);border-radius:10px;padding:12px 16px;">
         <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
           Identificação Patrimonial & Especificações
         </div>
@@ -1246,7 +1281,7 @@
         </div>
         <div id="ficha-eq-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:10px;">
+      <div style="flex-shrink:0;display:grid;grid-template-columns:repeat(4, 1fr);gap:10px;">
         <div style="background:#FFFFFF;border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
           <div id="ficha-kpi-ocs" style="font-size:18px;font-weight:800;color:var(--txt);">0</div>
           <div style="font-size:10.5px;color:var(--muted);font-weight:600;">Total Ocorrências</div>
@@ -1264,7 +1299,9 @@
           <div style="font-size:10.5px;color:var(--muted);font-weight:600;">Disponibilidade</div>
         </div>
       </div>
-      <div>
+      <div id="ficha-eq-liveu-section" style="flex-shrink:0;display:none;background:#FFFFFF;border:1px solid #BFDBFE;border-radius:10px;overflow:hidden;"></div>
+      <div id="ficha-eq-audit-section" style="flex-shrink:0;display:none;background:#FFFFFF;border:1px solid var(--border);border-radius:10px;overflow:hidden;"></div>
+      <div style="flex-shrink:0;">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
           <div style="font-size:11.5px;font-weight:700;color:var(--txt);text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:6px;">
             <i data-lucide="history" style="width:14px;height:14px;color:var(--blue);"></i>
@@ -1288,20 +1325,69 @@
       </div>
     </div>
     <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-      <div style="display:flex;gap:6px;">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <button type="button" id="btn-ficha-editar" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:5px;">
           <i data-lucide="edit-3" style="width:13px;height:13px;"></i> Modificar Dados
         </button>
+        <button type="button" id="btn-ficha-toggle-status" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:5px;font-weight:600;">
+          <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> Alternar Manutenção
+        </button>
         <button type="button" id="btn-ficha-excluir" class="btn btn-ghost btn-sm" style="color:var(--red);display:inline-flex;align-items:center;gap:5px;">
-          <i data-lucide="trash-2" style="width:13px;height:13px;"></i> Excluir (Lixeira)
+          <i data-lucide="trash-2" style="width:13px;height:13px;"></i> Excluir
         </button>
       </div>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button type="button" id="btn-ficha-copiar" class="btn btn-ghost btn-sm" onclick="copiarFichaEquipamento()" style="border:1px solid var(--border);display:inline-flex;align-items:center;gap:5px;">
+          <i data-lucide="copy" style="width:13px;height:13px;"></i> Copiar Ficha
+        </button>
+        <button type="button" id="btn-ficha-imprimir" class="btn btn-ghost btn-sm" onclick="imprimirFichaEquipamento()" style="border:1px solid var(--border);display:inline-flex;align-items:center;gap:5px;">
+          <i data-lucide="printer" style="width:13px;height:13px;"></i> PDF
+        </button>
         <button type="button" id="btn-ficha-nova-oc" class="btn btn-sm" style="background:#FFFBEB;color:#B45309;border:1px solid #FDE68A;font-weight:600;display:inline-flex;align-items:center;gap:5px;">
-          <i data-lucide="alert-triangle" style="width:13px;height:13px;"></i> Abrir Ocorrência neste Equipamento
+          <i data-lucide="alert-triangle" style="width:13px;height:13px;"></i> Abrir Ocorrência
         </button>
         <button type="button" class="btn btn-primary btn-sm" onclick="fecharPopup('popup-ficha-vida-equipamento')">Fechar</button>
       </div>
+    </div>
+  </div>
+</div>
+<div class="overlay" id="popup-eq-tag-liveu" hidden role="dialog" aria-modal="true" aria-labelledby="liveu-modal-title">
+  <div class="modal modal-lg" style="width:760px;max-width:95vw;">
+    <div class="modal-header">
+      <div class="modal-icon" style="background:#0071E3;">
+        <i data-lucide="radio" style="width:17px;height:17px;color:#fff;stroke-width:2;"></i>
+      </div>
+      <div style="flex:1;">
+        <h3 class="modal-title" id="liveu-modal-title">Configuração Técnica LiveU — Chips &amp; Modens</h3>
+        <p class="modal-subtitle" id="liveu-modal-subtitle">Gerencie operadoras, numeração de chips, IMEI dos modens, inserção e fotos</p>
+      </div>
+      <button class="modal-close-btn" onclick="fecharPopup('popup-eq-tag-liveu')" title="Fechar"><i data-lucide="x" style="width:15px;height:15px;"></i></button>
+    </div>
+    <div class="modal-body" style="max-height:72vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px;">
+      <div class="fg2">
+        <div class="frow">
+          <label for="liveu-chips-modens-tv">Chips e Modens TV (Identificação / Kit)</label>
+          <input id="liveu-chips-modens-tv" type="text" placeholder="Ex: Kit 6 Modens TVI · Slots 1-6 ativos" />
+        </div>
+        <div class="frow">
+          <label for="liveu-obs-geral">Observações Gerais LiveU / Firmware</label>
+          <input id="liveu-obs-geral" type="text" placeholder="Ex: Firmware v9.x, antena externa acoplada..." />
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding-top:4px;border-top:1px solid var(--border-lt);">
+        <div>
+          <div style="font-size:12.5px;font-weight:800;color:var(--txt);">Slots de Chips &amp; Modens</div>
+          <div style="font-size:11px;color:var(--muted);">Adicione os chips e modens vinculados a este LiveU</div>
+        </div>
+        <button type="button" class="btn btn-sm" onclick="adicionarSlotLiveU()" style="background:#EFF6FF;color:#0071E3;border:1px solid #93C5FD;font-weight:700;display:inline-flex;align-items:center;gap:5px;">
+          <i data-lucide="plus" style="width:13px;height:13px;"></i> Adicionar Chip / Modem
+        </button>
+      </div>
+      <div id="liveu-slots-container" style="display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;">
+      <button type="button" class="btn btn-ghost" onclick="fecharPopup('popup-eq-tag-liveu')">Cancelar</button>
+      <button type="button" class="btn btn-primary" onclick="salvarDadosModalTagLiveU()">Aplicar Dados LiveU</button>
     </div>
   </div>
 </div>
@@ -1634,18 +1720,6 @@
 <div class="main">
   <header class="topbar">
     <h1 class="topbar-title" id="page-title">Ocorrências</h1>
-    <span class="chip" id="page-chip">Gestão e acompanhamento de ocorrências</span>
-    <div id="topbar-praca-badge" class="praca-badge" title="Praça de operação ativa">
-      <span>📍</span> <span id="topbar-praca-nome">Juiz de Fora</span>
-    </div>
-    <div id="cloud-status-indicator" class="cloud-status online" title="Status da Conexão (Clique para gerenciar a sincronização)" onclick="abrirModalConectarBanco()">
-      <span class="cloud-dot"></span>
-      <span class="cloud-text">Sincronizado</span>
-    </div>
-    <button id="btn-conectar-nuvem-topbar" class="btn btn-xs btn-primary" onclick="abrirModalConectarBanco()" style="display:none;align-items:center;gap:5px;font-size:11px;padding:3.5px 9px;font-weight:600;" title="Conectar ao servidor da emissora">
-      <i data-lucide="cloud" style="width:12px;height:12px;"></i>
-      <span>Sincronizar</span>
-    </button>
     <button class="notif-btn" onclick="abrirNotificacoes()" aria-label="Notificações">
       <i data-lucide="bell" style="width:15px;height:15px;stroke-width:2;"></i>
       <div class="notif-dot" aria-hidden="true"></div>
@@ -2630,14 +2704,15 @@
             </button>
           </div>
           <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--r-md);background:#FFFFFF;box-shadow:var(--shadow-sm);">
-            <table class="rec-table" id="tb-rec" style="width:100%;min-width:650px;margin:0;">
+            <table class="rec-table" id="tb-rec" style="width:100%;min-width:780px;margin:0;">
               <thead>
                 <tr>
                   <th style="width:75px;text-align:center;">Quantidade</th>
                   <th>Descrição</th>
                   <th style="width:120px;">Plaqueta</th>
                   <th style="width:120px;">Nº Série</th>
-                  <th style="width:150px;">Localidade</th>
+                  <th style="width:140px;">Localidade</th>
+                  <th style="width:155px;text-align:center;">Opções de Relatório</th>
                   <th style="width:50px;text-align:center;">Ação</th>
                 </tr>
               </thead>
@@ -2648,6 +2723,12 @@
                   <td><input type="text" class="item-plaq" placeholder="Plaqueta..."/></td>
                   <td><input type="text" class="item-serie" placeholder="Nº Série..."/></td>
                   <td><input type="text" class="item-local" placeholder="Ex: Juiz de Fora"/></td>
+                  <td style="text-align:center;">
+                    <label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--txt2);cursor:pointer;user-select:none;" title="Se marcado, este equipamento também aparecerá nas listas de opções dos relatórios e popups de transmissão">
+                      <input type="checkbox" class="item-exibir-rel" style="width:14px;height:14px;accent-color:var(--blue);cursor:pointer;" />
+                      <span>Incluir nos Relatórios</span>
+                    </label>
+                  </td>
                   <td style="text-align:center;">
                     <button type="button" class="btn btn-ghost btn-xs" onclick="removerLinhaMaterial(this)" style="color:var(--red);padding:3px 6px;display:inline-flex;align-items:center;justify-content:center;" title="Remover item">
                       <i data-lucide="trash-2" style="width:13px;height:13px;stroke-width:2;"></i>
@@ -3276,7 +3357,7 @@
         <div style="display:flex;flex-direction:column;gap:10px;">
           <div style="position:relative;">
             <i data-lucide="search" style="width:16px;height:16px;color:var(--muted);position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;"></i>
-            <input id="eq-catalogo-search" type="text" placeholder="Pesquisar por nome, ID/Plaqueta, Número de Série, modelo ou tag..." oninput="renderCatalogoEquipamentos()" style="padding-left:34px;width:100%;font-size:13px;height:38px;border-radius:var(--r-md);border:1px solid rgba(0,0,0,0.12);background:#FFFFFF;" />
+            <input id="eq-catalogo-search" type="text" placeholder="Pesquisar por nome, ID/Plaqueta, Série, chip, telefone, IMEI, operadora ou tag..." oninput="renderCatalogoEquipamentos()" style="padding-left:34px;width:100%;font-size:13px;height:38px;border-radius:var(--r-md);border:1px solid rgba(0,0,0,0.12);background:#FFFFFF;" />
           </div>
           <div class="pills" role="tablist">
             <button type="button" class="pill on" onclick="filtrarEquipamentosPorTag('todos', this)">Todos</button>
