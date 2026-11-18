@@ -1,4 +1,5 @@
   var EQUIPAMENTOS_STORAGE_KEY = 'tv_equipamentos_catalogo_v1';
+  window._equipamentosSyncInicialConcluido = false;
   var TAGS_PADRAO_EQUIPAMENTOS = ['LiveU', 'Transmissão', 'Estúdio', 'Áudio', 'Vídeo', 'RF', 'Rede/Fibra', 'Satélite', 'Energia'];
   var EQUIPAMENTOS_SEED_JF = [
     { id: 'eq_jf_liveu1',  codigo_patrimonio: 'PAT-JF-001', numero_serie: 'SN-LU600-01', nome: 'LIVE U1',      categoria: 'Mochilink / LiveU', fabricante_modelo: 'LiveU LU600 HEVC',       praca: 'Juiz de Fora', setor_local: 'Jornalismo Externo', tags: ['LiveU', 'Transmissão'], status_operacional: 'operacional', obs_tecnicas: 'Unidade móvel principal para entradas ao vivo externas.' },
@@ -80,8 +81,9 @@
     var histEdRaw = Array.isArray(eq.historico_edicoes)
       ? eq.historico_edicoes
       : (Array.isArray(metRaw.historico_edicoes) ? metRaw.historico_edicoes : []);
-    var rawAt = eq.atualizado_em || metRaw.atualizado_em || eq.criado_em || 0;
-    var atualizadoVal = (typeof rawAt === 'number' && !isNaN(rawAt)) ? rawAt : (Date.parse(rawAt) || 0);
+    var numMetAt = Number(metRaw.atualizado_em || 0);
+    var numEqAt = (typeof eq.atualizado_em === 'number') ? eq.atualizado_em : (Date.parse(eq.atualizado_em || '') || 0);
+    var atualizadoVal = Math.max(isNaN(numMetAt) ? 0 : numMetAt, isNaN(numEqAt) ? 0 : numEqAt);
     var metObj = {
       conf: metRaw.conf || 0,
       nc: metRaw.nc || 0,
@@ -114,6 +116,7 @@
       obs_tecnicas: (eq.obs_tecnicas || eq.obs || '').trim(),
       ordem: ordemVal,
       metricas: metObj,
+      _dirtyLocal: !!eq._dirtyLocal,
       criado_por: eq.criado_por || 'Sistema',
       criado_em: eq.criado_em || Date.now()
     };
@@ -243,10 +246,17 @@
     ativosDaPraca.forEach(function(eq) {
       var existente = dashboardMetrics.equipamento[eq.nome];
       var metBanco = (eq.metricas && typeof eq.metricas === 'object') ? eq.metricas : {};
+      var cConf = existente && typeof existente.conf === 'number' ? existente.conf : (metBanco.conf || 0);
+      var cNc   = existente && typeof existente.nc   === 'number' ? existente.nc   : (metBanco.nc   || 0);
+      var cCanc = existente && typeof existente.canc === 'number' ? existente.canc : (metBanco.canc || 0);
+      if (!eq.metricas || typeof eq.metricas !== 'object') eq.metricas = {};
+      eq.metricas.conf = cConf;
+      eq.metricas.nc   = cNc;
+      eq.metricas.canc = cCanc;
       novoMapaEq[eq.nome] = {
-        conf: existente && typeof existente.conf === 'number' ? existente.conf : (metBanco.conf || 0),
-        nc:   existente && typeof existente.nc   === 'number' ? existente.nc   : (metBanco.nc   || 0),
-        canc: existente && typeof existente.canc === 'number' ? existente.canc : (metBanco.canc || 0),
+        conf: cConf,
+        nc:   cNc,
+        canc: cCanc,
         id: eq.id,
         codigo_patrimonio: eq.codigo_patrimonio,
         numero_serie: eq.numero_serie,
@@ -531,6 +541,7 @@
     })
     .then(function(remotos) {
       if (!Array.isArray(remotos)) return;
+      window._equipamentosSyncInicialConcluido = true;
       console.info('[PostgreSQL Equipamentos] Sincronizados do banco:', remotos.length, 'itens');
       var mapaLocal = {};
       var mapaLocalOrdem = {};
@@ -547,13 +558,14 @@
         var tinhaHash = Array.isArray(rawRem.tags) && rawRem.tags.some(function(t) { return String(t).indexOf('#') !== -1; });
         var san = sanitizarEquipamento(rawRem);
         if (san) {
+          san._dirtyLocal = false;
           var pendTs = _eqPendingSaveIds[san.id] || 0;
           var locExist = mapaLocal[san.id];
-          if (locExist && pendTs && (agoraMs - pendTs) < 10000) {
+          if (locExist && ((pendTs && (agoraMs - pendTs) < 10000) || locExist._dirtyLocal === true)) {
             san = locExist;
-          } else if (locExist && Number(locExist.atualizado_em || 0) > Number(san.atualizado_em || 0)) {
-            san = locExist;
-            salvarEquipamentoPostgreSQL(locExist, true);
+            if (locExist._dirtyLocal === true && !pendTs) {
+              salvarEquipamentoPostgreSQL(locExist, true);
+            }
           }
           if (typeof san.ordem !== 'number' && typeof mapaLocalOrdem[san.id] === 'number') {
             san.ordem = mapaLocalOrdem[san.id];
@@ -688,6 +700,10 @@
           if (typeof callback === 'function') callback(false);
           return;
         }
+        eq._dirtyLocal = false;
+        try {
+          localStorage.setItem(EQUIPAMENTOS_STORAGE_KEY, JSON.stringify(catalogoEquipamentos));
+        } catch (eL) {}
         console.info('[PostgreSQL Equipamentos] Salvo com sucesso no banco:', eq.id, eq.nome, 'atualizado_em=' + eq.atualizado_em);
         if (typeof callback === 'function') callback(true);
       })
@@ -1393,6 +1409,7 @@
           e.obs_tecnicas       = obsEl ? obsEl.value.trim() : '';
           e.tags               = tagsSelecionadasModalEq.slice();
           e.atualizado_em      = Date.now();
+          e._dirtyLocal        = true;
           var mudancas = gerarDiffEquipamento(snapshotAntes, e);
           if (mudancas.length > 0) {
             if (!Array.isArray(e.historico_edicoes)) e.historico_edicoes = [];
@@ -1431,6 +1448,7 @@
         atualizado_em: Date.now(),
         obs_tecnicas: obsEl ? obsEl.value.trim() : '',
         tags: tagsSelecionadasModalEq.slice(),
+        _dirtyLocal: true,
         criado_por: operadorAtual,
         criado_em: Date.now()
       });
@@ -1471,6 +1489,7 @@
     }
     eq.status_operacional = 'lixeira';
     eq.atualizado_em = Date.now();
+    eq._dirtyLocal = true;
     salvarCatalogoEquipamentosLocal();
     salvarEquipamentoPostgreSQL(eq, true);
     if (typeof lixeiraData !== 'undefined' && Array.isArray(lixeiraData)) {
@@ -1802,6 +1821,7 @@
     var novoStatus = (antesStatus === 'manutencao') ? 'operacional' : 'manutencao';
     eq.status_operacional = novoStatus;
     eq.atualizado_em = Date.now();
+    eq._dirtyLocal = true;
     if (!Array.isArray(eq.historico_edicoes)) eq.historico_edicoes = [];
     eq.historico_edicoes.unshift({
       autor: (typeof getUsuarioAtual === 'function') ? getUsuarioAtual() : 'Operador',
@@ -1978,6 +1998,7 @@
         if (!eq.dados_tags || typeof eq.dados_tags !== 'object') eq.dados_tags = {};
         eq.dados_tags.liveu = novoLiveU;
         eq.atualizado_em = Date.now();
+        eq._dirtyLocal = true;
         var muds = gerarDiffEquipamento(snap, eq);
         if (muds.length > 0) {
           if (!Array.isArray(eq.historico_edicoes)) eq.historico_edicoes = [];

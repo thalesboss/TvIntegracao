@@ -253,7 +253,7 @@
             if (mud) {
               eq.metricas = Object.assign({}, eq.metricas || {}, { conf: m.conf || 0, nc: m.nc || 0, canc: m.canc || 0 });
               if (typeof eq.ordem === 'number') eq.metricas.ordem = eq.ordem;
-              if (typeof salvarEquipamentoPostgreSQL === 'function') {
+              if (window._equipamentosSyncInicialConcluido === true && typeof salvarEquipamentoPostgreSQL === 'function') {
                 salvarEquipamentoPostgreSQL(eq, true);
               }
             }

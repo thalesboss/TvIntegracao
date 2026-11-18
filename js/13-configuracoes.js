@@ -260,7 +260,23 @@
             }
           });
           if (!resOp.ok) {
-            exibirMsgLogin(msgEl, 'Erro ao consultar tabela <code>operadores</code>. Verifique se o SQL foi executado no Supabase.', 'erro');
+            try {
+              localStorage.removeItem('tv_supabase_url');
+              localStorage.removeItem('tv_supabase_key');
+              if (typeof DBService !== 'undefined' && DBService) {
+                DBService.url = '';
+                DBService.key = '';
+              }
+            } catch (eClr) {}
+            var boxChaveErr = document.getElementById('ident-box-chave-estacao');
+            if (boxChaveErr) boxChaveErr.style.display = 'block';
+            var inChaveErr = document.getElementById('ident-chave-estacao-input');
+            exibirMsgLogin(
+              msgEl,
+              '🔑 As credenciais salvas nesta estação expiraram ou são inválidas (HTTP ' + resOp.status + '). Digite a <strong>Chave de Acesso da Estação</strong> acima e clique em Continuar.',
+              'erro'
+            );
+            if (inChaveErr) inChaveErr.focus();
             if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
             return;
           }
@@ -315,7 +331,23 @@
           }
           return;
         } catch (errFetch) {
-          exibirMsgLogin(msgEl, 'Falha de conexão com o banco: ' + errFetch.message, 'erro');
+          try {
+            localStorage.removeItem('tv_supabase_url');
+            localStorage.removeItem('tv_supabase_key');
+            if (typeof DBService !== 'undefined' && DBService) {
+              DBService.url = '';
+              DBService.key = '';
+            }
+          } catch (eClrNet) {}
+          var boxChaveNet = document.getElementById('ident-box-chave-estacao');
+          if (boxChaveNet) boxChaveNet.style.display = 'block';
+          var inChaveNet = document.getElementById('ident-chave-estacao-input');
+          exibirMsgLogin(
+            msgEl,
+            '🔑 Falha de conexão com as credenciais salvas (' + escapeHTML(errFetch.message || 'erro de rede') + '). Confira sua internet ou digite a <strong>Chave de Acesso da Estação</strong> acima e clique em Continuar.',
+            'erro'
+          );
+          if (inChaveNet) inChaveNet.focus();
           if (btn) { btn.disabled = false; btn.textContent = 'Continuar'; }
           return;
         }
