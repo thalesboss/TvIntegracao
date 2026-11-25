@@ -1,239 +1,241 @@
-  var IDB_NAME = 'SistemaTV_MediaDB';
-  var IDB_STORE = 'midias';
-  function openMediaDB() {
-    return new Promise(function(resolve) {
-      if (!window.indexedDB) { resolve(null); return; }
-      var req = window.indexedDB.open(IDB_NAME, 1);
-      req.onupgradeneeded = function(e) {
-        var db = e.target.result;
-        if (!db.objectStoreNames.contains(IDB_STORE)) {
-          db.createObjectStore(IDB_STORE, { keyPath: 'id' });
-        }
-      };
-      req.onsuccess = function(e) { resolve(e.target.result); };
-      req.onerror = function() { resolve(null); };
-    });
-  }
-  function salvarMidiaIDB(id, dataUrl, meta) {
-    return openMediaDB().then(function(db) {
-      if (!db) return false;
-      return new Promise(function(resolve) {
-        try {
-          var tx = db.transaction(IDB_STORE, 'readwrite');
-          var store = tx.objectStore(IDB_STORE);
-          store.put({ id: id, data: dataUrl, meta: meta || {}, timestamp: Date.now() });
-          tx.oncomplete = function() { resolve(true); };
-          tx.onerror = function() { resolve(false); };
-        } catch (e) { resolve(false); }
+(function (window, document, TVApp) {
+  'use strict';
+
+  TVApp.registerModule('media-idb', function (app) {
+    var Store = app.Store;
+    var IDB_NAME = 'SistemaTV_MediaDB';
+    var IDB_STORE = 'midias';
+    var EXTENSOES_PERMITIDAS_UPLOAD = /\.(jpg|jpeg|png|gif|webp|bmp|mp4|webm|mov|pdf)$/i;
+    var MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024; // 25 MB
+
+    function openMediaDB() {
+      return new Promise(function (resolve) {
+        if (!window.indexedDB) { resolve(null); return; }
+        var req = window.indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = function (e) {
+          var db = e.target.result;
+          if (!db.objectStoreNames.contains(IDB_STORE)) {
+            db.createObjectStore(IDB_STORE, { keyPath: 'id' });
+          }
+        };
+        req.onsuccess = function (e) { resolve(e.target.result); };
+        req.onerror = function () { resolve(null); };
       });
-    });
-  }
-  var uploadedFilesStore = {};
-  function comprimirImagemSeNecessario(file, callback) {
-    if (!file || !file.type || !file.type.startsWith('image/') || file.type === 'image/svg+xml') {
-      if (file && file.type && file.type.startsWith('video/')) {
-        try {
-          var vidUrl = URL.createObjectURL(file);
-          callback(vidUrl, file);
-          return;
-        } catch(eVid) {}
+    }
+
+    function salvarMidiaIDB(id, dataUrl, meta) {
+      return openMediaDB().then(function (db) {
+        if (!db) return false;
+        return new Promise(function (resolve) {
+          try {
+            var tx = db.transaction(IDB_STORE, 'readwrite');
+            var store = tx.objectStore(IDB_STORE);
+            store.put({ id: id, data: dataUrl, meta: meta || {}, timestamp: Date.now() });
+            tx.oncomplete = function () { resolve(true); };
+            tx.onerror = function () { resolve(false); };
+          } catch (e) { resolve(false); }
+        });
+      });
+    }
+
+    function comprimirImagemSeNecessario(file, callback) {
+      if (!file || !file.type || !file.type.startsWith('image/') || file.type === 'image/svg+xml') {
+        if (file && file.type && file.type.startsWith('video/')) {
+          try {
+            callback(URL.createObjectURL(file), file);
+            return;
+          } catch (eVid) {}
+        }
+        var readerRaw = new FileReader();
+        readerRaw.onload = function (e) { callback(e.target.result, file); };
+        readerRaw.readAsDataURL(file);
+        return;
       }
       var reader = new FileReader();
-      reader.onload = function(e) { callback(e.target.result, file); };
-      reader.readAsDataURL(file);
-      return;
-    }
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      var img = new Image();
-      img.onload = function() {
-        var maxDim = 1600;
-        var width = img.width;
-        var height = img.height;
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
+      reader.onload = function (e) {
+        var img = new Image();
+        img.onload = function () {
+          var maxDim = 1600;
+          var width = img.width;
+          var height = img.height;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
           }
-        }
-        var canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        var ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        var compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
-        if (typeof canvas.toBlob === 'function') {
-          canvas.toBlob(function(blob) {
-            var compressedBlob = blob || file;
-            callback(compressedDataUrl, compressedBlob);
-          }, 'image/jpeg', 0.82);
-        } else {
-          callback(compressedDataUrl, file);
-        }
-      };
-      img.onerror = function() {
-        callback(e.target.result, file);
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  }
-  window.comprimirImagemSeNecessario = comprimirImagemSeNecessario;
-  var EXTENSOES_PERMITIDAS_UPLOAD = /\.(jpg|jpeg|png|gif|webp|bmp|mp4|webm|mov|pdf)$/i;
-  var MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024; // 25 MB
-  function handleFileSelect(input, containerId) {
-    if (!input || !input.files || input.files.length === 0) return;
-    if (!uploadedFilesStore[containerId]) uploadedFilesStore[containerId] = [];
-    var fileList = Array.from(input.files).filter(function(file) {
-      var nome = (file && file.name) ? file.name : '';
-      var tipo = (file && file.type) ? file.type.toLowerCase() : '';
-      if (!EXTENSOES_PERMITIDAS_UPLOAD.test(nome) || tipo === 'image/svg+xml' || tipo === 'text/html') {
-        if (typeof mostrarToast === 'function') {
-          mostrarToast('Formato Bloqueado', 'O arquivo "' + nome + '" não é permitido. Envie apenas JPG, PNG, WEBP, MP4, MOV ou PDF.', 'warning');
-        }
-        return false;
-      }
-      if (file.size > MAX_UPLOAD_SIZE_BYTES) {
-        if (typeof mostrarToast === 'function') {
-          mostrarToast('Arquivo Muito Grande', 'O arquivo "' + nome + '" excede o limite de 25 MB.', 'warning');
-        }
-        return false;
-      }
-      return true;
-    });
-    if (fileList.length === 0) {
-      input.value = '';
-      return;
-    }
-    var pending = fileList.length;
-    fileList.forEach(function(file) {
-      var mediaId = 'med_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-      comprimirImagemSeNecessario(file, function(dataUrl, blobOuFile) {
-        var finalFile = blobOuFile || file;
-        var mediaObj = {
-          id: mediaId,
-          name: file.name,
-          type: (finalFile && finalFile.type) ? finalFile.type : (file.type || 'image/jpeg'),
-          size: (finalFile && finalFile.size) ? finalFile.size : file.size,
-          dataUrl: dataUrl,
-          fileObj: finalFile
+          var canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          var compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          if (typeof canvas.toBlob === 'function') {
+            canvas.toBlob(function (blob) {
+              callback(compressedDataUrl, blob || file);
+            }, 'image/jpeg', 0.82);
+          } else {
+            callback(compressedDataUrl, file);
+          }
         };
-        uploadedFilesStore[containerId].push(mediaObj);
-        salvarMidiaIDB(mediaId, dataUrl, { name: file.name, type: mediaObj.type, size: mediaObj.size });
-        pending--;
-        if (pending === 0) {
-          renderPreviewsForContainer(containerId);
+        img.onerror = function () { callback(e.target.result, file); };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+    window.comprimirImagemSeNecessario = comprimirImagemSeNecessario;
+
+    function handleFileSelect(input, containerId) {
+      if (!input || !input.files || input.files.length === 0) return;
+      if (!Store.uploadedFilesStore[containerId]) Store.uploadedFilesStore[containerId] = [];
+      var fileList = Array.from(input.files).filter(function (file) {
+        var nome = (file && file.name) ? file.name : '';
+        var tipo = (file && file.type) ? file.type.toLowerCase() : '';
+        if (!EXTENSOES_PERMITIDAS_UPLOAD.test(nome) || tipo === 'image/svg+xml' || tipo === 'text/html') {
+          if (typeof window.mostrarToast === 'function') {
+            window.mostrarToast('Formato Bloqueado', 'O arquivo "' + nome + '" não é permitido. Envie apenas JPG, PNG, WEBP, MP4, MOV ou PDF.', 'warning');
+          }
+          return false;
         }
+        if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+          if (typeof window.mostrarToast === 'function') {
+            window.mostrarToast('Arquivo Muito Grande', 'O arquivo "' + nome + '" excede o limite de 25 MB.', 'warning');
+          }
+          return false;
+        }
+        return true;
       });
-    });
-    input.value = ''; // reseta input para permitir re-selecionar o mesmo arquivo se necessário
-  }
-  window.handleFileSelect = handleFileSelect;
-  function removerArquivoPreview(containerId, index, event) {
-    if (event) {
-      event.stopPropagation();
-      event.preventDefault();
-    }
-    if (uploadedFilesStore[containerId] && uploadedFilesStore[containerId][index] !== undefined) {
-      uploadedFilesStore[containerId].splice(index, 1);
-      renderPreviewsForContainer(containerId);
-    }
-  }
-  window.removerArquivoPreview = removerArquivoPreview;
-  function renderPreviewsForContainer(containerId) {
-    var container = document.getElementById(containerId);
-    if (!container) return;
-    container.innerHTML = '';
-    var files = uploadedFilesStore[containerId] || [];
-    files.forEach(function(file, idx) {
-      var item = document.createElement('div');
-      item.className = 'prev-item';
-      item.style.position = 'relative';
-      var removeBtn = document.createElement('button');
-      removeBtn.className = 'prev-remove-btn';
-      removeBtn.type = 'button';
-      removeBtn.innerHTML = '&times;';
-      removeBtn.title = 'Remover este arquivo';
-      removeBtn.onclick = function(e) {
-        removerArquivoPreview(containerId, idx, e);
-      };
-      item.appendChild(removeBtn);
-      var fType = (file.type || '').toLowerCase();
-      var fName = (file.name || '').toLowerCase();
-      var isImg = fType.startsWith('image/') || fName.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i);
-      var isPdf = fType === 'application/pdf' || fName.endsWith('.pdf');
-      var isVid = fType.startsWith('video/') || fName.match(/\.(mp4|webm|mov|mkv|avi)$/i);
-      if (isImg && file.dataUrl) {
-        var img = document.createElement('img');
-        img.src = file.dataUrl;
-        img.alt = file.name || 'Imagem';
-        img.loading = 'lazy';
-        img.style.cursor = 'pointer';
-        img.title = 'Clique para ampliar (Quick Look)';
-        (function(currentFile) {
-          img.onclick = function() {
-            abrirQuickLook(currentFile.dataUrl, currentFile.name);
+      if (fileList.length === 0) {
+        input.value = '';
+        return;
+      }
+      var pending = fileList.length;
+      fileList.forEach(function (file) {
+        var mediaId = 'med_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        comprimirImagemSeNecessario(file, function (dataUrl, blobOuFile) {
+          var finalFile = blobOuFile || file;
+          var mediaObj = {
+            id: mediaId,
+            name: file.name,
+            type: (finalFile && finalFile.type) ? finalFile.type : (file.type || 'image/jpeg'),
+            size: (finalFile && finalFile.size) ? finalFile.size : file.size,
+            dataUrl: dataUrl,
+            fileObj: finalFile
           };
-        })(file);
-        item.appendChild(img);
-      } else if (isPdf) {
-        var pdfBox = document.createElement('div');
-        pdfBox.className = 'prev-vid prev-pdf-box';
-        pdfBox.innerHTML = '<i data-lucide="file-text" style="width:24px;height:24px;stroke-width:1.5;color:var(--red);"></i>';
-        item.appendChild(pdfBox);
-      } else if (isVid) {
-        var vidBox = document.createElement('div');
-        vidBox.className = 'prev-vid';
-        vidBox.style.position = 'relative';
-        vidBox.style.overflow = 'hidden';
-        if (file.dataUrl) {
-          var vEl = document.createElement('video');
-          vEl.src = file.dataUrl;
-          vEl.preload = 'metadata';
-          vEl.muted = true;
-          vEl.style.width = '100%';
-          vEl.style.height = '100%';
-          vEl.style.objectFit = 'cover';
-          vEl.style.borderRadius = 'var(--r-sm)';
-          vidBox.appendChild(vEl);
-          var playBadge = document.createElement('div');
-          playBadge.innerHTML = '▶';
-          playBadge.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;text-shadow:0 1px 4px rgba(0,0,0,0.8);pointer-events:none;';
-          vidBox.appendChild(playBadge);
-        } else {
-          vidBox.innerHTML = '<i data-lucide="film" style="width:24px;height:24px;stroke-width:1.5;color:var(--blue);"></i><span style="font-size:9px;color:var(--blue);font-weight:800;margin-top:2px;">VÍDEO</span>';
-        }
-        item.appendChild(vidBox);
-      } else {
-        var docBox = document.createElement('div');
-        docBox.className = 'prev-vid';
-        docBox.innerHTML = '<i data-lucide="file" style="width:24px;height:24px;stroke-width:1.5;color:var(--muted);"></i>';
-        item.appendChild(docBox);
-      }
-      if (!isImg) {
-        var nome = document.createElement('div');
-        nome.className = 'prev-name';
-        var displayName = file.name || 'Anexo';
-        nome.textContent = displayName.length > 12 ? displayName.substring(0, 9) + '…' : displayName;
-        item.appendChild(nome);
-      }
-      container.appendChild(item);
-    });
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-  }
-  window.renderPreviewsForContainer = renderPreviewsForContainer;
-  ['req', 'rec', 'nova', 'edit-oc', 'resolver'].forEach(function(prefix) {
-    var area  = document.getElementById(prefix + '-upload-area');
-    var file  = document.getElementById(prefix + '-arquivos');
-    if (area && file) {
-      area.onclick = function(e) {
-        if (e.target !== file) file.click();
-      };
-      file.onchange = function() {
-        handleFileSelect(this, prefix + '-previews');
-      };
+          Store.uploadedFilesStore[containerId].push(mediaObj);
+          salvarMidiaIDB(mediaId, dataUrl, { name: file.name, type: mediaObj.type, size: mediaObj.size });
+          pending--;
+          if (pending === 0) {
+            renderPreviewsForContainer(containerId);
+          }
+        });
+      });
+      input.value = '';
     }
+    window.handleFileSelect = handleFileSelect;
+
+    function removerArquivoPreview(containerId, index, event) {
+      if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+      if (Store.uploadedFilesStore[containerId] && Store.uploadedFilesStore[containerId][index] !== undefined) {
+        Store.uploadedFilesStore[containerId].splice(index, 1);
+        renderPreviewsForContainer(containerId);
+      }
+    }
+    window.removerArquivoPreview = removerArquivoPreview;
+
+    function renderPreviewsForContainer(containerId) {
+      var container = document.getElementById(containerId);
+      if (!container) return;
+      container.innerHTML = '';
+      var files = Store.uploadedFilesStore[containerId] || [];
+      files.forEach(function (file, idx) {
+        var item = document.createElement('div');
+        item.className = 'prev-item';
+        item.style.position = 'relative';
+        var removeBtn = document.createElement('button');
+        removeBtn.className = 'prev-remove-btn';
+        removeBtn.type = 'button';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.title = 'Remover este arquivo';
+        removeBtn.onclick = function (e) { removerArquivoPreview(containerId, idx, e); };
+        item.appendChild(removeBtn);
+        var fType = (file.type || '').toLowerCase();
+        var fName = (file.name || '').toLowerCase();
+        var isImg = fType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(fName);
+        var isPdf = fType === 'application/pdf' || fName.endsWith('.pdf');
+        var isVid = fType.startsWith('video/') || /\.(mp4|webm|mov|mkv|avi)$/i.test(fName);
+        if (isImg && file.dataUrl) {
+          var img = document.createElement('img');
+          img.src = file.dataUrl;
+          img.alt = file.name || 'Imagem';
+          img.loading = 'lazy';
+          img.style.cursor = 'pointer';
+          img.title = 'Clique para ampliar (Quick Look)';
+          img.onclick = function () { window.abrirQuickLook(file.dataUrl, file.name); };
+          item.appendChild(img);
+        } else if (isPdf) {
+          var pdfBox = document.createElement('div');
+          pdfBox.className = 'prev-vid prev-pdf-box';
+          pdfBox.innerHTML = '<i data-lucide="file-text" style="width:24px;height:24px;stroke-width:1.5;color:var(--red);"></i>';
+          item.appendChild(pdfBox);
+        } else if (isVid) {
+          var vidBox = document.createElement('div');
+          vidBox.className = 'prev-vid';
+          vidBox.style.position = 'relative';
+          vidBox.style.overflow = 'hidden';
+          if (file.dataUrl) {
+            var vEl = document.createElement('video');
+            vEl.src = file.dataUrl;
+            vEl.preload = 'metadata';
+            vEl.muted = true;
+            vEl.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:var(--r-sm);';
+            vidBox.appendChild(vEl);
+            var playBadge = document.createElement('div');
+            playBadge.textContent = '▶';
+            playBadge.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;text-shadow:0 1px 4px rgba(0,0,0,0.8);pointer-events:none;';
+            vidBox.appendChild(playBadge);
+          } else {
+            vidBox.innerHTML = '<i data-lucide="film" style="width:24px;height:24px;stroke-width:1.5;color:var(--blue);"></i><span style="font-size:9px;color:var(--blue);font-weight:800;margin-top:2px;">VÍDEO</span>';
+          }
+          item.appendChild(vidBox);
+        } else {
+          var docBox = document.createElement('div');
+          docBox.className = 'prev-vid';
+          docBox.innerHTML = '<i data-lucide="file" style="width:24px;height:24px;stroke-width:1.5;color:var(--muted);"></i>';
+          item.appendChild(docBox);
+        }
+        if (!isImg) {
+          var nome = document.createElement('div');
+          nome.className = 'prev-name';
+          var displayName = file.name || 'Anexo';
+          nome.textContent = displayName.length > 12 ? displayName.substring(0, 9) + '…' : displayName;
+          item.appendChild(nome);
+        }
+        container.appendChild(item);
+      });
+      if (typeof window.lucide !== 'undefined') window.lucide.createIcons();
+    }
+    window.renderPreviewsForContainer = renderPreviewsForContainer;
+
+    ['req', 'rec', 'nova', 'edit-oc', 'resolver'].forEach(function (prefix) {
+      var area = document.getElementById(prefix + '-upload-area');
+      var file = document.getElementById(prefix + '-arquivos');
+      if (area && file) {
+        /* Remove atributo inline onchange duplicado caso exista no HTML */
+        file.removeAttribute('onchange');
+        area.onclick = function (e) {
+          if (e.target !== file) file.click();
+        };
+        file.onchange = function () {
+          handleFileSelect(this, prefix + '-previews');
+        };
+      }
+    });
   });
+})(window, document, window.TVApp);

@@ -280,3 +280,9 @@
   color: var(--muted);
   margin-top: 2px;
 }
+.res-pill.selected-ok .res-pill-sub,
+.res-pill.selected-warn .res-pill-sub,
+.res-pill.selected-fwd .res-pill-sub {
+  opacity: 0.7;
+  color: inherit;
+}

@@ -127,6 +127,52 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+@media (max-width: 820px) {
+  .sidebar {
+    width: 64px;
+    padding: 8px 6px;
+  }
+  .sidebar .s-nav {
+    align-items: center;
+  }
+  .sidebar .s-nav > div:first-child {
+    justify-content: center;
+    padding: 8px 0 !important;
+  }
+  .sidebar .s-nav > div:first-child span,
+  .sidebar .s-section,
+  .sidebar .s-label {
+    display: none;
+  }
+  .sidebar .s-btn {
+    justify-content: center;
+    padding: 10px 0;
+    width: 46px;
+    position: relative;
+  }
+  .sidebar .s-btn .arquivados-badge,
+  .sidebar .s-btn .notif-badge {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    margin-left: 0 !important;
+    font-size: 9px;
+    padding: 0 4px;
+  }
+  .sidebar .s-user-block {
+    justify-content: center;
+    padding: 6px;
+  }
+  .sidebar .s-user-name,
+  .sidebar .s-user-role,
+  .sidebar .s-user-info {
+    display: none;
+  }
+  .user-popover {
+    left: 68px;
+    bottom: 8px;
+  }
+}
 .user-popover {
   position: absolute;
   bottom: 54px;

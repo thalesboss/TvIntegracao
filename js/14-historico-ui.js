@@ -1,3 +1,43 @@
+(function (window, document, TVApp) {
+  'use strict';
+
+  TVApp.registerModule('historico-ui', function (app) {
+    var Security = app.Security;
+    var Markers  = app.Markers;
+    var Session  = app.Session;
+    var Store    = app.Store;
+    var escapeHTML        = Security.escapeHTML;
+    var escapeJSString    = Security.escapeJSString;
+    var sanitizeIdAttr    = Security.sanitizeIdAttr;
+    var sanitizeMediaUrl  = Security.sanitizeMediaUrl;
+
+    var itemHistoricoSelecionado = null;
+    var historicoLimiteVisivel = 40;
+
+    function getUsuarioAtual() { return Session.getUserName(); }
+    function getHistoricoCompleto() { return typeof window.getHistoricoCompleto === 'function' ? window.getHistoricoCompleto() : []; }
+    function isItemDoUsuario(i) { return typeof window.isItemDoUsuario === 'function' ? window.isItemDoUsuario(i) : false; }
+    function getTagTipoBadge(i) { return typeof window.getTagTipoBadge === 'function' ? window.getTagTipoBadge(i) : ''; }
+    function obterEstiloSemanticoHistoricoItem(i) { return window.obterEstiloSemanticoHistoricoItem(i); }
+    function agruparPorDias(a, b) { return window.agruparPorDias(a, b); }
+    function renderSecoesComCards(a, b) { return window.renderSecoesComCards(a, b); }
+    function formatDataHoraLocal(v) { return typeof window.formatDataHoraLocal === 'function' ? window.formatDataHoraLocal(v) : ''; }
+    function obterCriadorOcorrencia(o) { return typeof window.obterCriadorOcorrencia === 'function' ? window.obterCriadorOcorrencia(o) : ((o && o.criadoPor) || Session.getUserName()); }
+    function formatarAtribuicaoResp(r) { return typeof window.formatarAtribuicaoResp === 'function' ? window.formatarAtribuicaoResp(r) : (r || 'Equipe do Turno (Todos)'); }
+    function formatarTextoComLinks(s, p) { return typeof window.formatarTextoComLinks === 'function' ? window.formatarTextoComLinks(s, p) : escapeHTML(s); }
+    function renderBotaoLinkExterno(u, l, c) { return typeof window.renderBotaoLinkExterno === 'function' ? window.renderBotaoLinkExterno(u, l, c) : ''; }
+    function gerarHTMLPreviewCTRSDados(d) { return typeof window.gerarHTMLPreviewCTRSDados === 'function' ? window.gerarHTMLPreviewCTRSDados(d) : ''; }
+    function abrirPopup(id) { if (typeof window.abrirPopup === 'function') window.abrirPopup(id); }
+    function mostrarToast(t, m, tp) { if (typeof window.mostrarToast === 'function') window.mostrarToast(t, m, tp); }
+    function isOcorrenciaVencida(oc) { return typeof window.isOcorrenciaVencida === 'function' ? window.isOcorrenciaVencida(oc) : false; }
+    function formatarDataHoraBR(val, fallback) { return typeof window.formatarDataHoraBR === 'function' ? window.formatarDataHoraBR(val, fallback) : (val || fallback || ''); }
+    function formatarTempoEmAberto(oc) { return typeof window.formatarTempoEmAberto === 'function' ? window.formatarTempoEmAberto(oc) : null; }
+
+  function carregarMaisHistorico() {
+    historicoLimiteVisivel += 40;
+    renderHistorico();
+  }
+  window.carregarMaisHistorico = carregarMaisHistorico;
   function renderHistorico() {
     var container = document.getElementById('hist-list');
     if (!container) return;
@@ -13,11 +53,12 @@
     if (document.getElementById('cnt-hist-rel'))   document.getElementById('cnt-hist-rel').textContent   = cntRel;
     if (document.getElementById('cnt-hist-rec'))   document.getElementById('cnt-hist-rec').textContent   = cntRec;
     if (document.getElementById('cnt-hist-meus'))  document.getElementById('cnt-hist-meus').textContent  = cntMeus;
+    var catAtiva = Store.historicoFiltroCategoria || 'todos';
     var filtrados = todosItens.filter(function(item) {
-      if (historicoFiltroCategoria === 'ocorrencia' && item.tipo !== 'ocorrencia') return false;
-      if (historicoFiltroCategoria === 'relatorio' && item.tipo !== 'relatorio') return false;
-      if (historicoFiltroCategoria === 'recebimento' && item.tipo !== 'recebimento') return false;
-      if (historicoFiltroCategoria === 'meus' && !isItemDoUsuario(item)) return false;
+      if (catAtiva === 'ocorrencia' && item.tipo !== 'ocorrencia') return false;
+      if (catAtiva === 'relatorio' && item.tipo !== 'relatorio') return false;
+      if (catAtiva === 'recebimento' && item.tipo !== 'recebimento') return false;
+      if (catAtiva === 'meus' && !isItemDoUsuario(item)) return false;
       if (busca) {
         var str = (item.titulo + ' ' + item.equipamento + ' ' + item.criadoPor + ' ' + item.resolvidoPor + ' ' + item.categoria + ' ' + item.local + ' ' + item.descCriacao + ' ' + (item.descResolucao || '')).toLowerCase();
         return str.includes(busca);
@@ -187,15 +228,17 @@
             (item.equipamento && item.equipamento !== 'Equipamentos de Transmissão / CTRS'
               ? '<span><i data-lucide="radio" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Equipamento(s): ' + escapeHTML(item.equipamento) + '</span>'
               : '') +
-            '<span><i data-lucide="calendar" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> ' + escapeHTML(item.dataCriacao || item.dataResolucao || '') + '</span>'
+            '<span><i data-lucide="calendar" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> ' + escapeHTML(formatarDataHoraBR(item.dataCriacao || item.dataResolucao || '')) + '</span>'
           )
         : (
             '<span><i data-lucide="user-check" style="width:12px;height:12px;stroke-width:2;color:var(--blue);"></i> Criado por: <strong style="color:var(--txt);">' + escapeHTML(typeof obterCriadorOcorrencia === 'function' ? obterCriadorOcorrencia(item) : (item.criadoPor || getUsuarioAtual())) + '</strong></span>' +
             '<span><i data-lucide="check-circle-2" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> Resolvido por: ' + escapeHTML(item.resolvidoPor || 'Pendente') + '</span>' +
-            '<span><i data-lucide="calendar" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> ' + escapeHTML(item.dataResolucao || item.dataCriacao || '') + '</span>'
+            '<span><i data-lucide="calendar" style="width:12px;height:12px;stroke-width:2;color:var(--dim);"></i> ' + escapeHTML(formatarDataHoraBR(item.dataResolucao || item.dataCriacao || '')) + '</span>'
           );
+      var safeHistAttrId = sanitizeIdAttr(item.id);
+      var safeHistJsId = escapeJSString(item.id);
       return (
-        '<article class="' + cardClasses + '" onclick="verDetalhesHistorico(\'' + item.id + '\')" onmouseenter="selecionarItemHistorico(\'' + item.id + '\')" style="cursor:pointer;margin-bottom:10px;' + (isSel ? 'border-color:var(--blue);box-shadow:0 0 0 2px rgba(0,113,227,.15);' : '') + '">' +
+        '<article class="' + cardClasses + '" data-hist-id="' + safeHistAttrId + '" onclick="verDetalhesHistorico(\'' + safeHistJsId + '\')" onmouseenter="selecionarItemHistorico(\'' + safeHistJsId + '\')" style="cursor:pointer;margin-bottom:10px;' + (isSel ? 'border-color:var(--blue);box-shadow:0 0 0 2px rgba(0,113,227,.15);' : '') + '">' +
           '<div class="prio-line ' + plClass + '"></div>' +
           '<div class="oc-body">' +
             '<div class="oc-header"><h3>' + escapeHTML(item.titulo || 'Sem título') + '</h3>' + tagTipo + tagMeu + '</div>' +
@@ -209,8 +252,19 @@
         '</article>'
       );
     }
-    var secoes = agruparPorDias(filtrados, function(item){ return item.dataCriacao; });
-    container.innerHTML = renderSecoesComCards(secoes, renderCardHistoricoHTML);
+    var visiveis = filtrados.slice(0, historicoLimiteVisivel);
+    var secoes = agruparPorDias(visiveis, function(item){ return item.dataCriacao; });
+    var htmlFinal = renderSecoesComCards(secoes, renderCardHistoricoHTML);
+    if (filtrados.length > historicoLimiteVisivel) {
+      var restantes = filtrados.length - historicoLimiteVisivel;
+      htmlFinal +=
+        '<div style="text-align:center;margin:14px 0 6px;">' +
+          '<button type="button" class="btn btn-ghost btn-sm" onclick="carregarMaisHistorico()" style="border:1px solid var(--border);background:var(--surface);padding:7px 18px;font-weight:700;color:var(--blue);">' +
+            'Carregar mais registros (' + restantes + ' restante' + (restantes > 1 ? 's' : '') + ')' +
+          '</button>' +
+        '</div>';
+    }
+    container.innerHTML = htmlFinal;
     if (typeof lucide !== 'undefined') lucide.createIcons();
     if (!itemHistoricoSelecionado && filtrados.length > 0) {
       selecionarItemHistorico(filtrados[0].id);
@@ -223,7 +277,7 @@
       return h.id === id || h.id === ('h_oc_' + id) || id === ('h_oc_' + h.id) || (h.id.replace('h_oc_','') === id.replace('h_oc_',''));
     });
     if (!found) {
-      var oc = ocorrencias.find(function(o){ return o && (o.id === id || o.id === id.replace('h_oc_','')); });
+      var oc = (Store.ocorrencias || []).find(function(o){ return o && (o.id === id || o.id === id.replace('h_oc_','')); });
       if (oc) {
         found = {
           id:            oc.id,
@@ -234,15 +288,15 @@
           categoria:     oc.cat || 'Equipamento',
           local:         oc.local || 'Central Técnica',
           dataCriacao:   formatDataHoraLocal(oc.dataCriacao || oc.criado),
-          criadoPor:     (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual()),
-          resp:          (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
+          criadoPor:     obterCriadorOcorrencia(oc),
+          resp:          formatarAtribuicaoResp(oc.resp),
           descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
           status:        (oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : (oc.status === 'arquivada' ? 'Em Observação' : 'Resolvido'),
           dataResolucao: (oc.resolucao && oc.resolucao.data) ? formatDataHoraLocal(oc.resolucao.data) : formatDataHoraLocal(),
           resolvidoPor:  (oc.resolucao && oc.resolucao.resolvidoPor) ? oc.resolucao.resolvidoPor : getUsuarioAtual(),
           descResolucao: (oc.resolucao && oc.resolucao.descRes) ? oc.resolucao.descRes : (oc.desc || 'Ocorrência resolvida pela equipe técnica.'),
           link:          oc.link || (oc.resolucao && oc.resolucao.link) || '',
-      tags:          oc.tags || [],
+          tags:          oc.tags || [],
           anexos:        (oc.anexos && Array.isArray(oc.anexos) && oc.anexos.length > 0) ? oc.anexos : ((oc.resolucao && Array.isArray(oc.resolucao.anexos)) ? oc.resolucao.anexos : [])
         };
       }
@@ -253,7 +307,8 @@
       c.style.borderColor = '';
       c.style.boxShadow = '';
     });
-    var el = document.querySelector('#hist-list .oc-card[onclick*="' + id + '"]');
+    var safeTargetAttr = sanitizeIdAttr(found.id || id);
+    var el = safeTargetAttr ? document.querySelector('#hist-list .oc-card[data-hist-id="' + safeTargetAttr + '"]') : null;
     if (el) {
       el.style.borderColor = 'var(--blue)';
       el.style.boxShadow = '0 0 0 2px rgba(0,113,227,.15)';
@@ -270,14 +325,14 @@
       'NET 2º ANDAR', 'NET 3º ANDAR', 'NET 4º ANDAR', 'KMJ',
       'INTEGRAÇÃO NOTÍCIA', 'MG1', 'MG2', 'GIRO MG2'
     ];
-    if (typeof dashboardMetrics !== 'undefined' && dashboardMetrics) {
-      if (dashboardMetrics.equipamento) {
-        Object.keys(dashboardMetrics.equipamento).forEach(function(k){
+    if (Store.dashboardMetrics) {
+      if (Store.dashboardMetrics.equipamento) {
+        Object.keys(Store.dashboardMetrics.equipamento).forEach(function(k){
           if (!alvosDashboard.includes(k)) alvosDashboard.push(k);
         });
       }
-      if (dashboardMetrics.telejornal) {
-        Object.keys(dashboardMetrics.telejornal).forEach(function(k){
+      if (Store.dashboardMetrics.telejornal) {
+        Object.keys(Store.dashboardMetrics.telejornal).forEach(function(k){
           if (!alvosDashboard.includes(k)) alvosDashboard.push(k);
         });
       }
@@ -402,7 +457,7 @@
               ? '<span style="font-size:9px;font-weight:700;color:#B45309;background:#FEF3C7;border:1px solid #FDE68A;padding:1px 6px;border-radius:999px;white-space:nowrap;">Recebimento</span>'
               : '<span style="font-size:9px;font-weight:700;color:#B91C1C;background:#FEE2E2;border:1px solid #FECACA;padding:1px 6px;border-radius:999px;white-space:nowrap;">Ocorrência</span>');
         return (
-          '<div class="mini-oc" onclick="verDetalhesHistorico(\'' + rel.id + '\')" style="margin-bottom:8px;padding:10px 12px;border-radius:var(--r-md);border:1px solid ' + stRel.border + ';border-left:3.5px solid ' + stRel.left + ';background:' + stRel.bg + ';cursor:pointer;transition:all 0.15s ease;" onmouseover="this.style.borderColor=\'' + stRel.hover + '\';this.style.boxShadow=\'0 2px 8px rgba(0,113,227,0.10)\';" onmouseout="this.style.borderColor=\'' + stRel.border + '\';this.style.boxShadow=\'none\';">' +
+          '<div class="mini-oc" onclick="verDetalhesHistorico(\'' + escapeJSString(rel.id) + '\')" style="margin-bottom:8px;padding:10px 12px;border-radius:var(--r-md);border:1px solid ' + stRel.border + ';border-left:3.5px solid ' + stRel.left + ';background:' + stRel.bg + ';cursor:pointer;transition:all 0.15s ease;" onmouseover="this.style.borderColor=\'' + stRel.hover + '\';this.style.boxShadow=\'0 2px 8px rgba(0,113,227,0.10)\';" onmouseout="this.style.borderColor=\'' + stRel.border + '\';this.style.boxShadow=\'none\';">' +
             '<div class="mini-top" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px;">' +
               tipoMiniBadge +
               '<span class="tag ' + stRel.tagCls + '" style="font-size:9.5px;padding:1px 6px;white-space:nowrap;">' + escapeHTML(statusTexto) + '</span>' +
@@ -420,11 +475,13 @@
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
   function filtrarHistorico() {
+    historicoLimiteVisivel = 40;
     renderHistorico();
   }
   window.filtrarHistorico = filtrarHistorico;
   function filtrarCategoriaHistorico(cat, btn) {
-    historicoFiltroCategoria = cat;
+    historicoLimiteVisivel = 40;
+    Store.historicoFiltroCategoria = cat;
     if (btn && btn.closest('.pills')) {
       btn.closest('.pills').querySelectorAll('.pill').forEach(function(p){ p.classList.remove('on'); });
       btn.classList.add('on');
@@ -697,128 +754,119 @@
   window.gerarHTMLPreviewRecebimentoDados = gerarHTMLPreviewRecebimentoDados;
   function gerarHTMLPreviewOcorrenciaDados(item, ocFound, dadosExtras) {
     var d = dadosExtras || {};
-    var prioRaw = d.prio || (ocFound && ocFound.prio) || (item && item.prio) || '';
-    if (!prioRaw && item && Array.isArray(item.tags)) {
-      if (item.tags.indexOf('Alta') !== -1) prioRaw = 'Alta';
-      else if (item.tags.indexOf('Média') !== -1) prioRaw = 'Média';
-      else if (item.tags.indexOf('Baixa') !== -1) prioRaw = 'Baixa';
-    }
-    var prioBadgeHTML = '';
-    if (prioRaw) {
-      var pLow = String(prioRaw).toLowerCase();
-      var pBg = pLow === 'alta' ? 'rgba(239,68,68,0.24)' : (pLow === 'baixa' ? 'rgba(16,185,129,0.24)' : 'rgba(245,158,11,0.24)');
-      var pBdr = pLow === 'alta' ? 'rgba(252,165,165,0.65)' : (pLow === 'baixa' ? 'rgba(110,231,183,0.65)' : 'rgba(253,230,138,0.65)');
-      var pTxt = pLow === 'alta' ? '#FEE2E2' : (pLow === 'baixa' ? '#D1FAE5' : '#FEF3C7');
-      prioBadgeHTML = '<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:' + pBg + ';border:1px solid ' + pBdr + ';color:' + pTxt + ';font-size:11px;font-weight:800;">Prioridade: ' + escapeHTML(prioRaw) + '</span>';
-    }
     var statusFinal = d.statusFinal || 'Concluído';
     var stLow = String(statusFinal).toLowerCase();
+    var isAbertaStatus = (ocFound && ocFound.status === 'aberta') ||
+      ((stLow === 'aberta' || stLow === 'prazo expirado') && !d.descRes);
     var resAccent = '#059669';
     var resHeaderBg = '#ECFDF5';
     var resHeaderBdr = '#A7F3D0';
     var resTitleTxt = '#065F46';
-    var stBannerBg = 'rgba(16,185,129,0.24)';
-    var stBannerBdr = 'rgba(110,231,183,0.65)';
-    var stBannerTxt = '#ECFDF5';
     if (stLow.indexOf('abert') !== -1 || stLow.indexOf('reinc') !== -1 || stLow.indexOf('expir') !== -1 || stLow.indexOf('penden') !== -1) {
       resAccent = '#DC2626';
       resHeaderBg = '#FEF2F2';
       resHeaderBdr = '#FECACA';
       resTitleTxt = '#991B1B';
-      stBannerBg = 'rgba(239,68,68,0.28)';
-      stBannerBdr = 'rgba(252,165,165,0.65)';
-      stBannerTxt = '#FEF2F2';
     } else if (stLow.indexOf('observ') !== -1 || stLow.indexOf('arquiv') !== -1) {
       resAccent = '#4F46E5';
       resHeaderBg = '#EEF2FF';
       resHeaderBdr = '#C7D2FE';
       resTitleTxt = '#3730A3';
-      stBannerBg = 'rgba(99,102,241,0.32)';
-      stBannerBdr = 'rgba(199,210,254,0.65)';
-      stBannerTxt = '#EEF2FF';
     } else if (stLow.indexOf('parcial') !== -1) {
       resAccent = '#D97706';
       resHeaderBg = '#FFFBEB';
       resHeaderBdr = '#FDE68A';
       resTitleTxt = '#92400E';
-      stBannerBg = 'rgba(245,158,11,0.26)';
-      stBannerBdr = 'rgba(253,230,138,0.65)';
-      stBannerTxt = '#FFFBEB';
     }
-    var tituloOc = (item && item.titulo) || (ocFound && ocFound.titulo) || 'Registro de Ocorrência';
-    var descCriHTML = (typeof formatarTextoComLinks === 'function') ? formatarTextoComLinks(d.descCri || '', false) : escapeHTML(d.descCri || '');
-    var descResHTML = (typeof formatarTextoComLinks === 'function') ? formatarTextoComLinks(d.descRes || '', false) : escapeHTML(d.descRes || '');
-    var linkHTML = (d.linkRel && typeof renderBotaoLinkExterno === 'function')
-      ? '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed #CBD5E1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><strong style="font-size:11.5px;color:#0F172A;">Link Relacionado:</strong> ' + renderBotaoLinkExterno(d.linkRel, null, false) + '</div>'
+    var descCriHTML = formatarTextoComLinks(d.descCri || '', false);
+    var linkHTML = d.linkRel
+      ? '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed #E2E8F0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><strong style="font-size:11.5px;color:#0F172A;">Link Relacionado:</strong> ' + renderBotaoLinkExterno(d.linkRel, null, false) + '</div>'
       : '';
+
+    var equipLimpo = String(d.equip || '').trim();
+    var catLimpa = String(d.categoria || 'Geral').trim();
+    var mostrarEquip = Boolean(
+      equipLimpo &&
+      equipLimpo !== 'N/A' &&
+      equipLimpo.toLowerCase() !== catLimpa.toLowerCase() &&
+      equipLimpo.indexOf(' — ' + catLimpa) === -1
+    );
+
+    var metaCardsHTML =
+      (mostrarEquip
+        ? '<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:9px 12px;">' +
+            '<div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Equipamento / Recurso</div>' +
+            '<div style="font-size:12.5px;font-weight:700;color:#0F172A;margin-top:2px;word-break:break-word;">' + escapeHTML(equipLimpo) + '</div>' +
+          '</div>'
+        : '') +
+      '<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:9px 12px;">' +
+        '<div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Localidade / Praça</div>' +
+        '<div style="font-size:12.5px;font-weight:700;color:#0F172A;margin-top:2px;">' + escapeHTML(d.localidade || 'Central Técnica') + '</div>' +
+      '</div>' +
+      '<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:9px 12px;">' +
+        '<div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Categoria Técnica</div>' +
+        '<div style="font-size:12.5px;font-weight:700;color:#0071E3;margin-top:2px;">' + escapeHTML(catLimpa) + '</div>' +
+      '</div>' +
+      '<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:9px 12px;">' +
+        '<div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Atribuído para</div>' +
+        '<div style="font-size:12.5px;font-weight:700;color:#0F172A;margin-top:2px;">' + escapeHTML(d.atribuidoPara || 'Equipe do Turno (Todos)') + '</div>' +
+      '</div>' +
+      (d.prazo
+        ? '<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:9px 12px;">' +
+            '<div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Prazo</div>' +
+            '<div style="font-size:12.5px;font-weight:700;color:#0F172A;margin-top:2px;">' + escapeHTML(d.prazo) + '</div>' +
+          '</div>'
+        : '');
+
+    var blocoFechamentoHTML = '';
+    var temResolucaoReal = !isAbertaStatus && Boolean((d.descRes && d.descRes.trim()) || (d.obsDetHTML && d.obsDetHTML.trim()));
+    if (temResolucaoReal) {
+      var descResHTML = formatarTextoComLinks(d.descRes || '', false);
+      var metaResParts = [];
+      if (d.respRes && d.respRes !== 'Pendente' && d.respRes !== 'Aguardando resolução') {
+        metaResParts.push('<span><strong>Responsável:</strong> ' + escapeHTML(d.respRes) + '</span>');
+      }
+      if (d.dataRes && d.dataRes !== 'Em andamento' && d.dataRes !== 'Pendente de resolução') {
+        metaResParts.push('<span><strong>Fechamento:</strong> ' + escapeHTML(formatarDataHoraBR(d.dataRes)) + '</span>');
+      }
+      blocoFechamentoHTML =
+        '<div style="border:1px solid ' + resHeaderBdr + ';border-left:4px solid ' + resAccent + ';border-radius:8px;background:#FFFFFF;margin-bottom:14px;overflow:hidden;">' +
+          '<div style="background:' + resHeaderBg + ';padding:8px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border-bottom:1px solid ' + resHeaderBdr + ';">' +
+            '<span style="font-size:11px;font-weight:800;color:' + resTitleTxt + ';text-transform:uppercase;letter-spacing:.04em;display:inline-flex;align-items:center;gap:6px;">' +
+              '<i data-lucide="check-circle-2" style="width:13px;height:13px;color:' + resAccent + ';stroke-width:2.3;"></i>' +
+              'Solução Aplicada' +
+            '</span>' +
+            (metaResParts.length > 0
+              ? '<div style="display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:' + resTitleTxt + ';">' + metaResParts.join('') + '</div>'
+              : '') +
+          '</div>' +
+          '<div style="padding:12px 14px;font-size:13px;line-height:1.6;color:#0F172A;overflow-wrap:anywhere;word-break:break-word;">' +
+            (descResHTML || '<span style="color:#64748B;">Sem observações adicionais.</span>') +
+            (d.obsDetHTML || '') +
+          '</div>' +
+        '</div>';
+    }
+
     return (
       '<div style="font-family:Segoe UI,Arial,sans-serif;color:#0F172A;">' +
-        '<div style="background:linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);color:#FFFFFF;padding:14px 18px;border-radius:8px;margin-bottom:14px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;">' +
-          '<div style="flex:1;min-width:220px;">' +
-            '<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#93C5FD;">TV INTEGRAÇÃO — ENGENHARIA E OPERAÇÕES</div>' +
-            '<div style="font-size:15px;font-weight:800;margin-top:2px;letter-spacing:.01em;">FICHA TÉCNICA DE OCORRÊNCIA E MANUTENÇÃO</div>' +
-            '<div style="font-size:12.5px;font-weight:600;color:#E2E8F0;margin-top:4px;">' + escapeHTML(tituloOc) + '</div>' +
-          '</div>' +
-          '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end;">' +
-            '<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:' + stBannerBg + ';border:1px solid ' + stBannerBdr + ';color:' + stBannerTxt + ';font-size:11px;font-weight:800;">' + escapeHTML(statusFinal) + '</span>' +
-            prioBadgeHTML +
-          '</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(165px, 1fr));gap:10px;margin-bottom:14px;">' +
+          metaCardsHTML +
         '</div>' +
-        '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));gap:10px;margin-bottom:14px;">' +
-          '<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:9px 12px;">' +
-            '<div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Equipamento / Recurso</div>' +
-            '<div style="font-size:12.5px;font-weight:700;color:#0F172A;margin-top:2px;word-break:break-word;">' + escapeHTML(d.equip || 'N/A') + '</div>' +
-          '</div>' +
-          '<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:9px 12px;">' +
-            '<div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Localidade / Praça</div>' +
-            '<div style="font-size:12.5px;font-weight:700;color:#0F172A;margin-top:2px;">' + escapeHTML(d.localidade || 'Central Técnica') + '</div>' +
-          '</div>' +
-          '<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:9px 12px;">' +
-            '<div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Categoria Técnica</div>' +
-            '<div style="font-size:12.5px;font-weight:700;color:#0071E3;margin-top:2px;">' + escapeHTML(d.categoria || 'Geral') + '</div>' +
-          '</div>' +
-          '<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:9px 12px;">' +
-            '<div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;">Atribuído para</div>' +
-            '<div style="font-size:12.5px;font-weight:700;color:#0F172A;margin-top:2px;">' + escapeHTML(d.atribuidoPara || 'Equipe do Turno (Todos)') + '</div>' +
-          '</div>' +
-        '</div>' +
-        '<div style="border:1px solid #CBD5E1;border-left:4px solid #DC2626;border-radius:8px;overflow:hidden;background:#FFFFFF;margin-bottom:14px;">' +
-          '<div style="background:#FEF2F2;border-bottom:1px solid #FECACA;padding:9px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">' +
-            '<span style="font-size:11px;font-weight:800;color:#991B1B;text-transform:uppercase;letter-spacing:.04em;display:inline-flex;align-items:center;gap:6px;">' +
-              '<i data-lucide="alert-circle" style="width:13px;height:13px;color:#DC2626;stroke-width:2.3;"></i>' +
-              'Registro de Abertura — Problema Relatado' +
+        '<div style="border:1px solid #E2E8F0;border-left:4px solid ' + (isAbertaStatus ? '#DC2626' : '#0071E3') + ';border-radius:8px;background:#FFFFFF;margin-bottom:14px;overflow:hidden;">' +
+          '<div style="background:#F8FAFC;border-bottom:1px solid #E2E8F0;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">' +
+            '<span style="font-size:11px;font-weight:800;color:#334155;text-transform:uppercase;letter-spacing:.04em;display:inline-flex;align-items:center;gap:6px;">' +
+              '<i data-lucide="alert-circle" style="width:13px;height:13px;color:' + (isAbertaStatus ? '#DC2626' : '#0071E3') + ';stroke-width:2.3;"></i>' +
+              'Problema Relatado' +
             '</span>' +
-            '<span style="font-size:11px;color:#7F1D1D;font-weight:600;">Aberto por <strong>' + escapeHTML(d.autorCri || 'Operador') + '</strong> · ' + escapeHTML(d.dataCri || '') + '</span>' +
+            '<span style="font-size:11px;color:#64748B;font-weight:600;">Aberto por <strong style="color:#0F172A;">' + escapeHTML(d.autorCri || 'Operador') + '</strong> · ' + escapeHTML(formatarDataHoraBR(d.dataCri || '')) + '</span>' +
           '</div>' +
-          '<div style="padding:12px 14px;">' +
-            '<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:10px 12px;font-size:12.5px;line-height:1.6;color:#0F172A;overflow-wrap:anywhere;word-break:break-word;">' +
-              '<div style="font-size:10px;font-weight:800;color:#64748B;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;">Descrição do Problema Relatado</div>' +
-              descCriHTML +
-              linkHTML +
-            '</div>' +
+          '<div style="padding:13px 14px;font-size:13px;line-height:1.65;color:#0F172A;overflow-wrap:anywhere;word-break:break-word;">' +
+            descCriHTML +
+            linkHTML +
             (d.blocoPreviewOcorrenciaHTML || '') +
           '</div>' +
         '</div>' +
-        '<div style="border:1px solid #CBD5E1;border-left:4px solid ' + resAccent + ';border-radius:8px;overflow:hidden;background:#FFFFFF;margin-bottom:14px;">' +
-          '<div style="background:' + resHeaderBg + ';border-bottom:1px solid ' + resHeaderBdr + ';padding:9px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">' +
-            '<span style="font-size:11px;font-weight:800;color:' + resTitleTxt + ';text-transform:uppercase;letter-spacing:.04em;display:inline-flex;align-items:center;gap:6px;">' +
-              '<i data-lucide="check-circle-2" style="width:13px;height:13px;color:' + resAccent + ';stroke-width:2.3;"></i>' +
-              'Diagnóstico Técnico e Solução Aplicada (Fechamento)' +
-            '</span>' +
-            '<span style="font-size:11px;color:' + resTitleTxt + ';font-weight:700;">' + escapeHTML(statusFinal) + '</span>' +
-          '</div>' +
-          '<div style="padding:12px 14px;">' +
-            '<div style="display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:#475569;margin-bottom:10px;">' +
-              '<span><strong>Responsável Técnico:</strong> <span style="color:#0F172A;font-weight:600;">' + escapeHTML(d.respRes || 'Pendente') + '</span></span>' +
-              '<span><strong>Data/Hora de Fechamento:</strong> <span style="color:#0F172A;font-weight:600;">' + escapeHTML(d.dataRes || 'Em andamento') + '</span></span>' +
-            '</div>' +
-            '<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:10px 12px;font-size:12.5px;line-height:1.6;color:#0F172A;overflow-wrap:anywhere;word-break:break-word;">' +
-              '<div style="font-size:10px;font-weight:800;color:#64748B;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;">Diagnóstico / O que foi realizado</div>' +
-              descResHTML +
-            '</div>' +
-            (d.obsDetHTML || '') +
-          '</div>' +
-        '</div>' +
+        blocoFechamentoHTML +
         (d.mediaHTML || '') +
         (d.edicoesHTML || '') +
       '</div>'
@@ -834,7 +882,7 @@
         return h.id === searchId || h.id === ('h_oc_' + searchId) || searchId === ('h_oc_' + h.id) || (h.id.replace('h_oc_','') === searchId.replace('h_oc_',''));
       });
       if (!item) {
-        var oc = ocorrencias.find(function(o){ return o && (o.id === searchId || o.id === searchId.replace('h_oc_','')); });
+        var oc = (Store.ocorrencias || []).find(function(o){ return o && (o.id === searchId || o.id === searchId.replace('h_oc_','')); });
         if (oc) {
           var nowFmt = formatDataHoraLocal(oc.dataCriacao || oc.criado);
           var resFmt = (oc.resolucao && oc.resolucao.data) ? formatDataHoraLocal(oc.resolucao.data) : nowFmt;
@@ -852,24 +900,24 @@
             categoria:     oc.cat || 'Equipamento',
             local:         oc.local || 'Central Técnica',
             dataCriacao:   nowFmt,
-            criadoPor:     (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual()),
-            resp:          (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
+            criadoPor:     obterCriadorOcorrencia(oc),
+            resp:          formatarAtribuicaoResp(oc.resp),
             descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
             status:        (oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : (oc.status === 'arquivada' ? 'Em Observação' : 'Resolvido'),
             dataResolucao: resFmt,
             resolvidoPor:  resPor,
             descResolucao: resDesc,
             link:          oc.link || (oc.resolucao && oc.resolucao.link) || '',
-      tags:          oc.tags || [],
+            tags:          oc.tags || [],
             anexos:        anexosLista
           };
         }
       }
     }
     if (!item) return;
-    itemDetalhesAtual = item;
+    Store.itemDetalhesAtual = item;
     var targetOcId = item.ocId || (item.id || '').replace(/^h_oc_/, '');
-    var ocFound = ocorrencias.find(function(o){
+    var ocFound = (Store.ocorrencias || []).find(function(o){
       if (!o || !o.id) return false;
       return o.id === item.id || o.id === targetOcId || ('h_oc_' + o.id) === item.id;
     });
@@ -880,13 +928,23 @@
     var atribuidoPara = (typeof formatarAtribuicaoResp === 'function')
       ? formatarAtribuicaoResp((ocFound && ocFound.resp) || item.resp)
       : ((ocFound && ocFound.resp) || item.resp || 'Equipe do Turno (Todos)');
-    var dataCri = item.dataCriacao || (item.criado ? formatDataHoraLocal(item.criado) : '') || (ocFound && (ocFound.dataCriacao || (ocFound.criado ? formatDataHoraLocal(ocFound.criado) : ''))) || 'Data não informada';
-    var equip = item.equipamento || (ocFound && ocFound.local ? (ocFound.local + ' — ' + (ocFound.cat || 'Equipamento')) : '') || (ocFound && (ocFound.cat || ocFound.titulo)) || 'N/A';
+    var dataCriRaw = item.dataCriacao || (item.criado ? formatDataHoraLocal(item.criado) : '') || (ocFound && (ocFound.dataCriacao || (ocFound.criado ? formatDataHoraLocal(ocFound.criado) : ''))) || '';
+    var dataCri = dataCriRaw ? formatarDataHoraBR(dataCriRaw) : 'Data não informada';
+    var equip = item.equipamento || (ocFound && ocFound.equipamento) || '';
     var localidade = item.local || (ocFound && ocFound.local) || 'Central Técnica';
     var categoria = item.categoria || item.subtipo || (ocFound && ocFound.cat) || 'Geral';
-    var descRes = item.descResolucao || (item.resolucao && item.resolucao.descRes) || (ocFound && ocFound.resolucao && ocFound.resolucao.descRes) || 'Nenhuma observação de fechamento fornecida.';
-    var respRes = item.resolvidoPor || (item.resolucao && item.resolucao.resolvidoPor) || (ocFound && ocFound.resolucao && ocFound.resolucao.resolvidoPor) || 'Pendente';
-    var dataRes = item.dataResolucao || (item.resolucao && item.resolucao.data ? formatDataHoraLocal(item.resolucao.data) : '') || (ocFound && ocFound.resolucao && ocFound.resolucao.data ? formatDataHoraLocal(ocFound.resolucao.data) : '') || 'Em andamento';
+    var isOcAberta = (ocFound && ocFound.status === 'aberta') ||
+      (String(item.status || '').toLowerCase() === 'aberta' && !(item.descResolucao && item.descResolucao.trim()));
+    var descRes = isOcAberta
+      ? (item.descResolucao || (ocFound && ocFound.resolucao && ocFound.resolucao.descRes) || '')
+      : (item.descResolucao || (item.resolucao && item.resolucao.descRes) || (ocFound && ocFound.resolucao && ocFound.resolucao.descRes) || '');
+    var respRes = isOcAberta
+      ? ''
+      : (item.resolvidoPor || (item.resolucao && item.resolucao.resolvidoPor) || (ocFound && ocFound.resolucao && ocFound.resolucao.resolvidoPor) || '');
+    var dataResRaw = isOcAberta
+      ? ''
+      : (item.dataResolucao || (item.resolucao && item.resolucao.data ? formatDataHoraLocal(item.resolucao.data) : '') || (ocFound && ocFound.resolucao && ocFound.resolucao.data ? formatDataHoraLocal(ocFound.resolucao.data) : '') || '');
+    var dataRes = dataResRaw ? formatarDataHoraBR(dataResRaw) : '';
     var statusFinal = item.status || (item.resolucao && item.resolucao.statusRes) || (ocFound && ocFound.resolucao && ocFound.resolucao.statusRes) || 'Concluído';
     var modalTitle = document.getElementById('hist-det-title');
     var modalTags  = document.getElementById('hist-det-tags');
@@ -895,7 +953,20 @@
     if (modalTags) {
       var stDet = obterEstiloSemanticoHistoricoItem(item);
       var tagMeu = isItemDoUsuario(item) ? '<span class="tag tag-ind">Seu Registro / Resolução</span>' : '';
-      modalTags.innerHTML = getTagTipoBadge(item) + ' <span class="tag ' + stDet.tagCls + '">' + escapeHTML(statusFinal) + '</span> ' + tagMeu;
+      var prioBadgeTop = '';
+      var prioValTop = (ocFound && ocFound.prio) || item.prio || '';
+      if (prioValTop) {
+        var prioClsTop = prioValTop === 'Alta' ? 'tag-r' : (prioValTop === 'Baixa' ? 'tag-g' : 'tag-y');
+        prioBadgeTop = ' <span class="tag ' + prioClsTop + '">Prioridade: ' + escapeHTML(prioValTop) + '</span>';
+      }
+      var tempoBadgeTop = '';
+      if (ocFound && ocFound.status === 'aberta') {
+        var tInfo = formatarTempoEmAberto(ocFound);
+        if (tInfo) {
+          tempoBadgeTop = ' <span class="tag" style="background:' + tInfo.bg + ';color:' + tInfo.color + ';border:1px solid ' + tInfo.border + ';font-weight:700;display:inline-flex;align-items:center;gap:3px;"><i data-lucide="hourglass" style="width:10.5px;height:10.5px;"></i>' + escapeHTML(tInfo.label) + '</span>';
+        }
+      }
+      modalTags.innerHTML = getTagTipoBadge(item) + ' <span class="tag ' + stDet.tagCls + '">' + escapeHTML(statusFinal) + '</span>' + prioBadgeTop + tempoBadgeTop + ' ' + tagMeu;
     }
     var anexos = (item.anexos && Array.isArray(item.anexos) && item.anexos.length > 0)
       ? item.anexos
@@ -1074,26 +1145,25 @@
       fonteCTRS = item;
     } else if (ocFound && (ocFound.htmlRelatorio || ocFound.dadosCTRS || (ocFound.desc && String(ocFound.desc).indexOf('<!--CTRS_JSON:') !== -1))) {
       fonteCTRS = ocFound;
-    } else if (typeof historicoSeedData !== 'undefined' && Array.isArray(historicoSeedData)) {
+    } else if (Array.isArray(Store.historicoSeedData)) {
       var idBuscaOc = (ocFound && ocFound.id) ? ocFound.id : String(item.id || '').replace(/^h_oc_/, '');
-      var relVinc = historicoSeedData.find(function(h) {
+      var relVinc = Store.historicoSeedData.find(function(h) {
         if (!h || h.tipo !== 'relatorio') return false;
-        var dH = h.dadosCTRS;
-        if (!dH && h.descResolucao && h.descResolucao.indexOf('<!--CTRS_JSON:') !== -1) {
-          try {
-            var mH = h.descResolucao.match(/<!--CTRS_JSON:([^>]+)-->/);
-            if (mH && mH[1]) dH = JSON.parse(decodeURIComponent(mH[1]));
-          } catch (e) {}
-        }
+        var dH = h.dadosCTRS || Markers.extract(h.descResolucao || '', 'CTRS');
         if (dH && Array.isArray(dH.idsOcorrenciasGeradas) && dH.idsOcorrenciasGeradas.indexOf(idBuscaOc) !== -1) return true;
         return false;
       });
       if (relVinc) fonteCTRS = relVinc;
     }
     var btnEditarFooter = document.getElementById('btn-hist-det-editar');
+    var btnResolverFooter = document.getElementById('btn-hist-det-resolver');
     var btnExcluirFooter = document.getElementById('btn-hist-det-excluir');
     if (btnEditarFooter) {
       btnEditarFooter.style.display = (isRelatorioCTRSModal || isRecebimentoModal) ? 'none' : 'inline-flex';
+    }
+    if (btnResolverFooter) {
+      var podeResolverDireto = !isRelatorioCTRSModal && !isRecebimentoModal && ((ocFound && ocFound.status === 'aberta') || isOcAberta);
+      btnResolverFooter.style.display = podeResolverDireto ? 'inline-flex' : 'none';
     }
     if (btnExcluirFooter) {
       btnExcluirFooter.innerHTML = isRelatorioCTRSModal
@@ -1187,6 +1257,7 @@
           equip: equip,
           localidade: localidade,
           categoria: categoria,
+          prazo: (ocFound && ocFound.prazo) || item.prazo || '',
           descCri: descCri,
           respRes: respRes,
           dataRes: dataRes,
@@ -1200,11 +1271,10 @@
           edicoesHTML: edicoesHTML
         });
         modalBody.innerHTML =
-          '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:10px 14px;margin-bottom:12px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;font-size:12px;color:#1E3A8A;">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:9px 12px;margin-bottom:12px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;font-size:12px;color:#334155;">' +
             '<div>' +
               '<strong>Registrado por:</strong> ' + escapeHTML(autorCri) + ' &nbsp;·&nbsp; ' +
-              '<strong>Data:</strong> ' + escapeHTML(dataCri) + ' &nbsp;·&nbsp; ' +
-              '<strong>Praça:</strong> ' + escapeHTML(localidade) +
+              '<strong>Em:</strong> ' + escapeHTML(dataCri) +
             '</div>' +
             '<div style="display:flex;gap:6px;">' +
               '<button type="button" class="btn btn-sm" onclick="copiarPreviewRelatorioHistorico()" style="background:#FFFFFF;color:#0071E3;border:1px solid #93C5FD;font-weight:700;padding:4px 10px;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;">' +
@@ -1215,7 +1285,7 @@
               '</button>' +
             '</div>' +
           '</div>' +
-          '<div id="hist-ctrs-preview-container" style="background:#FFFFFF;border:1px solid #CBD5E1;border-radius:10px;padding:16px;box-shadow:0 2px 8px rgba(15,23,42,0.04);overflow-x:auto;">' +
+          '<div id="hist-ctrs-preview-container">' +
             htmlPreviewOcorrencia +
           '</div>';
       }
@@ -1232,7 +1302,7 @@
       return h.id === id || h.id === ('h_oc_' + id) || id === ('h_oc_' + h.id) || (h.id.replace('h_oc_','') === id.replace('h_oc_',''));
     });
     if (!item) {
-      var oc = ocorrencias.find(function(o){ return o && (o.id === id || o.id === id.replace('h_oc_','')); });
+      var oc = (Store.ocorrencias || []).find(function(o){ return o && (o.id === id || o.id === id.replace('h_oc_','')); });
       if (oc) {
         var nowFmt = formatDataHoraLocal(oc.dataCriacao || oc.criado);
         var resFmt = (oc.resolucao && oc.resolucao.data) ? formatDataHoraLocal(oc.resolucao.data) : nowFmt;
@@ -1250,15 +1320,15 @@
           categoria:     oc.cat || 'Equipamento',
           local:         oc.local || 'Central Técnica',
           dataCriacao:   nowFmt,
-          criadoPor:     (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual()),
-          resp:          (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
+          criadoPor:     obterCriadorOcorrencia(oc),
+          resp:          formatarAtribuicaoResp(oc.resp),
           descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
           status:        (oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : (oc.status === 'arquivada' ? 'Em Observação' : 'Resolvido'),
           dataResolucao: resFmt,
           resolvidoPor:  resPor,
           descResolucao: resDesc,
           link:          oc.link || (oc.resolucao && oc.resolucao.link) || '',
-      tags:          oc.tags || [],
+          tags:          oc.tags || [],
           anexos:        anexosLista
         };
       }
@@ -1273,27 +1343,30 @@
   }
   window.verDetalhesOcorrenciaResolvida = verDetalhesOcorrenciaResolvida;
   function verDetalhesOcorrencia(id) {
-    var oc = ocorrencias.find(function(o){ return o && o.id === id; });
+    var oc = (Store.ocorrencias || []).find(function(o){ return o && o.id === id; });
     if (!oc) return;
     var anexosList = (oc.anexos && Array.isArray(oc.anexos) && oc.anexos.length > 0)
       ? oc.anexos
       : ((oc.resolucao && Array.isArray(oc.resolucao.anexos)) ? oc.resolucao.anexos : []);
+    var temResDados = Boolean(oc.resolucao && (oc.resolucao.descRes || oc.resolucao.data));
     var item = {
       id:            oc.id,
       tipo:          'ocorrencia',
       subtipo:       oc.cat || 'Equipamento',
       titulo:        oc.titulo,
-      equipamento:   oc.equipamento || (oc.local ? (oc.local + ' — ' + (oc.cat || 'Equipamento')) : (oc.cat || oc.titulo)),
+      equipamento:   oc.equipamento || '',
       categoria:     oc.cat || 'Equipamento',
       local:         oc.local || 'Central Técnica',
+      prazo:         oc.prazo || '',
+      prio:          oc.prio || '',
       dataCriacao:   formatDataHoraLocal(oc.dataCriacao || oc.criado),
-      criadoPor:     (typeof obterCriadorOcorrencia === 'function') ? obterCriadorOcorrencia(oc) : (oc.criadoPor || getUsuarioAtual()),
-      resp:          (typeof formatarAtribuicaoResp === 'function') ? formatarAtribuicaoResp(oc.resp) : (oc.resp || 'Equipe do Turno (Todos)'),
+      criadoPor:     obterCriadorOcorrencia(oc),
+      resp:          formatarAtribuicaoResp(oc.resp),
       descCriacao:   oc.desc || 'Ocorrência registrada no sistema.',
       status:        oc.status === 'resolvida' ? ((oc.resolucao && oc.resolucao.statusRes) ? oc.resolucao.statusRes : 'Resolvido') : (isOcorrenciaVencida(oc) ? 'Prazo Expirado' : 'Aberta'),
-      dataResolucao: oc.resolucao ? formatDataHoraLocal(oc.resolucao.data) : 'Pendente de resolução',
-      resolvidoPor:  oc.resolucao ? (oc.resolvidoPor || getUsuarioAtual()) : 'Aguardando resolução',
-      descResolucao: oc.resolucao ? (oc.resolucao.descRes || 'Ocorrência ativa no turno aguardando tratativa da equipe.') : 'Ocorrência ativa no turno aguardando tratativa da equipe.',
+      dataResolucao: (temResDados && oc.resolucao.data) ? formatDataHoraLocal(oc.resolucao.data) : '',
+      resolvidoPor:  (temResDados && oc.resolucao.resolvidoPor) ? oc.resolucao.resolvidoPor : '',
+      descResolucao: (temResDados && oc.resolucao.descRes) ? oc.resolucao.descRes : '',
       link:          oc.link || (oc.resolucao && oc.resolucao.link) || '',
       tags:          oc.tags || [],
       historicoEdicoes: oc.historicoEdicoes || (oc.resolucao && oc.resolucao.historicoEdicoes) || [],
@@ -1313,16 +1386,12 @@
         var blobHtml = new Blob([html], { type: 'text/html' });
         var blobText = new Blob([container.innerText || ''], { type: 'text/plain' });
         navigator.clipboard.write([new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })]).then(function() {
-          if (typeof mostrarToast === 'function') {
-            mostrarToast('Relatório Copiado', 'O relatório formatado foi copiado para a área de transferência.', 'success');
-          }
+          mostrarToast('Relatório Copiado', 'O relatório formatado foi copiado para a área de transferência.', 'success');
         });
         return;
       } catch (e) {}
     }
-    if (typeof mostrarToast === 'function') {
-      mostrarToast('Relatório Copiado', 'O relatório foi copiado para a área de transferência.', 'success');
-    }
+    mostrarToast('Relatório Copiado', 'O relatório foi copiado para a área de transferência.', 'success');
   }
   window.copiarPreviewRelatorioHistorico = copiarPreviewRelatorioHistorico;
   function imprimirPreviewRelatorioHistorico() {
@@ -1330,14 +1399,16 @@
     if (!container) return;
     var htmlPrint = container.innerHTML || '';
     var isRecPrint = htmlPrint.indexOf('GUIA DE RECEBIMENTO') !== -1;
-    var isOcPrint = htmlPrint.indexOf('FICHA TÉCNICA DE OCORRÊNCIA') !== -1;
+    var isOcPrint = htmlPrint.indexOf('Problema Relatado') !== -1 || htmlPrint.indexOf('FICHA TÉCNICA DE OCORRÊNCIA') !== -1;
     var docTitle = isRecPrint
       ? 'Guia de Recebimento — TV Integração'
       : (isOcPrint ? 'Ficha Técnica de Ocorrência — TV Integração' : 'Relatório CTRS — TV Integração');
-    var w = window.open('', '_blank');
-    if (!w) return;
-    w.document.open();
-    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"/><title>' + docTitle + '</title><style>@page{size:A4 portrait;margin:12mm;}body{font-family:Segoe UI,Arial,sans-serif;margin:0;padding:12px;background:#fff;}</style></head><body>' + container.innerHTML + '<script>setTimeout(function(){window.print();},350);<\/script></body></html>');
-    w.document.close();
+    var safeBody = Security.sanitizeReportHTML(htmlPrint);
+    Security.openSafePrintWindow(
+      '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>' + escapeHTML(docTitle) + '</title><style>@page{size:A4 portrait;margin:12mm;}body{font-family:Segoe UI,Arial,sans-serif;margin:0;padding:12px;background:#fff;}</style></head><body>' + safeBody + '</body></html>',
+      350
+    );
   }
   window.imprimirPreviewRelatorioHistorico = imprimirPreviewRelatorioHistorico;
+  });
+})(window, document, window.TVApp);

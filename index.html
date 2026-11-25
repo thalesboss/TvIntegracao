@@ -3,322 +3,12 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; media-src 'self' https: data: blob:; connect-src 'self' https://*.supabase.co https://script.google.com https://script.googleusercontent.com; object-src 'none'; base-uri 'self';"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; media-src 'self' https: data: blob:; frame-src 'self' blob: data:; connect-src 'self' https://*.supabase.co https://script.google.com https://script.googleusercontent.com; object-src 'none'; base-uri 'self'; form-action 'self';"/>
   <title>TV Integração</title>
   <link rel="icon" type="image/png" href="assets/icons/favicon.png?v=7.9"/>
   <link rel="shortcut icon" href="assets/icons/favicon.ico?v=7.9"/>
-  <link rel="stylesheet" href="style.css?v=8.0"/>
+  <link rel="stylesheet" href="style.css?v=19.5"/>
   <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js" crossorigin="anonymous"></script>
-  <style>
-    .lucide { display:inline-block; vertical-align:middle; flex-shrink:0; }
-    .s-btn .lucide { color: var(--muted); }
-    .s-btn:hover:not(.active) .lucide { color: var(--txt2); }
-    .s-btn.active .lucide { color: #fff; }
-    .res-status-group { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:4px; }
-    .res-pill {
-      flex:1; min-width:120px; border:1.5px solid var(--border);
-      border-radius:var(--r-lg); padding:10px 12px; cursor:pointer;
-      text-align:center; transition:all .12s; background:var(--bg);
-      user-select:none;
-    }
-    .res-pill:hover { border-color:var(--blue); background:var(--blue-lt); }
-    .res-pill.selected-ok   { border-color:var(--green-dk); background:var(--green-lt); color:var(--green-dk); font-weight:600; }
-    .res-pill.selected-warn { border-color:var(--yellow);   background:var(--yellow-lt); color:var(--yellow);   font-weight:600; }
-    .res-pill.selected-fwd  { border-color:var(--indigo);   background:var(--indigo-lt); color:var(--indigo);   font-weight:600; }
-    .res-pill-label { font-size:12.5px; font-weight:500; color:inherit; display:block; }
-    .res-pill-sub   { font-size:10.5px; color:var(--muted); margin-top:2px; }
-    .res-pill.selected-ok   .res-pill-sub,
-    .res-pill.selected-warn .res-pill-sub,
-    .res-pill.selected-fwd  .res-pill-sub { opacity:.7; color:inherit; }
-    /* ─── Relatório Diário / Ronda Técnica (Uberlândia) ─── */
-    .ronda-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-      gap: 16px;
-      margin-bottom: 16px;
-    }
-    .ronda-card {
-      background: var(--surface);
-      border: 1px solid var(--border-lt);
-      border-radius: var(--r-lg);
-      padding: 18px 20px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-    }
-    .ronda-card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 14px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid var(--border-lt);
-    }
-    .ronda-card-header h3 {
-      font-size: 13.5px;
-      font-weight: 700;
-      color: var(--txt);
-      margin: 0;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .ronda-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 7px 12px;
-      background: #FAFAFA;
-      border: 1px solid var(--border-lt);
-      border-radius: var(--r-md);
-      margin-bottom: 7px;
-      transition: all .15s ease;
-    }
-    .ronda-item:hover {
-      border-color: var(--border);
-      background: #FFFFFF;
-    }
-    .ronda-item.has-nc {
-      border-color: #FECACA !important;
-      background: #FEF2F2 !important;
-    }
-    .ronda-item-label {
-      font-size: 12.5px;
-      font-weight: 600;
-      color: var(--txt);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .ronda-toggle-group {
-      display: inline-flex;
-      gap: 5px;
-      align-items: center;
-    }
-    .ronda-btn-pill {
-      border: 1px solid var(--border);
-      background: #FFFFFF;
-      color: var(--txt2);
-      font-size: 11px;
-      font-weight: 600;
-      padding: 4px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      transition: all .12s ease;
-      user-select: none;
-    }
-    .ronda-btn-pill:hover {
-      background: #F1F5F9;
-    }
-    .ronda-btn-pill.conf.active {
-      background: #ECFDF5;
-      color: #059669;
-      border-color: #10B981;
-      font-weight: 700;
-      box-shadow: 0 1px 3px rgba(16, 185, 129, 0.2);
-    }
-    .ronda-btn-pill.nc.active {
-      background: #FEF2F2;
-      color: #DC2626;
-      border-color: #EF4444;
-      font-weight: 700;
-      box-shadow: 0 1px 3px rgba(239, 68, 68, 0.2);
-    }
-    .ronda-metric-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 7px 12px;
-      background: #FAFAFA;
-      border: 1px solid var(--border-lt);
-      border-radius: var(--r-md);
-      margin-bottom: 7px;
-    }
-    .ronda-metric-row label {
-      font-size: 12.5px;
-      font-weight: 600;
-      color: var(--txt);
-      flex: 1;
-      margin: 0;
-    }
-    .ronda-metric-input-wrap {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      width: 140px;
-    }
-    .ronda-metric-input-wrap input {
-      width: 100%;
-      padding: 5px 10px;
-      font-size: 12.5px;
-      font-weight: 600;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: #FFF;
-      text-align: right;
-    }
-    .ronda-metric-unit {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--muted);
-      min-width: 24px;
-    }
-    /* ── Visão Geral das Respostas (Estilo Microsoft Forms — Uberlândia) ── */
-    .vg-forms-overlay .modal {
-      max-width: 920px;
-      width: 95vw;
-      height: 90vh;
-      max-height: 90vh;
-      display: flex;
-      flex-direction: column;
-      background: #F8FAFC;
-      border-radius: 16px;
-      overflow: hidden;
-      padding: 0;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    }
-    .vg-forms-header {
-      padding: 16px 24px;
-      background: #FFFFFF;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
-      flex-shrink: 0;
-    }
-    .vg-forms-body {
-      padding: 24px;
-      overflow-y: auto;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-    }
-    .vg-top-cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 14px;
-    }
-    .vg-stat-box {
-      background: #FFFFFF;
-      border: 1px solid #E2E8F0;
-      border-radius: 10px;
-      padding: 16px 20px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-    }
-    .vg-stat-box .vg-stat-num {
-      font-size: 30px;
-      font-weight: 800;
-      color: #0F172A;
-      line-height: 1.1;
-      margin-top: 4px;
-    }
-    .vg-stat-box .vg-stat-lbl {
-      font-size: 12px;
-      font-weight: 600;
-      color: #64748B;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .vg-q-card {
-      background: #FFFFFF;
-      border: 1px solid #E2E8F0;
-      border-radius: 10px;
-      padding: 20px 22px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-    }
-    .vg-q-title {
-      font-size: 13.5px;
-      font-weight: 700;
-      color: #1E293B;
-      margin-bottom: 14px;
-      letter-spacing: -0.01em;
-    }
-    .vg-legend {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      font-size: 11.5px;
-      font-weight: 700;
-      margin-bottom: 14px;
-    }
-    .vg-legend-dot {
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      display: inline-block;
-      margin-right: 5px;
-    }
-    .vg-bar-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .vg-bar-row {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-    .vg-bar-name {
-      width: 175px;
-      font-size: 12px;
-      font-weight: 600;
-      color: #475569;
-      flex-shrink: 0;
-      text-transform: uppercase;
-    }
-    .vg-bar-track {
-      flex: 1;
-      height: 16px;
-      background: #F1F5F9;
-      border-radius: 4px;
-      overflow: hidden;
-      display: flex;
-    }
-    .vg-bar-fill-c {
-      background: #E06A3B;
-      height: 100%;
-      transition: width 0.3s;
-    }
-    .vg-bar-fill-nc {
-      background: #3B82F6;
-      height: 100%;
-      transition: width 0.3s;
-    }
-    .vg-bar-meta {
-      width: 85px;
-      font-size: 11.5px;
-      font-weight: 700;
-      color: #64748B;
-      text-align: right;
-      flex-shrink: 0;
-    }
-    .vg-recent-list {
-      background: #F8FAFC;
-      border: 1px solid #E2E8F0;
-      border-radius: 8px;
-      padding: 12px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .vg-recent-item {
-      font-size: 12.5px;
-      color: #334155;
-      line-height: 1.4;
-      border-bottom: 1px dashed #E2E8F0;
-      padding-bottom: 6px;
-    }
-    .vg-recent-item:last-child {
-      border-bottom: none;
-      padding-bottom: 0;
-    }
-  </style>
 </head>
 <body>
 <svg id="liquidgl-svg-defs" width="0" height="0" style="position:absolute;width:0;height:0;pointer-events:none;overflow:hidden;" aria-hidden="true">
@@ -732,7 +422,7 @@
       <div class="frow">
         <label>Comprovante / Evidência <span class="opt-badge">Opcional</span></label>
         <div class="upload-area" id="resolver-upload-area" role="button" tabindex="0">
-          <input id="resolver-arquivos" type="file" accept="image/*,video/*,.pdf,application/pdf" multiple onchange="handleFileSelect(this, 'resolver-previews')"/>
+          <input id="resolver-arquivos" type="file" accept="image/*,video/*,.pdf,application/pdf" multiple/>
           <div class="u-ico"><i data-lucide="paperclip" style="width:18px;height:18px;stroke-width:2;"></i></div>
           <p class="u-txt">Anexar foto, vídeo ou PDF como evidência</p>
           <p class="u-sub">JPG, PNG, PDF, MP4, MOV</p>
@@ -765,6 +455,9 @@
         <i data-lucide="trash-2" style="width:13px;height:13px;stroke-width:2;"></i> Excluir Ocorrência
       </button>
       <div style="display:flex;gap:8px;margin-left:auto;">
+        <button type="button" class="btn btn-success btn-sm" id="btn-hist-det-resolver" onclick="resolverOcorrenciaDoModalDetalhes()" style="display:none;align-items:center;gap:5px;">
+          <i data-lucide="check-circle-2" style="width:13px;height:13px;stroke-width:2.2;"></i> Resolver
+        </button>
         <button type="button" class="btn btn-primary btn-sm" id="btn-hist-det-editar" onclick="editarOcorrenciaDoModalDetalhes()" style="display:inline-flex;align-items:center;gap:5px;">
           <i data-lucide="pencil" style="width:13px;height:13px;stroke-width:2;"></i> Editar Ocorrência
         </button>
@@ -1225,6 +918,14 @@
             <i data-lucide="radio" style="width:13px;height:13px;"></i> Configurar Chips &amp; Modens (LiveU)
           </button>
         </div>
+        <div id="eq-modal-tag-rede-bar" style="display:none;margin-top:8px;padding:9px 12px;background:#ECFDF5;border:1px solid #6EE7B7;border-radius:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div style="font-size:11.5px;color:#065F46;">
+            <strong>Ficha Técnica Rede/Fibra:</strong> <span id="eq-modal-rede-resumo">Nenhum dado de rede configurado</span>
+          </div>
+          <button type="button" class="btn btn-sm" onclick="abrirModalTagRede()" style="background:#059669;color:#FFFFFF;border:none;font-weight:700;padding:5px 11px;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;">
+            <i data-lucide="network" style="width:13px;height:13px;"></i> Configurar Dados Rede/Fibra
+          </button>
+        </div>
       </div>
       <div class="frow">
         <label for="novo-eq-obs">Especificações & Observações Técnicas</label>
@@ -1300,6 +1001,7 @@
         </div>
       </div>
       <div id="ficha-eq-liveu-section" style="flex-shrink:0;display:none;background:#FFFFFF;border:1px solid #BFDBFE;border-radius:10px;overflow:hidden;"></div>
+      <div id="ficha-eq-rede-section" style="flex-shrink:0;display:none;background:#FFFFFF;border:1px solid #A7F3D0;border-radius:10px;overflow:hidden;"></div>
       <div id="ficha-eq-audit-section" style="flex-shrink:0;display:none;background:#FFFFFF;border:1px solid var(--border);border-radius:10px;overflow:hidden;"></div>
       <div style="flex-shrink:0;">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
@@ -1388,6 +1090,56 @@
     <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;">
       <button type="button" class="btn btn-ghost" onclick="fecharPopup('popup-eq-tag-liveu')">Cancelar</button>
       <button type="button" class="btn btn-primary" onclick="salvarDadosModalTagLiveU()">Aplicar Dados LiveU</button>
+    </div>
+  </div>
+</div>
+<div class="overlay" id="popup-eq-tag-rede" hidden role="dialog" aria-modal="true" aria-labelledby="rede-modal-title">
+  <div class="modal modal-lg" style="width:680px;max-width:95vw;">
+    <div class="modal-header">
+      <div class="modal-icon" style="background:#059669;">
+        <i data-lucide="network" style="width:17px;height:17px;color:#fff;stroke-width:2;"></i>
+      </div>
+      <div style="flex:1;">
+        <h3 class="modal-title" id="rede-modal-title">Configuração Técnica — Rede &amp; Fibra</h3>
+        <p class="modal-subtitle" id="rede-modal-subtitle">Endereçamento IP, gateway/VLAN, porta do switch, provedor e circuito dedicado</p>
+      </div>
+      <button class="modal-close-btn" onclick="fecharPopup('popup-eq-tag-rede')" title="Fechar"><i data-lucide="x" style="width:15px;height:15px;"></i></button>
+    </div>
+    <div class="modal-body" style="max-height:72vh;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+      <div class="fg2">
+        <div class="frow">
+          <label for="rede-ip-gerencia">IP de Gerência / IP Público / Link</label>
+          <input id="rede-ip-gerencia" type="text" placeholder="Ex: 10.20.30.45 ou 200.x.x.x/29" />
+        </div>
+        <div class="frow">
+          <label for="rede-gateway-vlan">Gateway / VLAN / Máscara</label>
+          <input id="rede-gateway-vlan" type="text" placeholder="Ex: VLAN 140 · GW 10.20.30.1 /24" />
+        </div>
+      </div>
+      <div class="fg2">
+        <div class="frow">
+          <label for="rede-switch-porta">Switch / Porta / DIO / Patch Panel</label>
+          <input id="rede-switch-porta" type="text" placeholder="Ex: SW-MCR-01 Gi1/0/24 · DIO-A Porta 03" />
+        </div>
+        <div class="frow">
+          <label for="rede-provedor-circuito">Provedor / Operadora / Nº Circuito</label>
+          <input id="rede-provedor-circuito" type="text" placeholder="Ex: Algar Telecom · Circ. #FIB-88421" />
+        </div>
+      </div>
+      <div class="fg2">
+        <div class="frow">
+          <label for="rede-velocidade">Velocidade / Banda Contratada</label>
+          <input id="rede-velocidade" type="text" placeholder="Ex: 500 Mbps Full Duplex Simétrico" />
+        </div>
+        <div class="frow">
+          <label for="rede-obs">Observações de Rede / Fibra</label>
+          <input id="rede-obs" type="text" placeholder="Ex: Redundância BGP ativa, contato NOC..." />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;">
+      <button type="button" class="btn btn-ghost" onclick="fecharPopup('popup-eq-tag-rede')">Cancelar</button>
+      <button type="button" class="btn btn-primary" onclick="salvarDadosModalTagRede()" style="background:#059669;border-color:#059669;">Aplicar Dados Rede/Fibra</button>
     </div>
   </div>
 </div>
@@ -1729,6 +1481,11 @@
       Nova Ocorrência
     </button>
   </header>
+  <div id="offline-status-banner" style="display:none;position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:900;background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,0.12);align-items:center;gap:8px;">
+    <span style="width:8px;height:8px;border-radius:50%;background:#EF4444;display:inline-block;"></span>
+    <span id="offline-status-banner-txt">Modo Offline — alterações salvas apenas localmente</span>
+    <button type="button" onclick="abrirModalConectarBanco()" style="background:#FFFFFF;color:#B91C1C;border:1px solid #FCA5A5;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;cursor:pointer;">Reconectar</button>
+  </div>
   <main class="page active" id="page-dashboard" aria-label="Ocorrências">
     <div class="scroll-area">
       <div class="stats-row">
@@ -2918,7 +2675,7 @@
           <div class="frow" style="margin-top:14px;">
             <label>Anexo de Proposta Comercial / Orçamento <span class="opt-badge">PDF, Fotos ou Documentos</span></label>
             <div class="upload-area" id="req-upload-area" role="button" tabindex="0">
-              <input id="req-arquivos" type="file" accept="image/*,video/*,.pdf,application/pdf" multiple onchange="handleFileSelect(this, 'req-previews')" />
+              <input id="req-arquivos" type="file" accept="image/*,video/*,.pdf,application/pdf" multiple />
               <div class="u-ico"><i data-lucide="paperclip" style="width:22px;height:22px;color:var(--muted);stroke-width:1.5;"></i></div>
               <p class="u-txt">Anexar proposta em PDF, orçamento ou documento comercial</p>
               <p class="u-sub">PDF, PNG, JPG, DOCX</p>
@@ -3190,12 +2947,12 @@
         <div class="cfg-photo-row">
           <div class="cfg-avatar" id="cfg-avatar">TM</div>
           <div class="cfg-photo-actions">
-            <label class="btn btn-ghost btn-sm" for="cfg-photo-input" style="cursor:pointer;">
+            <label class="btn btn-ghost btn-sm" for="cfg-photo-input" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;margin:0;">
               <i data-lucide="upload" style="width:13px;height:13px;stroke-width:2;"></i>
               Alterar foto
             </label>
             <input type="file" id="cfg-photo-input" accept="image/*" hidden onchange="alterarFotoPerfil(this)"/>
-            <button class="btn btn-ghost btn-sm" onclick="removerFotoPerfil()">Remover</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="removerFotoPerfil()">Remover</button>
           </div>
         </div>
       </div>
@@ -3239,36 +2996,25 @@
             <div class="cfg-toggle-title">Novas ocorrências</div>
             <div class="cfg-toggle-sub">Avisar quando uma nova ocorrência for aberta</div>
           </div>
-          <label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label>
+          <label class="toggle"><input type="checkbox" id="cfg-notif-nova" checked/><span class="toggle-slider"></span></label>
         </div>
         <div class="cfg-toggle-row">
           <div>
             <div class="cfg-toggle-title">Ocorrências atrasadas</div>
             <div class="cfg-toggle-sub">Avisar quando uma ocorrência passar do prazo</div>
           </div>
-          <label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label>
+          <label class="toggle"><input type="checkbox" id="cfg-notif-atrasada" checked/><span class="toggle-slider"></span></label>
         </div>
         <div class="cfg-toggle-row">
           <div>
             <div class="cfg-toggle-title">Resumo por e-mail</div>
             <div class="cfg-toggle-sub">Receber um resumo diário do turno por e-mail</div>
           </div>
-          <label class="toggle"><input type="checkbox"/><span class="toggle-slider"></span></label>
-        </div>
-      </div>
-      <div class="form-card">
-        <h3><div class="fcard-ico fci-p" style="display:flex;align-items:center;justify-content:center;"><i data-lucide="sliders-horizontal" style="width:13px;height:13px;stroke-width:2;"></i></div> Preferências</h3>
-        <div class="fg2">
-          <div class="frow"><label for="cfg-tema">Tema</label>
-            <select id="cfg-tema">
-              <option>Claro</option>
-              <option>Escuro (em breve)</option>
-            </select>
-          </div>
+          <label class="toggle"><input type="checkbox" id="cfg-notif-email"/><span class="toggle-slider"></span></label>
         </div>
       </div>
       <div class="submit-bar" style="justify-content:flex-end;">
-        <button class="btn btn-primary btn-sm" onclick="salvarConfiguracoes()">Salvar Alterações</button>
+        <button class="btn btn-primary btn-sm" onclick="salvarConfiguracoes(this)">Salvar Alterações</button>
       </div>
     </div>
   </main>
@@ -3375,56 +3121,7 @@
     </div>
   </main>
 </div>
-<script>
-  // Pacote Criptografado Global (AES-256-GCM + PBKDF2 250k)
-  // Descriptografado exclusivamente mediante digitação da Chave de Acesso da Estação
-  window.ENCRYPTED_TV_CREDENTIALS = {
-    salt: 'f37eefee9195919adb5b14e12f9bb900',
-    iv: 'b0e029893d4f1f0ee49d624b',
-    data: '8eeb4d7fd875a35c8abad781fcbe3e75f0dd0ed777735a5f79619486690b4a1c48951c48f6f7ee6d277195ada6873a13314618584d00b688c8e4096a39f687d74c7b815644a7e8e01497277b761991442ff16fdf10cf0722b1cfdb621a400ae045bbbfc5131d46e18539a6e2af19c2c8741a8a5bc48860751a'
-  };
-</script>
 <script src="config.js" onerror="window.ENV_CONFIG=window.ENV_CONFIG||{};"></script>
-<script src="script.js?v=9.5"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-  });
-  /* ── Pills de status do popup Resolver ── */
-  function selecionarStatus(valor) {
-    var inputEl = document.getElementById('resolver-status');
-    if (inputEl) inputEl.value = valor;
-    var pills = [
-      { id: 'pill-ok', val: 'Resolvido', cls: 'selected-ok' },
-      { id: 'pill-parcial', val: 'Parcialmente resolvido', cls: 'selected-warn' },
-      { id: 'pill-enc', val: 'Em Observação', cls: 'selected-fwd' }
-    ];
-    var isObs = (valor === 'Em Observação' || valor === 'Resolvida e Arquivada' || valor === 'Encaminhado');
-    pills.forEach(function(p) {
-      var el = document.getElementById(p.id);
-      if (!el) return;
-      el.classList.remove('selected-ok', 'selected-warn', 'selected-fwd');
-      if (p.val === valor || (p.id === 'pill-enc' && isObs)) {
-        el.classList.add(p.cls);
-      }
-    });
-    var boxTempo = document.getElementById('resolver-obs-tempo-box');
-    if (boxTempo) {
-      boxTempo.style.display = isObs ? 'block' : 'none';
-    }
-  }
-  window.selecionarStatus = selecionarStatus;
-  function toggleInputObsPersonalizado(val) {
-    var wrap = document.getElementById('resolver-obs-custom-wrap');
-    if (wrap) {
-      wrap.style.display = (val === 'custom') ? 'flex' : 'none';
-      if (val === 'custom') {
-        var inp = document.getElementById('resolver-obs-custom-val');
-        if (inp) setTimeout(function() { inp.focus(); inp.select(); }, 50);
-      }
-    }
-  }
-  window.toggleInputObsPersonalizado = toggleInputObsPersonalizado;
-</script>
+<script src="script.js?v=19.5"></script>
 </body>
 </html>

@@ -1,57 +1,80 @@
-  // Conexão segura: requer Chave de Acesso da Estação no 1º acesso do computador ou config.js local
-  try { carregarDashboardMetricsStore(); } catch(e) {}
-  try { if (typeof aplicarModoPraca === 'function') aplicarModoPraca(); } catch(e) {}
-  try { carregarFotoPerfilSalva(); } catch(e) {}
-  try { loadNotificacoes(); } catch(e) {}
-  try { if (typeof atualizarUIStatusBancoConfig === 'function') atualizarUIStatusBancoConfig(); } catch(e) {}
-  try { carregarRascunhoRelatorioTV(); } catch(e) {}
-  try { carregarRascunhoRecebimento(); } catch(e) {}
-  try { carregarRascunhoCompra(); } catch(e) {}
-  try { if (typeof carregarEquipamentosStore === 'function') carregarEquipamentosStore(); } catch(e) {}
-  try { carregarOrcamentoStore(); } catch(e) {}
-  try { carregarChecklistStore(); } catch(e) {}
-  try { if (typeof atualizarSelectsProfissionaisCTRS === 'function') atualizarSelectsProfissionaisCTRS(); } catch(e) {}
-  try { if (typeof sincronizarEquipeNuvem === 'function') sincronizarEquipeNuvem(); } catch(e) {}
-  try { if (typeof DBService !== 'undefined' && DBService.init) DBService.init(); } catch(e) {}
-  renderAll(true);
-  setInterval(function() {
-    if (document.hidden) return; // Se a aba estiver minimizada ou em segundo plano, economiza tráfego
-    if (typeof _isCloudConnected === 'function' && !_isCloudConnected()) {
-      return; // Se desconectado, o gerenciador de reconexão já cuida com backoff para não inchar o banco
+(function (window, document, TVApp) {
+  'use strict';
+
+  TVApp.registerModule('init', function (app) {
+    var KEYS    = app.KEYS;
+    var Storage = app.Storage;
+
+    function safeRun(fn) {
+      if (typeof fn === 'function') {
+        try { fn(); } catch (e) { console.warn('[TVApp.init] Erro parcial na inicialização:', e); }
+      }
     }
-    if (typeof DBService !== 'undefined' && DBService && typeof DBService.syncRemote === 'function') {
-      DBService.syncRemote();
+
+    safeRun(window.carregarDashboardMetricsStore);
+    safeRun(window.aplicarModoPraca);
+    safeRun(window.carregarConfiguracoesSalvas);
+    safeRun(window.carregarFotoPerfilSalva);
+    safeRun(window.loadNotificacoes);
+    safeRun(window.atualizarUIStatusBancoConfig);
+    safeRun(window.carregarRascunhoRelatorioTV);
+    safeRun(window.carregarRascunhoRecebimento);
+    safeRun(window.carregarRascunhoCompra);
+    safeRun(window.carregarEquipamentosStore);
+    safeRun(window.carregarOrcamentoStore);
+    safeRun(window.carregarChecklistStore);
+    safeRun(window.atualizarSelectsProfissionaisCTRS);
+    safeRun(window.sincronizarEquipeNuvem);
+    if (window.DBService && typeof window.DBService.init === 'function') {
+      try { window.DBService.init(); } catch (e) {}
     }
-  }, 120000); // 2 minutos
-  var lastFocusSync = 0;
-  window.addEventListener('focus', function() {
-    var now = Date.now();
-    if (now - lastFocusSync < 60000) return; // Limite de 1 sincronização por minuto ao alternar abas
-    lastFocusSync = now;
-    if (typeof _isCloudConnected === 'function' && !_isCloudConnected()) {
-      if (typeof tentarReconectarImediato === 'function') tentarReconectarImediato();
-      return;
+    if (typeof window.renderAll === 'function') {
+      window.renderAll(true);
     }
-    if (typeof DBService !== 'undefined' && DBService && typeof DBService.syncRemote === 'function') {
-      DBService.syncRemote();
-    }
-  });
-  var savedUserName = localStorage.getItem(USER_NAME_STORAGE_KEY);
-  try { if (typeof carregarOperadoresSugeridos === 'function') carregarOperadoresSugeridos(); } catch(e) {}
-  try { if (typeof atualizarUIIdentificacaoOperador === 'function') atualizarUIIdentificacaoOperador(); } catch(e) {}
-  var estacaoConectadaInit = (typeof isEstacaoConectadaTV === 'function') ? isEstacaoConectadaTV() : true;
-  if (!estacaoConectadaInit || !savedUserName || !savedUserName.trim() || savedUserName.trim() === 'Operador') {
-    abrirPopup('popup-identificacao-operador');
-    var identEmail = document.getElementById('ident-operador-email');
-    setTimeout(function() {
-      if (identEmail && identEmail.offsetParent !== null) identEmail.focus();
-    }, 180);
-  } else {
-    atualizarNomeOperadorUI(savedUserName.trim());
-    try {
-      var sEmail = localStorage.getItem('tv_user_email_v1');
-      var sTag   = localStorage.getItem('tv_user_tag_v1');
-      var sCargo = localStorage.getItem('tv_user_cargo_v1');
+
+    /* Sincronização periódica em segundo plano (respeita aba inativa e backoff) */
+    setInterval(function () {
+      if (document.hidden) return;
+      if (typeof window._isCloudConnected === 'function' && !window._isCloudConnected()) {
+        return;
+      }
+      if (window.DBService && typeof window.DBService.syncRemote === 'function') {
+        window.DBService.syncRemote();
+      }
+    }, 30000);
+
+    var lastFocusSync = 0;
+    window.addEventListener('focus', function () {
+      var now = Date.now();
+      if (now - lastFocusSync < 20000) return;
+      lastFocusSync = now;
+      if (typeof window._isCloudConnected === 'function' && !window._isCloudConnected()) {
+        if (typeof window.tentarReconectarImediato === 'function') window.tentarReconectarImediato();
+        return;
+      }
+      if (window.DBService && typeof window.DBService.syncRemote === 'function') {
+        window.DBService.syncRemote();
+      }
+    });
+
+    var savedUserName = Storage.getText(KEYS.USER_NAME, '').trim();
+    safeRun(window.carregarOperadoresSugeridos);
+    safeRun(window.atualizarUIIdentificacaoOperador);
+
+    var estacaoConectadaInit = (typeof window.isEstacaoConectadaTV === 'function') ? window.isEstacaoConectadaTV() : true;
+    if (!estacaoConectadaInit || !savedUserName || savedUserName === 'Operador') {
+      if (typeof window.abrirPopup === 'function') window.abrirPopup('popup-identificacao-operador');
+      var identEmail = document.getElementById('ident-operador-email');
+      setTimeout(function () {
+        if (identEmail && identEmail.offsetParent !== null) identEmail.focus();
+      }, 180);
+    } else {
+      if (typeof window.atualizarNomeOperadorUI === 'function') {
+        window.atualizarNomeOperadorUI(savedUserName);
+      }
+      var sEmail = Storage.getText(KEYS.USER_EMAIL, '');
+      var sTag   = Storage.getText(KEYS.USER_TAG, '');
+      var sCargo = Storage.getText(KEYS.USER_CARGO, '');
       if (sEmail) {
         var upEm = document.getElementById('up-email'); if (upEm) upEm.textContent = sEmail;
         var cfEm = document.getElementById('cfg-email'); if (cfEm) cfEm.value = sEmail;
@@ -62,8 +85,10 @@
         var sRl  = document.querySelector('.s-user-role'); if (sRl) sRl.textContent = lblC;
         var cfCg = document.getElementById('cfg-cargo'); if (cfCg) cfCg.value = lblC;
       }
-    } catch (e) {}
-    try { if (typeof obterOuCriarOperadorPorNome === 'function') obterOuCriarOperadorPorNome(savedUserName.trim()); } catch(e) {}
-    abrirPopup('popup-entrada');
-  }
-});
+      if (typeof window.obterOuCriarOperadorPorNome === 'function') {
+        try { window.obterOuCriarOperadorPorNome(savedUserName); } catch (e) {}
+      }
+      if (typeof window.abrirPopup === 'function') window.abrirPopup('popup-entrada');
+    }
+  });
+})(window, document, window.TVApp);

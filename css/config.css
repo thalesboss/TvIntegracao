@@ -5,10 +5,12 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 4px;
 }
 .cfg-avatar {
-  width: 64px;
-  height: 64px;
+  width: 68px;
+  height: 68px;
   border-radius: 50%;
   flex-shrink: 0;
   background: linear-gradient(135deg, var(--blue), var(--indigo));
@@ -20,13 +22,33 @@
   color: #fff;
   background-size: cover;
   background-position: center;
+  background-repeat: no-repeat;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.12);
+}
+.cfg-avatar.has-photo,
+.s-avatar.has-photo,
+.up-avatar.has-photo {
+  background-color: #FFFFFF !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+}
+.cfg-avatar.has-photo {
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 .cfg-photo-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+.cfg-photo-actions label.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
 }
 .cfg-toggle-row {
   display: flex;

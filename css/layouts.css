@@ -405,3 +405,49 @@ input[type="checkbox"]:focus {
     box-shadow: none !important;
   }
 }
+
+/* ── Layout Responsivo ── */
+@media (max-width: 1120px) {
+  .rel-layout {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .rel-center {
+    padding: 72px 18px 18px;
+    overflow-y: visible;
+  }
+  .rel-aside {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding: 18px;
+    overflow-y: visible;
+    max-height: none;
+  }
+  .stats-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fg3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .topbar {
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .scroll-area {
+    padding: 68px 14px 18px;
+  }
+  .fg2,
+  .fg3,
+  .stats-row,
+  .stats-row-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .modal {
+    max-width: 96vw !important;
+    max-height: 92vh;
+  }
+}
